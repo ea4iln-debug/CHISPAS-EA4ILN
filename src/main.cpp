@@ -1,9 +1,9 @@
 /**
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
- * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Dispositivo de aprendizaje de CW (Método Koch) y Activaciones SOTA/POTA.
- * @version 0.2b (beta)
- * @date 2026-10-07
+ * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
+ * @version 0.3b - Barra Visual en Stats 3.5, Criterio <90% y Formato de Zonas UI
+ * @date 2026-10-08
  */
 
 #include <Arduino.h>
@@ -14,40 +14,37 @@
 #include <Preferences.h>
 
 // ============================================================================
-// DEFINICIÓN DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
+// DEFINICION DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
 // ============================================================================
-#define OLED_SDA        17  // Pin I2C Data para la pantalla OLED
-#define OLED_SCL        18  // Pin I2C Clock para la pantalla OLED
-#define OLED_RST        21  // Reset físico de la pantalla OLED
-#define VEXT_CTRL       36  // Control MOSFET de alimentación a periféricos (LOW = ON)
+#define OLED_SDA        17  // Bus I2C - Datos SSD1306
+#define OLED_SCL        18  // Bus I2C - Reloj SSD1306
+#define OLED_RST        21  // Reset del OLED
+#define VEXT_CTRL       36  // Control de alimentacion VExt (Low = ON)
 
-#define BUTTON_PIN      0   // Botón PRG físico integrado en la placa
-#define LED_PIN         35  // LED blanco integrado para emisión visual Morse
+#define BUTTON_PIN      0   // Boton PRG integrado
+#define LED_PIN         35  // LED blanco integrado en placa
 
-#define LORA_NSS        8   // Pin Chip Select del SX1262
-#define LORA_DIO1       14  // Pin de Interrupción/DIO1 del SX1262
-#define LORA_NRST       12  // Pin Reset del SX1262
-#define LORA_BUSY       13  // Pin Busy del SX1262
+#define LORA_NSS        8   // Bus SPI - Select del SX1262
+#define LORA_DIO1       14  // Pin de interrupcion Hardware SX1262
+#define LORA_NRST       12  // Reset HW del transceptor SX1262
+#define LORA_BUSY       13  // Estado ocupado del SX1262
 
-// ASIGNACIÓN RESERVADA PARA KEYER Y AUDIO PWM (FUTURA CONEXIÓN FÍSICA)
-#define KEYER_PADDLE_DIT 2  // GPIO 2: Punto (Dit) o Straight Key
-#define KEYER_PADDLE_DAH 3  // GPIO 3: Raya (Dah)
-#define SPEAKER_PWM_PIN  25 // GPIO 25: Salida PWM de Audio (600 Hz) para altavoz/buzzer
+#define KEYER_PADDLE_DIT 2  // Entrada manipulador yambico (Punto)
+#define KEYER_PADDLE_DAH 3  // Entrada manipulador yambico (Raya)
+#define SPEAKER_PWM_PIN  25 // Salida PWM para altavoz/buzzer
 
-#define FREC_AUDIO_HZ    600// Tono estándar de telegrafía Morse (600 Hz)
-#define CANAL_PWM_AUDIO  0  // Canal LEDC PWM del ESP32-S3
-#define RES_PWM_AUDIO    8  // Resolución de 8 bits (0-255)
+#define FREC_AUDIO_HZ    600// Tono Morse local (600 Hz)
+#define CANAL_PWM_AUDIO  0  // Canal PWM del ESP32-S3
+#define RES_PWM_AUDIO    8  // Resolucion de 8 bits para el PWM
 
-// Batería LiPo y Calibración
-#define VBAT_ADC_PIN    1   // GPIO 1 (ADC1 Canal 0)
-#define ADC_CTRL_PIN    37  // MOSFET de control para lectura de batería (HIGH = ON)
-#define VBAT_MULTIPLIER 5.112f // Recalibrado para mostrar exactamente 4.20V al 100%
-#define TIEMPO_PULSACION_LARGA 600 // ms requeridos para considerar pulsación larga (-)
+#define VBAT_ADC_PIN    1   // Pin ADC para lectura del divisor de voltaje de la bateria
+#define ADC_CTRL_PIN    37  // Habilitacion del divisor de tension de bateria
+#define VBAT_MULTIPLIER 5.112f // Factor de calibracion del divisor R1/R2 de Heltec V3
+#define TIEMPO_PULSACION_LARGA 600 // Umbral en ms para detectar pulsacion larga del boton PRG
 
 // ============================================================================
 // DICCIONARIO MORSE Y TABLA KOCH
 // ============================================================================
-// Secuencia estándar de aprendizaje progresivo del método Koch (hasta 40 lecciones/caracteres)
 const char TABLA_KOCH[] = {
   'K', 'M', 'R', 'S', 'U', 'A', 'I', 'O', 'N', 'E', 
   'T', 'L', 'Y', 'P', 'Q', 'W', 'J', 'Z', 'F', 'C', 
@@ -61,7 +58,6 @@ struct PatronMorse {
   const char* codigo;
 };
 
-// Tabla de conversión de caracteres alfanuméricos a código morse estándar (dit/dah)
 const PatronMorse DICCIONARIO_MORSE[] = {
   {'A', ".-"},    {'B', "-..."},  {'C', "-.-."},  {'D', "-.."},   {'E', "."},
   {'F', "..-."},  {'G', "--."},   {'H', "...."},  {'I', ".."},    {'J', ".---"},
@@ -73,9 +69,6 @@ const PatronMorse DICCIONARIO_MORSE[] = {
   {'0', "-----"}, {'?', "..--.."},{'.', ".-.-.-"},{'/', "-..-."}, {',', "--..--"}
 };
 
-/**
- * @brief Busca y retorna la representación en código morse de un caracter dado.
- */
 const char* obtenerCodigoMorse(char c) {
   for (size_t i = 0; i < sizeof(DICCIONARIO_MORSE)/sizeof(PatronMorse); i++) {
     if (DICCIONARIO_MORSE[i].c == c) return DICCIONARIO_MORSE[i].codigo;
@@ -86,14 +79,13 @@ const char* obtenerCodigoMorse(char c) {
 // ============================================================================
 // ESTRUCTURA DE PAQUETE DIGITAL LORA (14 BYTES)
 // ============================================================================
-// Cabecera compacta para transmisiones de radioaficionado en banda ISM/LoRa
 struct __attribute__((packed)) TramaMrMorse {
-  uint8_t  magicHeader[2]; // [0x4D, 0x4D] -> Identificador de cabecera "MM"
-  uint8_t  tipoMensaje;    // 0x01: GRUPO_KOCH, 0x02: KEY_DOWN, 0x03: KEY_UP, 0x04: QSO_LIBRE
-  char     callsign[6];    // Indicativo de estación emisor (ej. "EA4ILN")
-  uint8_t  wpm;            // Velocidad activa en palabras por minuto
-  uint8_t  longitudTexto;  // Longitud real útil del payload
-  char     payload[5];     // Bloque de caracteres transmitidos (ej. "KMRSU")
+  uint8_t  magicHeader[2]; // "MM"
+  uint8_t  tipoMensaje;    // 0x01: GRUPO_KOCH
+  char     callsign[6];    // Indicativo (ej. "EA4ILN")
+  uint8_t  wpm;            // Velocidad de la trama enviada
+  uint8_t  longitudTexto;  // Numero de caracteres validos en payload
+  char     payload[5];     // Cadena del grupo transmitido
 };
 
 // ============================================================================
@@ -103,21 +95,25 @@ Adafruit_SSD1306 display(128, 64, &Wire, OLED_RST);
 SX1262 radio = new Module(LORA_NSS, LORA_DIO1, LORA_NRST, LORA_BUSY);
 Preferences prefs;
 
-uint8_t pantallaActual = 1;         // Pantalla principal actual (1 a 4)
-const uint8_t TOTAL_PANTALLAS = 4;
+// Interrupcion por hardware para recepcion LoRa
+volatile bool flagPaqueteRecibido = false;
 
-uint8_t opcionNavegacionP1234 = 1;  // Selector barra inferior: 0 = "ant.", 1 = "sig." (por defecto "sig.")
+void IRAM_ATTR cbInterrupcionLora() {
+  flagPaqueteRecibido = true;
+}
+
+uint8_t pantallaActual = 1;         
+const uint8_t TOTAL_PANTALLAS = 4;
+uint8_t opcionNavegacionP1234 = 1;  // 0 = "ant.", 1 = "sig."
 
 int contadorPulsaciones = 0;
-String estadoLoraStr = "Iniciando...";
+String estadoLoraStr = "INICIANDO...";
 bool modoRadioRxActivo = false;
 
-// Variables de control físico del botón PRG
 bool ultimoEstadoBoton = HIGH;
 unsigned long tiempoInicioPulsacion = 0;
 bool procesandoPulsacion = false;
 
-// Estructura de estadísticas locales persistidas en NVS por lección Koch
 struct StatsLeccion {
   uint16_t vecesCompletada;
   uint8_t maxAcierto;
@@ -125,11 +121,10 @@ struct StatsLeccion {
 };
 StatsLeccion statsKoch[40];
 
-// Variables de configuración de la Pantalla 3 / Entrenador Koch
 bool enSubpantallaCW = false;
 bool enPractica3_2 = false;
 bool enEstadisticas3_5 = false;
-uint8_t opcionPantalla3 = 2; // Por defecto en 2 (barra inferior "sig.")
+uint8_t opcionPantalla3 = 2; // 0=CONTINUAR, 1=ESTADISTICAS, 2=BARRA INFERIOR (ant/sig)
 
 uint8_t wpmCW = 25;
 uint16_t espaciadoCW = 200;
@@ -138,7 +133,6 @@ uint8_t caracteresCW = 5;
 uint8_t gruposCW = 20;
 uint8_t opcionSubpantalla = 5;
 
-// Máquina de estados interna para la sesión de práctica CW
 enum EstadoCW { 
   CW_IDLE, 
   CW_GENERAR_GRUPO, 
@@ -165,27 +159,22 @@ uint8_t opcionPantallaCorregir = 0;
 uint8_t paginaStats3_5 = 0;     
 bool confirmandoBorrado = false;
 
-// Temporizadores no bloqueantes para la reproducción de Morse
 unsigned long tiempoCWProximo = 0;
 int idxCaracter = 0;
 int idxElemento = 0;
 const char* codigoElementoActual = "";
 bool ledEncendido = false;
 
-// ============================================================================
-// VARIABLES Y ESTADOS PARA PANTALLA 4 (TRANSCEPTOR LORA & KEYER)
-// ============================================================================
+// Variables de estado para Pantalla 4 (Transceptor LoRa)
 bool enPantalla4_Sub = false;  
-uint8_t opcionPantalla4 = 2;   // Por defecto en 2 (barra inferior "sig.")
+uint8_t opcionPantalla4 = 2;   // 0=CW DUO, 1=CW QSO, 2=BARRA INFERIOR (ant/sig)
 uint8_t subpantalla4Activa = 0;
 
-// Subpantalla 4.1 (Modo Dúo LoRa / Práctica cruzada)
-uint8_t opcionDuo4_1 = 3;      // 0=WPM, 1=SP, 2=LECCION, 3=ENVIAR, 4=ATRAS
+uint8_t opcionDuo4_1 = 3;      
 String grupoDuoTransmitido = "";
 String grupoDuoRecibido = "";
 bool grupoDuoRevelado = false;
 
-// Control local de emisión/recepción de audio y LED en modo Dúo LoRa
 bool emitiendoMorseDuo = false;
 String cadenaMorseAEmitirDuo = "";
 int idxCharDuo = 0;
@@ -194,32 +183,25 @@ const char* codigoElemDuo = "";
 unsigned long tiempoProximoDuo = 0;
 bool estadoTonoDuo = false;
 
-// Subpantalla 4.2 (Keyer manual y telemetría de radio)
 uint8_t modoKeyer4_2 = 0;
 int rssiUltimo = 0;
 float snrUltimo = 0.0;
 
 // ============================================================================
-// CONTROL UNIFICADO DE TONO DE AUDIO Y LED MORSE
+// CONTROL DE AUDIO Y LED MORSE
 // ============================================================================
-/**
- * @brief Activa o silencia simultáneamente el LED indicador y la salida PWM de audio.
- */
 void conmutarEmisionMorse(bool activar) {
   digitalWrite(LED_PIN, activar ? HIGH : LOW);
   if (activar) {
-    ledcWrite(CANAL_PWM_AUDIO, 128); // Genera onda cuadrada (50% Duty Cycle) a 600 Hz
+    ledcWrite(CANAL_PWM_AUDIO, 128); 
   } else {
-    ledcWrite(CANAL_PWM_AUDIO, 0);   // Silencia completamente la salida PWM
+    ledcWrite(CANAL_PWM_AUDIO, 0);   
   }
 }
 
 // ============================================================================
 // MEMORIA PERSISTENTE NVS
 // ============================================================================
-/**
- * @brief Carga las configuraciones de usuario y estadísticas de lecciones desde la NVS.
- */
 void cargarDatosNVS() {
   prefs.begin("mr_morse", true);
   wpmCW = prefs.getUChar("wpm", 25);
@@ -240,9 +222,6 @@ void cargarDatosNVS() {
   prefs.end();
 }
 
-/**
- * @brief Almacena los parámetros actuales de CW en la memoria flash no volátil.
- */
 void guardarUltimaConfiguracionNVS() {
   prefs.begin("mr_morse", false);
   prefs.putUChar("wpm", wpmCW);
@@ -253,9 +232,6 @@ void guardarUltimaConfiguracionNVS() {
   prefs.end();
 }
 
-/**
- * @brief Guarda los resultados de acierto de una lección completada en NVS.
- */
 void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
   if (lecc < 1 || lecc > 40) return;
   uint8_t idx = lecc - 1;
@@ -285,9 +261,6 @@ void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
   prefs.end();
 }
 
-/**
- * @brief Restablece todos los registros estadísticos y configuraciones por defecto.
- */
 void borrarTodasLasEstadisticasNVS() {
   prefs.begin("mr_morse", false);
   prefs.clear();
@@ -302,7 +275,7 @@ void borrarTodasLasEstadisticasNVS() {
 }
 
 // ============================================================================
-// LECTURA DE BATERÍA (CALIBRADO A 4.20V / 100%)
+// LECTURA DE BATERIA (4.20V / 100%)
 // ============================================================================
 enum EstadoAlimentacion { SOLO_USB, BAT_DESCARGA };
 
@@ -312,9 +285,6 @@ struct BateriaInfo {
   EstadoAlimentacion estado;
 };
 
-/**
- * @brief Realiza la lectura analógica del divisor de tensión de la batería LiPo.
- */
 BateriaInfo leerBateria() {
   pinMode(ADC_CTRL_PIN, OUTPUT);
   digitalWrite(ADC_CTRL_PIN, HIGH);
@@ -349,11 +319,8 @@ BateriaInfo leerBateria() {
 }
 
 // ============================================================================
-// DIBUJO Y RENDERIZADO OLED
+// DIBUJO Y RENDERIZADO OLED (BARRA SUPERIOR: MAYÚSCULAS | INFERIOR: MINÚSCULAS)
 // ============================================================================
-/**
- * @brief Dibuja la barra superior común con información de batería/estado.
- */
 void dibujarEncabezado() {
   BateriaInfo bat = leerBateria();
   display.setTextSize(1);
@@ -400,7 +367,7 @@ void dibujarEncabezado() {
     display.print(txtRight);
 
   } else {
-    String txtRight = "BAT: " + strBat;
+    String txtRight = "BAT:" + strBat;
     int16_t x1, y1;
     uint16_t w, h;
     display.getTextBounds(txtRight, 0, 0, &x1, &y1, &w, &h);
@@ -411,9 +378,6 @@ void dibujarEncabezado() {
   display.drawLine(0, 9, 128, 9, SSD1306_WHITE);
 }
 
-/**
- * @brief Muestra un pie de página centrado en la parte inferior de la pantalla.
- */
 void dibujarPieCentrado(const String& txt) {
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setTextSize(1);
@@ -426,24 +390,19 @@ void dibujarPieCentrado(const String& txt) {
   display.print(txt);
 }
 
-/**
- * @brief Renderiza la barra de navegación inferior para pantallas principales (1, 2, 3 y 4).
- */
-void dibujarBarraAvanzarRetroceder() {
+void dibujarBarraAvanzarRetroceder(bool enfocada) {
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
 
-  // Izquierda: ant. (Muestra '>' solo si la opción actual es 0)
   display.setCursor(0, 55);
-  if (opcionNavegacionP1234 == 0) {
+  if (enfocada && opcionNavegacionP1234 == 0) {
     display.print(F("> ant."));
   } else {
     display.print(F("  ant."));
   }
 
-  // Derecha: sig. (Muestra '>' solo si la opción actual es 1)
-  String txtSig = (opcionNavegacionP1234 == 1 ? "> sig." : "  sig.");
+  String txtSig = (enfocada && opcionNavegacionP1234 == 1) ? "> sig." : "  sig.";
   int16_t x1, y1;
   uint16_t w, h;
   display.getTextBounds(txtSig, 0, 0, &x1, &y1, &w, &h);
@@ -452,24 +411,25 @@ void dibujarBarraAvanzarRetroceder() {
 }
 
 // ============================================================================
-// TRANSMISIÓN Y RECEPCIÓN LORA
+// TRANSMISION Y RECEPCION LORA POR INTERRUPCION
 // ============================================================================
-/**
- * @brief Inicia la reproducción local no bloqueante de una cadena morse en modo Dúo.
- */
 void iniciarEmisionLocalDuo(String cadena) {
+  cadena.trim();
+  if (cadena.length() == 0) return;
+
+  conmutarEmisionMorse(false);
   cadenaMorseAEmitirDuo = cadena;
-  emitiendoMorseDuo = true;
   idxCharDuo = 0;
   idxElemDuo = 0;
   codigoElemDuo = obtenerCodigoMorse(cadenaMorseAEmitirDuo.charAt(0));
+
+  if (strlen(codigoElemDuo) == 0) return;
+
+  emitiendoMorseDuo = true;
+  estadoTonoDuo = false; 
   tiempoProximoDuo = millis();
-  estadoTonoDuo = false;
 }
 
-/**
- * @brief Gestiona el avance paso a paso del tono y LED en modo Dúo sin bloquear el sistema.
- */
 void procesarEmisionMorseDuoNoBloqueante() {
   if (!emitiendoMorseDuo) return;
   if (millis() < tiempoProximoDuo) return;
@@ -495,22 +455,24 @@ void procesarEmisionMorseDuoNoBloqueante() {
       tiempoProximoDuo = millis() + tElementoGap;
     } else {
       idxCharDuo++;
-      if (idxCharDuo < cadenaMorseAEmitirDuo.length()) {
+      if (idxCharDuo < (int)cadenaMorseAEmitirDuo.length()) {
         codigoElemDuo = obtenerCodigoMorse(cadenaMorseAEmitirDuo.charAt(idxCharDuo));
         idxElemDuo = 0;
         tiempoProximoDuo = millis() + tCharGap;
       } else {
         emitiendoMorseDuo = false;
+        conmutarEmisionMorse(false);
+        
+        if (modoRadioRxActivo) {
+          radio.startReceive();
+        }
       }
     }
   }
 }
 
-/**
- * @brief Transmite un grupo de caracteres vía LoRa empaquetado en la trama Mr. Morse.
- */
 void transmitirGrupoDuoLoRa(String grupo) {
-  iniciarEmisionLocalDuo(grupo);
+  grupoDuoTransmitido = grupo; 
 
   TramaMrMorse trama;
   trama.magicHeader[0] = 'M';
@@ -523,36 +485,65 @@ void transmitirGrupoDuoLoRa(String grupo) {
   memset(trama.payload, 0, 5);
   memcpy(trama.payload, grupo.c_str(), trama.longitudTexto);
 
-  radio.transmit((uint8_t*)&trama, sizeof(TramaMrMorse));
+  Serial.print(F("[LORA TX] ENVIANDO POR AIRE: "));
+  Serial.println(grupo);
+
+  int estadoTx = radio.transmit((uint8_t*)&trama, sizeof(TramaMrMorse));
+  
+  if (estadoTx == RADIOLIB_ERR_NONE) {
+    Serial.println(F("[LORA TX] PAQUETE ENVIADO CON EXITO!"));
+  } else {
+    Serial.print(F("[LORA TX] ERROR RADIOLIB: "));
+    Serial.println(estadoTx);
+  }
+
   radio.startReceive();
+  iniciarEmisionLocalDuo(grupo);
 }
 
-/**
- * @brief Comprueba el buffer del módulo radio para recibir paquetes LoRa entrantes.
- */
 void procesarRecepcionLoRa() {
   if (!modoRadioRxActivo) return;
 
-  uint16_t length = radio.getPacketLength();
-  if (length == sizeof(TramaMrMorse)) {
-    TramaMrMorse tramaRx;
-    int state = radio.readData((uint8_t*)&tramaRx, sizeof(TramaMrMorse));
+  if (!flagPaqueteRecibido) return;
 
-    if (state == RADIOLIB_ERR_NONE) {
-      if (tramaRx.magicHeader[0] == 'M' && tramaRx.magicHeader[1] == 'M') {
-        rssiUltimo = radio.getRSSI();
-        snrUltimo = radio.getSNR();
+  flagPaqueteRecibido = false;
 
-        if (tramaRx.tipoMensaje == 0x01 && subpantalla4Activa == 1) {
-          grupoDuoRecibido = String(tramaRx.payload).substring(0, tramaRx.longitudTexto);
-          grupoDuoRevelado = false;
-          iniciarEmisionLocalDuo(grupoDuoRecibido);
-        } else if (tramaRx.tipoMensaje == 0x02 || tramaRx.tipoMensaje == 0x03) {
-          conmutarEmisionMorse(tramaRx.tipoMensaje == 0x02);
+  if (emitiendoMorseDuo) {
+    radio.startReceive();
+    return;
+  }
+
+  TramaMrMorse tramaRx;
+  int state = radio.readData((uint8_t*)&tramaRx, sizeof(TramaMrMorse));
+
+  if (state == RADIOLIB_ERR_NONE) {
+    if (tramaRx.magicHeader[0] == 'M' && tramaRx.magicHeader[1] == 'M') {
+      rssiUltimo = radio.getRSSI();
+      snrUltimo = radio.getSNR();
+
+      if (tramaRx.tipoMensaje == 0x01 && subpantalla4Activa == 1) {
+        char bufferPayload[6] = {0};
+        memcpy(bufferPayload, tramaRx.payload, min((int)tramaRx.longitudTexto, 5));
+        String grupoRx = String(bufferPayload);
+        grupoRx.trim();
+
+        if (grupoRx == grupoDuoTransmitido && grupoDuoTransmitido.length() > 0) {
+          grupoDuoTransmitido = ""; 
+          radio.startReceive();
+          return;
         }
+
+        grupoDuoRecibido = grupoRx;
+        grupoDuoRevelado = false; 
+
+        Serial.print(F("[LORA RX INTERRUPCION OK] NUEVO GRUPO REMOTO: "));
+        Serial.println(grupoDuoRecibido);
+
+        iniciarEmisionLocalDuo(grupoDuoRecibido);
       }
     }
   }
+
   radio.startReceive();
 }
 
@@ -574,7 +565,7 @@ void renderizarPantalla1() {
   display.setCursor(x, y);
   display.print(titulo);
 
-  dibujarBarraAvanzarRetroceder();
+  dibujarBarraAvanzarRetroceder(true);
 }
 
 void renderizarPantalla2() {
@@ -582,18 +573,18 @@ void renderizarPantalla2() {
   display.setTextSize(1);
 
   display.setCursor(0, 16);
-  display.print(F("LoRa: "));
+  display.print(F("LORA: "));
   display.println(estadoLoraStr);
 
   BateriaInfo bat = leerBateria();
   display.setCursor(0, 32);
-  display.print(F("VBat: "));
+  display.print(F("VBAT: "));
   display.print(bat.voltaje, 2);
   display.print(F("V ("));
   display.print(bat.porcentaje);
   display.print(F("%)"));
 
-  dibujarBarraAvanzarRetroceder();
+  dibujarBarraAvanzarRetroceder(true);
 }
 
 void renderizarPantalla3() {
@@ -619,13 +610,13 @@ void renderizarPantalla3() {
 
     display.setCursor(15, 28);
     display.print(opcionPantalla3 == 0 ? "> " : "  ");
-    display.print(F("< continuar >"));
+    display.print(F("< CONTINUAR >"));
 
     display.setCursor(15, 38);
     display.print(opcionPantalla3 == 1 ? "> " : "  ");
-    display.print(F("< estadisticas >"));
+    display.print(F("< ESTADISTICAS >"));
 
-    dibujarBarraAvanzarRetroceder();
+    dibujarBarraAvanzarRetroceder(opcionPantalla3 == 2);
 
   } else if (enSubpantallaCW && !enPractica3_2) {
     display.setTextSize(1);
@@ -651,7 +642,7 @@ void renderizarPantalla3() {
     display.print(F("GRUPOS: ")); display.print(gruposCW);
 
     String txtPie3_1 = (opcionSubpantalla == 5 ? "> " : "  ") + String("iniciar  ") + 
-                       (opcionSubpantalla == 6 ? "> " : "  ") + String("atras");
+                       (opcionSubpantalla == 6 ? "> " : "  ") + String("volver");
     dibujarPieCentrado(txtPie3_1);
 
   } else if (enEstadisticas3_5) {
@@ -671,15 +662,28 @@ void renderizarPantalla3() {
         if (lNum < 10) display.print(F("0"));
         display.print(lNum);
         display.print(F(":"));
+
+        // Alineacion limpia de veces completadas
+        if (statsKoch[idx].vecesCompletada < 10) display.print(F(" "));
         display.print(statsKoch[idx].vecesCompletada);
-        display.print(F("x MAX:"));
-        display.print(statsKoch[idx].maxAcierto);
-        display.print(F("% MIN:"));
-        if (statsKoch[idx].vecesCompletada == 0) display.print(F("0%"));
-        else { display.print(statsKoch[idx].minAcierto); display.print(F("%")); }
+        display.print(F("x ["));
+
+        // DIBUJO DE BARRA VISUAL OPCION 4 (8 BLOQUES)
+        uint8_t maxPct = statsKoch[idx].maxAcierto;
+        uint8_t bloques = (maxPct * 8) / 100;
+        for (uint8_t b = 0; b < 8; b++) {
+          display.print(b < bloques ? "=" : ".");
+        }
+        display.print(F("]"));
+
+        // Alineacion fija del porcentaje final sin saltos de linea
+        if (maxPct < 100) display.print(F(" "));
+        if (maxPct < 10) display.print(F(" "));
+        display.print(maxPct);
+        display.print(F("%"));
       }
 
-      dibujarPieCentrado(". : mas   - : atras");
+      dibujarPieCentrado(". : mas   - : volver");
 
     } else {
       display.setCursor(10, 16);
@@ -689,10 +693,10 @@ void renderizarPantalla3() {
       if (confirmandoBorrado) {
         display.println(F(" ¿CONFIRMAR BORRADO?"));
       } else {
-        display.println(F("  > Borrar Todo <"));
+        display.println(F("  > BORRAR TODO <"));
       }
 
-      dibujarPieCentrado(". : borrar   - : atras");
+      dibujarPieCentrado(". : borrar   - : volver");
     }
 
   } else if (enPractica3_2) {
@@ -753,18 +757,18 @@ void renderizarPantalla3() {
       display.println(F("- RESULTADO KOCH -"));
 
       display.setCursor(0, 26);
-      display.print(F("Aciertos: "));
+      display.print(F("ACIERTOS: "));
       display.print(pctAciertos, 1);
       display.println(F("%"));
 
       display.setCursor(0, 41);
-      display.print(F("Repetir si <=90%"));
+      display.print(F("REPETIR SI <90%")); // Criterio ajustado: estrictamente menor a 90%
 
       dibujarPieCentrado(". : volver   - : rep.");
 
     } else {
       display.setCursor(0, 12);
-      display.print(F("Grupo: "));
+      display.print(F("GRUPO: "));
       display.print(grupoActualNum);
       display.print(F(" / "));
       display.print(gruposCW);
@@ -782,7 +786,7 @@ void renderizarPantalla3() {
         if (estadoCW == CW_PAUSADO) {
           display.print(F("    [ PAUSADO ]"));
         } else {
-          display.print(F("  TX LED (Oculto)..."));
+          display.print(F("  TX LED (OCULTO)..."));
         }
       }
 
@@ -795,7 +799,6 @@ void renderizarPantalla4() {
   display.setTextColor(SSD1306_WHITE);
 
   if (!enPantalla4_Sub) {
-    // PANTALLA 4 PRINCIPAL
     display.setTextSize(1);
     
     const char* titulo = " TRANSCEPTOR LORA ";
@@ -815,16 +818,15 @@ void renderizarPantalla4() {
 
     display.setCursor(5, 28);
     display.print(opcionPantalla4 == 0 ? "> " : "  ");
-    display.print(F("< CW duo (Lora) >"));
+    display.print(F("< CW DUO (LORA) >"));
 
     display.setCursor(5, 38);
     display.print(opcionPantalla4 == 1 ? "> " : "  ");
-    display.print(F("< CW QSO (Keyer) >"));
+    display.print(F("< CW QSO (KEYER) >"));
 
-    dibujarBarraAvanzarRetroceder();
+    dibujarBarraAvanzarRetroceder(opcionPantalla4 == 2);
 
   } else if (subpantalla4Activa == 1) {
-    // SUBPANTALLA 4.1: CW DÚO CON AJUSTE DE WPM, SP Y LECCIÓN
     display.setTextSize(1);
 
     display.setCursor(0, 11);
@@ -849,40 +851,36 @@ void renderizarPantalla4() {
       if (grupoDuoRevelado) {
         display.print(F("RX <- [")); display.print(grupoDuoRecibido); display.print(F("]"));
       } else {
-        display.print(F("RX <- LED (Oculto)"));
+        display.print(F("RX <- LED (OCULTO)"));
         display.setCursor(0, 42);
         display.print(F(" [-: rev]"));
       }
     } else {
-      display.print(F("RX <- Escuchando..."));
+      display.print(F("RX <- ESCUCHANDO..."));
     }
 
     String txtPie4_1 = (opcionDuo4_1 == 3 ? "> " : "  ") + String("enviar  ") + 
-                       (opcionDuo4_1 == 4 ? "> " : "  ") + String("atras");
+                       (opcionDuo4_1 == 4 ? "> " : "  ") + String("volver");
     dibujarPieCentrado(txtPie4_1);
 
   } else if (subpantalla4Activa == 2) {
-    // SUBPANTALLA 4.2: KEYER MANUAL & QSO REAL-TIME
     display.setTextSize(1);
     display.setCursor(0, 12);
     display.print(F("KEYER: "));
-    if (modoKeyer4_2 == 0) display.print(F("Auto-Practica"));
-    else if (modoKeyer4_2 == 1) display.print(F("QSO Real-Time"));
-    else display.print(F("Modo Eco"));
+    if (modoKeyer4_2 == 0) display.print(F("AUTO-PRACTICA"));
+    else if (modoKeyer4_2 == 1) display.print(F("QSO REAL-TIME"));
+    else display.print(F("MODO ECO"));
 
     display.setCursor(0, 26);
-    display.print(F("Pins: Dit=G2 Dah=G3"));
+    display.print(F("PINS: DIT=G2 DAH=G3"));
 
     display.setCursor(0, 38);
-    display.print(F("RSSI: ")); display.print(rssiUltimo); display.print(F("dBm"));
+    display.print(F("RSSI: ")); display.print(rssiUltimo); display.print(F("DBM"));
 
-    dibujarPieCentrado(". : modo   - : atras");
+    dibujarPieCentrado(". : modo   - : volver");
   }
 }
 
-/**
- * @brief Limpia el buffer y redirige al renderizado de la pantalla activa.
- */
 void actualizarPantalla() {
   display.clearDisplay();
   dibujarEncabezado();
@@ -898,11 +896,8 @@ void actualizarPantalla() {
 }
 
 // ============================================================================
-// MÁQUINA DE ESTADOS CW Y BOTÓN PRG
+// MAQUINA DE ESTADOS CW Y BOTON PRG
 // ============================================================================
-/**
- * @brief Inicializa los parámetros de una nueva sesión de práctica de Koch.
- */
 void iniciarPracticaCW() {
   enPractica3_2 = true;
   grupoActualNum = 0;
@@ -920,9 +915,6 @@ void iniciarPracticaCW() {
   tiempoCWProximo = millis();
 }
 
-/**
- * @brief Detiene la práctica activa y devuelve el sistema al menú del entrenador.
- */
 void detenerPracticaCW() {
   conmutarEmisionMorse(false);
   ledEncendido = false;
@@ -931,9 +923,6 @@ void detenerPracticaCW() {
   actualizarPantalla();
 }
 
-/**
- * @brief Genera aleatoriamente un grupo de caracteres según el nivel de la lección Koch.
- */
 void generarGrupoKoch() {
   grupoActualStr = "";
   uint8_t maxIdx = constrain(leccionCW, 1, TOTAL_CARACTERES_KOCH);
@@ -947,9 +936,6 @@ void generarGrupoKoch() {
   textoCompletoLeccion += grupoActualStr;
 }
 
-/**
- * @brief Maneja los estados temporizados de emisión de elementos morse de forma no bloqueante.
- */
 void procesarMaquinaEstadosCW() {
   if (!enPractica3_2 || estadoCW == CW_PAUSADO || estadoCW == CW_IDLE || 
       estadoCW == CW_PANTALLA_3_3_LISTADO || estadoCW == CW_PANTALLA_CORREGIR_ERRORES || 
@@ -1003,7 +989,7 @@ void procesarMaquinaEstadosCW() {
           if (idxCaracter < grupoActualStr.length()) {
             codigoElementoActual = obtenerCodigoMorse(grupoActualStr.charAt(idxCaracter));
             idxElemento = 0;
-            tiempoCWProximo = millis() + tCharGap;
+            tiempoProximoDuo = millis() + tCharGap;
           } else {
             mostrarTextoGrupo = true;
             actualizarPantalla();
@@ -1024,11 +1010,8 @@ void procesarMaquinaEstadosCW() {
 }
 
 // ============================================================================
-// PROCESAMIENTO INTERACTIVO DEL BOTÓN PRG
+// PROCESAMIENTO INTERACTIVO DEL BOTON PRG
 // ============================================================================
-/**
- * @brief Gestiona la lógica de pulsaciones cortas y largas del botón físico PRG.
- */
 void procesarBoton() {
   bool estadoActual = digitalRead(BUTTON_PIN);
 
@@ -1045,10 +1028,21 @@ void procesarBoton() {
     if (pantallaActual == 4) {
       if (!enPantalla4_Sub) {
         if (duracion >= TIEMPO_PULSACION_LARGA) {
-          if (opcionPantalla4 == 0) opcionPantalla4 = 1;
-          else if (opcionPantalla4 == 1) { opcionPantalla4 = 2; opcionNavegacionP1234 = 1; }
-          else { opcionPantalla4 = 0; }
+          // CICLO ROTATIVO PANTALLA 4 CON PULSACION LARGA (-):
+          // [sig.] -> [CW DUO] -> [CW QSO] -> [ant.] -> [sig.] ...
+          if (opcionPantalla4 == 2 && opcionNavegacionP1234 == 1) {
+            opcionPantalla4 = 0;
+          } else if (opcionPantalla4 == 0) {
+            opcionPantalla4 = 1;
+          } else if (opcionPantalla4 == 1) {
+            opcionPantalla4 = 2;
+            opcionNavegacionP1234 = 0;
+          } else if (opcionPantalla4 == 2 && opcionNavegacionP1234 == 0) {
+            opcionPantalla4 = 2;
+            opcionNavegacionP1234 = 1;
+          }
         } else if (duracion > 30) {
+          // PULSACION CORTA (.): EJECUTAR OPCION SELECCIONADA
           if (opcionPantalla4 == 0) {
             enPantalla4_Sub = true; subpantalla4Activa = 1;
             modoRadioRxActivo = true; opcionDuo4_1 = 3;
@@ -1056,10 +1050,15 @@ void procesarBoton() {
             enPantalla4_Sub = true; subpantalla4Activa = 2;
             modoRadioRxActivo = true;
           } else if (opcionPantalla4 == 2) {
-            if (opcionNavegacionP1234 == 0) pantallaActual = 3;
-            else pantallaActual = 1;
-            opcionPantalla4 = 2; // Restablece a "sig." por defecto
-            opcionNavegacionP1234 = 1;
+            if (opcionNavegacionP1234 == 0) {
+              pantallaActual = 3;
+              opcionPantalla3 = 2;          // Por defecto al entrar a P3: barra inferior
+              opcionNavegacionP1234 = 1;    // "sig."
+            } else {
+              pantallaActual = 1;
+              opcionNavegacionP1234 = 1;
+            }
+            opcionPantalla4 = 2;
           }
         }
       } else if (subpantalla4Activa == 1) {
@@ -1076,9 +1075,9 @@ void procesarBoton() {
             case 2: leccionCW++; if (leccionCW > 40) leccionCW = 1; break;
             case 3: {
               uint8_t maxIdx = constrain(leccionCW, 1, TOTAL_CARACTERES_KOCH);
-              grupoDuoTransmitido = "";
-              for (int i = 0; i < caracteresCW; i++) grupoDuoTransmitido += TABLA_KOCH[random(0, maxIdx)];
-              transmitirGrupoDuoLoRa(grupoDuoTransmitido);
+              String nuevoGrupo = "";
+              for (int i = 0; i < caracteresCW; i++) nuevoGrupo += TABLA_KOCH[random(0, maxIdx)];
+              transmitirGrupoDuoLoRa(nuevoGrupo);
               break;
             }
             case 4: enPantalla4_Sub = false; break;
@@ -1151,29 +1150,57 @@ void procesarBoton() {
         }
       } else {
         if (duracion >= TIEMPO_PULSACION_LARGA) {
-          if (opcionPantalla3 == 0) opcionPantalla3 = 1;
-          else if (opcionPantalla3 == 1) { opcionPantalla3 = 2; opcionNavegacionP1234 = 1; }
-          else { opcionPantalla3 = 0; }
-        } else if (duracion > 30) {
-          if (opcionPantalla3 == 0) { enSubpantallaCW = true; opcionSubpantalla = 5; }
-          else if (opcionPantalla3 == 1) { enEstadisticas3_5 = true; paginaStats3_5 = 0; confirmandoBorrado = false; }
-          else if (opcionPantalla3 == 2) {
-            if (opcionNavegacionP1234 == 0) pantallaActual = 2;
-            else pantallaActual = 4;
-            opcionPantalla3 = 2; // Restablece a "sig." por defecto
+          // CICLO ROTATIVO PANTALLA 3 CON PULSACION LARGA (-):
+          // [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [ant.] -> [sig.] ...
+          if (opcionPantalla3 == 2 && opcionNavegacionP1234 == 1) {
+            opcionPantalla3 = 0;
+          } else if (opcionPantalla3 == 0) {
+            opcionPantalla3 = 1;
+          } else if (opcionPantalla3 == 1) {
+            opcionPantalla3 = 2;
+            opcionNavegacionP1234 = 0;
+          } else if (opcionPantalla3 == 2 && opcionNavegacionP1234 == 0) {
+            opcionPantalla3 = 2;
             opcionNavegacionP1234 = 1;
+          }
+        } else if (duracion > 30) {
+          // PULSACION CORTA (.): EJECUTAR OPCION SELECCIONADA
+          if (opcionPantalla3 == 0) {
+            enSubpantallaCW = true; 
+            opcionSubpantalla = 5;
+          } else if (opcionPantalla3 == 1) {
+            enEstadisticas3_5 = true; 
+            paginaStats3_5 = 0; 
+            confirmandoBorrado = false;
+          } else if (opcionPantalla3 == 2) {
+            if (opcionNavegacionP1234 == 0) {
+              pantallaActual = 2; // Retroceder a Pantalla 2
+            } else {
+              pantallaActual = 4; // Avanzar a Pantalla 4
+              opcionPantalla4 = 2;
+              opcionNavegacionP1234 = 1;
+            }
+            opcionPantalla3 = 2; 
           }
         }
       }
 
     } else {
-      // NAVEGACIÓN EN PANTALLAS 1 Y 2
       if (duracion >= TIEMPO_PULSACION_LARGA) opcionNavegacionP1234 = (opcionNavegacionP1234 == 0) ? 1 : 0;
       else if (duracion > 30) {
         if (opcionNavegacionP1234 == 0) pantallaActual = (pantallaActual == 1) ? TOTAL_PANTALLAS : pantallaActual - 1;
         else pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
         contadorPulsaciones++;
-        opcionNavegacionP1234 = 1;
+        
+        if (pantallaActual == 3) {
+          opcionPantalla3 = 2;       // Foco en barra inferior
+          opcionNavegacionP1234 = 1; // Apuntando por defecto a "sig."
+        } else if (pantallaActual == 4) {
+          opcionPantalla4 = 2;
+          opcionNavegacionP1234 = 1;
+        } else {
+          opcionNavegacionP1234 = 1;
+        }
       }
     }
 
@@ -1186,9 +1213,6 @@ void procesarBoton() {
 // ============================================================================
 // SETUP Y BUCLE PRINCIPAL
 // ============================================================================
-/**
- * @brief Configura los pines de control de alimentación y periféricos iniciales.
- */
 void encenderPerifericos() {
   pinMode(VEXT_CTRL, OUTPUT);
   digitalWrite(VEXT_CTRL, LOW);
@@ -1198,26 +1222,25 @@ void encenderPerifericos() {
   pinMode(KEYER_PADDLE_DIT, INPUT_PULLUP);
   pinMode(KEYER_PADDLE_DAH, INPUT_PULLUP);
 
-  // Configurar temporizador LEDC para el tono de audio PWM a 600 Hz
   ledcSetup(CANAL_PWM_AUDIO, FREC_AUDIO_HZ, RES_PWM_AUDIO);
   ledcAttachPin(SPEAKER_PWM_PIN, CANAL_PWM_AUDIO);
-  ledcWrite(CANAL_PWM_AUDIO, 0); // Silencio inicial
+  ledcWrite(CANAL_PWM_AUDIO, 0);
 
   delay(100);
 }
 
-/**
- * @brief Inicialización general del sistema operativo y submódulos de hardware.
- */
 void setup() {
   Serial.begin(115200);
+  delay(1000);
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3b..."));
+  
   encenderPerifericos();
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   Wire.begin(OLED_SDA, OLED_SCL);
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("Error OLED"));
+    Serial.println(F("[ERROR] OLED"));
     for (;;);
   }
 
@@ -1226,20 +1249,23 @@ void setup() {
   cargarDatosNVS();
   actualizarPantalla();
 
+  Serial.println(F("[LORA] INICIANDO SX1262..."));
   int state = radio.begin(868.0, 125.0, 9, 7, 0x12, 10, 8);
   if (state == RADIOLIB_ERR_NONE) {
-    estadoLoraStr = "868MHz OK";
+    estadoLoraStr = "868MHZ OK";
+    Serial.println(F("[LORA] MODULO OK. VINCULANDO ISR EN DIO1..."));
+    
+    radio.setPacketReceivedAction(cbInterrupcionLora);
     radio.startReceive();
   } else {
     estadoLoraStr = "ERR (" + String(state) + ")";
+    Serial.print(F("[LORA ERROR] CODE: "));
+    Serial.println(state);
   }
 
   actualizarPantalla();
 }
 
-/**
- * @brief Bucle principal de ejecución del microcontrolador.
- */
 void loop() {
   procesarBoton();
   procesarMaquinaEstadosCW();
