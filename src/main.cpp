@@ -1,3 +1,11 @@
+/**
+ * @file main.cpp
+ * @author Mr. Morse EA4ILN Project
+ * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Dispositivo de aprendizaje de CW (Método Koch) y Activaciones SOTA/POTA.
+ * @version 0.2b (beta)
+ * @date 2026-10-07
+ */
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -6,31 +14,40 @@
 #include <Preferences.h>
 
 // ============================================================================
-// DEFINICIÓN DE PINES NATIVOS Y CONSTANTES (Heltec WiFi LoRa 32 V3 / ESP32-S3)
+// DEFINICIÓN DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
 // ============================================================================
 #define OLED_SDA        17  // Pin I2C Data para la pantalla OLED
 #define OLED_SCL        18  // Pin I2C Clock para la pantalla OLED
 #define OLED_RST        21  // Reset físico de la pantalla OLED
-#define VEXT_CTRL       36  // Control MOSFET de alimentación a periféricos (LOW = encendido)
+#define VEXT_CTRL       36  // Control MOSFET de alimentación a periféricos (LOW = ON)
 
 #define BUTTON_PIN      0   // Botón PRG físico integrado en la placa
-#define LED_PIN         35  // LED blanco integrado en la Heltec V3 para emisión Morse
+#define LED_PIN         35  // LED blanco integrado para emisión visual Morse
 
 #define LORA_NSS        8   // Pin Chip Select del SX1262
 #define LORA_DIO1       14  // Pin de Interrupción/DIO1 del SX1262
 #define LORA_NRST       12  // Pin Reset del SX1262
 #define LORA_BUSY       13  // Pin Busy del SX1262
 
-// Configuración de la Batería LiPo mediante divisor resistivo interno
+// ASIGNACIÓN RESERVADA PARA KEYER Y AUDIO PWM (FUTURA CONEXIÓN FÍSICA)
+#define KEYER_PADDLE_DIT 2  // GPIO 2: Punto (Dit) o Straight Key
+#define KEYER_PADDLE_DAH 3  // GPIO 3: Raya (Dah)
+#define SPEAKER_PWM_PIN  25 // GPIO 25: Salida PWM de Audio (600 Hz) para altavoz/buzzer
+
+#define FREC_AUDIO_HZ    600// Tono estándar de telegrafía Morse (600 Hz)
+#define CANAL_PWM_AUDIO  0  // Canal LEDC PWM del ESP32-S3
+#define RES_PWM_AUDIO    8  // Resolución de 8 bits (0-255)
+
+// Batería LiPo y Calibración
 #define VBAT_ADC_PIN    1   // GPIO 1 (ADC1 Canal 0)
-#define ADC_CTRL_PIN    37  // MOSFET de control para lectura de batería (HIGH = encendido)
-#define VBAT_MULTIPLIER 5.012f // Multiplicador de escala ajustado para precisión
-#define TIEMPO_PULSACION_LARGA 600 // Milisegundos requeridos para detectar pulsación larga (-)
+#define ADC_CTRL_PIN    37  // MOSFET de control para lectura de batería (HIGH = ON)
+#define VBAT_MULTIPLIER 5.112f // Recalibrado para mostrar exactamente 4.20V al 100%
+#define TIEMPO_PULSACION_LARGA 600 // ms requeridos para considerar pulsación larga (-)
 
 // ============================================================================
-// DICCIONARIO MORSE Y TABLA DE CARACTERES KOCH
+// DICCIONARIO MORSE Y TABLA KOCH
 // ============================================================================
-// Secuencia estándar oficial de aprendizaje del Método Koch (40 lecciones)
+// Secuencia estándar de aprendizaje progresivo del método Koch (hasta 40 lecciones/caracteres)
 const char TABLA_KOCH[] = {
   'K', 'M', 'R', 'S', 'U', 'A', 'I', 'O', 'N', 'E', 
   'T', 'L', 'Y', 'P', 'Q', 'W', 'J', 'Z', 'F', 'C', 
@@ -39,12 +56,12 @@ const char TABLA_KOCH[] = {
 };
 const uint8_t TOTAL_CARACTERES_KOCH = sizeof(TABLA_KOCH);
 
-// Estructura de mapeo Carácter ASCII -> Código Morse (puntos y rayas)
 struct PatronMorse {
   char c;
   const char* codigo;
 };
 
+// Tabla de conversión de caracteres alfanuméricos a código morse estándar (dit/dah)
 const PatronMorse DICCIONARIO_MORSE[] = {
   {'A', ".-"},    {'B', "-..."},  {'C', "-.-."},  {'D', "-.."},   {'E', "."},
   {'F', "..-."},  {'G', "--."},   {'H', "...."},  {'I', ".."},    {'J', ".---"},
@@ -56,7 +73,9 @@ const PatronMorse DICCIONARIO_MORSE[] = {
   {'0', "-----"}, {'?', "..--.."},{'.', ".-.-.-"},{'/', "-..-."}, {',', "--..--"}
 };
 
-// Función auxiliar para recuperar el patrón Morse de un carácter dado
+/**
+ * @brief Busca y retorna la representación en código morse de un caracter dado.
+ */
 const char* obtenerCodigoMorse(char c) {
   for (size_t i = 0; i < sizeof(DICCIONARIO_MORSE)/sizeof(PatronMorse); i++) {
     if (DICCIONARIO_MORSE[i].c == c) return DICCIONARIO_MORSE[i].codigo;
@@ -65,84 +84,88 @@ const char* obtenerCodigoMorse(char c) {
 }
 
 // ============================================================================
-// OBJETOS Y VARIABLES GLOBALES DE SISTEMA
+// ESTRUCTURA DE PAQUETE DIGITAL LORA (14 BYTES)
 // ============================================================================
-Adafruit_SSD1306 display(128, 64, &Wire, OLED_RST); // Controlador de Pantalla OLED
-SX1262 radio = new Module(LORA_NSS, LORA_DIO1, LORA_NRST, LORA_BUSY); // Módulo Radio
-Preferences prefs; // Manejador de Memoria Flash NVS
+// Cabecera compacta para transmisiones de radioaficionado en banda ISM/LoRa
+struct __attribute__((packed)) TramaMrMorse {
+  uint8_t  magicHeader[2]; // [0x4D, 0x4D] -> Identificador de cabecera "MM"
+  uint8_t  tipoMensaje;    // 0x01: GRUPO_KOCH, 0x02: KEY_DOWN, 0x03: KEY_UP, 0x04: QSO_LIBRE
+  char     callsign[6];    // Indicativo de estación emisor (ej. "EA4ILN")
+  uint8_t  wpm;            // Velocidad activa en palabras por minuto
+  uint8_t  longitudTexto;  // Longitud real útil del payload
+  char     payload[5];     // Bloque de caracteres transmitidos (ej. "KMRSU")
+};
 
-uint8_t pantallaActual = 1;         // Pantalla principal activa (1, 2 o 3)
-const uint8_t TOTAL_PANTALLAS = 3;  // Total de pantallas navegables en el carrusel base
+// ============================================================================
+// OBJETOS Y VARIABLES GLOBALES
+// ============================================================================
+Adafruit_SSD1306 display(128, 64, &Wire, OLED_RST);
+SX1262 radio = new Module(LORA_NSS, LORA_DIO1, LORA_NRST, LORA_BUSY);
+Preferences prefs;
 
-uint8_t opcionNavegacionP123 = 1;   // 0 = "ant.", 1 = "sig." en la barra inferior de P1, P2 y P3
+uint8_t pantallaActual = 1;         // Pantalla principal actual (1 a 4)
+const uint8_t TOTAL_PANTALLAS = 4;
+
+uint8_t opcionNavegacionP1234 = 1;  // Selector barra inferior: 0 = "ant.", 1 = "sig." (por defecto "sig.")
 
 int contadorPulsaciones = 0;
 String estadoLoraStr = "Iniciando...";
+bool modoRadioRxActivo = false;
 
-// Control de Botón con Anti-rebote (Debounce)
+// Variables de control físico del botón PRG
 bool ultimoEstadoBoton = HIGH;
 unsigned long tiempoInicioPulsacion = 0;
 bool procesandoPulsacion = false;
 
-// ============================================================================
-// ESTRUCTURA DE ESTADÍSTICAS PERSISTENTES EN MEMORIA NVS (FLASH)
-// ============================================================================
+// Estructura de estadísticas locales persistidas en NVS por lección Koch
 struct StatsLeccion {
-  uint16_t vecesCompletada; // Intentos/veces finalizadas
-  uint8_t maxAcierto;       // Mejor porcentaje registrado
-  uint8_t minAcierto;       // Peor porcentaje registrado
+  uint16_t vecesCompletada;
+  uint8_t maxAcierto;
+  uint8_t minAcierto;
 };
+StatsLeccion statsKoch[40];
 
-StatsLeccion statsKoch[40]; // Array estático de rendimiento para las 40 lecciones
+// Variables de configuración de la Pantalla 3 / Entrenador Koch
+bool enSubpantallaCW = false;
+bool enPractica3_2 = false;
+bool enEstadisticas3_5 = false;
+uint8_t opcionPantalla3 = 2; // Por defecto en 2 (barra inferior "sig.")
 
-// ============================================================================
-// VARIABLES DE ESTADO Y AJUSTES DE LAS SUBPANTALLAS (3.1 A 3.5)
-// ============================================================================
-bool enSubpantallaCW = false;  // Activo cuando estamos en la Subpantalla 3.1
-bool enPractica3_2 = false;     // Activo durante la práctica o revisión (3.2 / 3.3 / 3.4)
-bool enEstadisticas3_5 = false; // Activo al visualizar historial NVS (3.5)
+uint8_t wpmCW = 25;
+uint16_t espaciadoCW = 200;
+uint8_t leccionCW = 4;
+uint8_t caracteresCW = 5;
+uint8_t gruposCW = 20;
+uint8_t opcionSubpantalla = 5;
 
-uint8_t opcionPantalla3 = 0;    // Selector en Pantalla 3: 0 = < continuar >, 1 = < estadisticas >
-
-// Ajustes por defecto de entrenamiento CW
-uint8_t wpmCW = 25;             // Velocidad en Palabras Por Minuto (15 a 30)
-uint16_t espaciadoCW = 200;     // Espaciado Farnsworth en % (100% a 200%)
-uint8_t leccionCW = 4;          // Lección activa seleccionada (1 a 40)
-uint8_t caracteresCW = 5;       // Tamaño del bloque/grupo de caracteres (1 a 5)
-uint8_t gruposCW = 20;          // Total de grupos por lección (10 a 50)
-
-uint8_t opcionSubpantalla = 5;  // Cursor por defecto en 3.1 (5 = "iniciar")
-
-// Máquina de estados para ejecución y corrección de ejercicios
+// Máquina de estados interna para la sesión de práctica CW
 enum EstadoCW { 
   CW_IDLE, 
   CW_GENERAR_GRUPO, 
   CW_EMITIENDO_ELEMENTO, 
   CW_PAUSA_ENTRE_GRUPOS, 
   CW_PAUSADO, 
-  CW_PANTALLA_3_3_LISTADO,      // Muestra grupos emitidos para cotejar
-  CW_PANTALLA_CORREGIR_ERRORES, // Pantalla 3.4a: Recogida manual de fallos
-  CW_PANTALLA_RESUMEN_FINAL     // Pantalla 3.4b: Porcentaje final de acierto
+  CW_PANTALLA_3_3_LISTADO,      
+  CW_PANTALLA_CORREGIR_ERRORES, 
+  CW_PANTALLA_RESUMEN_FINAL     
 };
 EstadoCW estadoCW = CW_IDLE;
 
-String grupoActualStr = "";        // Cadena del grupo actual en transmisión
-String textoCompletoLeccion = ""; // Registro de todo el texto enviado en la sesión
+String grupoActualStr = "";
+String textoCompletoLeccion = ""; 
 uint8_t grupoActualNum = 0;
 bool mostrarTextoGrupo = false;
 
-// Variables de paginación y entrada de usuario
 uint16_t totalCaracteresLeccion = 0;
 uint16_t numeroErrores = 0;
 uint8_t paginaListado3_3 = 0;    
-uint8_t opcionFinListado3_3 = 0; // 0 = corregir, 1 = rep.
-uint8_t opcionPantallaCorregir = 0; // 0 = ERRORES, 1 = ENVIAR, 2 = REP.
+uint8_t opcionFinListado3_3 = 0; 
+uint8_t opcionPantallaCorregir = 0; 
 
-// Variables de la Subpantalla 3.5 (Estadísticas NVS)
-uint8_t paginaStats3_5 = 0;     // Navegación por páginas (3 lecciones por página)
+uint8_t paginaStats3_5 = 0;     
 bool confirmandoBorrado = false;
 
-// Variables de temporización no bloqueante para el LED Morse
+// Temporizadores no bloqueantes para la reproducción de Morse
 unsigned long tiempoCWProximo = 0;
 int idxCaracter = 0;
 int idxElemento = 0;
@@ -150,11 +173,55 @@ const char* codigoElementoActual = "";
 bool ledEncendido = false;
 
 // ============================================================================
-// GESTIÓN DE MEMORIA PERSISTENTE (NVS / FLASH)
+// VARIABLES Y ESTADOS PARA PANTALLA 4 (TRANSCEPTOR LORA & KEYER)
 // ============================================================================
-// Carga todos los parámetros y métricas guardadas al arrancar el microcontrolador
+bool enPantalla4_Sub = false;  
+uint8_t opcionPantalla4 = 2;   // Por defecto en 2 (barra inferior "sig.")
+uint8_t subpantalla4Activa = 0;
+
+// Subpantalla 4.1 (Modo Dúo LoRa / Práctica cruzada)
+uint8_t opcionDuo4_1 = 3;      // 0=WPM, 1=SP, 2=LECCION, 3=ENVIAR, 4=ATRAS
+String grupoDuoTransmitido = "";
+String grupoDuoRecibido = "";
+bool grupoDuoRevelado = false;
+
+// Control local de emisión/recepción de audio y LED en modo Dúo LoRa
+bool emitiendoMorseDuo = false;
+String cadenaMorseAEmitirDuo = "";
+int idxCharDuo = 0;
+int idxElemDuo = 0;
+const char* codigoElemDuo = "";
+unsigned long tiempoProximoDuo = 0;
+bool estadoTonoDuo = false;
+
+// Subpantalla 4.2 (Keyer manual y telemetría de radio)
+uint8_t modoKeyer4_2 = 0;
+int rssiUltimo = 0;
+float snrUltimo = 0.0;
+
+// ============================================================================
+// CONTROL UNIFICADO DE TONO DE AUDIO Y LED MORSE
+// ============================================================================
+/**
+ * @brief Activa o silencia simultáneamente el LED indicador y la salida PWM de audio.
+ */
+void conmutarEmisionMorse(bool activar) {
+  digitalWrite(LED_PIN, activar ? HIGH : LOW);
+  if (activar) {
+    ledcWrite(CANAL_PWM_AUDIO, 128); // Genera onda cuadrada (50% Duty Cycle) a 600 Hz
+  } else {
+    ledcWrite(CANAL_PWM_AUDIO, 0);   // Silencia completamente la salida PWM
+  }
+}
+
+// ============================================================================
+// MEMORIA PERSISTENTE NVS
+// ============================================================================
+/**
+ * @brief Carga las configuraciones de usuario y estadísticas de lecciones desde la NVS.
+ */
 void cargarDatosNVS() {
-  prefs.begin("mr_morse", true); // Abre en modo solo lectura
+  prefs.begin("mr_morse", true);
   wpmCW = prefs.getUChar("wpm", 25);
   espaciadoCW = prefs.getUShort("sp", 200);
   leccionCW = prefs.getUChar("leccion", 4);
@@ -173,9 +240,11 @@ void cargarDatosNVS() {
   prefs.end();
 }
 
-// Guarda la configuración activa de la lección
+/**
+ * @brief Almacena los parámetros actuales de CW en la memoria flash no volátil.
+ */
 void guardarUltimaConfiguracionNVS() {
-  prefs.begin("mr_morse", false); // Abre en modo lectura/escritura
+  prefs.begin("mr_morse", false);
   prefs.putUChar("wpm", wpmCW);
   prefs.putUShort("sp", espaciadoCW);
   prefs.putUChar("leccion", leccionCW);
@@ -184,7 +253,9 @@ void guardarUltimaConfiguracionNVS() {
   prefs.end();
 }
 
-// Registra la precisión conseguida en la memoria Flash
+/**
+ * @brief Guarda los resultados de acierto de una lección completada en NVS.
+ */
 void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
   if (lecc < 1 || lecc > 40) return;
   uint8_t idx = lecc - 1;
@@ -214,7 +285,9 @@ void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
   prefs.end();
 }
 
-// Reinicia de fábrica todos los datos de usuario en la NVS
+/**
+ * @brief Restablece todos los registros estadísticos y configuraciones por defecto.
+ */
 void borrarTodasLasEstadisticasNVS() {
   prefs.begin("mr_morse", false);
   prefs.clear();
@@ -229,7 +302,7 @@ void borrarTodasLasEstadisticasNVS() {
 }
 
 // ============================================================================
-// LECTURA ANALÓGICA DE BATERÍA
+// LECTURA DE BATERÍA (CALIBRADO A 4.20V / 100%)
 // ============================================================================
 enum EstadoAlimentacion { SOLO_USB, BAT_DESCARGA };
 
@@ -239,9 +312,12 @@ struct BateriaInfo {
   EstadoAlimentacion estado;
 };
 
+/**
+ * @brief Realiza la lectura analógica del divisor de tensión de la batería LiPo.
+ */
 BateriaInfo leerBateria() {
   pinMode(ADC_CTRL_PIN, OUTPUT);
-  digitalWrite(ADC_CTRL_PIN, HIGH); // Habilita el divisor de tensión por hardware
+  digitalWrite(ADC_CTRL_PIN, HIGH);
   delay(10);
 
   analogReadResolution(12);
@@ -254,7 +330,7 @@ BateriaInfo leerBateria() {
   }
   float mvPromedio = sumaMv / 15.0;
 
-  digitalWrite(ADC_CTRL_PIN, LOW); // Apaga el divisor para reducir consumo
+  digitalWrite(ADC_CTRL_PIN, LOW);
 
   float voltaje = (mvPromedio * VBAT_MULTIPLIER) / 1000.0;
 
@@ -273,9 +349,11 @@ BateriaInfo leerBateria() {
 }
 
 // ============================================================================
-// FUNCIONES DE DIBUJO Y RENDERIZADO OLED
+// DIBUJO Y RENDERIZADO OLED
 // ============================================================================
-// Dibuja la barra superior constante con la batería y parámetros clave
+/**
+ * @brief Dibuja la barra superior común con información de batería/estado.
+ */
 void dibujarEncabezado() {
   BateriaInfo bat = leerBateria();
   display.setTextSize(1);
@@ -284,7 +362,6 @@ void dibujarEncabezado() {
   String strBat = (bat.estado == SOLO_USB) ? "PWR" : String(bat.porcentaje) + "%";
 
   if (pantallaActual == 3 && enEstadisticas3_5) {
-    // Progreso global de lecciones aprobadas (>= 90% aciertos)
     uint8_t superadas = 0;
     for (int i = 0; i < 40; i++) {
       if (statsKoch[i].maxAcierto >= 90) superadas++;
@@ -308,7 +385,7 @@ void dibujarEncabezado() {
     display.setCursor(128 - w, 0);
     display.print(txtRight);
 
-  } else if (pantallaActual == 3 && enPractica3_2) {
+  } else if ((pantallaActual == 3 && enPractica3_2) || (pantallaActual == 4 && subpantalla4Activa == 1)) {
     display.setCursor(0, 0);
     display.print(wpmCW);
     display.print(F("WPM SP:"));
@@ -334,7 +411,9 @@ void dibujarEncabezado() {
   display.drawLine(0, 9, 128, 9, SSD1306_WHITE);
 }
 
-// Dibuja una línea de texto centrada en el pie de pantalla
+/**
+ * @brief Muestra un pie de página centrado en la parte inferior de la pantalla.
+ */
 void dibujarPieCentrado(const String& txt) {
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setTextSize(1);
@@ -347,20 +426,24 @@ void dibujarPieCentrado(const String& txt) {
   display.print(txt);
 }
 
-// Dibuja la barra de navegación "ant." y "sig." alineada a los bordes para Pantallas 1, 2 y 3
+/**
+ * @brief Renderiza la barra de navegación inferior para pantallas principales (1, 2, 3 y 4).
+ */
 void dibujarBarraAvanzarRetroceder() {
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
 
-  // Izquierda: "ant." (con cursor si está seleccionado)
+  // Izquierda: ant. (Muestra '>' solo si la opción actual es 0)
   display.setCursor(0, 55);
-  if (opcionNavegacionP123 == 0) display.print(F("> "));
-  else display.print(F("  "));
-  display.print(F("ant."));
+  if (opcionNavegacionP1234 == 0) {
+    display.print(F("> ant."));
+  } else {
+    display.print(F("  ant."));
+  }
 
-  // Derecha: "sig." (con cursor si está seleccionado)
-  String txtSig = (opcionNavegacionP123 == 1 ? "> " : "  ") + String("sig.");
+  // Derecha: sig. (Muestra '>' solo si la opción actual es 1)
+  String txtSig = (opcionNavegacionP1234 == 1 ? "> sig." : "  sig.");
   int16_t x1, y1;
   uint16_t w, h;
   display.getTextBounds(txtSig, 0, 0, &x1, &y1, &w, &h);
@@ -369,7 +452,112 @@ void dibujarBarraAvanzarRetroceder() {
 }
 
 // ============================================================================
-// RENDERIZADO ESPECÍFICO DE PANTALLAS
+// TRANSMISIÓN Y RECEPCIÓN LORA
+// ============================================================================
+/**
+ * @brief Inicia la reproducción local no bloqueante de una cadena morse en modo Dúo.
+ */
+void iniciarEmisionLocalDuo(String cadena) {
+  cadenaMorseAEmitirDuo = cadena;
+  emitiendoMorseDuo = true;
+  idxCharDuo = 0;
+  idxElemDuo = 0;
+  codigoElemDuo = obtenerCodigoMorse(cadenaMorseAEmitirDuo.charAt(0));
+  tiempoProximoDuo = millis();
+  estadoTonoDuo = false;
+}
+
+/**
+ * @brief Gestiona el avance paso a paso del tono y LED en modo Dúo sin bloquear el sistema.
+ */
+void procesarEmisionMorseDuoNoBloqueante() {
+  if (!emitiendoMorseDuo) return;
+  if (millis() < tiempoProximoDuo) return;
+
+  uint32_t tDit = 1200 / wpmCW;  
+  uint32_t tDah = tDit * 3;     
+  uint32_t tElementoGap = tDit; 
+  uint32_t tCharGap = (tDit * 3 * espaciadoCW) / 100;
+
+  if (!estadoTonoDuo) {
+    char elem = codigoElemDuo[idxElemDuo];
+    conmutarEmisionMorse(true);
+    estadoTonoDuo = true;
+
+    uint32_t duracionElemento = (elem == '-') ? tDah : tDit;
+    tiempoProximoDuo = millis() + duracionElemento;
+  } else {
+    conmutarEmisionMorse(false);
+    estadoTonoDuo = false;
+    idxElemDuo++;
+
+    if (codigoElemDuo[idxElemDuo] != '\0') {
+      tiempoProximoDuo = millis() + tElementoGap;
+    } else {
+      idxCharDuo++;
+      if (idxCharDuo < cadenaMorseAEmitirDuo.length()) {
+        codigoElemDuo = obtenerCodigoMorse(cadenaMorseAEmitirDuo.charAt(idxCharDuo));
+        idxElemDuo = 0;
+        tiempoProximoDuo = millis() + tCharGap;
+      } else {
+        emitiendoMorseDuo = false;
+      }
+    }
+  }
+}
+
+/**
+ * @brief Transmite un grupo de caracteres vía LoRa empaquetado en la trama Mr. Morse.
+ */
+void transmitirGrupoDuoLoRa(String grupo) {
+  iniciarEmisionLocalDuo(grupo);
+
+  TramaMrMorse trama;
+  trama.magicHeader[0] = 'M';
+  trama.magicHeader[1] = 'M';
+  trama.tipoMensaje = 0x01;
+  memset(trama.callsign, 0, 6);
+  strncpy(trama.callsign, "EA4ILN", 6);
+  trama.wpm = wpmCW;
+  trama.longitudTexto = min((int)grupo.length(), 5);
+  memset(trama.payload, 0, 5);
+  memcpy(trama.payload, grupo.c_str(), trama.longitudTexto);
+
+  radio.transmit((uint8_t*)&trama, sizeof(TramaMrMorse));
+  radio.startReceive();
+}
+
+/**
+ * @brief Comprueba el buffer del módulo radio para recibir paquetes LoRa entrantes.
+ */
+void procesarRecepcionLoRa() {
+  if (!modoRadioRxActivo) return;
+
+  uint16_t length = radio.getPacketLength();
+  if (length == sizeof(TramaMrMorse)) {
+    TramaMrMorse tramaRx;
+    int state = radio.readData((uint8_t*)&tramaRx, sizeof(TramaMrMorse));
+
+    if (state == RADIOLIB_ERR_NONE) {
+      if (tramaRx.magicHeader[0] == 'M' && tramaRx.magicHeader[1] == 'M') {
+        rssiUltimo = radio.getRSSI();
+        snrUltimo = radio.getSNR();
+
+        if (tramaRx.tipoMensaje == 0x01 && subpantalla4Activa == 1) {
+          grupoDuoRecibido = String(tramaRx.payload).substring(0, tramaRx.longitudTexto);
+          grupoDuoRevelado = false;
+          iniciarEmisionLocalDuo(grupoDuoRecibido);
+        } else if (tramaRx.tipoMensaje == 0x02 || tramaRx.tipoMensaje == 0x03) {
+          conmutarEmisionMorse(tramaRx.tipoMensaje == 0x02);
+        }
+      }
+    }
+  }
+  radio.startReceive();
+}
+
+// ============================================================================
+// RENDERIZADO PANTALLAS (1 A 4)
 // ============================================================================
 void renderizarPantalla1() {
   const char* titulo = " MR. MORSE EA4ILN ";
@@ -397,9 +585,13 @@ void renderizarPantalla2() {
   display.print(F("LoRa: "));
   display.println(estadoLoraStr);
 
+  BateriaInfo bat = leerBateria();
   display.setCursor(0, 32);
-  display.print(F("Eventos Btn: "));
-  display.print(contadorPulsaciones);
+  display.print(F("VBat: "));
+  display.print(bat.voltaje, 2);
+  display.print(F("V ("));
+  display.print(bat.porcentaje);
+  display.print(F("%)"));
 
   dibujarBarraAvanzarRetroceder();
 }
@@ -408,7 +600,6 @@ void renderizarPantalla3() {
   display.setTextColor(SSD1306_WHITE);
 
   if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
-    // PANTALLA 3 PRINCIPAL (MODIFICADA: Sin "Metodo Koch")
     display.setTextSize(1);
     
     const char* titulo = " ENTRENADOR CW ";
@@ -426,7 +617,6 @@ void renderizarPantalla3() {
 
     display.setTextColor(SSD1306_WHITE);
 
-    // Selector entre Continuar y Estadísticas en el cuerpo central
     display.setCursor(15, 28);
     display.print(opcionPantalla3 == 0 ? "> " : "  ");
     display.print(F("< continuar >"));
@@ -438,7 +628,6 @@ void renderizarPantalla3() {
     dibujarBarraAvanzarRetroceder();
 
   } else if (enSubpantallaCW && !enPractica3_2) {
-    // SUBPANTALLA DE CONFIGURACIÓN 3.1
     display.setTextSize(1);
 
     display.setCursor(0, 12);
@@ -466,7 +655,6 @@ void renderizarPantalla3() {
     dibujarPieCentrado(txtPie3_1);
 
   } else if (enEstadisticas3_5) {
-    // SUBPANTALLA DE HISTORIAL Y PROGRESO 3.5
     display.setTextSize(1);
 
     if (paginaStats3_5 < 13) {
@@ -511,7 +699,6 @@ void renderizarPantalla3() {
     display.setTextSize(1);
 
     if (estadoCW == CW_PANTALLA_3_3_LISTADO) {
-      // SUBPANTALLA 3.3: LISTADO DE VERIFICACIÓN
       display.setCursor(0, 11);
       display.print(F("- GRUPOS EMITIDOS -"));
 
@@ -537,7 +724,6 @@ void renderizarPantalla3() {
       }
 
     } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
-      // PANTALLA 3.4a: CORRECCIÓN MANUAL DE ERRORES
       display.setCursor(10, 12);
       display.println(F("- REVISAR LECCION -"));
 
@@ -557,7 +743,6 @@ void renderizarPantalla3() {
       dibujarPieCentrado("- : nav   . : mod");
 
     } else if (estadoCW == CW_PANTALLA_RESUMEN_FINAL) {
-      // PANTALLA 3.4b: RESUMEN FINAL
       float pctAciertos = 0.0;
       if (totalCaracteresLeccion > 0) {
         pctAciertos = ((float)(totalCaracteresLeccion - numeroErrores) / (float)totalCaracteresLeccion) * 100.0;
@@ -578,7 +763,6 @@ void renderizarPantalla3() {
       dibujarPieCentrado(". : volver   - : rep.");
 
     } else {
-      // EMISIÓN SILENCIOSA EN TIEMPO REAL POR LED (3.2)
       display.setCursor(0, 12);
       display.print(F("Grupo: "));
       display.print(grupoActualNum);
@@ -607,6 +791,98 @@ void renderizarPantalla3() {
   }
 }
 
+void renderizarPantalla4() {
+  display.setTextColor(SSD1306_WHITE);
+
+  if (!enPantalla4_Sub) {
+    // PANTALLA 4 PRINCIPAL
+    display.setTextSize(1);
+    
+    const char* titulo = " TRANSCEPTOR LORA ";
+    int16_t x1, y1;
+    uint16_t w, h;
+    display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
+    
+    int x = (128 - w) / 2;
+    int y = 14;
+
+    display.fillRect(x - 2, y - 2, w + 4, h + 4, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.setCursor(x, y);
+    display.print(titulo);
+
+    display.setTextColor(SSD1306_WHITE);
+
+    display.setCursor(5, 28);
+    display.print(opcionPantalla4 == 0 ? "> " : "  ");
+    display.print(F("< CW duo (Lora) >"));
+
+    display.setCursor(5, 38);
+    display.print(opcionPantalla4 == 1 ? "> " : "  ");
+    display.print(F("< CW QSO (Keyer) >"));
+
+    dibujarBarraAvanzarRetroceder();
+
+  } else if (subpantalla4Activa == 1) {
+    // SUBPANTALLA 4.1: CW DÚO CON AJUSTE DE WPM, SP Y LECCIÓN
+    display.setTextSize(1);
+
+    display.setCursor(0, 11);
+    display.print(opcionDuo4_1 == 0 ? ">" : " ");
+    display.print(F("WPM:")); display.print(wpmCW);
+
+    display.setCursor(52, 11);
+    display.print(opcionDuo4_1 == 1 ? ">" : " ");
+    display.print(F("SP:")); display.print(espaciadoCW); display.print(F("%"));
+
+    display.setCursor(0, 21);
+    display.print(opcionDuo4_1 == 2 ? ">" : " ");
+    display.print(F("LECC:")); display.print(leccionCW);
+
+    if (grupoDuoTransmitido.length() > 0) {
+      display.setCursor(52, 21);
+      display.print(F("TX:[")); display.print(grupoDuoTransmitido); display.print(F("]"));
+    }
+
+    display.setCursor(0, 32);
+    if (grupoDuoRecibido.length() > 0) {
+      if (grupoDuoRevelado) {
+        display.print(F("RX <- [")); display.print(grupoDuoRecibido); display.print(F("]"));
+      } else {
+        display.print(F("RX <- LED (Oculto)"));
+        display.setCursor(0, 42);
+        display.print(F(" [-: rev]"));
+      }
+    } else {
+      display.print(F("RX <- Escuchando..."));
+    }
+
+    String txtPie4_1 = (opcionDuo4_1 == 3 ? "> " : "  ") + String("enviar  ") + 
+                       (opcionDuo4_1 == 4 ? "> " : "  ") + String("atras");
+    dibujarPieCentrado(txtPie4_1);
+
+  } else if (subpantalla4Activa == 2) {
+    // SUBPANTALLA 4.2: KEYER MANUAL & QSO REAL-TIME
+    display.setTextSize(1);
+    display.setCursor(0, 12);
+    display.print(F("KEYER: "));
+    if (modoKeyer4_2 == 0) display.print(F("Auto-Practica"));
+    else if (modoKeyer4_2 == 1) display.print(F("QSO Real-Time"));
+    else display.print(F("Modo Eco"));
+
+    display.setCursor(0, 26);
+    display.print(F("Pins: Dit=G2 Dah=G3"));
+
+    display.setCursor(0, 38);
+    display.print(F("RSSI: ")); display.print(rssiUltimo); display.print(F("dBm"));
+
+    dibujarPieCentrado(". : modo   - : atras");
+  }
+}
+
+/**
+ * @brief Limpia el buffer y redirige al renderizado de la pantalla activa.
+ */
 void actualizarPantalla() {
   display.clearDisplay();
   dibujarEncabezado();
@@ -615,14 +891,18 @@ void actualizarPantalla() {
     case 1: renderizarPantalla1(); break;
     case 2: renderizarPantalla2(); break;
     case 3: renderizarPantalla3(); break;
+    case 4: renderizarPantalla4(); break;
   }
 
   display.display();
 }
 
 // ============================================================================
-// MAQUINA DE ESTADOS DE TELEGRAFÍA (EJECUCIÓN MORSE NO BLOQUEANTE)
+// MÁQUINA DE ESTADOS CW Y BOTÓN PRG
 // ============================================================================
+/**
+ * @brief Inicializa los parámetros de una nueva sesión de práctica de Koch.
+ */
 void iniciarPracticaCW() {
   enPractica3_2 = true;
   grupoActualNum = 0;
@@ -640,14 +920,20 @@ void iniciarPracticaCW() {
   tiempoCWProximo = millis();
 }
 
+/**
+ * @brief Detiene la práctica activa y devuelve el sistema al menú del entrenador.
+ */
 void detenerPracticaCW() {
-  digitalWrite(LED_PIN, LOW);
+  conmutarEmisionMorse(false);
   ledEncendido = false;
   enPractica3_2 = false;
   estadoCW = CW_IDLE;
   actualizarPantalla();
 }
 
+/**
+ * @brief Genera aleatoriamente un grupo de caracteres según el nivel de la lección Koch.
+ */
 void generarGrupoKoch() {
   grupoActualStr = "";
   uint8_t maxIdx = constrain(leccionCW, 1, TOTAL_CARACTERES_KOCH);
@@ -661,6 +947,9 @@ void generarGrupoKoch() {
   textoCompletoLeccion += grupoActualStr;
 }
 
+/**
+ * @brief Maneja los estados temporizados de emisión de elementos morse de forma no bloqueante.
+ */
 void procesarMaquinaEstadosCW() {
   if (!enPractica3_2 || estadoCW == CW_PAUSADO || estadoCW == CW_IDLE || 
       estadoCW == CW_PANTALLA_3_3_LISTADO || estadoCW == CW_PANTALLA_CORREGIR_ERRORES || 
@@ -697,13 +986,13 @@ void procesarMaquinaEstadosCW() {
     case CW_EMITIENDO_ELEMENTO:
       if (!ledEncendido) {
         char elem = codigoElementoActual[idxElemento];
-        digitalWrite(LED_PIN, HIGH);
+        conmutarEmisionMorse(true);
         ledEncendido = true;
 
         uint32_t duracionElemento = (elem == '-') ? tDah : tDit;
         tiempoCWProximo = millis() + duracionElemento;
       } else {
-        digitalWrite(LED_PIN, LOW);
+        conmutarEmisionMorse(false);
         ledEncendido = false;
         idxElemento++;
 
@@ -737,6 +1026,9 @@ void procesarMaquinaEstadosCW() {
 // ============================================================================
 // PROCESAMIENTO INTERACTIVO DEL BOTÓN PRG
 // ============================================================================
+/**
+ * @brief Gestiona la lógica de pulsaciones cortas y largas del botón físico PRG.
+ */
 void procesarBoton() {
   bool estadoActual = digitalRead(BUTTON_PIN);
 
@@ -750,89 +1042,103 @@ void procesarBoton() {
     unsigned long duracion = millis() - tiempoInicioPulsacion;
     procesandoPulsacion = false;
 
-    if (pantallaActual == 3) {
-      if (enEstadisticas3_5) {
+    if (pantallaActual == 4) {
+      if (!enPantalla4_Sub) {
         if (duracion >= TIEMPO_PULSACION_LARGA) {
-          enEstadisticas3_5 = false;
-          confirmandoBorrado = false;
+          if (opcionPantalla4 == 0) opcionPantalla4 = 1;
+          else if (opcionPantalla4 == 1) { opcionPantalla4 = 2; opcionNavegacionP1234 = 1; }
+          else { opcionPantalla4 = 0; }
         } else if (duracion > 30) {
-          if (paginaStats3_5 < 13) {
-            paginaStats3_5++;
-          } else {
-            if (!confirmandoBorrado) {
-              confirmandoBorrado = true;
-            } else {
-              borrarTodasLasEstadisticasNVS();
-              confirmandoBorrado = false;
-              paginaStats3_5 = 0;
-            }
+          if (opcionPantalla4 == 0) {
+            enPantalla4_Sub = true; subpantalla4Activa = 1;
+            modoRadioRxActivo = true; opcionDuo4_1 = 3;
+          } else if (opcionPantalla4 == 1) {
+            enPantalla4_Sub = true; subpantalla4Activa = 2;
+            modoRadioRxActivo = true;
+          } else if (opcionPantalla4 == 2) {
+            if (opcionNavegacionP1234 == 0) pantallaActual = 3;
+            else pantallaActual = 1;
+            opcionPantalla4 = 2; // Restablece a "sig." por defecto
+            opcionNavegacionP1234 = 1;
           }
         }
+      } else if (subpantalla4Activa == 1) {
+        if (duracion >= TIEMPO_PULSACION_LARGA) {
+          if (grupoDuoRecibido.length() > 0 && !grupoDuoRevelado) {
+            grupoDuoRevelado = true;
+          } else {
+            opcionDuo4_1 = (opcionDuo4_1 + 1) % 5;
+          }
+        } else if (duracion > 30) {
+          switch (opcionDuo4_1) {
+            case 0: wpmCW++; if (wpmCW > 30) wpmCW = 15; break;
+            case 1: espaciadoCW += 10; if (espaciadoCW > 200) espaciadoCW = 100; break;
+            case 2: leccionCW++; if (leccionCW > 40) leccionCW = 1; break;
+            case 3: {
+              uint8_t maxIdx = constrain(leccionCW, 1, TOTAL_CARACTERES_KOCH);
+              grupoDuoTransmitido = "";
+              for (int i = 0; i < caracteresCW; i++) grupoDuoTransmitido += TABLA_KOCH[random(0, maxIdx)];
+              transmitirGrupoDuoLoRa(grupoDuoTransmitido);
+              break;
+            }
+            case 4: enPantalla4_Sub = false; break;
+          }
+        }
+      } else if (subpantalla4Activa == 2) {
+        if (duracion >= TIEMPO_PULSACION_LARGA) {
+          enPantalla4_Sub = false;
+        } else if (duracion > 30) {
+          modoKeyer4_2 = (modoKeyer4_2 + 1) % 3;
+        }
+      }
 
+    } else if (pantallaActual == 3) {
+      if (enEstadisticas3_5) {
+        if (duracion >= TIEMPO_PULSACION_LARGA) {
+          enEstadisticas3_5 = false; confirmandoBorrado = false;
+        } else if (duracion > 30) {
+          if (paginaStats3_5 < 13) paginaStats3_5++;
+          else {
+            if (!confirmandoBorrado) confirmandoBorrado = true;
+            else { borrarTodasLasEstadisticasNVS(); confirmandoBorrado = false; paginaStats3_5 = 0; }
+          }
+        }
       } else if (enPractica3_2) {
         if (estadoCW == CW_PANTALLA_3_3_LISTADO) {
           int charPorPagina = 63;
           bool hayMasPaginas = ((paginaListado3_3 + 1) * charPorPagina) < textoCompletoLeccion.length();
-
-          if (hayMasPaginas) {
-            if (duracion > 30) paginaListado3_3++;
-          } else {
-            if (duracion >= TIEMPO_PULSACION_LARGA) {
-              opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
-            } else if (duracion > 30) {
-              if (opcionFinListado3_3 == 0) {
-                estadoCW = CW_PANTALLA_CORREGIR_ERRORES;
-                opcionPantallaCorregir = 0;
-              } else {
-                iniciarPracticaCW();
-              }
+          if (hayMasPaginas) { if (duracion > 30) paginaListado3_3++; } 
+          else {
+            if (duracion >= TIEMPO_PULSACION_LARGA) opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
+            else if (duracion > 30) {
+              if (opcionFinListado3_3 == 0) { estadoCW = CW_PANTALLA_CORREGIR_ERRORES; opcionPantallaCorregir = 0; }
+              else iniciarPracticaCW();
             }
           }
-
         } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
-          if (duracion >= TIEMPO_PULSACION_LARGA) {
-            opcionPantallaCorregir = (opcionPantallaCorregir + 1) % 3;
-          } else if (duracion > 30) {
-            if (opcionPantallaCorregir == 0) {
-              numeroErrores++;
-              if (numeroErrores > totalCaracteresLeccion) numeroErrores = 0;
-            } else if (opcionPantallaCorregir == 1) {
+          if (duracion >= TIEMPO_PULSACION_LARGA) opcionPantallaCorregir = (opcionPantallaCorregir + 1) % 3;
+          else if (duracion > 30) {
+            if (opcionPantallaCorregir == 0) { numeroErrores++; if (numeroErrores > totalCaracteresLeccion) numeroErrores = 0; }
+            else if (opcionPantallaCorregir == 1) {
               float pct = 0.0;
-              if (totalCaracteresLeccion > 0) {
-                pct = ((float)(totalCaracteresLeccion - numeroErrores) / (float)totalCaracteresLeccion) * 100.0;
-              }
+              if (totalCaracteresLeccion > 0) pct = ((float)(totalCaracteresLeccion - numeroErrores) / (float)totalCaracteresLeccion) * 100.0;
               registrarResultadoLeccionNVS(leccionCW, pct);
               estadoCW = CW_PANTALLA_RESUMEN_FINAL;
-            } else if (opcionPantallaCorregir == 2) {
-              iniciarPracticaCW();
-            }
+            } else if (opcionPantallaCorregir == 2) iniciarPracticaCW();
           }
-
         } else if (estadoCW == CW_PANTALLA_RESUMEN_FINAL) {
-          if (duracion >= TIEMPO_PULSACION_LARGA) {
-            iniciarPracticaCW();
-          } else if (duracion > 30) {
-            detenerPracticaCW();
-          }
-
+          if (duracion >= TIEMPO_PULSACION_LARGA) iniciarPracticaCW();
+          else if (duracion > 30) detenerPracticaCW();
         } else {
-          if (duracion >= TIEMPO_PULSACION_LARGA) {
-            detenerPracticaCW();
-          } else if (duracion > 30) {
-            if (estadoCW == CW_PAUSADO) {
-              estadoCW = CW_GENERAR_GRUPO;
-            } else {
-              estadoCW = CW_PAUSADO;
-              digitalWrite(LED_PIN, LOW);
-              ledEncendido = false;
-            }
+          if (duracion >= TIEMPO_PULSACION_LARGA) detenerPracticaCW();
+          else if (duracion > 30) {
+            if (estadoCW == CW_PAUSADO) estadoCW = CW_GENERAR_GRUPO;
+            else { estadoCW = CW_PAUSADO; conmutarEmisionMorse(false); ledEncendido = false; }
           }
         }
-
       } else if (enSubpantallaCW) {
-        if (duracion >= TIEMPO_PULSACION_LARGA) {
-          opcionSubpantalla = (opcionSubpantalla + 1) % 7;
-        } else if (duracion > 30) {
+        if (duracion >= TIEMPO_PULSACION_LARGA) opcionSubpantalla = (opcionSubpantalla + 1) % 7;
+        else if (duracion > 30) {
           switch (opcionSubpantalla) {
             case 0: wpmCW++; if (wpmCW > 30) wpmCW = 15; break;
             case 1: espaciadoCW += 10; if (espaciadoCW > 200) espaciadoCW = 100; break;
@@ -843,44 +1149,31 @@ void procesarBoton() {
             case 6: enSubpantallaCW = false; break;
           }
         }
-
       } else {
-        // NAVEGACIÓN DENTRO DE PANTALLA 3 PRINCIPAL
         if (duracion >= TIEMPO_PULSACION_LARGA) {
-          // Alterna entre la opción central y la barra inferior ant./sig.
-          // 0 = < continuar >, 1 = < estadisticas >, 2 = barra ant./sig.
           if (opcionPantalla3 == 0) opcionPantalla3 = 1;
-          else if (opcionPantalla3 == 1) opcionPantalla3 = 2; // Pasa a la barra inferior
-          else { opcionPantalla3 = 0; opcionNavegacionP123 = 1; }
+          else if (opcionPantalla3 == 1) { opcionPantalla3 = 2; opcionNavegacionP1234 = 1; }
+          else { opcionPantalla3 = 0; }
         } else if (duracion > 30) {
-          if (opcionPantalla3 == 0) {
-            enSubpantallaCW = true;
-            opcionSubpantalla = 5;
-          } else if (opcionPantalla3 == 1) {
-            enEstadisticas3_5 = true;
-            paginaStats3_5 = 0;
-            confirmandoBorrado = false;
-          } else if (opcionPantalla3 == 2) {
-            if (opcionNavegacionP123 == 0) pantallaActual = 2; // ant. -> P2
-            else pantallaActual = 1; // sig. -> P1
-            opcionPantalla3 = 0;
+          if (opcionPantalla3 == 0) { enSubpantallaCW = true; opcionSubpantalla = 5; }
+          else if (opcionPantalla3 == 1) { enEstadisticas3_5 = true; paginaStats3_5 = 0; confirmandoBorrado = false; }
+          else if (opcionPantalla3 == 2) {
+            if (opcionNavegacionP1234 == 0) pantallaActual = 2;
+            else pantallaActual = 4;
+            opcionPantalla3 = 2; // Restablece a "sig." por defecto
+            opcionNavegacionP1234 = 1;
           }
         }
       }
 
     } else {
-      // NAVEGACIÓN DENTRO DE PANTALLAS 1 Y 2
-      if (duracion >= TIEMPO_PULSACION_LARGA) {
-        // Conmuta el cursor de la barra inferior entre "ant." (0) y "sig." (1)
-        opcionNavegacionP123 = (opcionNavegacionP123 == 0) ? 1 : 0;
-      } else if (duracion > 30) {
-        // Ejecuta el cambio de pantalla según la opción seleccionada
-        if (opcionNavegacionP123 == 0) {
-          pantallaActual = (pantallaActual == 1) ? TOTAL_PANTALLAS : pantallaActual - 1;
-        } else {
-          pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
-        }
+      // NAVEGACIÓN EN PANTALLAS 1 Y 2
+      if (duracion >= TIEMPO_PULSACION_LARGA) opcionNavegacionP1234 = (opcionNavegacionP1234 == 0) ? 1 : 0;
+      else if (duracion > 30) {
+        if (opcionNavegacionP1234 == 0) pantallaActual = (pantallaActual == 1) ? TOTAL_PANTALLAS : pantallaActual - 1;
+        else pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
         contadorPulsaciones++;
+        opcionNavegacionP1234 = 1;
       }
     }
 
@@ -891,16 +1184,31 @@ void procesarBoton() {
 }
 
 // ============================================================================
-// CONFIGURACIÓN INICIAL Y BUCLE PRINCIPAL
+// SETUP Y BUCLE PRINCIPAL
 // ============================================================================
+/**
+ * @brief Configura los pines de control de alimentación y periféricos iniciales.
+ */
 void encenderPerifericos() {
   pinMode(VEXT_CTRL, OUTPUT);
-  digitalWrite(VEXT_CTRL, LOW); // Alimenta pantallas y componentes externos
+  digitalWrite(VEXT_CTRL, LOW);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
+
+  pinMode(KEYER_PADDLE_DIT, INPUT_PULLUP);
+  pinMode(KEYER_PADDLE_DAH, INPUT_PULLUP);
+
+  // Configurar temporizador LEDC para el tono de audio PWM a 600 Hz
+  ledcSetup(CANAL_PWM_AUDIO, FREC_AUDIO_HZ, RES_PWM_AUDIO);
+  ledcAttachPin(SPEAKER_PWM_PIN, CANAL_PWM_AUDIO);
+  ledcWrite(CANAL_PWM_AUDIO, 0); // Silencio inicial
+
   delay(100);
 }
 
+/**
+ * @brief Inicialización general del sistema operativo y submódulos de hardware.
+ */
 void setup() {
   Serial.begin(115200);
   encenderPerifericos();
@@ -915,15 +1223,13 @@ void setup() {
 
   randomSeed(analogRead(0) + millis());
 
-  // Cargar preferencias del usuario desde NVS
   cargarDatosNVS();
-
   actualizarPantalla();
 
-  // Inicialización de la radio LoRa SX1262 a 868 MHz
   int state = radio.begin(868.0, 125.0, 9, 7, 0x12, 10, 8);
   if (state == RADIOLIB_ERR_NONE) {
     estadoLoraStr = "868MHz OK";
+    radio.startReceive();
   } else {
     estadoLoraStr = "ERR (" + String(state) + ")";
   }
@@ -931,14 +1237,15 @@ void setup() {
   actualizarPantalla();
 }
 
+/**
+ * @brief Bucle principal de ejecución del microcontrolador.
+ */
 void loop() {
-  // 1. Escuchar la entrada por botón
   procesarBoton();
-
-  // 2. Ejecutar la temporización no bloqueante del motor CW
   procesarMaquinaEstadosCW();
+  procesarEmisionMorseDuoNoBloqueante();
+  procesarRecepcionLoRa();
 
-  // 3. Refrescar datos de entorno cada 3 segundos
   static unsigned long ultimoRefresco = 0;
   if (millis() - ultimoRefresco > 3000) {
     ultimoRefresco = millis();
