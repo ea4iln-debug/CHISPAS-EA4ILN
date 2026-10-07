@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firmware Mr. Morse EA4ILN - Hoja de Ruta Ampliada</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #38bdf8;
+      --accent-green: #4ade80;
+      --accent-yellow: #facc15;
+      --accent-orange: #fb923c;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+      --border: #334155;
+      --oled-bg: #000000;
+      --oled-text: #ffffff;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1, h2, h3 {
+      color: var(--accent);
+      margin-top: 0;
+    }
+
+    .header-title {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    .screen-preview {
+      background-color: var(--oled-bg);
+      color: var(--oled-text);
+      font-family: 'Courier New', Courier, monospace;
+      border: 2px solid #475569;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 13px;
+      margin: 12px 0;
+      white-space: pre-wrap;
+      line-height: 1.2;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .tag-main { background: #0284c7; color: #fff; }
+    .tag-sub { background: #7c3aed; color: #fff; }
+    .tag-future { background: #ea580c; color: #fff; }
+
+    .progress-container {
+      background-color: var(--border);
+      border-radius: 8px;
+      height: 18px;
+      width: 100%;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: var(--accent);
+      text-align: center;
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 18px;
+      color: #000;
+    }
+
+    ul {
+      padding-left: 20px;
+      margin: 8px 0;
+    }
+
+    li {
+      margin-bottom: 4px;
+      color: var(--text-dim);
+    }
+
+    li strong {
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header-title">
+    <h1>Mr. Morse EA4ILN — Arquitectura Actualizada y Proyecto Global</h1>
+    <p style="color: var(--text-dim);">Plataforma: Heltec WiFi LoRa 32 V3 (ESP32-S3 + SX1262 + SSD1306 OLED + Memoria NVS)</p>
+  </div>
+
+  <!-- ESTIMACIÓN DE MEMORIA Y ALMACENAMIENTO -->
+  <div class="card" style="margin-bottom: 30px;">
+    <h2>📊 Estimación de Uso de Recursos en la ESP32-S3</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+      
+      <div>
+        <span style="font-size: 14px;">Memoria Flash (Código Firmware)</span>
+        <div class="progress-container">
+          <div class="progress-bar" style="width: 24%;">~24% (1.92 MB / 8 MB)</div>
+        </div>
+        <small style="color: var(--text-dim);">Librerías Arduino Core, RadioLib, Adafruit GFX y Preferences.</small>
+      </div>
+
+      <div>
+        <span style="font-size: 14px;">Memoria RAM (SRAM Libre)</span>
+        <div class="progress-container">
+          <div class="progress-bar" style="width: 13%; background-color: var(--accent-green);">~13% (65 KB / 512 KB)</div>
+        </div>
+        <small style="color: var(--text-dim);">Buffer de pantalla OLED (1KB), pilas de la radio e hiperparámetros.</small>
+      </div>
+
+      <div>
+        <span style="font-size: 14px;">Memoria NVS (Flash Persistente)</span>
+        <div class="progress-container">
+          <div class="progress-bar" style="width: 3%; background-color: var(--accent-yellow);">~3% (600 Bytes / 20 KB)</div>
+        </div>
+        <small style="color: var(--text-dim);">Guarda el estado de las 40 lecciones, el último ejercicio y la config.</small>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MAPA DE PANTALLAS IMPLEMENTADAS -->
+  <h2>📱 Mapa de Pantallas del Menú</h2>
+  <div class="grid">
+
+    <!-- Pantalla 1 -->
+    <div class="card">
+      <span class="tag tag-main">Pantalla 1</span>
+      <h3>Portada / Identificador</h3>
+      <div class="screen-preview"> BAT: 90%
+------------------------
+
+   MR. MORSE EA4ILN    
+
+------------------------
+> ant.              sig.</div>
+      <ul>
+        <li><strong>Contenido:</strong> Logotipo principal e identificativo del operador.</li>
+        <li><strong>Navegación:</strong> Barra inferior con botones seleccionables <code>ant.</code> y <code>sig.</code>.</li>
+      </ul>
+    </div>
+
+    <!-- Pantalla 2 -->
+    <div class="card">
+      <span class="tag tag-main">Pantalla 2</span>
+      <h3>Estado LoRa y Diagnóstico</h3>
+      <div class="screen-preview"> BAT: 90%
+------------------------
+LoRa: 868MHz OK
+
+Eventos Btn: 14
+------------------------
+  ant.            > sig.</div>
+      <ul>
+        <li><strong>Contenido:</strong> Diagnóstico del chip SX1262 y registro de eventos.</li>
+        <li><strong>Navegación:</strong> Pulsación larga conmuta entre <code>ant.</code> y <code>sig.</code>.</li>
+      </ul>
+    </div>
+
+    <!-- Pantalla 3 -->
+    <div class="card">
+      <span class="tag tag-main">Pantalla 3</span>
+      <h3>Entrenador CW (Sin "Metodo Koch")</h3>
+      <div class="screen-preview"> BAT: 90%
+------------------------
+    ENTRENADOR CW
+
+  > < continuar >
+    < estadisticas >
+------------------------
+  ant.              sig.</div>
+      <ul>
+        <li><strong>Contenido:</strong> Selector para cargar la lección activa o ver estadísticas.</li>
+        <li><strong>Navegación:</strong> <code>-</code> rota entre opciones centrales y la barra inferior.</li>
+      </ul>
+    </div>
+
+    <!-- Subpantalla 3.1 -->
+    <div class="card">
+      <span class="tag tag-sub">Subpantalla 3.1</span>
+      <h3>Configuración de Parámetros CW</h3>
+      <div class="screen-preview"> BAT: 90%
+------------------------
+  WPM: 25   SP: 200%
+  LECCION: 4
+  CARACTERES: 5
+  GRUPOS: 20
+------------------------
+   > iniciar   atras    </div>
+      <ul>
+        <li><strong>Contenido:</strong> Ajustes de WPM, SP, Lección, Caracteres y Grupos.</li>
+        <li><strong>Navegación:</strong> <code>iniciar</code> y <code>atras</code> situadas en la barra inferior.</li>
+      </ul>
+    </div>
+
+    <!-- Subpantalla 3.2 -->
+    <div class="card">
+      <span class="tag tag-sub">Subpantalla 3.2</span>
+      <h3>Práctica Activa (LED Silencioso)</h3>
+      <div class="screen-preview">25WPM SP:200%   BAT:90%
+------------------------
+Grupo: 3 / 20
+
+  TX LED (Oculto)...
+
+------------------------
+   . : pausa   - : salir</div>
+      <ul>
+        <li><strong>Contenido:</strong> Parpadeo morse por LED con temporizaciones Farnsworth.</li>
+        <li><strong>Navegación:</strong> <code>. : pausa</code> y <code>- : salir</code> centrados en el pie.</li>
+      </ul>
+    </div>
+
+    <!-- Subpantalla 3.3 y 3.4 -->
+    <div class="card">
+      <span class="tag tag-sub">Subpantallas 3.3 / 3.4</span>
+      <h3>Cotejo, Errores y NVS</h3>
+      <div class="screen-preview">25WPM SP:200%   BAT:90%
+------------------------
+- RESULTADO KOCH -
+Aciertos: 95.0%
+
+Repetir si <=90%
+------------------------
+. : volver   - : rep.   </div>
+      <ul>
+        <li><strong>Contenido:</strong> Verificación de grupos, conteo de faltas y guardado NVS.</li>
+        <li><strong>Navegación:</strong> <code>. : volver</code> a 3.1 o <code>- : rep.</code> para reiniciar la lección.</li>
+      </ul>
+    </div>
+
+    <!-- Subpantalla 3.5 -->
+    <div class="card">
+      <span class="tag tag-sub">Subpantalla 3.5</span>
+      <h3>Estadísticas NVS y Progreso</h3>
+      <div class="screen-preview">[====....] 50%  BAT:90%
+------------------------
+L04:3x MAX:95% MIN:80%
+L05:1x MAX:85% MIN:85%
+L06:0x MAX:0%  MIN:0%
+------------------------
+  . : mas   - : atras   </div>
+      <ul>
+        <li><strong>Contenido:</strong> Progreso global (40 lecciones), intentos y mejor/peor acierto.</li>
+        <li><strong>Navegación:</strong> <code>. : mas</code> avanza página; <code>- : atras</code> vuelve al menú 3.</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- BALANCE DEL FIRMWARE Y HOJA DE RUTA -->
+  <div class="card">
+    <h2>📋 Estado del Proyecto y Próximos Módulos</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+      
+      <div>
+        <h3 style="color: var(--accent-green);">✅ Completado hasta la Fecha</h3>
+        <ul>
+          <li>Arquitectura de menús 100% coordinada con simbología Morse (<code>.</code> y <code>-</code>).</li>
+          <li>Navegación mejorada entre pantallas principales mediante la barra <code>ant.</code> / <code>sig.</code>.</li>
+          <li>Entrenador Koch completo con cálculo de precisión y guardado en memoria NVS.</li>
+          <li>Paginador de estadísticas con barra de progreso global y borrado seguro de la Flash.</li>
+          <li>Barras inferiores unificadas, centradas, abreviadas y en minúsculas.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 style="color: var(--accent-orange);">⏳ Próximos Módulos por Implementar</h3>
+        <ul>
+          <li><strong>Audio Tono PWM (600 Hz):</strong> Configuración del periférico LEDC/PWM del ESP32-S3 para emitir tonos por zumbador o auriculares.</li>
+          <li><strong>GPS & Maidenhead Locator:</strong> Módulo NMEA para calcular coordenadas, altitud y Locator (ej. IN80) para actividades en el campo.</li>
+          <li><strong>Módulos Activación SOTA / POTA:</strong> Calculadora de referencias de parques y cumbres con registro de QSOs.</li>
+          <li><strong>Transceptor CW por LoRa (TX & RX):</strong>
+            <ul>
+              <li><strong>TX LoRa:</strong> Enviar cada grupo de entrenamiento por RF a 868 MHz.</li>
+              <li><strong>RX LoRa:</strong> Recibir tramas CW de otro "Mr. Morse" y decodificarlas en pantalla para prácticas pareadas en directo.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
