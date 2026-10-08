@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.3e - Cola de recepcion LoRa (los grupos que llegan mientras suena otro se reproducen despues)
+ * @version 0.3f - Arreglos de pantalla: estadisticas 3.5 (ancho de linea y leccion 40), signo de apertura, foco al volver a P2
  * @date 2026-10-08
  */
 
@@ -157,7 +157,8 @@ uint8_t paginaListado3_3 = 0;
 uint8_t opcionFinListado3_3 = 0; 
 uint8_t opcionPantallaCorregir = 0; 
 
-uint8_t paginaStats3_5 = 0;     
+uint8_t paginaStats3_5 = 0;
+#define PAGINAS_STATS_3_5 14    // 40 lecciones / 3 por pagina = 14 paginas; la 15 (indice 14) es la de borrado
 bool confirmandoBorrado = false;
 
 unsigned long tiempoCWProximo = 0;
@@ -709,7 +710,7 @@ void renderizarPantalla3() {
   } else if (enEstadisticas3_5) {
     display.setTextSize(1);
 
-    if (paginaStats3_5 < 13) {
+    if (paginaStats3_5 < PAGINAS_STATS_3_5) {
       uint8_t leccInicio = (paginaStats3_5 * 3) + 1;
 
       for (uint8_t i = 0; i < 3; i++) {
@@ -724,10 +725,12 @@ void renderizarPantalla3() {
         display.print(lNum);
         display.print(F(":"));
 
-        // Alineacion limpia de veces completadas
-        if (statsKoch[idx].vecesCompletada < 10) display.print(F(" "));
-        display.print(statsKoch[idx].vecesCompletada);
-        display.print(F("x ["));
+        // Alineacion limpia de veces completadas (2 cifras; a partir de 99 se muestra 99)
+        // La linea completa "L01:99x[========]100%" ocupa 21 caracteres = 126 px
+        uint16_t veces = min(statsKoch[idx].vecesCompletada, (uint16_t)99);
+        if (veces < 10) display.print(F(" "));
+        display.print(veces);
+        display.print(F("x["));
 
         // DIBUJO DE BARRA VISUAL OPCION 4 (8 BLOQUES)
         uint8_t maxPct = statsKoch[idx].maxAcierto;
@@ -752,7 +755,10 @@ void renderizarPantalla3() {
 
       display.setCursor(0, 32);
       if (confirmandoBorrado) {
-        display.println(F(" ¿CONFIRMAR BORRADO?"));
+        // La fuente por defecto no es UTF-8: el signo de apertura es el 0xA8 de CP437
+        display.print(F(" "));
+        display.write(0xA8);
+        display.println(F("CONFIRMAR BORRADO?"));
       } else {
         display.println(F("  > BORRAR TODO <"));
       }
@@ -1182,7 +1188,7 @@ void procesarBoton() {
         if (ev == BOTON_LARGA) {
           enEstadisticas3_5 = false; confirmandoBorrado = false;
         } else if (ev == BOTON_CORTA) {
-          if (paginaStats3_5 < 13) paginaStats3_5++;
+          if (paginaStats3_5 < PAGINAS_STATS_3_5) paginaStats3_5++;
           else {
             if (!confirmandoBorrado) confirmandoBorrado = true;
             else { borrarTodasLasEstadisticasNVS(); confirmandoBorrado = false; paginaStats3_5 = 0; }
@@ -1261,6 +1267,7 @@ void procesarBoton() {
           } else if (opcionPantalla3 == 2) {
             if (opcionNavegacionP1234 == 0) {
               pantallaActual = 2; // Retroceder a Pantalla 2
+              opcionNavegacionP1234 = 1;
             } else {
               pantallaActual = 4; // Avanzar a Pantalla 4
               opcionPantalla4 = 2;
@@ -1316,7 +1323,7 @@ void encenderPerifericos() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3e..."));
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3f..."));
   
   encenderPerifericos();
 
