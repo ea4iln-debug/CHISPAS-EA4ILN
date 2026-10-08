@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.4a - Trama LoRa v2 de longitud variable (un byte por caracter con centinela, seq, indicativo de 8)
+ * @version 0.4b - TCXO del SX1262 a 1.8 V (valor de la Heltec V3)
  * @date 2026-10-08
  */
 
@@ -1481,7 +1481,7 @@ void encenderPerifericos() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.4a..."));
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.4b..."));
   
   encenderPerifericos();
 
@@ -1501,7 +1501,10 @@ void setup() {
   actualizarPantalla();
 
   Serial.println(F("[LORA] INICIANDO SX1262..."));
-  int state = radio.begin(868.0, 125.0, 9, 7, 0x12, 10, 8);
+  // Freq, BW, SF, CR 4/7, sync word privado, 10 dBm, preambulo 8, TCXO 1.8 V.
+  // La V3 alimenta el TCXO por DIO3 a 1.8 V (Meshtastic heltec_v3: SX126X_DIO3_TCXO_VOLTAGE 1.8);
+  // el valor por defecto de RadioLib es 1.6 V. DIO2 como RF switch ya lo activa RadioLib en begin().
+  int state = radio.begin(868.0, 125.0, 9, 7, 0x12, 10, 8, 1.8);
   if (state == RADIOLIB_ERR_NONE) {
     estadoLoraStr = "868MHZ OK";
     Serial.println(F("[LORA] MODULO OK. VINCULANDO ISR EN DIO1..."));
