@@ -2,9 +2,11 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.4b - TCXO del SX1262 a 1.8 V (valor de la Heltec V3)
+ * @version 0.4c - Radio a 868.1 MHz SF7/250 kHz (parametros en #define); version del firmware en la pantalla 1
  * @date 2026-10-08
  */
+
+#define FW_VERSION "0.4c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -28,6 +30,20 @@
 #define LORA_DIO1       14  // Pin de interrupcion Hardware SX1262
 #define LORA_NRST       12  // Reset HW del transceptor SX1262
 #define LORA_BUSY       13  // Estado ocupado del SX1262
+
+// Parametros de radio LoRa (las dos placas deben usar los mismos)
+// 868.1 MHz cae entero en la sub-banda 868.0-868.6 (25 mW, 1 % de ciclo de trabajo).
+// SF7 / 250 kHz: unos 32 ms de aire por trama de 18 bytes (SF9 / 125 kHz: unos 226 ms).
+#define LORA_FREC_MHZ     868.1
+#define LORA_BW_KHZ       250.0
+#define LORA_SF           7
+#define LORA_CR           7      // 4/7
+#define LORA_SYNC_WORD    0x12   // Red privada
+#define LORA_POTENCIA_DBM 10
+#define LORA_PREAMBULO    8
+// La V3 alimenta el TCXO por DIO3 a 1.8 V (Meshtastic heltec_v3: SX126X_DIO3_TCXO_VOLTAGE 1.8);
+// el valor por defecto de RadioLib es 1.6 V. DIO2 como RF switch ya lo activa RadioLib en begin().
+#define LORA_TCXO_V       1.8
 
 #define KEYER_PADDLE_DIT 2  // Entrada manipulador yambico (Punto)
 #define KEYER_PADDLE_DAH 3  // Entrada manipulador yambico (Raya)
@@ -768,6 +784,13 @@ void renderizarPantalla1() {
   display.setCursor(x, y);
   display.print(titulo);
 
+  // Version del firmware cargado, centrada bajo el titulo
+  display.setTextColor(SSD1306_WHITE);
+  String txtVersion = "FW v" + String(FW_VERSION);
+  display.getTextBounds(txtVersion.c_str(), 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((128 - w) / 2, 40);
+  display.print(txtVersion);
+
   dibujarBarraAvanzarRetroceder(true);
 }
 
@@ -1481,7 +1504,7 @@ void encenderPerifericos() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.4b..."));
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v" FW_VERSION "..."));
   
   encenderPerifericos();
 
@@ -1501,12 +1524,10 @@ void setup() {
   actualizarPantalla();
 
   Serial.println(F("[LORA] INICIANDO SX1262..."));
-  // Freq, BW, SF, CR 4/7, sync word privado, 10 dBm, preambulo 8, TCXO 1.8 V.
-  // La V3 alimenta el TCXO por DIO3 a 1.8 V (Meshtastic heltec_v3: SX126X_DIO3_TCXO_VOLTAGE 1.8);
-  // el valor por defecto de RadioLib es 1.6 V. DIO2 como RF switch ya lo activa RadioLib en begin().
-  int state = radio.begin(868.0, 125.0, 9, 7, 0x12, 10, 8, 1.8);
+  int state = radio.begin(LORA_FREC_MHZ, LORA_BW_KHZ, LORA_SF, LORA_CR, LORA_SYNC_WORD,
+                          LORA_POTENCIA_DBM, LORA_PREAMBULO, LORA_TCXO_V);
   if (state == RADIOLIB_ERR_NONE) {
-    estadoLoraStr = "868MHZ OK";
+    estadoLoraStr = String(LORA_FREC_MHZ, 1) + "MHZ SF" + String(LORA_SF);  // Cabe en 21 caracteres con "LORA: "
     Serial.println(F("[LORA] MODULO OK. VINCULANDO ISR EN DIO1..."));
     
     radio.setPacketReceivedAction(cbInterrupcionLora);

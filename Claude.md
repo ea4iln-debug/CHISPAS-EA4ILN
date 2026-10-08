@@ -7,7 +7,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.4a**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.4c**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -23,16 +23,19 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   redibujado solo por cambios (sin refresco fijo) -> v0.3h RSSI en Duo y medida de temporización CW por serie
   (`DEBUG_CW`; resultado: retraso máx. 0 ms). RSSI medido: -31 dBm a 2 m.
 - Las pruebas son con LED, pantalla y monitor serie: no hay audio conectado (no proponer pruebas "a oído").
+- La versión está en `#define FW_VERSION` (al principio de `main.cpp`): se ve en la pantalla 1 y por serie.
+  Subirla en cada cambio que se cargue en placa.
+- Radio (v0.4c, `#define LORA_*`): 868,1 MHz, SF7, 250 kHz, CR 4/7, sync 0x12, 10 dBm, TCXO 1,8 V (revisado:
+  DIO2 RF switch lo activa RadioLib 6.6 en `begin()`; SPI 9/11/10 correcto). RSSI a 2 m: unos -40/-45 dBm
+  (con SF9/125 kHz y 868,0 eran -31 dBm; sin comparar en las mismas condiciones).
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Koch: estadísticas por carácter (hoy la corrección solo cuenta errores) y modo Echo con el keyer.
    Hecho en v0.3i: tabla en orden LCWO (41 caracteres, con `=`), lección N = N+1 caracteres.
 2. Trama LoRa v2 hecha en v0.4a (formato en el comentario de `main.cpp`). Falta: indicativo configurable por
    placa (hoy constante `INDICATIVO`), reproducir a los wpm del emisor y pantalla para textos largos.
-3. `radio.begin()`: comprobar `setDio2AsRfSwitch(true)` y el voltaje del TCXO para la V3 si el alcance es pobre.
-   Verificar también que el SPI usa los pines 9/10/11 (board `heltec_wifi_lora_32_V3`).
-4. Un paquete que llega durante `radio.transmit()` (bloqueante) se pierde al borrar el flag tras TX.
-5. A futuro: motor CW en una tarea FreeRTOS, audio I2S, keyer iámbico, decodificador (Goertzel).
+3. Un paquete que llega durante `radio.transmit()` (bloqueante) se pierde al borrar el flag tras TX.
+4. A futuro: motor CW en una tarea FreeRTOS, audio I2S, keyer iámbico, decodificador (Goertzel).
 
 ## Decisiones tomadas
 - Práctica en pareja con **tramas digitales**, no audio: un byte por carácter con bit centinela
