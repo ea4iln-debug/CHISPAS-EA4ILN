@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.3h - RSSI en la pantalla Duo; medida de temporizacion CW por serie (DEBUG_CW)
+ * @version 0.3i - Tabla Koch en orden LCWO (41 caracteres, con =); la leccion N usa N+1 caracteres
  * @date 2026-10-08
  */
 
@@ -46,13 +46,21 @@
 // ============================================================================
 // DICCIONARIO MORSE Y TABLA KOCH
 // ============================================================================
+// Orden Koch de LCWO (igual que lcwoKochChars del Morserino-32): la leccion N usa los
+// N+1 primeros caracteres, asi que la leccion 1 es K M y la 40 los 41 caracteres
 const char TABLA_KOCH[] = {
-  'K', 'M', 'R', 'S', 'U', 'A', 'I', 'O', 'N', 'E', 
-  'T', 'L', 'Y', 'P', 'Q', 'W', 'J', 'Z', 'F', 'C', 
-  'D', 'X', 'B', 'G', 'V', 'H', '1', '2', '3', '4', 
-  '5', '6', '7', '8', '9', '0', '?', '.', '/', ','
+  'K', 'M', 'U', 'R', 'E', 'S', 'N', 'A', 'P', 'T',
+  'L', 'W', 'I', '.', 'J', 'Z', '=', 'F', 'O', 'Y',
+  ',', 'V', 'G', '5', '/', 'Q', '9', '2', 'H', '3',
+  '8', 'B', '?', '4', '7', 'C', '1', 'D', '6', '0',
+  'X'
 };
 const uint8_t TOTAL_CARACTERES_KOCH = sizeof(TABLA_KOCH);
+
+// Numero de caracteres de la tabla que entran en una leccion (1..40)
+uint8_t caracteresDeLeccion(uint8_t leccion) {
+  return constrain(leccion + 1, 2, TOTAL_CARACTERES_KOCH);
+}
 
 struct PatronMorse {
   char c;
@@ -67,7 +75,8 @@ const PatronMorse DICCIONARIO_MORSE[] = {
   {'U', "..-"},   {'V', "...-"},  {'W', ".--"},   {'X', "-..-"},  {'Y', "-.--"},
   {'Z', "--.."},  {'1', ".----"}, {'2', "..---"}, {'3', "...--"}, {'4', "....-"},
   {'5', "....."}, {'6', "-...."}, {'7', "--..."}, {'8', "---.."}, {'9', "----."},
-  {'0', "-----"}, {'?', "..--.."},{'.', ".-.-.-"},{'/', "-..-."}, {',', "--..--"}
+  {'0', "-----"}, {'?', "..--.."},{'.', ".-.-.-"},{'/', "-..-."}, {',', "--..--"},
+  {'=', "-...-"}
 };
 
 const char* obtenerCodigoMorse(char c) {
@@ -1050,7 +1059,7 @@ void detenerPracticaCW() {
 
 void generarGrupoKoch() {
   grupoActualStr = "";
-  uint8_t maxIdx = constrain(leccionCW, 1, TOTAL_CARACTERES_KOCH);
+  uint8_t maxIdx = caracteresDeLeccion(leccionCW);
   
   for (int i = 0; i < caracteresCW; i++) {
     char c = TABLA_KOCH[random(0, maxIdx)];
@@ -1231,7 +1240,7 @@ void procesarBoton() {
             case 1: espaciadoCW += 10; if (espaciadoCW > 200) espaciadoCW = 100; break;
             case 2: leccionCW++; if (leccionCW > 40) leccionCW = 1; break;
             case 3: {
-              uint8_t maxIdx = constrain(leccionCW, 1, TOTAL_CARACTERES_KOCH);
+              uint8_t maxIdx = caracteresDeLeccion(leccionCW);
               String nuevoGrupo = "";
               for (int i = 0; i < caracteresCW; i++) nuevoGrupo += TABLA_KOCH[random(0, maxIdx)];
               transmitirGrupoDuoLoRa(nuevoGrupo);
@@ -1388,7 +1397,7 @@ void encenderPerifericos() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3h..."));
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3i..."));
   
   encenderPerifericos();
 

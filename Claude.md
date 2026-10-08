@@ -7,7 +7,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.3h**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.3i**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -25,8 +25,8 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 - Las pruebas son con LED, pantalla y monitor serie: no hay audio conectado (no proponer pruebas "a oído").
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
-1. Koch: la lección 1 genera un solo carácter (usar `leccionCW + 1`); verificar el orden de la tabla frente
-   a LCWO / Morserino; estadísticas por carácter y modo Echo con el keyer.
+1. Koch: estadísticas por carácter (hoy la corrección solo cuenta errores) y modo Echo con el keyer.
+   Hecho en v0.3i: tabla en orden LCWO (41 caracteres, con `=`), lección N = N+1 caracteres.
 2. Trama LoRa: `sizeof` = 16 bytes (el comentario dice 14), máximo 5 caracteres. Migrar al formato variable.
 3. `radio.begin()`: comprobar `setDio2AsRfSwitch(true)` y el voltaje del TCXO para la V3 si el alcance es pobre.
    Verificar también que el SPI usa los pines 9/10/11 (board `heltec_wifi_lora_32_V3`).
