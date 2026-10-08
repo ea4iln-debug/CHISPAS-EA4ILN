@@ -7,7 +7,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.6b**, cargada y probada en las dos placas (9 oct 2026). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.6c** (compila; sin cargar en placa). v0.6b cargada y probada en las dos placas (9 oct 2026). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -17,7 +17,7 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   de debug se eliminó. Cabecera con nombre corto de pantalla; `- : opc` en la barra si hay opciones.
 - NVS: `mr_morse` (entrenador y estadísticas), `mr_estacion` (indicativo, locator); WiFi en el NVS del ESP32.
   Borrar estadísticas solo borra estadísticas; el reset de fábrica lo borra todo.
-- **No migrar a `pins.h` ni al hardware nuevo hasta que el firmware sea estable y se monte el circuito.**
+- Hardware en curso: prototipo en protoboard (sección más abajo). La PCB y `pins.h` siguen aplazados.
 - La entrada está abstraída en `leerEventoBoton()` (BOTON_CORTA / BOTON_LARGA): al montar el rotary y el
   pulsador de función solo habrá que cambiar esa función, no los menús.
 - `SPEAKER_PWM_PIN` está en GPIO7 de forma provisional (el GPIO25 del código antiguo no existe en el S3).
@@ -86,18 +86,30 @@ Nota: lo que llega *durante* `transmit()` se pierde por ser semidúplex, no por 
 - POTA/SOTA: búsqueda de parque offline con CSV guardado en LittleFS; spots online con cola si no hay cobertura.
   Las APIs de POTA son no oficiales; la lectura de SOTA es abierta, pero publicar spots exige credenciales.
 
-- **Expansor MCP23017: decidido en principio quitarlo** y usar GPIO directos (rotary en 38/39/40, función en 41,
-  detección de auriculares en 42, enables de GPS y amplificador en 19/20). Antes de fijarlo, probar cada pin en una
-  placa desnuda. Evitar 45 y 46 con pull-up externo (pines de arranque). Los cambios de esquema que eso implica
-  quedan para cuando se retome el hardware.
+- Expansor MCP23017 descartado: GPIO directos (ver prototipo en protoboard).
 
-## Decisiones abiertas (para cuando se retome el hardware)
-- Detector de auriculares: añadir 10 kΩ en serie con el pin (el contacto TN lleva señal del DAC cuando no hay jack).
-- Auriculares directos del PCM5102A con 220 Ω frente a amplificador TPA6132A2 (decidir tras probar en banco).
+## Prototipo en protoboard (9 oct 2026)
+Montaje sin PCB con la lista de compra "opción A (buzzer)", comprada salvo el GPS (pedido), el adaptador a bornas,
+el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banco. Pines decididos por el usuario:
 
-## Hardware y KiCad: APLAZADO
-**No trabajar en KiCad, `pins.h`, `pcb_spec.md` ni `gen_kicad.py` por ahora.** El usuario retomará esas decisiones
-más adelante. Mientras tanto, el desarrollo es solo de firmware sobre las placas desnudas.
+| GPIO | Uso |
+|---|---|
+| 2 | Salida KEY (PC817, 330 Ω). `KEY_OUT_PIN`, en BAJO al principio de `setup()` (v0.6c) |
+| 4 / 5 | Paleta DIT / DAH (pull-up interno; `KEYER_PADDLE_DIT/DAH` desde v0.6c) |
+| 6 | Entrada del decodificador (ADC1): acoplo 1 µF, polarización 2×10 kΩ, trimmer, 1 kΩ y 2×1N4148 |
+| 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, buzzer piezo pasivo en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R |
+| 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW (19/20 son USB D−/D+ del S3: probar en placa desnuda) |
+| 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
+| 3 (futuro) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido |
+| BME280 (futuro) | I2C 0x76. Si 17/18 no salen al conector, segundo bus (Wire1) en dos pines libres |
+
+Esquema de conexiones: `docs/esquema_protoboard.pdf` (6 hojas), generado con `docs/gen_esquema.py` (HTML/SVG; el PDF
+se imprime con Edge sin interfaz). Si cambia algún pin, actualizar el script y regenerar el PDF.
+Pines aún libres según el pinout publicado de la V3 (sin comprobar en la placa): 38–42, 33 y 34.
+No usar: 0, 8–14, 17/18/21 (OLED), 35, 36, 37, 43/44, 45/46 (arranque), 26–32.
+
+## KiCad: APLAZADO
+**No trabajar en KiCad, `pins.h`, `pcb_spec.md` ni `gen_kicad.py` por ahora.**
 (Referencia, sin usar ahora: `pins.h`, `pcb_spec.md` y `kicad/gen_kicad.py` describen una PCB portadora rev. A.2;
 la fuente de verdad del circuito era `gen_kicad.py`.)
 

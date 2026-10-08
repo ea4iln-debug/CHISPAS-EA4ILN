@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.6b - Duo: sin startReceive() al acabar cada emision (0.6a: motor CW en una tarea FreeRTOS)
+ * @version 0.6c - Pines del prototipo: palas en GPIO4/5 y salida KEY en GPIO2 (en BAJO desde el arranque)
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.6b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.6c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -54,8 +54,9 @@
 #define LORA_CAD_INTENTOS      3
 #define LORA_ESPERA_OCUPADO_MS 100  // Una trama de 45 bytes con SF7/250 kHz dura unos 60 ms
 
-#define KEYER_PADDLE_DIT 2  // Entrada manipulador yambico (Punto)
-#define KEYER_PADDLE_DAH 3  // Entrada manipulador yambico (Raya)
+#define KEYER_PADDLE_DIT 4  // Entrada manipulador yambico (Punto), punta del jack J1
+#define KEYER_PADDLE_DAH 5  // Entrada manipulador yambico (Raya), anillo del jack J1
+#define KEY_OUT_PIN      2  // Salida KEY a la emisora por el PC817: ALTO = manipulando. En BAJO desde el arranque
 #define SPEAKER_PWM_PIN  7  // Salida PWM provisional (GPIO libre del header). El GPIO25 no existe en el S3
 
 #define FREC_AUDIO_HZ    600// Tono Morse local (600 Hz)
@@ -2338,6 +2339,10 @@ void encenderPerifericos() {
 }
 
 void setup() {
+  // Lo primero: la salida KEY en BAJO, para que la emisora no transmita mientras arranca la placa
+  pinMode(KEY_OUT_PIN, OUTPUT);
+  digitalWrite(KEY_OUT_PIN, LOW);
+
   Serial.begin(115200);
   delay(1000);
   Serial.println(F("\n[INIT] Mr. Morse EA4ILN v" FW_VERSION "..."));
