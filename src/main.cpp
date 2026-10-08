@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.5a - WiFi (portal WiFiManager), hora NTP en cabecera, pantalla 5 propagacion (hamqsl) y 6 spots POTA CW
+ * @version 0.5b - Condiciones por banda (pantalla 5, pagina 2); pantalla 7 sol y linea gris
  * @date 2026-10-08
  */
 
-#define FW_VERSION "0.5a"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.5b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -181,7 +181,7 @@ void IRAM_ATTR cbInterrupcionLora() {
 }
 
 uint8_t pantallaActual = 1;         
-const uint8_t TOTAL_PANTALLAS = 6;
+const uint8_t TOTAL_PANTALLAS = 7;
 uint8_t opcionNavegacionP1234 = 1;  // 0 = "ant.", 1 = "sig."
 
 int contadorPulsaciones = 0;
@@ -858,7 +858,10 @@ struct DatosPropagacion {
   int sfi, aIndex, kIndex, manchas;
   char rayosX[8];
   char actualizado[24];
+  char bandas[4][2][6];  // [80-40, 30-20, 17-15, 12-10][dia, noche]: "Good", "Fair", "Poor"
 };
+const char* const NOMBRES_BANDAS_XML[4] = { "80m-40m", "30m-20m", "17m-15m", "12m-10m" };
+const char* const NOMBRES_BANDAS_PANTALLA[4] = { "80-40m", "30-20m", "17-15m", "12-10m" };
 DatosPropagacion propagacion = {};
 
 struct SpotPota {
@@ -873,8 +876,11 @@ bool spotsPotaValidos = false;
 unsigned long spotsPotaIntentoMs = 0;  // 0 = nunca
 uint8_t paginaSpots = 0;
 
-uint8_t opcionPantalla5 = 2;  // 0 = actualizar, 1 = wifi (portal), 2 = barra ant./sig.
-uint8_t opcionPantalla6 = 2;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
+#define OPCION_BARRA_P5 3
+#define OPCION_BARRA_P6 2
+uint8_t opcionPantalla5 = OPCION_BARRA_P5;  // 0 = pagina, 1 = actualizar, 2 = wifi (portal), 3 = barra ant./sig.
+uint8_t opcionPantalla6 = OPCION_BARRA_P6;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
+uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
 
 void abrirPortalWifi() {
   if (nombrePortal[0] == '\0') {
@@ -958,6 +964,21 @@ void actualizarPropagacion() {
   propagacion.manchas = valorEtiquetaXml(xml, "sunspots").toInt();
   strlcpy(propagacion.rayosX, valorEtiquetaXml(xml, "xray").c_str(), sizeof(propagacion.rayosX));
   strlcpy(propagacion.actualizado, valorEtiquetaXml(xml, "updated").c_str(), sizeof(propagacion.actualizado));
+  for (uint8_t b = 0; b < 4; b++) {
+    for (uint8_t t = 0; t < 2; t++) {
+      // <band name="80m-40m" time="day">Fair</band>
+      String clave = String("name=\"") + NOMBRES_BANDAS_XML[b] + "\" time=\"" + (t == 0 ? "day" : "night") + "\">";
+      String valor = "";
+      int ini = xml.indexOf(clave);
+      if (ini >= 0) {
+        ini += clave.length();
+        int fin = xml.indexOf('<', ini);
+        if (fin > ini) valor = xml.substring(ini, fin);
+      }
+      valor.trim();
+      strlcpy(propagacion.bandas[b][t], valor.length() ? valor.c_str() : "?", sizeof(propagacion.bandas[b][t]));
+    }
+  }
   propagacion.validos = true;
   Serial.printf("[WIFI] PROPAGACION: SFI %d A %d K %d\n", propagacion.sfi, propagacion.aIndex, propagacion.kIndex);
 }
@@ -1474,6 +1495,15 @@ void renderizarPantalla5() {
     } else if (!propagacion.validos) {
       display.setCursor(0, 22);
       display.print(F("SIN DATOS"));
+    } else if (paginaPropagacion == 1) {
+      // Prevision de hamqsl por banda: D = dia, N = noche
+      for (uint8_t b = 0; b < 4; b++) {
+        char linea[24];
+        snprintf(linea, sizeof(linea), "%s D:%-4s N:%s", NOMBRES_BANDAS_PANTALLA[b],
+                 propagacion.bandas[b][0], propagacion.bandas[b][1]);
+        display.setCursor(0, 12 + b * 10);
+        display.print(linea);
+      }
     } else {
       display.setCursor(0, 12);
       display.print(F("SFI ")); display.print(propagacion.sfi);
@@ -1491,7 +1521,7 @@ void renderizarPantalla5() {
     }
 
     struct tm local;
-    if (horaLocalValida(local)) {
+    if (paginaPropagacion == 0 && horaLocalValida(local)) {
       time_t ahora = time(nullptr);
       struct tm utc;
       gmtime_r(&ahora, &utc);
@@ -1502,11 +1532,13 @@ void renderizarPantalla5() {
     }
   }
 
-  if (opcionPantalla5 == 2) {
+  if (opcionPantalla5 == OPCION_BARRA_P5) {
     dibujarBarraAvanzarRetroceder(true);
   } else {
-    String pie = (opcionPantalla5 == 0 ? "> " : "  ") + String("actualizar  ") +
-                 (opcionPantalla5 == 1 ? "> " : "  ") + String("wifi");
+    // Maximo 21 caracteres: "> pag  > act.  > wifi"
+    String pie = (opcionPantalla5 == 0 ? "> " : "  ") + String("pag ") +
+                 (opcionPantalla5 == 1 ? "> " : "  ") + String("act. ") +
+                 (opcionPantalla5 == 2 ? "> " : "  ") + String("wifi");
     dibujarPieCentrado(pie);
   }
 }
@@ -1542,7 +1574,7 @@ void renderizarPantalla6() {
     }
   }
 
-  if (opcionPantalla6 == 2) {
+  if (opcionPantalla6 == OPCION_BARRA_P6) {
     dibujarBarraAvanzarRetroceder(true);
   } else {
     // Maximo 21 caracteres: "> mas 10/10   > act."
@@ -1550,6 +1582,127 @@ void renderizarPantalla6() {
                  (opcionPantalla6 == 1 ? "   > " : "     ") + String("act.");
     dibujarPieCentrado(pie);
   }
+}
+
+// ============================================================================
+// PANTALLA 7: SOL Y LINEA GRIS (CALCULO LOCAL, SIN WIFI)
+// ============================================================================
+// Ecuaciones solares de NOAA (precision de un par de minutos). Ventana de linea gris:
+// sol entre GRIS_ELEV_MIN y GRIS_ELEV_MAX grados de altura (unos 30-40 min antes y
+// despues de la salida y la puesta en la Peninsula). Necesita la hora sincronizada por NTP.
+#define PANTALLA_SOL   7
+#define LOCATOR        "IM68mu" // Locator de la estacion (4 o 6 caracteres)
+#define GRIS_ELEV_MIN  -6.0
+#define GRIS_ELEV_MAX  6.0
+
+// Centro de la cuadricula Maidenhead (4 o 6 caracteres)
+bool locatorALatLon(const char* loc, float& lat, float& lon) {
+  size_t n = strlen(loc);
+  if (n != 4 && n != 6) return false;
+  char c0 = toupper(loc[0]), c1 = toupper(loc[1]);
+  if (c0 < 'A' || c0 > 'R' || c1 < 'A' || c1 > 'R' || !isdigit(loc[2]) || !isdigit(loc[3])) return false;
+  lon = (c0 - 'A') * 20.0 - 180.0 + (loc[2] - '0') * 2.0;
+  lat = (c1 - 'A') * 10.0 - 90.0 + (loc[3] - '0') * 1.0;
+  if (n == 6) {
+    char c4 = toupper(loc[4]), c5 = toupper(loc[5]);
+    if (c4 < 'A' || c4 > 'X' || c5 < 'A' || c5 > 'X') return false;
+    lon += (c4 - 'A') * (2.0 / 24) + (1.0 / 24);
+    lat += (c5 - 'A') * (1.0 / 24) + (0.5 / 24);
+  } else {
+    lon += 1.0;
+    lat += 0.5;
+  }
+  return true;
+}
+
+struct DatosSol {
+  float elevacion;      // Grados sobre el horizonte, ahora
+  float ecuacionTiempo; // Minutos
+  float declinacion;    // Radianes
+};
+
+DatosSol calcularSol(const struct tm& utc, float lat, float lon) {
+  float horaUtc = utc.tm_hour + utc.tm_min / 60.0 + utc.tm_sec / 3600.0;
+  float g = 2 * PI / 365.0 * (utc.tm_yday + (horaUtc - 12) / 24.0);  // tm_yday empieza en 0
+  DatosSol d;
+  d.ecuacionTiempo = 229.18 * (0.000075 + 0.001868 * cos(g) - 0.032077 * sin(g)
+                               - 0.014615 * cos(2 * g) - 0.040849 * sin(2 * g));
+  d.declinacion = 0.006918 - 0.399912 * cos(g) + 0.070257 * sin(g) - 0.006758 * cos(2 * g)
+                  + 0.000907 * sin(2 * g) - 0.002697 * cos(3 * g) + 0.00148 * sin(3 * g);
+  float tiempoSolar = horaUtc * 60 + d.ecuacionTiempo + 4 * lon;  // Minutos
+  float anguloHorario = radians(tiempoSolar / 4 - 180);
+  float phi = radians(lat);
+  float cosZenit = sin(phi) * sin(d.declinacion) + cos(phi) * cos(d.declinacion) * cos(anguloHorario);
+  d.elevacion = 90 - degrees(acos(constrain(cosZenit, -1.0f, 1.0f)));
+  return d;
+}
+
+// Minuto UTC del dia en que el sol pasa por la altura indicada (subiendo o bajando); -1 si no ocurre
+int minutoUtcAltura(const DatosSol& d, float lat, float lon, float altura, bool subiendo) {
+  float phi = radians(lat);
+  float x = (cos(radians(90 - altura)) - sin(phi) * sin(d.declinacion)) / (cos(phi) * cos(d.declinacion));
+  if (x < -1 || x > 1) return -1;  // Sol de medianoche o noche polar
+  float ha = degrees(acos(x));
+  float minuto = 720 - 4 * (lon + (subiendo ? ha : -ha)) - d.ecuacionTiempo;
+  return ((int)lround(minuto) % 1440 + 1440) % 1440;
+}
+
+// "HH:MM" en hora local a partir del minuto UTC y la diferencia local-UTC en minutos
+String formatearMinuto(int minutoUtc, int difLocal) {
+  if (minutoUtc < 0) return "--:--";
+  int m = ((minutoUtc + difLocal) % 1440 + 1440) % 1440;
+  char txt[6];
+  snprintf(txt, sizeof(txt), "%02d:%02d", m / 60, m % 60);
+  return String(txt);
+}
+
+void renderizarPantalla7() {
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+
+  float lat, lon;
+  struct tm local;
+  if (!locatorALatLon(LOCATOR, lat, lon)) {
+    display.setCursor(0, 22);
+    display.print(F("LOCATOR NO VALIDO"));
+  } else if (!horaLocalValida(local)) {
+    display.setCursor(0, 12);
+    display.print(F("SIN HORA."));
+    display.setCursor(0, 22);
+    display.print(F("SINCRONIZALA ENTRANDO"));
+    display.setCursor(0, 32);
+    display.print(F("EN LA PANTALLA 5"));
+  } else {
+    time_t ahora = time(nullptr);
+    struct tm utc;
+    gmtime_r(&ahora, &utc);
+    int difLocal = (local.tm_hour * 60 + local.tm_min) - (utc.tm_hour * 60 + utc.tm_min);
+    if (difLocal > 720) difLocal -= 1440;
+    if (difLocal < -720) difLocal += 1440;
+
+    DatosSol d = calcularSol(utc, lat, lon);
+    // -0.833 grados: salida y puesta oficiales (refraccion y radio del disco)
+    String sale = formatearMinuto(minutoUtcAltura(d, lat, lon, -0.833, true), difLocal);
+    String pone = formatearMinuto(minutoUtcAltura(d, lat, lon, -0.833, false), difLocal);
+
+    display.setCursor(0, 12);
+    display.print("SALE " + sale + " PONE " + pone);
+
+    display.setCursor(0, 22);
+    display.print("GRIS AM " + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MIN, true), difLocal) +
+                  "-" + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MAX, true), difLocal));
+    display.setCursor(0, 32);
+    display.print("GRIS PM " + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MAX, false), difLocal) +
+                  "-" + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MIN, false), difLocal));
+
+    char linea[24];
+    bool enGris = d.elevacion >= GRIS_ELEV_MIN && d.elevacion <= GRIS_ELEV_MAX;
+    snprintf(linea, sizeof(linea), "%s SOL %+.1f%s", LOCATOR, d.elevacion, enGris ? " GRIS" : "");
+    display.setCursor(0, 42);
+    display.print(linea);
+  }
+
+  dibujarBarraAvanzarRetroceder(true);
 }
 
 void actualizarPantalla() {
@@ -1563,6 +1716,7 @@ void actualizarPantalla() {
     case 4: renderizarPantalla4(); break;
     case PANTALLA_PROPAGACION: renderizarPantalla5(); break;
     case PANTALLA_SPOTS: renderizarPantalla6(); break;
+    case PANTALLA_SOL: renderizarPantalla7(); break;
   }
 
   display.display();
@@ -1761,7 +1915,7 @@ void procesarBoton() {
               opcionNavegacionP1234 = 1;    // "sig."
             } else {
               pantallaActual = PANTALLA_PROPAGACION;
-              opcionPantalla5 = 2;
+              opcionPantalla5 = OPCION_BARRA_P5;
               opcionNavegacionP1234 = 1;
             }
             opcionPantalla4 = 2;
@@ -1798,41 +1952,43 @@ void procesarBoton() {
       }
 
     } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS) {
-      // P5: [sig.] -> [actualizar] -> [wifi] -> [ant.]    P6: [sig.] -> [mas] -> [actualizar] -> [ant.]
-      uint8_t& opcion = (pantallaActual == PANTALLA_PROPAGACION) ? opcionPantalla5 : opcionPantalla6;
+      // P5: [sig.] -> [pag] -> [act.] -> [wifi] -> [ant.]    P6: [sig.] -> [mas] -> [act.] -> [ant.]
+      bool esP5 = (pantallaActual == PANTALLA_PROPAGACION);
+      uint8_t& opcion = esP5 ? opcionPantalla5 : opcionPantalla6;
+      uint8_t barra = esP5 ? OPCION_BARRA_P5 : OPCION_BARRA_P6;
       if (ev == BOTON_LARGA) {
-        if (opcion == 2 && opcionNavegacionP1234 == 1) {
+        if (opcion == barra && opcionNavegacionP1234 == 1) {
           opcion = 0;
-        } else if (opcion == 0) {
-          opcion = 1;
-        } else if (opcion == 1) {
-          opcion = 2;
+        } else if (opcion < barra - 1) {
+          opcion++;
+        } else if (opcion == barra - 1) {
+          opcion = barra;
           opcionNavegacionP1234 = 0;
         } else {
-          opcion = 2;
           opcionNavegacionP1234 = 1;
         }
       } else if (ev == BOTON_CORTA) {
-        if (pantallaActual == PANTALLA_PROPAGACION && opcion == 0) {
-          pedirActualizacionWifi();
-        } else if (pantallaActual == PANTALLA_PROPAGACION && opcion == 1) {
-          abrirPortalWifi();  // Para cambiar de red
-        } else if (pantallaActual == PANTALLA_SPOTS && opcion == 0) {
-          uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
-          paginaSpots = (paginaSpots + 1) % paginas;
-        } else if (pantallaActual == PANTALLA_SPOTS && opcion == 1) {
-          pedirActualizacionWifi();
-        } else if (opcion == 2) {
+        if (opcion == barra) {
           if (opcionNavegacionP1234 == 0) {
             pantallaActual--;  // P5 -> P4, P6 -> P5
           } else {
             pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
           }
-          opcion = 2;
           if (pantallaActual == 4) opcionPantalla4 = 2;
-          else if (pantallaActual == PANTALLA_PROPAGACION) opcionPantalla5 = 2;
-          else if (pantallaActual == PANTALLA_SPOTS) opcionPantalla6 = 2;
+          else if (pantallaActual == PANTALLA_PROPAGACION) opcionPantalla5 = OPCION_BARRA_P5;
+          else if (pantallaActual == PANTALLA_SPOTS) opcionPantalla6 = OPCION_BARRA_P6;
           opcionNavegacionP1234 = 1;
+        } else if (esP5 && opcion == 0) {
+          paginaPropagacion = (paginaPropagacion + 1) % 2;
+        } else if (esP5 && opcion == 1) {
+          pedirActualizacionWifi();
+        } else if (esP5 && opcion == 2) {
+          abrirPortalWifi();  // Para cambiar de red
+        } else if (!esP5 && opcion == 0) {
+          uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
+          paginaSpots = (paginaSpots + 1) % paginas;
+        } else if (!esP5 && opcion == 1) {
+          pedirActualizacionWifi();
         }
       }
 
@@ -1945,7 +2101,7 @@ void procesarBoton() {
           opcionPantalla4 = 2;
           opcionNavegacionP1234 = 1;
         } else if (pantallaActual == PANTALLA_SPOTS) {
-          opcionPantalla6 = 2;
+          opcionPantalla6 = OPCION_BARRA_P6;
           opcionNavegacionP1234 = 1;
         } else {
           opcionNavegacionP1234 = 1;

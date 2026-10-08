@@ -7,7 +7,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.5a**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.5b**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -39,6 +39,9 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   enciende en esas pantallas. Red por portal WiFiManager (`MrMorse-XXXX`, clave `PORTAL_CLAVE`, 192.168.4.1),
   guardada en NVS. Hora NTP (CET/CEST) en la cabecera de todas las pantallas. HTTPS con `setInsecure()`.
   Refresco: propagación 30 min, POTA 2 min (sin límites publicados: consultar con moderación).
+- v0.5b (probado): pantalla 5 con segunda página de condiciones por banda (hamqsl, día/noche); pantalla 7
+  "Sol" sin WiFi: salida/puesta, ventanas de línea gris (sol entre -6° y +6°) y altura actual, calculadas con
+  las ecuaciones de NOAA para el locator de la estación **IM68mu** (`#define LOCATOR`). Necesita hora NTP.
 - **SOTA: no programar el cliente.** Sus condiciones (api-db2.sota.org.uk/docs) exigen unirse al grupo
   "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Lo decide el usuario.
 
