@@ -7,8 +7,8 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.4e**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
-  `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306.
+- Firmware: `src/main.cpp` **v0.5a**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+  `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
   con el botón PRG (GPIO0), pulsación corta/larga.
@@ -34,6 +34,13 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   por I2C, su estado decía "encendida" y el I2C no daba errores. No era alimentación (cortar Vext 0,3 s o 2 s
   no cambiaba nada). Arreglo: tras `display.begin()` se reenvían bomba de carga (`0x8D 0x14`) y encendido (`0xAF`).
   También se imprime por serie el motivo del reinicio y ya no hay `for(;;)` si falla la OLED.
+
+- WiFi (v0.5a, probado): pantallas 5 (propagación, hamqsl.com) y 6 (spots POTA solo CW). El WiFi solo se
+  enciende en esas pantallas. Red por portal WiFiManager (`MrMorse-XXXX`, clave `PORTAL_CLAVE`, 192.168.4.1),
+  guardada en NVS. Hora NTP (CET/CEST) en la cabecera de todas las pantallas. HTTPS con `setInsecure()`.
+  Refresco: propagación 30 min, POTA 2 min (sin límites publicados: consultar con moderación).
+- **SOTA: no programar el cliente.** Sus condiciones (api-db2.sota.org.uk/docs) exigen unirse al grupo
+  "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Lo decide el usuario.
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):

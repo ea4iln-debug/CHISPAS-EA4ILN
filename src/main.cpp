@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.4e - Arreglo de la OLED que a veces quedaba negra tras un reset; motivo del reinicio por serie
+ * @version 0.5a - WiFi (portal WiFiManager), hora NTP en cabecera, pantalla 5 propagacion (hamqsl) y 6 spots POTA CW
  * @date 2026-10-08
  */
 
-#define FW_VERSION "0.4e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.5a"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -14,6 +14,12 @@
 #include <Adafruit_SSD1306.h>
 #include <RadioLib.h>
 #include <Preferences.h>
+#include <WiFi.h>
+#include <WiFiManager.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+#include <time.h>
 
 // ============================================================================
 // DEFINICION DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
@@ -175,7 +181,7 @@ void IRAM_ATTR cbInterrupcionLora() {
 }
 
 uint8_t pantallaActual = 1;         
-const uint8_t TOTAL_PANTALLAS = 4;
+const uint8_t TOTAL_PANTALLAS = 6;
 uint8_t opcionNavegacionP1234 = 1;  // 0 = "ant.", 1 = "sig."
 
 int contadorPulsaciones = 0;
@@ -441,6 +447,10 @@ bool pantallaPendiente = false;  // Redibujar en cuanto no suene CW
 // ============================================================================
 // DIBUJO Y RENDERIZADO OLED (BARRA SUPERIOR: MAYÚSCULAS | INFERIOR: MINÚSCULAS)
 // ============================================================================
+bool horaLocalValida(struct tm& t) {
+  return getLocalTime(&t, 0) && t.tm_year > 120;  // Sin sincronizar el reloj empieza en 1970
+}
+
 void dibujarEncabezado() {
   BateriaInfo bat = bateriaActual;
   display.setTextSize(1);
@@ -487,6 +497,15 @@ void dibujarEncabezado() {
     display.print(txtRight);
 
   } else {
+    // Hora local, en cuanto se haya sincronizado por NTP (el reloj interno la mantiene sin WiFi)
+    struct tm local;
+    if (horaLocalValida(local)) {
+      char txtHora[6];
+      snprintf(txtHora, sizeof(txtHora), "%02d:%02d", local.tm_hour, local.tm_min);
+      display.setCursor(0, 0);
+      display.print(txtHora);
+    }
+
     String txtRight = "BAT:" + strBat;
     int16_t x1, y1;
     uint16_t w, h;
@@ -806,7 +825,290 @@ void salirModoLoRa() {
 }
 
 // ============================================================================
-// RENDERIZADO PANTALLAS (1 A 4)
+// WIFI: HORA NTP, PROPAGACION (hamqsl.com) Y SPOTS POTA
+// ============================================================================
+// El WiFi solo se enciende en las pantallas 5 y 6 y se apaga al salir de ellas.
+// Si no hay red guardada o no conecta, la placa abre un punto de acceso para
+// configurar la red desde el movil (WiFiManager). La red queda guardada en NVS.
+// SOTA no se incluye: sus condiciones de uso exigen aprobacion previa para software generado por IA.
+#define PANTALLA_PROPAGACION     5
+#define PANTALLA_SPOTS           6
+#define WIFI_TIMEOUT_CONEXION_MS 15000
+#define PORTAL_TIMEOUT_S         300
+#define PORTAL_CLAVE             "mrmorse73"  // Clave del punto de acceso de configuracion (minimo 8)
+#define ZONA_HORARIA             "CET-1CEST,M3.5.0,M10.5.0/3"  // Peninsula
+#define URL_PROPAGACION          "https://www.hamqsl.com/solarxml.php"
+#define URL_POTA                 "https://api.pota.app/spot/activator"
+#define REFRESCO_PROPAGACION_MS  (30UL * 60 * 1000)  // hamqsl actualiza cada pocas horas
+#define REFRESCO_POTA_MS         (2UL * 60 * 1000)   // POTA no publica limites: se consulta con moderacion
+#define MAX_SPOTS_POTA           40
+#define SPOTS_POR_PAGINA         4
+
+enum EstadoWifi { WIFI_APAGADO, WIFI_CONECTANDO, WIFI_PORTAL, WIFI_CONECTADO };
+EstadoWifi estadoWifi = WIFI_APAGADO;
+unsigned long inicioConexionWifi = 0;
+WiFiManager wm;
+char nombrePortal[16] = "";
+bool actualizandoWifi = false;     // Se esta descargando: la pantalla muestra "ACTUALIZANDO..."
+bool forzarActualizacion = false;  // Pedido con la opcion "actualizar"
+
+struct DatosPropagacion {
+  bool validos;
+  unsigned long intentoMs;  // 0 = nunca
+  int sfi, aIndex, kIndex, manchas;
+  char rayosX[8];
+  char actualizado[24];
+};
+DatosPropagacion propagacion = {};
+
+struct SpotPota {
+  char indicativo[12];
+  char frecuencia[10];
+  char referencia[12];
+  char tiempo[20];  // "2026-10-08T12:03:57" (UTC); sirve para ordenar
+};
+SpotPota spotsPota[MAX_SPOTS_POTA];
+uint8_t numSpotsPota = 0;
+bool spotsPotaValidos = false;
+unsigned long spotsPotaIntentoMs = 0;  // 0 = nunca
+uint8_t paginaSpots = 0;
+
+uint8_t opcionPantalla5 = 2;  // 0 = actualizar, 1 = wifi (portal), 2 = barra ant./sig.
+uint8_t opcionPantalla6 = 2;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
+
+void abrirPortalWifi() {
+  if (nombrePortal[0] == '\0') {
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    snprintf(nombrePortal, sizeof(nombrePortal), "MrMorse-%02X%02X", mac[4], mac[5]);
+  }
+  WiFi.mode(WIFI_STA);
+  wm.setConfigPortalBlocking(false);
+  wm.setConfigPortalTimeout(PORTAL_TIMEOUT_S);
+  wm.startConfigPortal(nombrePortal, PORTAL_CLAVE);
+  estadoWifi = WIFI_PORTAL;
+  Serial.printf("[WIFI] PORTAL ABIERTO: %s\n", nombrePortal);
+  pantallaPendiente = true;
+}
+
+void encenderWifi() {
+  WiFi.mode(WIFI_STA);
+  if (!wm.getWiFiIsSaved()) {
+    abrirPortalWifi();
+    return;
+  }
+  WiFi.begin();  // Red guardada
+  estadoWifi = WIFI_CONECTANDO;
+  inicioConexionWifi = millis();
+  Serial.println(F("[WIFI] CONECTANDO..."));
+  pantallaPendiente = true;
+}
+
+void apagarWifi() {
+  if (estadoWifi == WIFI_PORTAL) wm.stopConfigPortal();
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  estadoWifi = WIFI_APAGADO;
+  Serial.println(F("[WIFI] APAGADO"));
+}
+
+void wifiConectado() {
+  estadoWifi = WIFI_CONECTADO;
+  Serial.print(F("[WIFI] CONECTADO, IP "));
+  Serial.println(WiFi.localIP());
+  configTzTime(ZONA_HORARIA, "pool.ntp.org", "time.cloudflare.com");  // Sincroniza en segundo plano
+  pantallaPendiente = true;
+}
+
+bool descargarUrl(const char* url, String& cuerpo) {
+  WiFiClientSecure cliente;
+  cliente.setInsecure();  // Datos publicos de solo lectura: no se valida el certificado
+  HTTPClient http;
+  http.setTimeout(8000);
+  if (!http.begin(cliente, url)) return false;
+  http.setUserAgent("MrMorse-EA4ILN/" FW_VERSION);
+  int codigo = http.GET();
+  if (codigo == HTTP_CODE_OK) cuerpo = http.getString();
+  else Serial.printf("[WIFI] %s -> HTTP %d\n", url, codigo);
+  http.end();
+  return codigo == HTTP_CODE_OK;
+}
+
+String valorEtiquetaXml(const String& xml, const char* etiqueta) {
+  String apertura = String("<") + etiqueta + ">";
+  String cierre = String("</") + etiqueta + ">";
+  int ini = xml.indexOf(apertura);
+  if (ini < 0) return "";
+  ini += apertura.length();
+  int fin = xml.indexOf(cierre, ini);
+  if (fin < 0) return "";
+  String valor = xml.substring(ini, fin);
+  valor.trim();
+  return valor;
+}
+
+void actualizarPropagacion() {
+  propagacion.intentoMs = millis();
+  String xml;
+  if (!descargarUrl(URL_PROPAGACION, xml)) return;
+
+  propagacion.sfi = valorEtiquetaXml(xml, "solarflux").toInt();
+  propagacion.aIndex = valorEtiquetaXml(xml, "aindex").toInt();
+  propagacion.kIndex = valorEtiquetaXml(xml, "kindex").toInt();
+  propagacion.manchas = valorEtiquetaXml(xml, "sunspots").toInt();
+  strlcpy(propagacion.rayosX, valorEtiquetaXml(xml, "xray").c_str(), sizeof(propagacion.rayosX));
+  strlcpy(propagacion.actualizado, valorEtiquetaXml(xml, "updated").c_str(), sizeof(propagacion.actualizado));
+  propagacion.validos = true;
+  Serial.printf("[WIFI] PROPAGACION: SFI %d A %d K %d\n", propagacion.sfi, propagacion.aIndex, propagacion.kIndex);
+}
+
+int compararSpotsRecientePrimero(const void* a, const void* b) {
+  return strcmp(((const SpotPota*)b)->tiempo, ((const SpotPota*)a)->tiempo);
+}
+
+void actualizarSpotsPota() {
+  spotsPotaIntentoMs = millis();
+  String json;
+  if (!descargarUrl(URL_POTA, json)) return;
+
+  JsonDocument filtro;
+  filtro[0]["activator"] = true;
+  filtro[0]["frequency"] = true;
+  filtro[0]["mode"] = true;
+  filtro[0]["reference"] = true;
+  filtro[0]["spotTime"] = true;
+
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, json, DeserializationOption::Filter(filtro));
+  if (err) {
+    Serial.printf("[WIFI] POTA: JSON NO VALIDO (%s)\n", err.c_str());
+    return;
+  }
+
+  numSpotsPota = 0;
+  for (JsonObject s : doc.as<JsonArray>()) {
+    if (numSpotsPota >= MAX_SPOTS_POTA) break;
+    if (strcmp(s["mode"] | "", "CW") != 0) continue;
+
+    SpotPota& sp = spotsPota[numSpotsPota++];
+    strlcpy(sp.indicativo, s["activator"] | "", sizeof(sp.indicativo));
+    strlcpy(sp.frecuencia, s["frequency"] | "", sizeof(sp.frecuencia));
+    strlcpy(sp.referencia, s["reference"] | "", sizeof(sp.referencia));
+    strlcpy(sp.tiempo, s["spotTime"] | "", sizeof(sp.tiempo));
+
+    // "7044.0" -> "7044"
+    size_t n = strlen(sp.frecuencia);
+    if (n > 2 && strcmp(&sp.frecuencia[n - 2], ".0") == 0) sp.frecuencia[n - 2] = '\0';
+  }
+  qsort(spotsPota, numSpotsPota, sizeof(SpotPota), compararSpotsRecientePrimero);
+  spotsPotaValidos = true;
+  paginaSpots = 0;
+  Serial.printf("[WIFI] POTA: %u SPOTS CW\n", numSpotsPota);
+}
+
+/**
+ * Opcion "actualizar": con WiFi descarga ya; sin WiFi intenta conectar.
+ */
+void pedirActualizacionWifi() {
+  if (estadoWifi == WIFI_CONECTADO) forzarActualizacion = true;
+  else if (estadoWifi == WIFI_APAGADO) encenderWifi();
+}
+
+/**
+ * Enciende o apaga el WiFi al entrar o salir de sus pantallas, avanza la conexion o el
+ * portal y descarga los datos cuando tocan. La descarga bloquea 1-3 s, pero en estas
+ * pantallas no suena CW ni hay recepcion LoRa.
+ */
+void procesarWifi() {
+  static uint8_t pantallaAnterior = 0;
+  bool enPantallaWifi = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS);
+  bool estabaEnPantallaWifi = (pantallaAnterior == PANTALLA_PROPAGACION || pantallaAnterior == PANTALLA_SPOTS);
+  if (pantallaActual != pantallaAnterior) {
+    if (enPantallaWifi && !estabaEnPantallaWifi) encenderWifi();
+    if (!enPantallaWifi && estabaEnPantallaWifi) apagarWifi();
+    pantallaAnterior = pantallaActual;
+  }
+
+  switch (estadoWifi) {
+    case WIFI_CONECTANDO:
+      if (WiFi.status() == WL_CONNECTED) {
+        wifiConectado();
+      } else if (millis() - inicioConexionWifi > WIFI_TIMEOUT_CONEXION_MS) {
+        Serial.println(F("[WIFI] NO CONECTA"));
+        abrirPortalWifi();
+      }
+      break;
+
+    case WIFI_PORTAL:
+      if (wm.process()) {
+        wifiConectado();
+      } else if (!wm.getConfigPortalActive()) {
+        Serial.println(F("[WIFI] PORTAL CERRADO POR TIEMPO"));
+        apagarWifi();
+        pantallaPendiente = true;
+      }
+      break;
+
+    case WIFI_CONECTADO: {
+      if (WiFi.status() != WL_CONNECTED) {
+        estadoWifi = WIFI_CONECTANDO;
+        inicioConexionWifi = millis();
+        pantallaPendiente = true;
+        break;
+      }
+      bool tocaPropagacion = pantallaActual == PANTALLA_PROPAGACION &&
+          (forzarActualizacion || propagacion.intentoMs == 0 ||
+           millis() - propagacion.intentoMs > REFRESCO_PROPAGACION_MS);
+      bool tocaPota = pantallaActual == PANTALLA_SPOTS &&
+          (forzarActualizacion || spotsPotaIntentoMs == 0 ||
+           millis() - spotsPotaIntentoMs > REFRESCO_POTA_MS);
+      if (tocaPropagacion || tocaPota) {
+        forzarActualizacion = false;
+        actualizandoWifi = true;
+        actualizarPantalla();
+        if (tocaPropagacion) actualizarPropagacion();
+        if (tocaPota) actualizarSpotsPota();
+        actualizandoWifi = false;
+        pantallaPendiente = true;
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
+}
+
+/**
+ * Si no hay conexion dibuja el estado del WiFi en el cuerpo de la pantalla y devuelve true.
+ */
+bool dibujarEstadoWifi() {
+  switch (estadoWifi) {
+    case WIFI_CONECTANDO:
+      display.setCursor(0, 22);
+      display.print(F("CONECTANDO WIFI..."));
+      return true;
+    case WIFI_PORTAL:
+      display.setCursor(0, 12);
+      display.print(F("CONFIGURA EL WIFI:"));
+      display.setCursor(0, 22);
+      display.print(F("RED   ")); display.print(nombrePortal);
+      display.setCursor(0, 32);
+      display.print(F("CLAVE " PORTAL_CLAVE));
+      display.setCursor(0, 42);
+      display.print(F("WEB   192.168.4.1"));
+      return true;
+    case WIFI_APAGADO:
+      display.setCursor(0, 22);
+      display.print(F("WIFI APAGADO"));
+      return true;
+    default:
+      return false;
+  }
+}
+
+// ============================================================================
+// RENDERIZADO PANTALLAS (1 A 6)
 // ============================================================================
 void renderizarPantalla1() {
   const char* titulo = " MR. MORSE EA4ILN ";
@@ -1161,6 +1463,95 @@ void renderizarPantalla4() {
   }
 }
 
+void renderizarPantalla5() {
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+
+  if (!dibujarEstadoWifi()) {
+    if (actualizandoWifi) {
+      display.setCursor(0, 22);
+      display.print(F("ACTUALIZANDO..."));
+    } else if (!propagacion.validos) {
+      display.setCursor(0, 22);
+      display.print(F("SIN DATOS"));
+    } else {
+      display.setCursor(0, 12);
+      display.print(F("SFI ")); display.print(propagacion.sfi);
+      display.print(F("  SSN ")); display.print(propagacion.manchas);
+
+      display.setCursor(0, 22);
+      display.print(F("A ")); display.print(propagacion.aIndex);
+      display.print(F("  K ")); display.print(propagacion.kIndex);
+      display.print(F("  XR ")); display.print(propagacion.rayosX);
+
+      // "08 Oct 2026 1205 GMT" -> se muestra la hora del dato
+      String act = String(propagacion.actualizado);
+      display.setCursor(0, 32);
+      display.print(F("HAMQSL ")); display.print(act.length() > 8 ? act.substring(act.length() - 8) : act);
+    }
+
+    struct tm local;
+    if (horaLocalValida(local)) {
+      time_t ahora = time(nullptr);
+      struct tm utc;
+      gmtime_r(&ahora, &utc);
+      char txtHora[24];
+      snprintf(txtHora, sizeof(txtHora), "UTC %02d:%02d LOC %02d:%02d", utc.tm_hour, utc.tm_min, local.tm_hour, local.tm_min);
+      display.setCursor(0, 42);
+      display.print(txtHora);
+    }
+  }
+
+  if (opcionPantalla5 == 2) {
+    dibujarBarraAvanzarRetroceder(true);
+  } else {
+    String pie = (opcionPantalla5 == 0 ? "> " : "  ") + String("actualizar  ") +
+                 (opcionPantalla5 == 1 ? "> " : "  ") + String("wifi");
+    dibujarPieCentrado(pie);
+  }
+}
+
+void renderizarPantalla6() {
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+  uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
+
+  if (!dibujarEstadoWifi()) {
+    if (actualizandoWifi) {
+      display.setCursor(0, 22);
+      display.print(F("ACTUALIZANDO..."));
+    } else if (!spotsPotaValidos) {
+      display.setCursor(0, 22);
+      display.print(F("SIN DATOS"));
+    } else if (numSpotsPota == 0) {
+      display.setCursor(0, 22);
+      display.print(F("NO HAY SPOTS CW"));
+    } else {
+      // Indicativo, frecuencia (kHz) y referencia; lo que no cabe se recorta
+      display.setTextWrap(false);
+      for (uint8_t i = 0; i < SPOTS_POR_PAGINA; i++) {
+        uint8_t idx = paginaSpots * SPOTS_POR_PAGINA + i;
+        if (idx >= numSpotsPota) break;
+        char linea[40];
+        snprintf(linea, sizeof(linea), "%-7s%6s %s", spotsPota[idx].indicativo,
+                 spotsPota[idx].frecuencia, spotsPota[idx].referencia);
+        display.setCursor(0, 12 + i * 10);
+        display.print(linea);
+      }
+      display.setTextWrap(true);
+    }
+  }
+
+  if (opcionPantalla6 == 2) {
+    dibujarBarraAvanzarRetroceder(true);
+  } else {
+    // Maximo 21 caracteres: "> mas 10/10   > act."
+    String pie = (opcionPantalla6 == 0 ? "> " : "  ") + String("mas ") + String(paginaSpots + 1) + "/" + String(paginas) +
+                 (opcionPantalla6 == 1 ? "   > " : "     ") + String("act.");
+    dibujarPieCentrado(pie);
+  }
+}
+
 void actualizarPantalla() {
   display.clearDisplay();
   dibujarEncabezado();
@@ -1170,6 +1561,8 @@ void actualizarPantalla() {
     case 2: renderizarPantalla2(); break;
     case 3: renderizarPantalla3(); break;
     case 4: renderizarPantalla4(); break;
+    case PANTALLA_PROPAGACION: renderizarPantalla5(); break;
+    case PANTALLA_SPOTS: renderizarPantalla6(); break;
   }
 
   display.display();
@@ -1367,7 +1760,8 @@ void procesarBoton() {
               opcionPantalla3 = 2;          // Por defecto al entrar a P3: barra inferior
               opcionNavegacionP1234 = 1;    // "sig."
             } else {
-              pantallaActual = 1;
+              pantallaActual = PANTALLA_PROPAGACION;
+              opcionPantalla5 = 2;
               opcionNavegacionP1234 = 1;
             }
             opcionPantalla4 = 2;
@@ -1400,6 +1794,45 @@ void procesarBoton() {
           salirModoLoRa();
         } else if (ev == BOTON_CORTA) {
           modoKeyer4_2 = (modoKeyer4_2 + 1) % 3;
+        }
+      }
+
+    } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS) {
+      // P5: [sig.] -> [actualizar] -> [wifi] -> [ant.]    P6: [sig.] -> [mas] -> [actualizar] -> [ant.]
+      uint8_t& opcion = (pantallaActual == PANTALLA_PROPAGACION) ? opcionPantalla5 : opcionPantalla6;
+      if (ev == BOTON_LARGA) {
+        if (opcion == 2 && opcionNavegacionP1234 == 1) {
+          opcion = 0;
+        } else if (opcion == 0) {
+          opcion = 1;
+        } else if (opcion == 1) {
+          opcion = 2;
+          opcionNavegacionP1234 = 0;
+        } else {
+          opcion = 2;
+          opcionNavegacionP1234 = 1;
+        }
+      } else if (ev == BOTON_CORTA) {
+        if (pantallaActual == PANTALLA_PROPAGACION && opcion == 0) {
+          pedirActualizacionWifi();
+        } else if (pantallaActual == PANTALLA_PROPAGACION && opcion == 1) {
+          abrirPortalWifi();  // Para cambiar de red
+        } else if (pantallaActual == PANTALLA_SPOTS && opcion == 0) {
+          uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
+          paginaSpots = (paginaSpots + 1) % paginas;
+        } else if (pantallaActual == PANTALLA_SPOTS && opcion == 1) {
+          pedirActualizacionWifi();
+        } else if (opcion == 2) {
+          if (opcionNavegacionP1234 == 0) {
+            pantallaActual--;  // P5 -> P4, P6 -> P5
+          } else {
+            pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
+          }
+          opcion = 2;
+          if (pantallaActual == 4) opcionPantalla4 = 2;
+          else if (pantallaActual == PANTALLA_PROPAGACION) opcionPantalla5 = 2;
+          else if (pantallaActual == PANTALLA_SPOTS) opcionPantalla6 = 2;
+          opcionNavegacionP1234 = 1;
         }
       }
 
@@ -1510,6 +1943,9 @@ void procesarBoton() {
           opcionNavegacionP1234 = 1; // Apuntando por defecto a "sig."
         } else if (pantallaActual == 4) {
           opcionPantalla4 = 2;
+          opcionNavegacionP1234 = 1;
+        } else if (pantallaActual == PANTALLA_SPOTS) {
+          opcionPantalla6 = 2;
           opcionNavegacionP1234 = 1;
         } else {
           opcionNavegacionP1234 = 1;
@@ -1642,6 +2078,14 @@ void procesarBateriaYPantalla() {
     if (cambia) pantallaPendiente = true;
   }
 
+  // El reloj de la cabecera cambia cada minuto
+  static int ultimoMinuto = -1;
+  struct tm local;
+  if (horaLocalValida(local) && local.tm_min != ultimoMinuto) {
+    ultimoMinuto = local.tm_min;
+    pantallaPendiente = true;
+  }
+
   if (pantallaPendiente) {
     pantallaPendiente = false;
     actualizarPantalla();
@@ -1654,5 +2098,6 @@ void loop() {
   procesarEmisionMorseDuoNoBloqueante();
   procesarRecepcionLoRa();
   procesarColaRxDuo();
+  procesarWifi();
   procesarBateriaYPantalla();
 }
