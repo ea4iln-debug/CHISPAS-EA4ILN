@@ -27,6 +27,7 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   `¿` con `write(0xA8)`, foco al volver a P2 -> v0.3g batería en caché cada 30 s fuera de la emisión CW y
   redibujado solo por cambios (sin refresco fijo) -> v0.3h RSSI en Duo y medida de temporización CW por serie
   (`DEBUG_CW`; resultado: retraso máx. 0 ms). RSSI medido: -31 dBm a 2 m.
+- **v0.5e cargada en las dos placas** (8 oct 2026).
 - Las pruebas son con LED, pantalla y monitor serie: no hay audio conectado (no proponer pruebas "a oído").
 - La versión está en `#define FW_VERSION` (al principio de `main.cpp`): se ve en la pantalla 1 y por serie.
   Subirla en cada cambio que se cargue en placa.
