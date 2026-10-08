@@ -7,11 +7,16 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.5b**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.5e**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
   con el botón PRG (GPIO0), pulsación corta/larga.
+- Pantallas (v0.5d, constantes `PANTALLA_*`): 1 Inicio, 2 CW (Koch), 3 LoRa (Duo/QSO), 4 Propagación, 5 POTA,
+  6 Sol, 7 Configuración (indicativo, locator, LoRa, batería, FW, portal, reset de fábrica). La antigua pantalla
+  de debug se eliminó. Cabecera con nombre corto de pantalla; `- : opc` en la barra si hay opciones.
+- NVS: `mr_morse` (entrenador y estadísticas), `mr_estacion` (indicativo, locator); WiFi en el NVS del ESP32.
+  Borrar estadísticas solo borra estadísticas; el reset de fábrica lo borra todo.
 - **No migrar a `pins.h` ni al hardware nuevo hasta que el firmware sea estable y se monte el circuito.**
 - La entrada está abstraída en `leerEventoBoton()` (BOTON_CORTA / BOTON_LARGA): al montar el rotary y el
   pulsador de función solo habrá que cambiar esa función, no los menús.
@@ -44,6 +49,11 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   las ecuaciones de NOAA para el locator de la estación **IM68mu** (`#define LOCATOR`). Necesita hora NTP.
 - **SOTA: no programar el cliente.** Sus condiciones (api-db2.sota.org.uk/docs) exigen unirse al grupo
   "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Lo decide el usuario.
+
+- Batería (v0.5e): en estas placas el divisor se activa con GPIO37 **HIGH** (con LOW el pin lee 0; Meshtastic
+  declara LOW para su V3). Atenuación 2,5 dB, factor 4,9 (teórico 390k/100k) y porcentaje con curva Li-ion.
+  **Pendiente: calibrar con polímetro** (tensión real ÷ mV del pin) y quitar `diagnosticoBateria()` del arranque.
+  Con USB el cargador sube la tensión: el % solo es fiable con batería sola.
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):

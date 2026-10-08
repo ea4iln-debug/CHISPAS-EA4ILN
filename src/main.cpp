@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.5c - Indicativo y locator en NVS; pantalla 8 de configuracion (portal, reset de fabrica); hora manual en el portal
+ * @version 0.5e - Bateria: atenuacion 2.5 dB, divisor x4.9 y porcentaje con curva Li-ion
  * @date 2026-10-08
  */
 
-#define FW_VERSION "0.5c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.5e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -64,7 +64,7 @@
 
 #define VBAT_ADC_PIN    1   // Pin ADC para lectura del divisor de voltaje de la bateria
 #define ADC_CTRL_PIN    37  // Habilitacion del divisor de tension de bateria
-#define VBAT_MULTIPLIER 5.112f // Factor de calibracion del divisor R1/R2 de Heltec V3
+#define VBAT_MULTIPLIER 4.9f   // Divisor 390k/100k de la V3. PENDIENTE: confirmar con polimetro
 #define TIEMPO_PULSACION_LARGA 600 // Umbral en ms para detectar pulsacion larga del boton PRG
 #define TIEMPO_ANTIRREBOTE_MS  30  // Pulsaciones mas cortas se ignoran (rebotes)
 
@@ -185,7 +185,15 @@ void IRAM_ATTR cbInterrupcionLora() {
 }
 
 uint8_t pantallaActual = 1;         
-const uint8_t TOTAL_PANTALLAS = 8;
+// Pantallas principales, en el orden en que se recorren con ant. / sig.
+#define PANTALLA_INICIO      1
+#define PANTALLA_CW          2  // Entrenador Koch
+#define PANTALLA_LORA        3  // Duo / QSO
+#define PANTALLA_PROPAGACION 4
+#define PANTALLA_SPOTS       5
+#define PANTALLA_SOL         6
+#define PANTALLA_CONFIG      7
+const uint8_t TOTAL_PANTALLAS = 7;
 uint8_t opcionNavegacionP1234 = 1;  // 0 = "ant.", 1 = "sig."
 
 int contadorPulsaciones = 0;
@@ -427,13 +435,30 @@ struct BateriaInfo {
   EstadoAlimentacion estado;
 };
 
+// Curva de descarga tipica de una celda Li-ion en reposo (tension -> %), interpolada.
+// Con USB conectado el cargador sube la tension y el porcentaje sale alto.
+int porcentajeLiIon(float v) {
+  static const float tension[] = { 3.30, 3.60, 3.68, 3.72, 3.75, 3.78, 3.81, 3.86, 3.92, 4.00, 4.10, 4.20 };
+  static const int   pct[]     = {    0,    5,   10,   20,   30,   40,   50,   60,   70,   80,   90,  100 };
+  const int n = sizeof(tension) / sizeof(tension[0]);
+  if (v <= tension[0]) return 0;
+  if (v >= tension[n - 1]) return 100;
+  for (int i = 1; i < n; i++) {
+    if (v <= tension[i]) {
+      return pct[i - 1] + (int)lround((v - tension[i - 1]) / (tension[i] - tension[i - 1]) * (pct[i] - pct[i - 1]));
+    }
+  }
+  return 100;
+}
+
 BateriaInfo leerBateria() {
   pinMode(ADC_CTRL_PIN, OUTPUT);
   digitalWrite(ADC_CTRL_PIN, HIGH);
   delay(10);
 
+  // Al pin llegan como mucho 4.2 V / 4.9 = 0.86 V: 2.5 dB (rango hasta unos 1.25 V) es mas preciso que 11 dB
   analogReadResolution(12);
-  analogSetPinAttenuation(VBAT_ADC_PIN, ADC_11db);
+  analogSetPinAttenuation(VBAT_ADC_PIN, ADC_2_5db);
 
   uint32_t sumaMv = 0;
   for (int i = 0; i < 15; i++) {
@@ -453,11 +478,33 @@ BateriaInfo leerBateria() {
     bat.estado = SOLO_USB;
   } else {
     bat.voltaje = voltaje;
-    int pct = map((int)(voltaje * 100), 330, 420, 0, 100);
-    bat.porcentaje = constrain(pct, 0, 100);
+    bat.porcentaje = porcentajeLiIon(voltaje);
     bat.estado = BAT_DESCARGA;
   }
   return bat;
+}
+
+// PRUEBA (quitar tras calibrar con polimetro): mide el divisor con GPIO37 a LOW y a HIGH y con atenuacion de 11 dB y 2,5 dB,
+// para averiguar como se habilita el divisor en esta revision de la placa
+void diagnosticoBateria() {
+  const uint8_t niveles[2] = { LOW, HIGH };
+  const adc_attenuation_t atenuaciones[2] = { ADC_11db, ADC_2_5db };
+  const char* nombresAten[2] = { "11dB", "2.5dB" };
+  analogReadResolution(12);
+  pinMode(ADC_CTRL_PIN, OUTPUT);
+  for (uint8_t n = 0; n < 2; n++) {
+    for (uint8_t a = 0; a < 2; a++) {
+      digitalWrite(ADC_CTRL_PIN, niveles[n]);
+      analogSetPinAttenuation(VBAT_ADC_PIN, atenuaciones[a]);
+      delay(50);
+      uint32_t suma = 0;
+      for (int i = 0; i < 32; i++) { suma += analogReadMilliVolts(VBAT_ADC_PIN); delay(1); }
+      float mv = suma / 32.0;
+      Serial.printf("[BAT DIAG] GPIO37=%s %-5s pin %6.1f mV -> x4.9 = %.3f V\n",
+                    niveles[n] == LOW ? "LOW " : "HIGH", nombresAten[a], mv, mv * 4.9 / 1000.0);
+    }
+  }
+  digitalWrite(ADC_CTRL_PIN, LOW);
 }
 
 // leerBateria() bloquea unos 25 ms: se lee cada 30 s fuera de la emision CW y el
@@ -480,7 +527,7 @@ void dibujarEncabezado() {
 
   String strBat = (bat.estado == SOLO_USB) ? "PWR" : String(bat.porcentaje) + "%";
 
-  if (pantallaActual == 3 && enEstadisticas3_5) {
+  if (pantallaActual == PANTALLA_CW && enEstadisticas3_5) {
     uint8_t superadas = 0;
     for (int i = 0; i < 40; i++) {
       if (statsKoch[i].maxAcierto >= 90) superadas++;
@@ -504,7 +551,7 @@ void dibujarEncabezado() {
     display.setCursor(128 - w, 0);
     display.print(txtRight);
 
-  } else if ((pantallaActual == 3 && enPractica3_2) || (pantallaActual == 4 && subpantalla4Activa == 1)) {
+  } else if ((pantallaActual == PANTALLA_CW && enPractica3_2) || (pantallaActual == PANTALLA_LORA && subpantalla4Activa == 1)) {
     display.setCursor(0, 0);
     display.print(wpmCW);
     display.print(F("WPM SP:"));
@@ -534,6 +581,20 @@ void dibujarEncabezado() {
     display.getTextBounds(txtRight, 0, 0, &x1, &y1, &w, &h);
     display.setCursor(128 - w, 0);
     display.print(txtRight);
+
+    // Nombre de la pantalla, centrado. Maximo 5 caracteres: entre el reloj y "BAT:100%"
+    const char* nombre = "";
+    switch (pantallaActual) {
+      case PANTALLA_CW:          nombre = "CW";    break;
+      case PANTALLA_LORA:        nombre = "LORA";  break;
+      case PANTALLA_PROPAGACION: nombre = "PROP."; break;
+      case PANTALLA_SPOTS:       nombre = "POTA";  break;
+      case PANTALLA_SOL:         nombre = "SOL";   break;
+      case PANTALLA_CONFIG:      nombre = "CONF."; break;
+    }
+    display.getTextBounds(nombre, 0, 0, &x1, &y1, &w, &h);
+    display.setCursor((128 - w) / 2, 0);
+    display.print(nombre);
   }
 
   display.drawLine(0, 9, 128, 9, SSD1306_WHITE);
@@ -551,7 +612,7 @@ void dibujarPieCentrado(const String& txt) {
   display.print(txt);
 }
 
-void dibujarBarraAvanzarRetroceder(bool enfocada) {
+void dibujarBarraAvanzarRetroceder(bool enfocada, bool hayOpciones) {
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -569,6 +630,13 @@ void dibujarBarraAvanzarRetroceder(bool enfocada) {
   display.getTextBounds(txtSig, 0, 0, &x1, &y1, &w, &h);
   display.setCursor(128 - w, 55);
   display.print(txtSig);
+
+  // "- : opc" = con pulsacion larga se recorren las opciones de la pantalla
+  if (hayOpciones) {
+    display.getTextBounds("- : opc", 0, 0, &x1, &y1, &w, &h);
+    display.setCursor((128 - w) / 2, 55);
+    display.print(F("- : opc"));
+  }
 }
 
 // ============================================================================
@@ -853,8 +921,6 @@ void salirModoLoRa() {
 // Si no hay red guardada o no conecta, la placa abre un punto de acceso para
 // configurar la red desde el movil (WiFiManager). La red queda guardada en NVS.
 // SOTA no se incluye: sus condiciones de uso exigen aprobacion previa para software generado por IA.
-#define PANTALLA_PROPAGACION     5
-#define PANTALLA_SPOTS           6
 #define WIFI_TIMEOUT_CONEXION_MS 15000
 #define PORTAL_TIMEOUT_S         300
 #define PORTAL_CLAVE             "mrmorse73"  // Clave del punto de acceso de configuracion (minimo 8)
@@ -898,15 +964,14 @@ bool spotsPotaValidos = false;
 unsigned long spotsPotaIntentoMs = 0;  // 0 = nunca
 uint8_t paginaSpots = 0;
 
-#define OPCION_BARRA_P5 3
-#define OPCION_BARRA_P6 2
-uint8_t opcionPantalla5 = OPCION_BARRA_P5;  // 0 = pagina, 1 = actualizar, 2 = wifi (portal), 3 = barra ant./sig.
-uint8_t opcionPantalla6 = OPCION_BARRA_P6;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
+#define OPCION_BARRA_PROP 3
+#define OPCION_BARRA_SPOTS 2
+uint8_t opcionPantallaProp = OPCION_BARRA_PROP;  // 0 = pagina, 1 = actualizar, 2 = wifi (portal), 3 = barra ant./sig.
+uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
 
-#define PANTALLA_CONFIG 8
-#define OPCION_BARRA_P8 2
-uint8_t opcionPantalla8 = OPCION_BARRA_P8;  // 0 = portal, 1 = reset de fabrica, 2 = barra ant./sig.
+#define OPCION_BARRA_CONFIG 2
+uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // 0 = portal, 1 = reset de fabrica, 2 = barra ant./sig.
 bool confirmandoFabrica = false;
 
 // Pagina "Setup" del portal: datos de la estacion y hora manual (para campo sin internet)
@@ -1222,7 +1287,7 @@ bool dibujarEstadoWifi() {
 // ============================================================================
 // RENDERIZADO PANTALLAS (1 A 6)
 // ============================================================================
-void renderizarPantalla1() {
+void renderizarPantallaInicio() {
   const char* titulo = " MR. MORSE EA4ILN ";
   int16_t x1, y1;
   uint16_t w, h;
@@ -1244,29 +1309,10 @@ void renderizarPantalla1() {
   display.setCursor((128 - w) / 2, 40);
   display.print(txtVersion);
 
-  dibujarBarraAvanzarRetroceder(true);
+  dibujarBarraAvanzarRetroceder(true, false);
 }
 
-void renderizarPantalla2() {
-  display.setTextColor(SSD1306_WHITE);
-  display.setTextSize(1);
-
-  display.setCursor(0, 16);
-  display.print(F("LORA: "));
-  display.println(estadoLoraStr);
-
-  BateriaInfo bat = bateriaActual;
-  display.setCursor(0, 32);
-  display.print(F("VBAT: "));
-  display.print(bat.voltaje, 2);
-  display.print(F("V ("));
-  display.print(bat.porcentaje);
-  display.print(F("%)"));
-
-  dibujarBarraAvanzarRetroceder(true);
-}
-
-void renderizarPantalla3() {
+void renderizarPantallaCW() {
   display.setTextColor(SSD1306_WHITE);
 
   if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
@@ -1295,7 +1341,7 @@ void renderizarPantalla3() {
     display.print(opcionPantalla3 == 1 ? "> " : "  ");
     display.print(F("< ESTADISTICAS >"));
 
-    dibujarBarraAvanzarRetroceder(opcionPantalla3 == 2);
+    dibujarBarraAvanzarRetroceder(opcionPantalla3 == 2, true);
 
   } else if (enSubpantallaCW && !enPractica3_2) {
     display.setTextSize(1);
@@ -1479,7 +1525,7 @@ void renderizarPantalla3() {
   }
 }
 
-void renderizarPantalla4() {
+void renderizarPantallaLora() {
   display.setTextColor(SSD1306_WHITE);
 
   if (!enPantalla4_Sub) {
@@ -1508,7 +1554,7 @@ void renderizarPantalla4() {
     display.print(opcionPantalla4 == 1 ? "> " : "  ");
     display.print(F("< CW QSO (KEYER) >"));
 
-    dibujarBarraAvanzarRetroceder(opcionPantalla4 == 2);
+    dibujarBarraAvanzarRetroceder(opcionPantalla4 == 2, true);
 
   } else if (subpantalla4Activa == 1) {
     display.setTextSize(1);
@@ -1575,7 +1621,7 @@ void renderizarPantalla4() {
   }
 }
 
-void renderizarPantalla5() {
+void renderizarPantallaPropagacion() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
 
@@ -1623,18 +1669,18 @@ void renderizarPantalla5() {
     }
   }
 
-  if (opcionPantalla5 == OPCION_BARRA_P5) {
-    dibujarBarraAvanzarRetroceder(true);
+  if (opcionPantallaProp == OPCION_BARRA_PROP) {
+    dibujarBarraAvanzarRetroceder(true, true);
   } else {
     // Maximo 21 caracteres: "> pag  > act.  > wifi"
-    String pie = (opcionPantalla5 == 0 ? "> " : "  ") + String("pag ") +
-                 (opcionPantalla5 == 1 ? "> " : "  ") + String("act. ") +
-                 (opcionPantalla5 == 2 ? "> " : "  ") + String("wifi");
+    String pie = (opcionPantallaProp == 0 ? "> " : "  ") + String("pag ") +
+                 (opcionPantallaProp == 1 ? "> " : "  ") + String("act. ") +
+                 (opcionPantallaProp == 2 ? "> " : "  ") + String("wifi");
     dibujarPieCentrado(pie);
   }
 }
 
-void renderizarPantalla6() {
+void renderizarPantallaSpots() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
   uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
@@ -1665,12 +1711,12 @@ void renderizarPantalla6() {
     }
   }
 
-  if (opcionPantalla6 == OPCION_BARRA_P6) {
-    dibujarBarraAvanzarRetroceder(true);
+  if (opcionPantallaSpots == OPCION_BARRA_SPOTS) {
+    dibujarBarraAvanzarRetroceder(true, true);
   } else {
     // Maximo 21 caracteres: "> mas 10/10   > act."
-    String pie = (opcionPantalla6 == 0 ? "> " : "  ") + String("mas ") + String(paginaSpots + 1) + "/" + String(paginas) +
-                 (opcionPantalla6 == 1 ? "   > " : "     ") + String("act.");
+    String pie = (opcionPantallaSpots == 0 ? "> " : "  ") + String("mas ") + String(paginaSpots + 1) + "/" + String(paginas) +
+                 (opcionPantallaSpots == 1 ? "   > " : "     ") + String("act.");
     dibujarPieCentrado(pie);
   }
 }
@@ -1681,7 +1727,6 @@ void renderizarPantalla6() {
 // Ecuaciones solares de NOAA (precision de un par de minutos). Ventana de linea gris:
 // sol entre GRIS_ELEV_MIN y GRIS_ELEV_MAX grados de altura (unos 30-40 min antes y
 // despues de la salida y la puesta en la Peninsula). Necesita la hora sincronizada por NTP.
-#define PANTALLA_SOL   7
 #define GRIS_ELEV_MIN  -6.0
 #define GRIS_ELEV_MAX  6.0
 
@@ -1746,7 +1791,7 @@ String formatearMinuto(int minutoUtc, int difLocal) {
   return String(txt);
 }
 
-void renderizarPantalla7() {
+void renderizarPantallaSol() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
 
@@ -1792,7 +1837,7 @@ void renderizarPantalla7() {
     display.print(linea);
   }
 
-  dibujarBarraAvanzarRetroceder(true);
+  dibujarBarraAvanzarRetroceder(true, false);
 }
 
 // ============================================================================
@@ -1821,30 +1866,39 @@ void resetFabrica() {
   ESP.restart();
 }
 
-void renderizarPantalla8() {
+void renderizarPantallaConfig() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
 
   if (estadoWifi == WIFI_PORTAL || estadoWifi == WIFI_CONECTANDO) {
     dibujarEstadoWifi();
   } else {
+    char linea[24];
+    snprintf(linea, sizeof(linea), "%-9s %s", indicativoEstacion, locatorEstacion);
     display.setCursor(0, 12);
-    display.print(F("INDICATIVO ")); display.print(indicativoEstacion);
+    display.print(linea);
+
     display.setCursor(0, 22);
-    display.print(F("LOCATOR    ")); display.print(locatorEstacion);
+    display.print(F("LORA ")); display.print(estadoLoraStr);
+
     display.setCursor(0, 32);
-    display.print(F("FIRMWARE   v" FW_VERSION));
-    if (confirmandoFabrica) {
-      display.setCursor(0, 42);
-      display.print(F("OTRA VEZ: BORRA TODO"));
+    if (bateriaActual.estado == SOLO_USB) {
+      display.print(F("BAT  SIN BATERIA"));
+    } else {
+      snprintf(linea, sizeof(linea), "BAT  %.2fV  %d%%", bateriaActual.voltaje, bateriaActual.porcentaje);
+      display.print(linea);
     }
+
+    display.setCursor(0, 42);
+    if (confirmandoFabrica) display.print(F("OTRA VEZ: BORRA TODO"));
+    else display.print(F("FW   v" FW_VERSION));
   }
 
-  if (opcionPantalla8 == OPCION_BARRA_P8) {
-    dibujarBarraAvanzarRetroceder(true);
+  if (opcionPantallaConfig == OPCION_BARRA_CONFIG) {
+    dibujarBarraAvanzarRetroceder(true, true);
   } else {
-    String pie = (opcionPantalla8 == 0 ? "> " : "  ") + String("portal  ") +
-                 (opcionPantalla8 == 1 ? "> " : "  ") + String("fabrica");
+    String pie = (opcionPantallaConfig == 0 ? "> " : "  ") + String("portal  ") +
+                 (opcionPantallaConfig == 1 ? "> " : "  ") + String("fabrica");
     dibujarPieCentrado(pie);
   }
 }
@@ -1854,14 +1908,13 @@ void actualizarPantalla() {
   dibujarEncabezado();
 
   switch (pantallaActual) {
-    case 1: renderizarPantalla1(); break;
-    case 2: renderizarPantalla2(); break;
-    case 3: renderizarPantalla3(); break;
-    case 4: renderizarPantalla4(); break;
-    case PANTALLA_PROPAGACION: renderizarPantalla5(); break;
-    case PANTALLA_SPOTS: renderizarPantalla6(); break;
-    case PANTALLA_SOL: renderizarPantalla7(); break;
-    case PANTALLA_CONFIG: renderizarPantalla8(); break;
+    case PANTALLA_INICIO: renderizarPantallaInicio(); break;
+    case PANTALLA_CW: renderizarPantallaCW(); break;
+    case PANTALLA_LORA: renderizarPantallaLora(); break;
+    case PANTALLA_PROPAGACION: renderizarPantallaPropagacion(); break;
+    case PANTALLA_SPOTS: renderizarPantallaSpots(); break;
+    case PANTALLA_SOL: renderizarPantallaSol(); break;
+    case PANTALLA_CONFIG: renderizarPantallaConfig(); break;
   }
 
   display.display();
@@ -2029,7 +2082,7 @@ void procesarBoton() {
 
   if (ev != BOTON_NINGUNO) {
 
-    if (pantallaActual == 4) {
+    if (pantallaActual == PANTALLA_LORA) {
       if (!enPantalla4_Sub) {
         if (ev == BOTON_LARGA) {
           // CICLO ROTATIVO PANTALLA 4 CON PULSACION LARGA (-):
@@ -2055,12 +2108,12 @@ void procesarBoton() {
             modoRadioRxActivo = true;
           } else if (opcionPantalla4 == 2) {
             if (opcionNavegacionP1234 == 0) {
-              pantallaActual = 3;
+              pantallaActual = PANTALLA_CW;
               opcionPantalla3 = 2;          // Por defecto al entrar a P3: barra inferior
               opcionNavegacionP1234 = 1;    // "sig."
             } else {
               pantallaActual = PANTALLA_PROPAGACION;
-              opcionPantalla5 = OPCION_BARRA_P5;
+              opcionPantallaProp = OPCION_BARRA_PROP;
               opcionNavegacionP1234 = 1;
             }
             opcionPantalla4 = 2;
@@ -2100,10 +2153,10 @@ void procesarBoton() {
                pantallaActual == PANTALLA_CONFIG) {
       // P5: [sig.] -> [pag] -> [act.] -> [wifi] -> [ant.]    P6: [sig.] -> [mas] -> [act.] -> [ant.]
       // P8: [sig.] -> [portal] -> [fabrica] -> [ant.]
-      bool esP5 = (pantallaActual == PANTALLA_PROPAGACION);
-      bool esP8 = (pantallaActual == PANTALLA_CONFIG);
-      uint8_t& opcion = esP5 ? opcionPantalla5 : (esP8 ? opcionPantalla8 : opcionPantalla6);
-      uint8_t barra = esP5 ? OPCION_BARRA_P5 : (esP8 ? OPCION_BARRA_P8 : OPCION_BARRA_P6);
+      bool esProp = (pantallaActual == PANTALLA_PROPAGACION);
+      bool esConfig = (pantallaActual == PANTALLA_CONFIG);
+      uint8_t& opcion = esProp ? opcionPantallaProp : (esConfig ? opcionPantallaConfig : opcionPantallaSpots);
+      uint8_t barra = esProp ? OPCION_BARRA_PROP : (esConfig ? OPCION_BARRA_CONFIG : OPCION_BARRA_SPOTS);
       if (ev == BOTON_LARGA) confirmandoFabrica = false;
       if (ev == BOTON_LARGA) {
         if (opcion == barra && opcionNavegacionP1234 == 1) {
@@ -2119,34 +2172,34 @@ void procesarBoton() {
       } else if (ev == BOTON_CORTA) {
         if (opcion == barra) {
           if (opcionNavegacionP1234 == 0) {
-            pantallaActual--;  // P5 -> P4, P6 -> P5, P8 -> P7
+            pantallaActual--;  // Propagacion -> LoRa, Spots -> Propagacion, Config -> Sol
           } else {
             pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
           }
-          if (pantallaActual == 4) opcionPantalla4 = 2;
-          else if (pantallaActual == PANTALLA_PROPAGACION) opcionPantalla5 = OPCION_BARRA_P5;
-          else if (pantallaActual == PANTALLA_SPOTS) opcionPantalla6 = OPCION_BARRA_P6;
+          if (pantallaActual == PANTALLA_LORA) opcionPantalla4 = 2;
+          else if (pantallaActual == PANTALLA_PROPAGACION) opcionPantallaProp = OPCION_BARRA_PROP;
+          else if (pantallaActual == PANTALLA_SPOTS) opcionPantallaSpots = OPCION_BARRA_SPOTS;
           opcionNavegacionP1234 = 1;
-        } else if (esP8 && opcion == 0) {
+        } else if (esConfig && opcion == 0) {
           abrirPortalWifi();
-        } else if (esP8 && opcion == 1) {
+        } else if (esConfig && opcion == 1) {
           if (!confirmandoFabrica) confirmandoFabrica = true;
           else resetFabrica();
-        } else if (esP5 && opcion == 0) {
+        } else if (esProp && opcion == 0) {
           paginaPropagacion = (paginaPropagacion + 1) % 2;
-        } else if (esP5 && opcion == 1) {
+        } else if (esProp && opcion == 1) {
           pedirActualizacionWifi();
-        } else if (esP5 && opcion == 2) {
+        } else if (esProp && opcion == 2) {
           abrirPortalWifi();  // Para cambiar de red
-        } else if (!esP5 && !esP8 && opcion == 0) {
+        } else if (!esProp && !esConfig && opcion == 0) {
           uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
           paginaSpots = (paginaSpots + 1) % paginas;
-        } else if (!esP5 && !esP8 && opcion == 1) {
+        } else if (!esProp && !esConfig && opcion == 1) {
           pedirActualizacionWifi();
         }
       }
 
-    } else if (pantallaActual == 3) {
+    } else if (pantallaActual == PANTALLA_CW) {
       if (enEstadisticas3_5) {
         if (ev == BOTON_LARGA) {
           enEstadisticas3_5 = false; confirmandoBorrado = false;
@@ -2229,10 +2282,10 @@ void procesarBoton() {
             confirmandoBorrado = false;
           } else if (opcionPantalla3 == 2) {
             if (opcionNavegacionP1234 == 0) {
-              pantallaActual = 2; // Retroceder a Pantalla 2
+              pantallaActual = PANTALLA_INICIO;
               opcionNavegacionP1234 = 1;
             } else {
-              pantallaActual = 4; // Avanzar a Pantalla 4
+              pantallaActual = PANTALLA_LORA;
               opcionPantalla4 = 2;
               opcionNavegacionP1234 = 1;
             }
@@ -2248,17 +2301,17 @@ void procesarBoton() {
         else pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
         contadorPulsaciones++;
         
-        if (pantallaActual == 3) {
+        if (pantallaActual == PANTALLA_CW) {
           opcionPantalla3 = 2;       // Foco en barra inferior
           opcionNavegacionP1234 = 1; // Apuntando por defecto a "sig."
-        } else if (pantallaActual == 4) {
+        } else if (pantallaActual == PANTALLA_LORA) {
           opcionPantalla4 = 2;
           opcionNavegacionP1234 = 1;
         } else if (pantallaActual == PANTALLA_SPOTS) {
-          opcionPantalla6 = OPCION_BARRA_P6;
+          opcionPantallaSpots = OPCION_BARRA_SPOTS;
           opcionNavegacionP1234 = 1;
         } else if (pantallaActual == PANTALLA_CONFIG) {
-          opcionPantalla8 = OPCION_BARRA_P8;
+          opcionPantallaConfig = OPCION_BARRA_CONFIG;
           confirmandoFabrica = false;
           opcionNavegacionP1234 = 1;
         } else {
@@ -2300,6 +2353,7 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   Serial.printf("[INIT] MOTIVO DEL REINICIO: %d\n", (int)esp_reset_reason());
+  diagnosticoBateria();
 
   // display.begin() no comprueba que la OLED responda (solo falla si no hay memoria).
   // Se comprueba el ACK en I2C tras un pulso de reset y, si no contesta, se corta Vext y se reintenta.
@@ -2390,7 +2444,7 @@ void procesarBateriaYPantalla() {
     BateriaInfo nueva = leerBateria();
     bool cambia = nueva.estado != bateriaActual.estado ||
                   nueva.porcentaje != bateriaActual.porcentaje ||
-                  (pantallaActual == 2 && fabs(nueva.voltaje - bateriaActual.voltaje) >= 0.01);
+                  (pantallaActual == PANTALLA_CONFIG && fabs(nueva.voltaje - bateriaActual.voltaje) >= 0.01);
     bateriaActual = nueva;
     if (cambia) pantallaPendiente = true;
   }
