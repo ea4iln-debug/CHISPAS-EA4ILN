@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.5e - Bateria: atenuacion 2.5 dB, divisor x4.9 y porcentaje con curva Li-ion
- * @date 2026-10-08
+ * @version 0.6b - Duo: sin startReceive() al acabar cada emision (0.6a: motor CW en una tarea FreeRTOS)
+ * @date 2026-10-09
  */
 
-#define FW_VERSION "0.5f"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.6b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -226,7 +226,7 @@ uint8_t opcionSubpantalla = 5;
 enum EstadoCW { 
   CW_IDLE, 
   CW_GENERAR_GRUPO, 
-  CW_EMITIENDO_ELEMENTO, 
+  CW_EMITIENDO_GRUPO,  // El grupo esta en el motor CW
   CW_PAUSA_ENTRE_GRUPOS, 
   CW_PAUSADO, 
   CW_PANTALLA_3_3_LISTADO,      
@@ -251,10 +251,6 @@ uint8_t paginaStats3_5 = 0;
 bool confirmandoBorrado = false;
 
 unsigned long tiempoCWProximo = 0;
-int idxCaracter = 0;
-int idxElemento = 0;
-const char* codigoElementoActual = "";
-bool ledEncendido = false;
 
 // Variables de estado para Pantalla 4 (Transceptor LoRa)
 bool enPantalla4_Sub = false;  
@@ -266,13 +262,7 @@ String grupoDuoTransmitido = "";
 String grupoDuoRecibido = "";
 bool grupoDuoRevelado = false;
 
-bool emitiendoMorseDuo = false;
-String cadenaMorseAEmitirDuo = "";
-int idxCharDuo = 0;
-int idxElemDuo = 0;
-const char* codigoElemDuo = "";
-unsigned long tiempoProximoDuo = 0;
-bool estadoTonoDuo = false;
+bool emitiendoMorseDuo = false;  // Hay un grupo de Duo en el motor CW
 unsigned long finEmisionDuo = 0;  // Instante en que termino la ultima emision (para el espacio entre grupos)
 
 // Cola circular de grupos recibidos por LoRa pendientes de reproducir
@@ -294,7 +284,7 @@ float snrUltimo = 0.0;
 // ============================================================================
 // Mide cuanto llega tarde cada transicion (encender/apagar) respecto a lo programado.
 // Ese retraso alarga el elemento o la pausa anterior. Se informa por serie al final
-// de cada grupo. Poner a 0 para quitarlo del firmware.
+// de cada grupo. Poner a 0 para quitarlo del firmware. Solo lo usa la tarea del motor CW.
 #define DEBUG_CW 1
 
 #if DEBUG_CW
@@ -302,8 +292,7 @@ uint32_t medidaCWNum = 0;
 uint32_t medidaCWSuma = 0;
 uint32_t medidaCWMax = 0;
 
-void registrarRetrasoCW(unsigned long previsto) {
-  uint32_t retraso = millis() - previsto;
+void registrarRetrasoCW(uint32_t retraso) {
   medidaCWNum++;
   medidaCWSuma += retraso;
   if (retraso > medidaCWMax) medidaCWMax = retraso;
@@ -327,8 +316,142 @@ void conmutarEmisionMorse(bool activar) {
   if (activar) {
     ledcWrite(CANAL_PWM_AUDIO, 128); 
   } else {
-    ledcWrite(CANAL_PWM_AUDIO, 0);   
+    ledcWrite(CANAL_PWM_AUDIO, 0);
   }
+}
+
+// ============================================================================
+// MOTOR CW EN UNA TAREA FREERTOS
+// ============================================================================
+// El LED y el tono los maneja una tarea con mas prioridad que loop() y en su mismo nucleo:
+// la temporizacion ya no depende de lo que bloquee loop() (OLED, LoRa, WiFi, bateria).
+// loop() pide un texto con motorCWEmitir(), lo corta con motorCWDetener() y mira si ha
+// terminado con motorCWOcupado(). Solo la tarea llama a conmutarEmisionMorse().
+#define MOTOR_CW_TEXTO_MAX 64
+#define MOTOR_CW_PRIORIDAD 3     // loop() corre con prioridad 1
+#define MOTOR_CW_NUCLEO    1     // El de loop() (CONFIG_ARDUINO_RUNNING_CORE); el WiFi va en el 0
+#define MOTOR_CW_PILA      4096
+
+struct PeticionCW {
+  uint32_t id;
+  char texto[MOTOR_CW_TEXTO_MAX + 1];
+  uint8_t wpm;
+  uint16_t espaciado;  // % sobre el espacio entre caracteres y entre palabras
+  const char* origen;  // Para la depuracion por serie
+};
+
+TaskHandle_t tareaMotorCW = NULL;
+QueueHandle_t colaMotorCW = NULL;
+// Cada peticion lleva un id creciente: la tarea esta ocupada mientras no haya terminado la ultima
+volatile uint32_t motorCWPedidas = 0;     // Lo escribe loop()
+volatile uint32_t motorCWCancelada = 0;   // Lo escribe loop(): las peticiones con id <= este se cortan
+volatile uint32_t motorCWTerminadas = 0;  // Lo escribe la tarea
+volatile unsigned long motorCWFinMs = 0;  // millis() al acabar la ultima emision
+
+bool motorCWOcupado() {
+  return motorCWTerminadas != motorCWPedidas;
+}
+
+/**
+ * Espera hasta el tick objetivo. Devuelve false si la peticion se ha cancelado: motorCWDetener()
+ * despierta la tarea con una notificacion, asi que no hay que esperar a que acabe la pausa.
+ */
+bool esperarMotorCW(TickType_t objetivo, uint32_t id) {
+  for (;;) {
+    if (id <= motorCWCancelada) return false;
+    TickType_t ahora = xTaskGetTickCount();
+    if ((int32_t)(objetivo - ahora) <= 0) {
+#if DEBUG_CW
+      registrarRetrasoCW(ahora - objetivo);
+#endif
+      return true;
+    }
+    ulTaskNotifyTake(pdTRUE, objetivo - ahora);
+  }
+}
+
+/**
+ * Emite el texto con plazos absolutos (cada uno se suma al anterior, sin acumular retrasos).
+ * Los espacios marcan el espacio entre palabras; los caracteres sin codigo Morse se saltan.
+ */
+void emitirTextoMotorCW(const PeticionCW& p) {
+  uint32_t tDit = 1200 / p.wpm;
+  uint32_t tCharGap = (tDit * 3 * p.espaciado) / 100;
+  uint32_t tWordGap = (tDit * 7 * p.espaciado) / 100;
+
+  TickType_t objetivo = xTaskGetTickCount();
+  bool primero = true;
+  bool hayEspacio = false;
+  for (const char* c = p.texto; *c != '\0'; c++) {
+    if (*c == ' ') { hayEspacio = true; continue; }
+    const char* codigo = obtenerCodigoMorse(*c);
+    if (*codigo == '\0') continue;
+
+    if (!primero) {
+      objetivo += pdMS_TO_TICKS(hayEspacio ? tWordGap : tCharGap);
+      if (!esperarMotorCW(objetivo, p.id)) return;
+    }
+    primero = false;
+    hayEspacio = false;
+
+    for (const char* e = codigo; *e != '\0'; e++) {
+      if (e != codigo) {
+        objetivo += pdMS_TO_TICKS(tDit);
+        if (!esperarMotorCW(objetivo, p.id)) return;
+      }
+      conmutarEmisionMorse(true);
+      objetivo += pdMS_TO_TICKS(*e == '-' ? tDit * 3 : tDit);
+      if (!esperarMotorCW(objetivo, p.id)) return;
+      conmutarEmisionMorse(false);
+    }
+  }
+}
+
+void tareaEmisionCW(void* parametro) {
+  PeticionCW p;
+  for (;;) {
+    xQueueReceive(colaMotorCW, &p, portMAX_DELAY);
+    emitirTextoMotorCW(p);
+    conmutarEmisionMorse(false);  // Por si se ha cortado con el tono encendido
+    motorCWFinMs = millis();
+#if DEBUG_CW
+    informarRetrasoCW(p.origen);
+#endif
+    motorCWTerminadas = p.id;
+  }
+}
+
+void iniciarMotorCW() {
+  colaMotorCW = xQueueCreate(1, sizeof(PeticionCW));
+  xTaskCreatePinnedToCore(tareaEmisionCW, "motorCW", MOTOR_CW_PILA, NULL, MOTOR_CW_PRIORIDAD,
+                          &tareaMotorCW, MOTOR_CW_NUCLEO);
+}
+
+/**
+ * Corta lo que este sonando y espera a que la tarea apague LED y tono.
+ */
+void motorCWDetener() {
+  if (!motorCWOcupado()) return;
+  motorCWCancelada = motorCWPedidas;
+  xTaskNotifyGive(tareaMotorCW);
+  unsigned long inicio = millis();
+  while (motorCWOcupado() && millis() - inicio < 50) vTaskDelay(1);
+}
+
+/**
+ * Emite un texto (corta antes lo que estuviera sonando). Vuelve enseguida.
+ */
+void motorCWEmitir(const char* texto, uint8_t wpm, uint16_t espaciado, const char* origen) {
+  motorCWDetener();
+
+  PeticionCW p;
+  p.id = motorCWPedidas + 1;
+  strncpy(p.texto, texto, MOTOR_CW_TEXTO_MAX);
+  p.texto[MOTOR_CW_TEXTO_MAX] = '\0';
+  p.wpm = max(wpm, (uint8_t)1);
+  p.espaciado = espaciado;
+  p.origen = origen;
+  if (xQueueSend(colaMotorCW, &p, 0) == pdTRUE) motorCWPedidas = p.id;
 }
 
 // ============================================================================
@@ -619,90 +742,24 @@ void dibujarBarraAvanzarRetroceder(bool enfocada, bool hayOpciones) {
 // ============================================================================
 // TRANSMISION Y RECEPCION LORA POR INTERRUPCION
 // ============================================================================
-/**
- * Busca desde idxCharDuo el siguiente caracter con codigo Morse y lo deja en codigoElemDuo.
- * Salta espacios (y avisa en hayEspacio) y caracteres sin codigo. False si no queda ninguno.
- */
-bool buscarCaracterDuo(bool& hayEspacio) {
-  hayEspacio = false;
-  while (idxCharDuo < (int)cadenaMorseAEmitirDuo.length()) {
-    char c = cadenaMorseAEmitirDuo.charAt(idxCharDuo);
-    if (c == ' ') {
-      hayEspacio = true;
-    } else {
-      codigoElemDuo = obtenerCodigoMorse(c);
-      if (strlen(codigoElemDuo) > 0) {
-        idxElemDuo = 0;
-        return true;
-      }
-    }
-    idxCharDuo++;
-  }
-  return false;
-}
-
 void iniciarEmisionLocalDuo(String cadena, uint8_t wpm) {
   cadena.trim();
   if (cadena.length() == 0) return;
 
-  conmutarEmisionMorse(false);
-  cadenaMorseAEmitirDuo = cadena;
   wpmEmisionDuo = wpm;
-  idxCharDuo = 0;
-  bool hayEspacio;
-  if (!buscarCaracterDuo(hayEspacio)) return;
-
+  motorCWEmitir(cadena.c_str(), wpm, espaciadoCW, "DUO");
   emitiendoMorseDuo = true;
-  estadoTonoDuo = false; 
-  tiempoProximoDuo = millis();
 }
 
-void procesarEmisionMorseDuoNoBloqueante() {
-  if (!emitiendoMorseDuo) return;
-  if (millis() < tiempoProximoDuo) return;
-#if DEBUG_CW
-  registrarRetrasoCW(tiempoProximoDuo);
-#endif
-
-  uint32_t tDit = 1200 / wpmEmisionDuo;
-  uint32_t tDah = tDit * 3;
-  uint32_t tElementoGap = tDit;
-  uint32_t tCharGap = (tDit * 3 * espaciadoCW) / 100;
-
-  if (!estadoTonoDuo) {
-    char elem = codigoElemDuo[idxElemDuo];
-    conmutarEmisionMorse(true);
-    estadoTonoDuo = true;
-
-    uint32_t duracionElemento = (elem == '-') ? tDah : tDit;
-    tiempoProximoDuo = millis() + duracionElemento;
-  } else {
-    conmutarEmisionMorse(false);
-    estadoTonoDuo = false;
-    idxElemDuo++;
-
-    if (codigoElemDuo[idxElemDuo] != '\0') {
-      tiempoProximoDuo = millis() + tElementoGap;
-    } else {
-      idxCharDuo++;
-      bool hayEspacio;
-      if (buscarCaracterDuo(hayEspacio)) {
-        uint32_t tWordGap = (tDit * 7 * espaciadoCW) / 100;
-        tiempoProximoDuo = millis() + (hayEspacio ? tWordGap : tCharGap);
-      } else {
-        emitiendoMorseDuo = false;
-        conmutarEmisionMorse(false);
-        finEmisionDuo = millis();
-#if DEBUG_CW
-        informarRetrasoCW("DUO");
-#endif
-
-        if (modoRadioRxActivo) {
-          radio.startReceive();
-        }
-      }
-    }
-  }
+/**
+ * Cuando el motor CW acaba el grupo de Duo, guarda el instante (para el espacio hasta el siguiente).
+ */
+void procesarFinEmisionDuo() {
+  if (!emitiendoMorseDuo || motorCWOcupado()) return;
+  emitiendoMorseDuo = false;
+  finEmisionDuo = motorCWFinMs;
+  // No se reinicia la recepcion: la radio ya vuelve a ella tras cada TX y RX, y
+  // startReceive() aqui podria cortar una trama que estuviera llegando
 }
 
 void procesarRecepcionLoRa();  // Definida mas abajo
@@ -805,7 +862,7 @@ void procesarColaRxDuo() {
   colaRxIni = (colaRxIni + 1) % COLA_RX_TAM;
   colaRxNum--;
 
-  // Se redibuja antes de empezar: iniciarEmisionLocalDuo() toma millis() despues
+  // Se redibuja antes de empezar, para que el grupo nuevo aparezca a la vez que suena
   actualizarPantalla();
   pantallaPendiente = false;
   iniciarEmisionLocalDuo(grupoDuoRecibido, wpm);
@@ -881,8 +938,7 @@ void salirModoLoRa() {
   flagPaqueteRecibido = false;
 
   emitiendoMorseDuo = false;
-  estadoTonoDuo = false;
-  conmutarEmisionMorse(false);
+  motorCWDetener();
 
   colaRxIni = 0;
   colaRxNum = 0;
@@ -1918,8 +1974,7 @@ void iniciarPracticaCW() {
 }
 
 void detenerPracticaCW() {
-  conmutarEmisionMorse(false);
-  ledEncendido = false;
+  motorCWDetener();
   enPractica3_2 = false;
   estadoCW = CW_IDLE;
   actualizarPantalla();
@@ -1945,11 +2000,6 @@ void procesarMaquinaEstadosCW() {
 
   if (millis() < tiempoCWProximo) return;
 
-  uint32_t tDit = 1200 / wpmCW;  
-  uint32_t tDah = tDit * 3;     
-  uint32_t tElementoGap = tDit; 
-  uint32_t tCharGap = (tDit * 3 * espaciadoCW) / 100;
-
   switch (estadoCW) {
     case CW_GENERAR_GRUPO:
       if (grupoActualNum >= gruposCW) {
@@ -1962,51 +2012,18 @@ void procesarMaquinaEstadosCW() {
 
       grupoActualNum++;
       generarGrupoKoch();
-      mostrarTextoGrupo = false; 
-      
-      idxCaracter = 0;
-      idxElemento = 0;
-      codigoElementoActual = obtenerCodigoMorse(grupoActualStr.charAt(0));
-      estadoCW = CW_EMITIENDO_ELEMENTO;
+      mostrarTextoGrupo = false;
+      estadoCW = CW_EMITIENDO_GRUPO;
       actualizarPantalla();
+      motorCWEmitir(grupoActualStr.c_str(), wpmCW, espaciadoCW, "KOCH");
       break;
 
-    case CW_EMITIENDO_ELEMENTO:
-#if DEBUG_CW
-      // El primer elemento del grupo no tiene hora programada (viene de CW_GENERAR_GRUPO)
-      if (ledEncendido || idxElemento > 0 || idxCaracter > 0) registrarRetrasoCW(tiempoCWProximo);
-#endif
-      if (!ledEncendido) {
-        char elem = codigoElementoActual[idxElemento];
-        conmutarEmisionMorse(true);
-        ledEncendido = true;
-
-        uint32_t duracionElemento = (elem == '-') ? tDah : tDit;
-        tiempoCWProximo = millis() + duracionElemento;
-      } else {
-        conmutarEmisionMorse(false);
-        ledEncendido = false;
-        idxElemento++;
-
-        if (codigoElementoActual[idxElemento] != '\0') {
-          tiempoCWProximo = millis() + tElementoGap;
-        } else {
-          idxCaracter++;
-          if (idxCaracter < grupoActualStr.length()) {
-            codigoElementoActual = obtenerCodigoMorse(grupoActualStr.charAt(idxCaracter));
-            idxElemento = 0;
-            tiempoCWProximo = millis() + tCharGap;
-          } else {
-            mostrarTextoGrupo = true;
-#if DEBUG_CW
-            informarRetrasoCW("KOCH");
-#endif
-            actualizarPantalla();
-            estadoCW = CW_PAUSA_ENTRE_GRUPOS;
-            tiempoCWProximo = millis() + 2000;
-          }
-        }
-      }
+    case CW_EMITIENDO_GRUPO:
+      if (motorCWOcupado()) return;
+      mostrarTextoGrupo = true;
+      actualizarPantalla();
+      estadoCW = CW_PAUSA_ENTRE_GRUPOS;
+      tiempoCWProximo = motorCWFinMs + 2000;
       break;
 
     case CW_PAUSA_ENTRE_GRUPOS:
@@ -2217,7 +2234,7 @@ void procesarBoton() {
           if (ev == BOTON_LARGA) detenerPracticaCW();
           else if (ev == BOTON_CORTA) {
             if (estadoCW == CW_PAUSADO) estadoCW = CW_GENERAR_GRUPO;
-            else { estadoCW = CW_PAUSADO; conmutarEmisionMorse(false); ledEncendido = false; }
+            else { estadoCW = CW_PAUSADO; motorCWDetener(); }
           }
         }
       } else if (enSubpantallaCW) {
@@ -2326,6 +2343,7 @@ void setup() {
   Serial.println(F("\n[INIT] Mr. Morse EA4ILN v" FW_VERSION "..."));
   
   encenderPerifericos();
+  iniciarMotorCW();
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
@@ -2397,23 +2415,11 @@ void setup() {
 }
 
 /**
- * True mientras suena CW (practica Koch o Duo): en ese tiempo no se hace nada
- * que bloquee (lectura de bateria, redibujado), para no alargar los elementos.
- */
-bool motorCWActivo() {
-  if (emitiendoMorseDuo) return true;
-  return enPractica3_2 && estadoCW != CW_PAUSADO && estadoCW != CW_IDLE &&
-         estadoCW != CW_PANTALLA_3_3_LISTADO && estadoCW != CW_PANTALLA_CORREGIR_ERRORES &&
-         estadoCW != CW_PANTALLA_RESUMEN_FINAL;
-}
-
-/**
  * Lee la bateria cada INTERVALO_BATERIA_MS y redibuja solo si algo ha cambiado.
- * Sustituye al refresco fijo cada 3 s.
+ * Sustituye al refresco fijo cada 3 s. Con el motor CW en su tarea, puede hacerse
+ * aunque suene CW.
  */
 void procesarBateriaYPantalla() {
-  if (motorCWActivo()) return;
-
   static unsigned long ultimaLecturaBat = 0;
   if (millis() - ultimaLecturaBat >= INTERVALO_BATERIA_MS) {
     ultimaLecturaBat = millis();
@@ -2442,7 +2448,7 @@ void procesarBateriaYPantalla() {
 void loop() {
   procesarBoton();
   procesarMaquinaEstadosCW();
-  procesarEmisionMorseDuoNoBloqueante();
+  procesarFinEmisionDuo();
   procesarRecepcionLoRa();
   procesarColaRxDuo();
   procesarWifi();

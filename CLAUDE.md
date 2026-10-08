@@ -7,7 +7,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.5f** (compila; sin cargar en placa). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.6b**, cargada y probada en las dos placas (9 oct 2026). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -56,13 +56,21 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   **v0.5f (9 oct 2026): calibrado con polímetro**, 4,10 V reales y 836,7 mV en el pin, lo que da 4,900: el factor
   teórico es correcto (un solo punto medido). Se quitó `diagnosticoBateria()`. Con USB el cargador sube la tensión: el % solo es fiable con batería sola.
 
+- Motor CW (v0.6a, 9 oct 2026, **probado en placa**: Koch, pausa, Duo con cola, salir de Duo, batería durante CW).
+  v0.6b quita el `radio.startReceive()` al acabar cada emisión de Duo (sobraba y podía cortar una trama entrante).
+  Detalle: tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3
+  (`loop()` tiene 1), con plazos absolutos sobre ticks de 1 ms. API para `loop()`: `motorCWEmitir()`, `motorCWDetener()`
+  (corta enseguida con una notificación), `motorCWOcupado()` y `motorCWFinMs`. Solo la tarea llama a `conmutarEmisionMorse()`.
+  Koch (`CW_EMITIENDO_GRUPO`) y Duo piden el grupo y esperan a que acabe. Se quitó `motorCWActivo()`: batería y
+  redibujado ya se hacen aunque suene CW. `DEBUG_CW` mide desde la tarea.
+
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):
    - Koch: estadísticas por carácter (marcar fallos en la corrección) y modo Echo (necesita keyer).
    - Indicativo configurable por placa (hoy constante `INDICATIVO` = "EA4ILN" en las dos; con dos placas
      no afecta al descarte de duplicados).
 2. Pantalla Duo para textos largos (cuando haya frases: QSO con keyer).
-3. A futuro: motor CW en una tarea FreeRTOS, audio I2S, keyer iámbico, decodificador (Goertzel).
+3. A futuro: audio I2S, keyer iámbico, decodificador (Goertzel).
 
 Hecho y probado: v0.3i tabla Koch LCWO; v0.4a trama v2; v0.4d Duo a los wpm del emisor (5-60, si no los
 locales) y antes de TX se lee la trama pendiente y se escucha el canal (CAD, 3 intentos, espera 100 ms).
