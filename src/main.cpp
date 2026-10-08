@@ -6,7 +6,7 @@
  * @date 2026-10-08
  */
 
-#define FW_VERSION "0.5e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.5f"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -64,7 +64,7 @@
 
 #define VBAT_ADC_PIN    1   // Pin ADC para lectura del divisor de voltaje de la bateria
 #define ADC_CTRL_PIN    37  // Habilitacion del divisor de tension de bateria
-#define VBAT_MULTIPLIER 4.9f   // Divisor 390k/100k de la V3. PENDIENTE: confirmar con polimetro
+#define VBAT_MULTIPLIER 4.9f   // Divisor 390k/100k de la V3. Calibrado con polimetro: 4,10 V reales / 836,7 mV en el pin (2,5 dB)
 #define TIEMPO_PULSACION_LARGA 600 // Umbral en ms para detectar pulsacion larga del boton PRG
 #define TIEMPO_ANTIRREBOTE_MS  30  // Pulsaciones mas cortas se ignoran (rebotes)
 
@@ -482,29 +482,6 @@ BateriaInfo leerBateria() {
     bat.estado = BAT_DESCARGA;
   }
   return bat;
-}
-
-// PRUEBA (quitar tras calibrar con polimetro): mide el divisor con GPIO37 a LOW y a HIGH y con atenuacion de 11 dB y 2,5 dB,
-// para averiguar como se habilita el divisor en esta revision de la placa
-void diagnosticoBateria() {
-  const uint8_t niveles[2] = { LOW, HIGH };
-  const adc_attenuation_t atenuaciones[2] = { ADC_11db, ADC_2_5db };
-  const char* nombresAten[2] = { "11dB", "2.5dB" };
-  analogReadResolution(12);
-  pinMode(ADC_CTRL_PIN, OUTPUT);
-  for (uint8_t n = 0; n < 2; n++) {
-    for (uint8_t a = 0; a < 2; a++) {
-      digitalWrite(ADC_CTRL_PIN, niveles[n]);
-      analogSetPinAttenuation(VBAT_ADC_PIN, atenuaciones[a]);
-      delay(50);
-      uint32_t suma = 0;
-      for (int i = 0; i < 32; i++) { suma += analogReadMilliVolts(VBAT_ADC_PIN); delay(1); }
-      float mv = suma / 32.0;
-      Serial.printf("[BAT DIAG] GPIO37=%s %-5s pin %6.1f mV -> x4.9 = %.3f V\n",
-                    niveles[n] == LOW ? "LOW " : "HIGH", nombresAten[a], mv, mv * 4.9 / 1000.0);
-    }
-  }
-  digitalWrite(ADC_CTRL_PIN, LOW);
 }
 
 // leerBateria() bloquea unos 25 ms: se lee cada 30 s fuera de la emision CW y el
@@ -2353,7 +2330,6 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   Serial.printf("[INIT] MOTIVO DEL REINICIO: %d\n", (int)esp_reset_reason());
-  diagnosticoBateria();
 
   // display.begin() no comprueba que la OLED responda (solo falla si no hay memoria).
   // Se comprueba el ACK en I2C tras un pulso de reset y, si no contesta, se corta Vext y se reintenta.

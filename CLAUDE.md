@@ -7,7 +7,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.5e**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.5f** (compila; sin cargar en placa). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -53,8 +53,8 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 - Batería (v0.5e): en estas placas el divisor se activa con GPIO37 **HIGH** (con LOW el pin lee 0; Meshtastic
   declara LOW para su V3). Atenuación 2,5 dB, factor 4,9 (teórico 390k/100k) y porcentaje con curva Li-ion.
-  **Pendiente: calibrar con polímetro** (tensión real ÷ mV del pin) y quitar `diagnosticoBateria()` del arranque.
-  Con USB el cargador sube la tensión: el % solo es fiable con batería sola.
+  **v0.5f (9 oct 2026): calibrado con polímetro**, 4,10 V reales y 836,7 mV en el pin, lo que da 4,900: el factor
+  teórico es correcto (un solo punto medido). Se quitó `diagnosticoBateria()`. Con USB el cargador sube la tensión: el % solo es fiable con batería sola.
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):
