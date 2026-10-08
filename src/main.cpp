@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.4d - Duo a los wpm del emisor; escucha del canal (CAD) y lectura de lo pendiente antes de transmitir
+ * @version 0.4e - Arreglo de la OLED que a veces quedaba negra tras un reset; motivo del reinicio por serie
  * @date 2026-10-08
  */
 
-#define FW_VERSION "0.4d"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.4e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -1526,7 +1526,7 @@ void procesarBoton() {
 // ============================================================================
 void encenderPerifericos() {
   pinMode(VEXT_CTRL, OUTPUT);
-  digitalWrite(VEXT_CTRL, LOW);
+  digitalWrite(VEXT_CTRL, LOW);   // Vext encendido
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
@@ -1549,10 +1549,43 @@ void setup() {
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
+  Serial.printf("[INIT] MOTIVO DEL REINICIO: %d\n", (int)esp_reset_reason());
+
+  // display.begin() no comprueba que la OLED responda (solo falla si no hay memoria).
+  // Se comprueba el ACK en I2C tras un pulso de reset y, si no contesta, se corta Vext y se reintenta.
   Wire.begin(OLED_SDA, OLED_SCL);
+  bool oledResponde = false;
+  pinMode(OLED_RST, OUTPUT);
+  for (uint8_t intento = 1; intento <= 3 && !oledResponde; intento++) {
+    digitalWrite(OLED_RST, LOW);   // Mientras RST esta bajo el SSD1306 no contesta
+    delay(10);
+    digitalWrite(OLED_RST, HIGH);
+    delay(10);
+    Wire.beginTransmission(0x3C);
+    oledResponde = (Wire.endTransmission() == 0);
+    if (!oledResponde) {
+      Serial.printf("[ERROR] OLED NO RESPONDE (intento %u)\n", intento);
+      digitalWrite(VEXT_CTRL, HIGH);  // Vext apagado
+      delay(200);
+      digitalWrite(VEXT_CTRL, LOW);   // Vext encendido
+      delay(200);
+    }
+  }
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("[ERROR] OLED"));
-    for (;;);
+    Serial.println(F("[ERROR] OLED: SIN MEMORIA PARA EL BUFFER"));
+  }
+
+  // Tras display.begin(), cerca de la mitad de los reinicios cortos la OLED quedaba negra:
+  // contestaba por I2C y su estado decia "encendida", pero el panel no se iluminaba (bomba
+  // de carga sin activar). Reenviar bomba de carga y encendido lo arregla (probado 10/10).
+  const uint8_t cmdsOled[][2] = { {0x8D, 0x14}, {0xAF, 0x00} };  // Bomba de carga on, pantalla on
+  for (uint8_t i = 0; i < 2; i++) {
+    Wire.beginTransmission(0x3C);
+    Wire.write((uint8_t)0x00);  // Byte de control: siguen comandos
+    Wire.write(cmdsOled[i][0]);
+    if (cmdsOled[i][0] == 0x8D) Wire.write(cmdsOled[i][1]);
+    uint8_t err = Wire.endTransmission();
+    if (err != 0) Serial.printf("[ERROR] OLED CMD 0x%02X: I2C %u\n", cmdsOled[i][0], err);
   }
 
   randomSeed(esp_random());  // GPIO0 no es ADC en el S3: la semilla anterior era casi fija

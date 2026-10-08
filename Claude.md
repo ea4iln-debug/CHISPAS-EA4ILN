@@ -7,7 +7,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.4d**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.4e**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -28,6 +28,12 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 - Radio (v0.4c, `#define LORA_*`): 868,1 MHz, SF7, 250 kHz, CR 4/7, sync 0x12, 10 dBm, TCXO 1,8 V (revisado:
   DIO2 RF switch lo activa RadioLib 6.6 en `begin()`; SPI 9/11/10 correcto). RSSI a 2 m: unos -40/-45 dBm
   (con SF9/125 kHz y 868,0 eran -31 dBm; sin comparar en las mismas condiciones).
+
+- OLED negra tras reset corto (resuelto en v0.4e, probado en las dos placas): en cerca de la mitad de los
+  reinicios cortos (RST o RTS al flashear) la placa arrancaba bien pero la OLED quedaba negra, aunque respondía
+  por I2C, su estado decía "encendida" y el I2C no daba errores. No era alimentación (cortar Vext 0,3 s o 2 s
+  no cambiaba nada). Arreglo: tras `display.begin()` se reenvían bomba de carga (`0x8D 0x14`) y encendido (`0xAF`).
+  También se imprime por serie el motivo del reinicio y ya no hay `for(;;)` si falla la OLED.
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):
