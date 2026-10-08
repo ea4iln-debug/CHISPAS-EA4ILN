@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.3g - Bateria en cache (lectura cada 30 s fuera de la emision CW), redibujado solo cuando cambia algo
+ * @version 0.3h - RSSI en la pantalla Duo; medida de temporizacion CW por serie (DEBUG_CW)
  * @date 2026-10-08
  */
 
@@ -195,6 +195,36 @@ uint8_t colaRxNum = 0;
 uint8_t modoKeyer4_2 = 0;
 int rssiUltimo = 0;
 float snrUltimo = 0.0;
+
+// ============================================================================
+// DEPURACION: MEDIDA DE LA TEMPORIZACION CW
+// ============================================================================
+// Mide cuanto llega tarde cada transicion (encender/apagar) respecto a lo programado.
+// Ese retraso alarga el elemento o la pausa anterior. Se informa por serie al final
+// de cada grupo. Poner a 0 para quitarlo del firmware.
+#define DEBUG_CW 1
+
+#if DEBUG_CW
+uint32_t medidaCWNum = 0;
+uint32_t medidaCWSuma = 0;
+uint32_t medidaCWMax = 0;
+
+void registrarRetrasoCW(unsigned long previsto) {
+  uint32_t retraso = millis() - previsto;
+  medidaCWNum++;
+  medidaCWSuma += retraso;
+  if (retraso > medidaCWMax) medidaCWMax = retraso;
+}
+
+void informarRetrasoCW(const char* origen) {
+  if (medidaCWNum == 0) return;
+  Serial.printf("[CW %s] %u transiciones, retraso medio %.1f ms, max %u ms\n",
+                origen, medidaCWNum, (float)medidaCWSuma / medidaCWNum, medidaCWMax);
+  medidaCWNum = 0;
+  medidaCWSuma = 0;
+  medidaCWMax = 0;
+}
+#endif
 
 // ============================================================================
 // CONTROL DE AUDIO Y LED MORSE
@@ -448,6 +478,9 @@ void iniciarEmisionLocalDuo(String cadena) {
 void procesarEmisionMorseDuoNoBloqueante() {
   if (!emitiendoMorseDuo) return;
   if (millis() < tiempoProximoDuo) return;
+#if DEBUG_CW
+  registrarRetrasoCW(tiempoProximoDuo);
+#endif
 
   uint32_t tDit = 1200 / wpmCW;  
   uint32_t tDah = tDit * 3;     
@@ -478,6 +511,9 @@ void procesarEmisionMorseDuoNoBloqueante() {
         emitiendoMorseDuo = false;
         conmutarEmisionMorse(false);
         finEmisionDuo = millis();
+#if DEBUG_CW
+        informarRetrasoCW("DUO");
+#endif
 
         if (modoRadioRxActivo) {
           radio.startReceive();
@@ -938,6 +974,16 @@ void renderizarPantalla4() {
       display.print(F("RX <- ESCUCHANDO..."));
     }
 
+    // RSSI de la ultima trama recibida (0 = aun no se ha recibido nada)
+    if (rssiUltimo != 0) {
+      String txtRssi = String(rssiUltimo) + "dBm";
+      int16_t x1, y1;
+      uint16_t w, h;
+      display.getTextBounds(txtRssi.c_str(), 0, 0, &x1, &y1, &w, &h);
+      display.setCursor(128 - w, 42);
+      display.print(txtRssi);
+    }
+
     String txtPie4_1 = (opcionDuo4_1 == 3 ? "> " : "  ") + String("enviar  ") + 
                        (opcionDuo4_1 == 4 ? "> " : "  ") + String("volver");
     dibujarPieCentrado(txtPie4_1);
@@ -1049,6 +1095,10 @@ void procesarMaquinaEstadosCW() {
       break;
 
     case CW_EMITIENDO_ELEMENTO:
+#if DEBUG_CW
+      // El primer elemento del grupo no tiene hora programada (viene de CW_GENERAR_GRUPO)
+      if (ledEncendido || idxElemento > 0 || idxCaracter > 0) registrarRetrasoCW(tiempoCWProximo);
+#endif
       if (!ledEncendido) {
         char elem = codigoElementoActual[idxElemento];
         conmutarEmisionMorse(true);
@@ -1071,6 +1121,9 @@ void procesarMaquinaEstadosCW() {
             tiempoCWProximo = millis() + tCharGap;
           } else {
             mostrarTextoGrupo = true;
+#if DEBUG_CW
+            informarRetrasoCW("KOCH");
+#endif
             actualizarPantalla();
             estadoCW = CW_PAUSA_ENTRE_GRUPOS;
             tiempoCWProximo = millis() + 2000;
@@ -1335,7 +1388,7 @@ void encenderPerifericos() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3g..."));
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3h..."));
   
   encenderPerifericos();
 

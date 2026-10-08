@@ -7,8 +7,9 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.3d**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
-  librerías RadioLib ^6.6, Adafruit GFX y SSD1306. **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
+- Firmware: `src/main.cpp` **v0.3h**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+  `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306.
+  **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
   con el botón PRG (GPIO0), pulsación corta/larga.
 - **No migrar a `pins.h` ni al hardware nuevo hasta que el firmware sea estable y se monte el circuito.**
@@ -17,23 +18,20 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 - `SPEAKER_PWM_PIN` está en GPIO7 de forma provisional (el GPIO25 del código antiguo no existe en el S3).
 - Revisión hecha: v0.3b -> v0.3c (temporizador entre caracteres, semilla con `esp_random()`, flag LoRa tras TX,
   `salirModoLoRa()`) -> v0.3d (botón por eventos, sin `delay`).
+- 8 oct 2026, probado en placa: v0.3e cola de recepción LoRa (8 grupos) -> v0.3f estadísticas 3.5 (L40 y ancho),
+  `¿` con `write(0xA8)`, foco al volver a P2 -> v0.3g batería en caché cada 30 s fuera de la emisión CW y
+  redibujado solo por cambios (sin refresco fijo) -> v0.3h RSSI en Duo y medida de temporización CW por serie
+  (`DEBUG_CW`; resultado: retraso máx. 0 ms). RSSI medido: -31 dBm a 2 m.
+- Las pruebas son con LED, pantalla y monitor serie: no hay audio conectado (no proponer pruebas "a oído").
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
-1. Un paquete LoRa que llega mientras suena otro se pierde (falta cola).
-2. Estadísticas 3.5: la línea mide 22 caracteres (132 px > 128) y el `%` salta de línea; la lección 40 no
-   aparece (`paginaStats3_5 < 13` solo cubre 39).
-3. `"¿CONFIRMAR BORRADO?"` muestra basura (la fuente por defecto no es UTF-8).
-4. Al ir de la pantalla 3 a la 2 queda `opcionNavegacionP1234 = 0` (entra con "ant." seleccionado).
-5. Koch: la lección 1 genera un solo carácter (usar `leccionCW + 1`); verificar el orden de la tabla frente
+1. Koch: la lección 1 genera un solo carácter (usar `leccionCW + 1`); verificar el orden de la tabla frente
    a LCWO / Morserino; estadísticas por carácter y modo Echo con el keyer.
-6. `dibujarEncabezado()` lee la batería (~25 ms bloqueantes) en cada redibujado y hay refresco cada 3 s:
-   puede alargar un elemento CW. Cachear la batería y redibujar solo cuando cambie algo.
-7. Trama LoRa: `sizeof` = 16 bytes (el comentario dice 14), máximo 5 caracteres. Migrar al formato variable.
-8. `radio.begin()`: comprobar `setDio2AsRfSwitch(true)` y el voltaje del TCXO para la V3 si el alcance es pobre.
+2. Trama LoRa: `sizeof` = 16 bytes (el comentario dice 14), máximo 5 caracteres. Migrar al formato variable.
+3. `radio.begin()`: comprobar `setDio2AsRfSwitch(true)` y el voltaje del TCXO para la V3 si el alcance es pobre.
    Verificar también que el SPI usa los pines 9/10/11 (board `heltec_wifi_lora_32_V3`).
-9. Fijar la versión de `platform = espressif32 @ ...` en `platformio.ini`: el core Arduino 3.x elimina
-   `ledcSetup()` / `ledcAttachPin()`.
-10. A futuro: motor CW en una tarea FreeRTOS, audio I2S, keyer iámbico, decodificador (Goertzel).
+4. Un paquete que llega durante `radio.transmit()` (bloqueante) se pierde al borrar el flag tras TX.
+5. A futuro: motor CW en una tarea FreeRTOS, audio I2S, keyer iámbico, decodificador (Goertzel).
 
 ## Decisiones tomadas
 - Práctica en pareja con **tramas digitales**, no audio: un byte por carácter con bit centinela
