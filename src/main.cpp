@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.3b - Barra Visual en Stats 3.5, Criterio <90% y Formato de Zonas UI
+ * @version 0.3d - Entrada por eventos de boton (sin delay), pin de altavoz provisional GPIO7
  * @date 2026-10-08
  */
 
@@ -31,7 +31,7 @@
 
 #define KEYER_PADDLE_DIT 2  // Entrada manipulador yambico (Punto)
 #define KEYER_PADDLE_DAH 3  // Entrada manipulador yambico (Raya)
-#define SPEAKER_PWM_PIN  25 // Salida PWM para altavoz/buzzer
+#define SPEAKER_PWM_PIN  7  // Salida PWM provisional (GPIO libre del header). El GPIO25 no existe en el S3
 
 #define FREC_AUDIO_HZ    600// Tono Morse local (600 Hz)
 #define CANAL_PWM_AUDIO  0  // Canal PWM del ESP32-S3
@@ -41,6 +41,7 @@
 #define ADC_CTRL_PIN    37  // Habilitacion del divisor de tension de bateria
 #define VBAT_MULTIPLIER 5.112f // Factor de calibracion del divisor R1/R2 de Heltec V3
 #define TIEMPO_PULSACION_LARGA 600 // Umbral en ms para detectar pulsacion larga del boton PRG
+#define TIEMPO_ANTIRREBOTE_MS  30  // Pulsaciones mas cortas se ignoran (rebotes)
 
 // ============================================================================
 // DICCIONARIO MORSE Y TABLA KOCH
@@ -498,17 +499,30 @@ void transmitirGrupoDuoLoRa(String grupo) {
   }
 
   radio.startReceive();
+
+  // En el SX1262 el mismo pin DIO1 señala "TX terminado" y "paquete recibido",
+  // asi que la ISR se dispara al acabar de transmitir. Se descarta ese aviso falso
+  // (esto sustituye al antiguo filtro de "eco" por comparacion de texto).
+  flagPaqueteRecibido = false;
+
   iniciarEmisionLocalDuo(grupo);
 }
 
 void procesarRecepcionLoRa() {
-  if (!modoRadioRxActivo) return;
-
   if (!flagPaqueteRecibido) return;
-
   flagPaqueteRecibido = false;
 
+  // Fuera del modo LoRa se descarta cualquier aviso pendiente
+  if (!modoRadioRxActivo) return;
+
+  // Pendiente de mejorar: un paquete que llega mientras suena otro se pierde
   if (emitiendoMorseDuo) {
+    radio.startReceive();
+    return;
+  }
+
+  // Solo se acepta una trama del tamaño exacto
+  if (radio.getPacketLength() != sizeof(TramaMrMorse)) {
     radio.startReceive();
     return;
   }
@@ -521,17 +535,11 @@ void procesarRecepcionLoRa() {
       rssiUltimo = radio.getRSSI();
       snrUltimo = radio.getSNR();
 
-      if (tramaRx.tipoMensaje == 0x01 && subpantalla4Activa == 1) {
+      if (tramaRx.tipoMensaje == 0x01 && enPantalla4_Sub && subpantalla4Activa == 1) {
         char bufferPayload[6] = {0};
         memcpy(bufferPayload, tramaRx.payload, min((int)tramaRx.longitudTexto, 5));
         String grupoRx = String(bufferPayload);
         grupoRx.trim();
-
-        if (grupoRx == grupoDuoTransmitido && grupoDuoTransmitido.length() > 0) {
-          grupoDuoTransmitido = ""; 
-          radio.startReceive();
-          return;
-        }
 
         grupoDuoRecibido = grupoRx;
         grupoDuoRevelado = false; 
@@ -545,6 +553,26 @@ void procesarRecepcionLoRa() {
   }
 
   radio.startReceive();
+}
+
+/**
+ * Sale de las subpantallas LoRa (Duo / QSO): desactiva la recepcion, corta el tono
+ * que pudiera estar sonando y limpia el estado, para que un paquete que llegue despues
+ * no suene encima del entrenador ni de otras pantallas.
+ */
+void salirModoLoRa() {
+  enPantalla4_Sub = false;
+  subpantalla4Activa = 0;
+  modoRadioRxActivo = false;
+  flagPaqueteRecibido = false;
+
+  emitiendoMorseDuo = false;
+  estadoTonoDuo = false;
+  conmutarEmisionMorse(false);
+
+  grupoDuoRecibido = "";
+  grupoDuoTransmitido = "";
+  grupoDuoRevelado = false;
 }
 
 // ============================================================================
@@ -989,7 +1017,7 @@ void procesarMaquinaEstadosCW() {
           if (idxCaracter < grupoActualStr.length()) {
             codigoElementoActual = obtenerCodigoMorse(grupoActualStr.charAt(idxCaracter));
             idxElemento = 0;
-            tiempoProximoDuo = millis() + tCharGap;
+            tiempoCWProximo = millis() + tCharGap;
           } else {
             mostrarTextoGrupo = true;
             actualizarPantalla();
@@ -1010,24 +1038,49 @@ void procesarMaquinaEstadosCW() {
 }
 
 // ============================================================================
-// PROCESAMIENTO INTERACTIVO DEL BOTON PRG
+// ENTRADA DE USUARIO: EVENTOS DE BOTON
 // ============================================================================
-void procesarBoton() {
+// Toda la logica de menus trabaja con eventos (corta / larga), no con el hardware.
+// Cuando monte el rotary y el pulsador de funcion, solo hay que cambiar leerEventoBoton()
+// (o anadir otra fuente de eventos); los menus de procesarBoton() no se tocan.
+enum EventoBoton { BOTON_NINGUNO, BOTON_CORTA, BOTON_LARGA };
+
+/**
+ * Lee el boton PRG sin bloquear y devuelve un evento cuando se SUELTA el boton.
+ * Corta: mas de TIEMPO_ANTIRREBOTE_MS. Larga: >= TIEMPO_PULSACION_LARGA.
+ */
+EventoBoton leerEventoBoton() {
   bool estadoActual = digitalRead(BUTTON_PIN);
+  EventoBoton ev = BOTON_NINGUNO;
 
   if (ultimoEstadoBoton == HIGH && estadoActual == LOW) {
     tiempoInicioPulsacion = millis();
     procesandoPulsacion = true;
-    delay(20);
   }
 
   if (ultimoEstadoBoton == LOW && estadoActual == HIGH && procesandoPulsacion) {
     unsigned long duracion = millis() - tiempoInicioPulsacion;
     procesandoPulsacion = false;
 
+    if (duracion >= TIEMPO_PULSACION_LARGA) ev = BOTON_LARGA;
+    else if (duracion > TIEMPO_ANTIRREBOTE_MS) ev = BOTON_CORTA;
+  }
+
+  ultimoEstadoBoton = estadoActual;
+  return ev;
+}
+
+// ============================================================================
+// PROCESAMIENTO INTERACTIVO DE LOS EVENTOS DE BOTON
+// ============================================================================
+void procesarBoton() {
+  EventoBoton ev = leerEventoBoton();
+
+  if (ev != BOTON_NINGUNO) {
+
     if (pantallaActual == 4) {
       if (!enPantalla4_Sub) {
-        if (duracion >= TIEMPO_PULSACION_LARGA) {
+        if (ev == BOTON_LARGA) {
           // CICLO ROTATIVO PANTALLA 4 CON PULSACION LARGA (-):
           // [sig.] -> [CW DUO] -> [CW QSO] -> [ant.] -> [sig.] ...
           if (opcionPantalla4 == 2 && opcionNavegacionP1234 == 1) {
@@ -1041,7 +1094,7 @@ void procesarBoton() {
             opcionPantalla4 = 2;
             opcionNavegacionP1234 = 1;
           }
-        } else if (duracion > 30) {
+        } else if (ev == BOTON_CORTA) {
           // PULSACION CORTA (.): EJECUTAR OPCION SELECCIONADA
           if (opcionPantalla4 == 0) {
             enPantalla4_Sub = true; subpantalla4Activa = 1;
@@ -1062,13 +1115,13 @@ void procesarBoton() {
           }
         }
       } else if (subpantalla4Activa == 1) {
-        if (duracion >= TIEMPO_PULSACION_LARGA) {
+        if (ev == BOTON_LARGA) {
           if (grupoDuoRecibido.length() > 0 && !grupoDuoRevelado) {
             grupoDuoRevelado = true;
           } else {
             opcionDuo4_1 = (opcionDuo4_1 + 1) % 5;
           }
-        } else if (duracion > 30) {
+        } else if (ev == BOTON_CORTA) {
           switch (opcionDuo4_1) {
             case 0: wpmCW++; if (wpmCW > 30) wpmCW = 15; break;
             case 1: espaciadoCW += 10; if (espaciadoCW > 200) espaciadoCW = 100; break;
@@ -1080,22 +1133,22 @@ void procesarBoton() {
               transmitirGrupoDuoLoRa(nuevoGrupo);
               break;
             }
-            case 4: enPantalla4_Sub = false; break;
+            case 4: salirModoLoRa(); break;
           }
         }
       } else if (subpantalla4Activa == 2) {
-        if (duracion >= TIEMPO_PULSACION_LARGA) {
-          enPantalla4_Sub = false;
-        } else if (duracion > 30) {
+        if (ev == BOTON_LARGA) {
+          salirModoLoRa();
+        } else if (ev == BOTON_CORTA) {
           modoKeyer4_2 = (modoKeyer4_2 + 1) % 3;
         }
       }
 
     } else if (pantallaActual == 3) {
       if (enEstadisticas3_5) {
-        if (duracion >= TIEMPO_PULSACION_LARGA) {
+        if (ev == BOTON_LARGA) {
           enEstadisticas3_5 = false; confirmandoBorrado = false;
-        } else if (duracion > 30) {
+        } else if (ev == BOTON_CORTA) {
           if (paginaStats3_5 < 13) paginaStats3_5++;
           else {
             if (!confirmandoBorrado) confirmandoBorrado = true;
@@ -1106,17 +1159,17 @@ void procesarBoton() {
         if (estadoCW == CW_PANTALLA_3_3_LISTADO) {
           int charPorPagina = 63;
           bool hayMasPaginas = ((paginaListado3_3 + 1) * charPorPagina) < textoCompletoLeccion.length();
-          if (hayMasPaginas) { if (duracion > 30) paginaListado3_3++; } 
+          if (hayMasPaginas) { paginaListado3_3++; } 
           else {
-            if (duracion >= TIEMPO_PULSACION_LARGA) opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
-            else if (duracion > 30) {
+            if (ev == BOTON_LARGA) opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
+            else if (ev == BOTON_CORTA) {
               if (opcionFinListado3_3 == 0) { estadoCW = CW_PANTALLA_CORREGIR_ERRORES; opcionPantallaCorregir = 0; }
               else iniciarPracticaCW();
             }
           }
         } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
-          if (duracion >= TIEMPO_PULSACION_LARGA) opcionPantallaCorregir = (opcionPantallaCorregir + 1) % 3;
-          else if (duracion > 30) {
+          if (ev == BOTON_LARGA) opcionPantallaCorregir = (opcionPantallaCorregir + 1) % 3;
+          else if (ev == BOTON_CORTA) {
             if (opcionPantallaCorregir == 0) { numeroErrores++; if (numeroErrores > totalCaracteresLeccion) numeroErrores = 0; }
             else if (opcionPantallaCorregir == 1) {
               float pct = 0.0;
@@ -1126,18 +1179,18 @@ void procesarBoton() {
             } else if (opcionPantallaCorregir == 2) iniciarPracticaCW();
           }
         } else if (estadoCW == CW_PANTALLA_RESUMEN_FINAL) {
-          if (duracion >= TIEMPO_PULSACION_LARGA) iniciarPracticaCW();
-          else if (duracion > 30) detenerPracticaCW();
+          if (ev == BOTON_LARGA) iniciarPracticaCW();
+          else if (ev == BOTON_CORTA) detenerPracticaCW();
         } else {
-          if (duracion >= TIEMPO_PULSACION_LARGA) detenerPracticaCW();
-          else if (duracion > 30) {
+          if (ev == BOTON_LARGA) detenerPracticaCW();
+          else if (ev == BOTON_CORTA) {
             if (estadoCW == CW_PAUSADO) estadoCW = CW_GENERAR_GRUPO;
             else { estadoCW = CW_PAUSADO; conmutarEmisionMorse(false); ledEncendido = false; }
           }
         }
       } else if (enSubpantallaCW) {
-        if (duracion >= TIEMPO_PULSACION_LARGA) opcionSubpantalla = (opcionSubpantalla + 1) % 7;
-        else if (duracion > 30) {
+        if (ev == BOTON_LARGA) opcionSubpantalla = (opcionSubpantalla + 1) % 7;
+        else if (ev == BOTON_CORTA) {
           switch (opcionSubpantalla) {
             case 0: wpmCW++; if (wpmCW > 30) wpmCW = 15; break;
             case 1: espaciadoCW += 10; if (espaciadoCW > 200) espaciadoCW = 100; break;
@@ -1149,7 +1202,7 @@ void procesarBoton() {
           }
         }
       } else {
-        if (duracion >= TIEMPO_PULSACION_LARGA) {
+        if (ev == BOTON_LARGA) {
           // CICLO ROTATIVO PANTALLA 3 CON PULSACION LARGA (-):
           // [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [ant.] -> [sig.] ...
           if (opcionPantalla3 == 2 && opcionNavegacionP1234 == 1) {
@@ -1163,7 +1216,7 @@ void procesarBoton() {
             opcionPantalla3 = 2;
             opcionNavegacionP1234 = 1;
           }
-        } else if (duracion > 30) {
+        } else if (ev == BOTON_CORTA) {
           // PULSACION CORTA (.): EJECUTAR OPCION SELECCIONADA
           if (opcionPantalla3 == 0) {
             enSubpantallaCW = true; 
@@ -1186,8 +1239,8 @@ void procesarBoton() {
       }
 
     } else {
-      if (duracion >= TIEMPO_PULSACION_LARGA) opcionNavegacionP1234 = (opcionNavegacionP1234 == 0) ? 1 : 0;
-      else if (duracion > 30) {
+      if (ev == BOTON_LARGA) opcionNavegacionP1234 = (opcionNavegacionP1234 == 0) ? 1 : 0;
+      else if (ev == BOTON_CORTA) {
         if (opcionNavegacionP1234 == 0) pantallaActual = (pantallaActual == 1) ? TOTAL_PANTALLAS : pantallaActual - 1;
         else pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
         contadorPulsaciones++;
@@ -1206,8 +1259,6 @@ void procesarBoton() {
 
     actualizarPantalla();
   }
-
-  ultimoEstadoBoton = estadoActual;
 }
 
 // ============================================================================
@@ -1232,7 +1283,7 @@ void encenderPerifericos() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3b..."));
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3d..."));
   
   encenderPerifericos();
 
@@ -1244,7 +1295,7 @@ void setup() {
     for (;;);
   }
 
-  randomSeed(analogRead(0) + millis());
+  randomSeed(esp_random());  // GPIO0 no es ADC en el S3: la semilla anterior era casi fija
 
   cargarDatosNVS();
   actualizarPantalla();
