@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.3f - Arreglos de pantalla: estadisticas 3.5 (ancho de linea y leccion 40), signo de apertura, foco al volver a P2
+ * @version 0.3g - Bateria en cache (lectura cada 30 s fuera de la emision CW), redibujado solo cuando cambia algo
  * @date 2026-10-08
  */
 
@@ -327,11 +327,17 @@ BateriaInfo leerBateria() {
   return bat;
 }
 
+// leerBateria() bloquea unos 25 ms: se lee cada 30 s fuera de la emision CW y el
+// dibujo usa este valor en cache
+#define INTERVALO_BATERIA_MS 30000
+BateriaInfo bateriaActual = {0.0, 0, SOLO_USB};
+bool pantallaPendiente = false;  // Redibujar en cuanto no suene CW
+
 // ============================================================================
 // DIBUJO Y RENDERIZADO OLED (BARRA SUPERIOR: MAYÚSCULAS | INFERIOR: MINÚSCULAS)
 // ============================================================================
 void dibujarEncabezado() {
-  BateriaInfo bat = leerBateria();
+  BateriaInfo bat = bateriaActual;
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
 
@@ -531,6 +537,8 @@ void encolarGrupoRxDuo(const char* grupo) {
   colaRxNum++;
 }
 
+void actualizarPantalla();  // Definida mas abajo
+
 /**
  * Si no suena nada y hay grupos en cola, reproduce el siguiente tras el espacio entre palabras.
  */
@@ -546,6 +554,9 @@ void procesarColaRxDuo() {
   colaRxIni = (colaRxIni + 1) % COLA_RX_TAM;
   colaRxNum--;
 
+  // Se redibuja antes de empezar: iniciarEmisionLocalDuo() toma millis() despues
+  actualizarPantalla();
+  pantallaPendiente = false;
   iniciarEmisionLocalDuo(grupoDuoRecibido);
 }
 
@@ -569,6 +580,7 @@ void procesarRecepcionLoRa() {
     if (tramaRx.magicHeader[0] == 'M' && tramaRx.magicHeader[1] == 'M') {
       rssiUltimo = radio.getRSSI();
       snrUltimo = radio.getSNR();
+      pantallaPendiente = true;
 
       if (tramaRx.tipoMensaje == 0x01 && enPantalla4_Sub && subpantalla4Activa == 1) {
         char bufferPayload[6] = {0};
@@ -638,7 +650,7 @@ void renderizarPantalla2() {
   display.print(F("LORA: "));
   display.println(estadoLoraStr);
 
-  BateriaInfo bat = leerBateria();
+  BateriaInfo bat = bateriaActual;
   display.setCursor(0, 32);
   display.print(F("VBAT: "));
   display.print(bat.voltaje, 2);
@@ -1323,7 +1335,7 @@ void encenderPerifericos() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3f..."));
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3g..."));
   
   encenderPerifericos();
 
@@ -1338,6 +1350,7 @@ void setup() {
   randomSeed(esp_random());  // GPIO0 no es ADC en el S3: la semilla anterior era casi fija
 
   cargarDatosNVS();
+  bateriaActual = leerBateria();
   actualizarPantalla();
 
   Serial.println(F("[LORA] INICIANDO SX1262..."));
@@ -1357,16 +1370,46 @@ void setup() {
   actualizarPantalla();
 }
 
+/**
+ * True mientras suena CW (practica Koch o Duo): en ese tiempo no se hace nada
+ * que bloquee (lectura de bateria, redibujado), para no alargar los elementos.
+ */
+bool motorCWActivo() {
+  if (emitiendoMorseDuo) return true;
+  return enPractica3_2 && estadoCW != CW_PAUSADO && estadoCW != CW_IDLE &&
+         estadoCW != CW_PANTALLA_3_3_LISTADO && estadoCW != CW_PANTALLA_CORREGIR_ERRORES &&
+         estadoCW != CW_PANTALLA_RESUMEN_FINAL;
+}
+
+/**
+ * Lee la bateria cada INTERVALO_BATERIA_MS y redibuja solo si algo ha cambiado.
+ * Sustituye al refresco fijo cada 3 s.
+ */
+void procesarBateriaYPantalla() {
+  if (motorCWActivo()) return;
+
+  static unsigned long ultimaLecturaBat = 0;
+  if (millis() - ultimaLecturaBat >= INTERVALO_BATERIA_MS) {
+    ultimaLecturaBat = millis();
+    BateriaInfo nueva = leerBateria();
+    bool cambia = nueva.estado != bateriaActual.estado ||
+                  nueva.porcentaje != bateriaActual.porcentaje ||
+                  (pantallaActual == 2 && fabs(nueva.voltaje - bateriaActual.voltaje) >= 0.01);
+    bateriaActual = nueva;
+    if (cambia) pantallaPendiente = true;
+  }
+
+  if (pantallaPendiente) {
+    pantallaPendiente = false;
+    actualizarPantalla();
+  }
+}
+
 void loop() {
   procesarBoton();
   procesarMaquinaEstadosCW();
   procesarEmisionMorseDuoNoBloqueante();
   procesarRecepcionLoRa();
   procesarColaRxDuo();
-
-  static unsigned long ultimoRefresco = 0;
-  if (millis() - ultimoRefresco > 3000) {
-    ultimoRefresco = millis();
-    actualizarPantalla();
-  }
+  procesarBateriaYPantalla();
 }
