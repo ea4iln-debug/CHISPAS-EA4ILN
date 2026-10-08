@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.5b - Condiciones por banda (pantalla 5, pagina 2); pantalla 7 sol y linea gris
+ * @version 0.5c - Indicativo y locator en NVS; pantalla 8 de configuracion (portal, reset de fabrica); hora manual en el portal
  * @date 2026-10-08
  */
 
-#define FW_VERSION "0.5b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.5c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -132,7 +132,11 @@ const char* obtenerCodigoMorse(char c) {
 #define MORSE_ESPACIO_PALABRA  0x00
 #define MORSE_NO_VALIDO        0x01  // Centinela sin elementos: caracter sin codigo Morse
 
-const char INDICATIVO[] = "EA4ILN";  // Pendiente: configurable por placa
+// Datos de la estacion: se guardan en NVS (espacio "mr_estacion") y se cambian desde el portal WiFi
+#define INDICATIVO_POR_DEFECTO "EA4ILN"
+#define LOCATOR_POR_DEFECTO    "IM68mu"
+char indicativoEstacion[TRAMA_LONG_INDICATIVO + 1] = INDICATIVO_POR_DEFECTO;
+char locatorEstacion[7] = LOCATOR_POR_DEFECTO;
 uint8_t seqTx = 0;                   // Se inicializa al azar en setup()
 
 uint8_t codificarCaracterMorse(char c) {
@@ -181,7 +185,7 @@ void IRAM_ATTR cbInterrupcionLora() {
 }
 
 uint8_t pantallaActual = 1;         
-const uint8_t TOTAL_PANTALLAS = 7;
+const uint8_t TOTAL_PANTALLAS = 8;
 uint8_t opcionNavegacionP1234 = 1;  // 0 = "ant.", 1 = "sig."
 
 int contadorPulsaciones = 0;
@@ -381,17 +385,35 @@ void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
   prefs.end();
 }
 
+// Borra solo las estadisticas Koch; la configuracion del entrenador y los datos de la estacion se conservan
 void borrarTodasLasEstadisticasNVS() {
   prefs.begin("mr_morse", false);
-  prefs.clear();
+  for (int i = 0; i < 40; i++) {
+    prefs.remove(("c_" + String(i)).c_str());
+    prefs.remove(("mx_" + String(i)).c_str());
+    prefs.remove(("mn_" + String(i)).c_str());
+  }
   prefs.end();
 
-  wpmCW = 25; espaciadoCW = 200; leccionCW = 4; caracteresCW = 5; gruposCW = 20;
   for (int i = 0; i < 40; i++) {
     statsKoch[i].vecesCompletada = 0;
     statsKoch[i].maxAcierto = 0;
     statsKoch[i].minAcierto = 100;
   }
+}
+
+void cargarEstacionNVS() {
+  prefs.begin("mr_estacion", true);
+  strlcpy(indicativoEstacion, prefs.getString("call", INDICATIVO_POR_DEFECTO).c_str(), sizeof(indicativoEstacion));
+  strlcpy(locatorEstacion, prefs.getString("loc", LOCATOR_POR_DEFECTO).c_str(), sizeof(locatorEstacion));
+  prefs.end();
+}
+
+void guardarEstacionNVS() {
+  prefs.begin("mr_estacion", false);
+  prefs.putString("call", indicativoEstacion);
+  prefs.putString("loc", locatorEstacion);
+  prefs.end();
 }
 
 // ============================================================================
@@ -673,7 +695,7 @@ void transmitirGrupoDuoLoRa(String grupo) {
   trama[3] = seqTx++;
   trama[4] = wpmCW;
   memset(&trama[5], 0, TRAMA_LONG_INDICATIVO);
-  memcpy(&trama[5], INDICATIVO, min(strlen(INDICATIVO), (size_t)TRAMA_LONG_INDICATIVO));
+  memcpy(&trama[5], indicativoEstacion, min(strlen(indicativoEstacion), (size_t)TRAMA_LONG_INDICATIVO));
 
   size_t longitud = TRAMA_LONG_CABECERA;
   for (size_t i = 0; i < grupo.length() && longitud < TRAMA_LONG_MAX; i++) {
@@ -882,12 +904,79 @@ uint8_t opcionPantalla5 = OPCION_BARRA_P5;  // 0 = pagina, 1 = actualizar, 2 = w
 uint8_t opcionPantalla6 = OPCION_BARRA_P6;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
 
+#define PANTALLA_CONFIG 8
+#define OPCION_BARRA_P8 2
+uint8_t opcionPantalla8 = OPCION_BARRA_P8;  // 0 = portal, 1 = reset de fabrica, 2 = barra ant./sig.
+bool confirmandoFabrica = false;
+
+// Pagina "Setup" del portal: datos de la estacion y hora manual (para campo sin internet)
+WiFiManagerParameter paramIndicativo("call", "Indicativo", INDICATIVO_POR_DEFECTO, TRAMA_LONG_INDICATIVO);
+WiFiManagerParameter paramLocator("loc", "Locator (4 o 6 caracteres)", LOCATOR_POR_DEFECTO, 6);
+WiFiManagerParameter paramHora("hora", "Hora local AAAA-MM-DD HH:MM (vacio = no cambiar)", "", 16);
+
+bool locatorALatLon(const char* loc, float& lat, float& lon);  // Definida en la pantalla 7
+
+void guardarParametrosPortal() {
+  String call = paramIndicativo.getValue();
+  call.trim();
+  call.toUpperCase();
+  bool callValido = call.length() >= 3 && call.length() <= TRAMA_LONG_INDICATIVO;
+  for (size_t i = 0; i < call.length(); i++) {
+    if (!isalnum(call[i]) && call[i] != '/') callValido = false;
+  }
+  if (callValido) strlcpy(indicativoEstacion, call.c_str(), sizeof(indicativoEstacion));
+  else Serial.printf("[PORTAL] INDICATIVO NO VALIDO: %s\n", call.c_str());
+
+  // "im68MU" -> "IM68mu"
+  String loc = paramLocator.getValue();
+  loc.trim();
+  for (size_t i = 0; i < loc.length(); i++) loc[i] = (i < 2) ? toupper(loc[i]) : tolower(loc[i]);
+  float lat, lon;
+  if (locatorALatLon(loc.c_str(), lat, lon)) strlcpy(locatorEstacion, loc.c_str(), sizeof(locatorEstacion));
+  else Serial.printf("[PORTAL] LOCATOR NO VALIDO: %s\n", loc.c_str());
+
+  guardarEstacionNVS();
+  Serial.printf("[PORTAL] ESTACION: %s %s\n", indicativoEstacion, locatorEstacion);
+
+  String hora = paramHora.getValue();
+  hora.trim();
+  if (hora.length() > 0) {
+    int a, me, d, h, mi;
+    if (sscanf(hora.c_str(), "%d-%d-%d %d:%d", &a, &me, &d, &h, &mi) == 5 &&
+        a >= 2024 && me >= 1 && me <= 12 && d >= 1 && d <= 31 && h >= 0 && h <= 23 && mi >= 0 && mi <= 59) {
+      struct tm t = {};
+      t.tm_year = a - 1900; t.tm_mon = me - 1; t.tm_mday = d;
+      t.tm_hour = h; t.tm_min = mi; t.tm_isdst = -1;  // Hora local: mktime aplica CET/CEST
+      struct timeval tv = { mktime(&t), 0 };
+      settimeofday(&tv, nullptr);
+      Serial.printf("[PORTAL] HORA MANUAL: %s\n", hora.c_str());
+    } else {
+      Serial.printf("[PORTAL] HORA NO VALIDA: %s\n", hora.c_str());
+    }
+  }
+  pantallaPendiente = true;
+}
+
 void abrirPortalWifi() {
   if (nombrePortal[0] == '\0') {
     uint8_t mac[6];
     WiFi.macAddress(mac);
     snprintf(nombrePortal, sizeof(nombrePortal), "MrMorse-%02X%02X", mac[4], mac[5]);
   }
+  static bool parametrosAnadidos = false;
+  if (!parametrosAnadidos) {
+    wm.addParameter(&paramIndicativo);
+    wm.addParameter(&paramLocator);
+    wm.addParameter(&paramHora);
+    const char* menu[] = { "wifi", "param", "exit" };  // "param" = pagina "Setup"
+    wm.setMenu(menu, 3);
+    wm.setSaveParamsCallback(guardarParametrosPortal);
+    parametrosAnadidos = true;
+  }
+  paramIndicativo.setValue(indicativoEstacion, TRAMA_LONG_INDICATIVO);
+  paramLocator.setValue(locatorEstacion, 6);
+  paramHora.setValue("", 16);
+
   WiFi.mode(WIFI_STA);
   wm.setConfigPortalBlocking(false);
   wm.setConfigPortalTimeout(PORTAL_TIMEOUT_S);
@@ -1042,11 +1131,13 @@ void pedirActualizacionWifi() {
  */
 void procesarWifi() {
   static uint8_t pantallaAnterior = 0;
-  bool enPantallaWifi = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS);
-  bool estabaEnPantallaWifi = (pantallaAnterior == PANTALLA_PROPAGACION || pantallaAnterior == PANTALLA_SPOTS);
+  // P5 y P6 encienden el WiFi al entrar; en P8 solo se usa si se abre el portal.
+  // Al ir a cualquier otra pantalla se apaga.
   if (pantallaActual != pantallaAnterior) {
-    if (enPantallaWifi && !estabaEnPantallaWifi) encenderWifi();
-    if (!enPantallaWifi && estabaEnPantallaWifi) apagarWifi();
+    bool enDatos = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS);
+    bool usaWifi = enDatos || pantallaActual == PANTALLA_CONFIG;
+    if (enDatos && estadoWifi == WIFI_APAGADO) encenderWifi();
+    if (!usaWifi && estadoWifi != WIFI_APAGADO) apagarWifi();
     pantallaAnterior = pantallaActual;
   }
 
@@ -1286,7 +1377,7 @@ void renderizarPantalla3() {
         display.write(0xA8);
         display.println(F("CONFIRMAR BORRADO?"));
       } else {
-        display.println(F("  > BORRAR TODO <"));
+        display.println(F(" BORRAR ESTADISTICAS"));  // Solo estadisticas: el resto, en P8 (fabrica)
       }
 
       dibujarPieCentrado(". : borrar   - : volver");
@@ -1591,7 +1682,6 @@ void renderizarPantalla6() {
 // sol entre GRIS_ELEV_MIN y GRIS_ELEV_MAX grados de altura (unos 30-40 min antes y
 // despues de la salida y la puesta en la Peninsula). Necesita la hora sincronizada por NTP.
 #define PANTALLA_SOL   7
-#define LOCATOR        "IM68mu" // Locator de la estacion (4 o 6 caracteres)
 #define GRIS_ELEV_MIN  -6.0
 #define GRIS_ELEV_MAX  6.0
 
@@ -1662,7 +1752,7 @@ void renderizarPantalla7() {
 
   float lat, lon;
   struct tm local;
-  if (!locatorALatLon(LOCATOR, lat, lon)) {
+  if (!locatorALatLon(locatorEstacion, lat, lon)) {
     display.setCursor(0, 22);
     display.print(F("LOCATOR NO VALIDO"));
   } else if (!horaLocalValida(local)) {
@@ -1697,12 +1787,66 @@ void renderizarPantalla7() {
 
     char linea[24];
     bool enGris = d.elevacion >= GRIS_ELEV_MIN && d.elevacion <= GRIS_ELEV_MAX;
-    snprintf(linea, sizeof(linea), "%s SOL %+.1f%s", LOCATOR, d.elevacion, enGris ? " GRIS" : "");
+    snprintf(linea, sizeof(linea), "%s SOL %+.1f%s", locatorEstacion, d.elevacion, enGris ? " GRIS" : "");
     display.setCursor(0, 42);
     display.print(linea);
   }
 
   dibujarBarraAvanzarRetroceder(true);
+}
+
+// ============================================================================
+// PANTALLA 8: CONFIGURACION
+// ============================================================================
+/**
+ * Reset de fabrica: borra estadisticas, configuracion del entrenador, datos de la estacion
+ * y la red WiFi guardada, y reinicia.
+ */
+void resetFabrica() {
+  Serial.println(F("[CONFIG] RESET DE FABRICA"));
+  prefs.begin("mr_morse", false);
+  prefs.clear();
+  prefs.end();
+  prefs.begin("mr_estacion", false);
+  prefs.clear();
+  prefs.end();
+  wm.resetSettings();  // Red WiFi guardada
+
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 28);
+  display.print(F("RESET DE FABRICA..."));
+  display.display();
+  delay(1500);
+  ESP.restart();
+}
+
+void renderizarPantalla8() {
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+
+  if (estadoWifi == WIFI_PORTAL || estadoWifi == WIFI_CONECTANDO) {
+    dibujarEstadoWifi();
+  } else {
+    display.setCursor(0, 12);
+    display.print(F("INDICATIVO ")); display.print(indicativoEstacion);
+    display.setCursor(0, 22);
+    display.print(F("LOCATOR    ")); display.print(locatorEstacion);
+    display.setCursor(0, 32);
+    display.print(F("FIRMWARE   v" FW_VERSION));
+    if (confirmandoFabrica) {
+      display.setCursor(0, 42);
+      display.print(F("OTRA VEZ: BORRA TODO"));
+    }
+  }
+
+  if (opcionPantalla8 == OPCION_BARRA_P8) {
+    dibujarBarraAvanzarRetroceder(true);
+  } else {
+    String pie = (opcionPantalla8 == 0 ? "> " : "  ") + String("portal  ") +
+                 (opcionPantalla8 == 1 ? "> " : "  ") + String("fabrica");
+    dibujarPieCentrado(pie);
+  }
 }
 
 void actualizarPantalla() {
@@ -1717,6 +1861,7 @@ void actualizarPantalla() {
     case PANTALLA_PROPAGACION: renderizarPantalla5(); break;
     case PANTALLA_SPOTS: renderizarPantalla6(); break;
     case PANTALLA_SOL: renderizarPantalla7(); break;
+    case PANTALLA_CONFIG: renderizarPantalla8(); break;
   }
 
   display.display();
@@ -1951,11 +2096,15 @@ void procesarBoton() {
         }
       }
 
-    } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS) {
+    } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
+               pantallaActual == PANTALLA_CONFIG) {
       // P5: [sig.] -> [pag] -> [act.] -> [wifi] -> [ant.]    P6: [sig.] -> [mas] -> [act.] -> [ant.]
+      // P8: [sig.] -> [portal] -> [fabrica] -> [ant.]
       bool esP5 = (pantallaActual == PANTALLA_PROPAGACION);
-      uint8_t& opcion = esP5 ? opcionPantalla5 : opcionPantalla6;
-      uint8_t barra = esP5 ? OPCION_BARRA_P5 : OPCION_BARRA_P6;
+      bool esP8 = (pantallaActual == PANTALLA_CONFIG);
+      uint8_t& opcion = esP5 ? opcionPantalla5 : (esP8 ? opcionPantalla8 : opcionPantalla6);
+      uint8_t barra = esP5 ? OPCION_BARRA_P5 : (esP8 ? OPCION_BARRA_P8 : OPCION_BARRA_P6);
+      if (ev == BOTON_LARGA) confirmandoFabrica = false;
       if (ev == BOTON_LARGA) {
         if (opcion == barra && opcionNavegacionP1234 == 1) {
           opcion = 0;
@@ -1970,7 +2119,7 @@ void procesarBoton() {
       } else if (ev == BOTON_CORTA) {
         if (opcion == barra) {
           if (opcionNavegacionP1234 == 0) {
-            pantallaActual--;  // P5 -> P4, P6 -> P5
+            pantallaActual--;  // P5 -> P4, P6 -> P5, P8 -> P7
           } else {
             pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
           }
@@ -1978,16 +2127,21 @@ void procesarBoton() {
           else if (pantallaActual == PANTALLA_PROPAGACION) opcionPantalla5 = OPCION_BARRA_P5;
           else if (pantallaActual == PANTALLA_SPOTS) opcionPantalla6 = OPCION_BARRA_P6;
           opcionNavegacionP1234 = 1;
+        } else if (esP8 && opcion == 0) {
+          abrirPortalWifi();
+        } else if (esP8 && opcion == 1) {
+          if (!confirmandoFabrica) confirmandoFabrica = true;
+          else resetFabrica();
         } else if (esP5 && opcion == 0) {
           paginaPropagacion = (paginaPropagacion + 1) % 2;
         } else if (esP5 && opcion == 1) {
           pedirActualizacionWifi();
         } else if (esP5 && opcion == 2) {
           abrirPortalWifi();  // Para cambiar de red
-        } else if (!esP5 && opcion == 0) {
+        } else if (!esP5 && !esP8 && opcion == 0) {
           uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
           paginaSpots = (paginaSpots + 1) % paginas;
-        } else if (!esP5 && opcion == 1) {
+        } else if (!esP5 && !esP8 && opcion == 1) {
           pedirActualizacionWifi();
         }
       }
@@ -2103,6 +2257,10 @@ void procesarBoton() {
         } else if (pantallaActual == PANTALLA_SPOTS) {
           opcionPantalla6 = OPCION_BARRA_P6;
           opcionNavegacionP1234 = 1;
+        } else if (pantallaActual == PANTALLA_CONFIG) {
+          opcionPantalla8 = OPCION_BARRA_P8;
+          confirmandoFabrica = false;
+          opcionNavegacionP1234 = 1;
         } else {
           opcionNavegacionP1234 = 1;
         }
@@ -2184,6 +2342,9 @@ void setup() {
   seqTx = random(256);       // Si la otra placa se reinicia, que no repita el ultimo seq
 
   cargarDatosNVS();
+  cargarEstacionNVS();
+  setenv("TZ", ZONA_HORARIA, 1);  // Para que la hora manual del portal se interprete como local
+  tzset();
   bateriaActual = leerBateria();
   actualizarPantalla();
 
