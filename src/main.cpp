@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.4c - Radio a 868.1 MHz SF7/250 kHz (parametros en #define); version del firmware en la pantalla 1
+ * @version 0.4d - Duo a los wpm del emisor; escucha del canal (CAD) y lectura de lo pendiente antes de transmitir
  * @date 2026-10-08
  */
 
-#define FW_VERSION "0.4c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.4d"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -44,6 +44,9 @@
 // La V3 alimenta el TCXO por DIO3 a 1.8 V (Meshtastic heltec_v3: SX126X_DIO3_TCXO_VOLTAGE 1.8);
 // el valor por defecto de RadioLib es 1.6 V. DIO2 como RF switch ya lo activa RadioLib en begin().
 #define LORA_TCXO_V       1.8
+// Escucha del canal (CAD) antes de transmitir
+#define LORA_CAD_INTENTOS      3
+#define LORA_ESPERA_OCUPADO_MS 100  // Una trama de 45 bytes con SF7/250 kHz dura unos 60 ms
 
 #define KEYER_PADDLE_DIT 2  // Entrada manipulador yambico (Punto)
 #define KEYER_PADDLE_DAH 3  // Entrada manipulador yambico (Raya)
@@ -257,6 +260,10 @@ unsigned long finEmisionDuo = 0;  // Instante en que termino la ultima emision (
 // Cola circular de grupos recibidos por LoRa pendientes de reproducir
 #define COLA_RX_TAM 8
 char colaRxDuo[COLA_RX_TAM][TRAMA_MAX_CARACTERES + 1];
+uint8_t colaRxWpm[COLA_RX_TAM];
+uint8_t wpmEmisionDuo = 20;  // Velocidad de lo que esta sonando en Duo (local o del emisor)
+#define WPM_MIN_DUO 5
+#define WPM_MAX_DUO 60
 uint8_t colaRxIni = 0;
 uint8_t colaRxNum = 0;
 
@@ -548,12 +555,13 @@ bool buscarCaracterDuo(bool& hayEspacio) {
   return false;
 }
 
-void iniciarEmisionLocalDuo(String cadena) {
+void iniciarEmisionLocalDuo(String cadena, uint8_t wpm) {
   cadena.trim();
   if (cadena.length() == 0) return;
 
   conmutarEmisionMorse(false);
   cadenaMorseAEmitirDuo = cadena;
+  wpmEmisionDuo = wpm;
   idxCharDuo = 0;
   bool hayEspacio;
   if (!buscarCaracterDuo(hayEspacio)) return;
@@ -570,9 +578,9 @@ void procesarEmisionMorseDuoNoBloqueante() {
   registrarRetrasoCW(tiempoProximoDuo);
 #endif
 
-  uint32_t tDit = 1200 / wpmCW;  
-  uint32_t tDah = tDit * 3;     
-  uint32_t tElementoGap = tDit; 
+  uint32_t tDit = 1200 / wpmEmisionDuo;
+  uint32_t tDah = tDit * 3;
+  uint32_t tElementoGap = tDit;
   uint32_t tCharGap = (tDit * 3 * espaciadoCW) / 100;
 
   if (!estadoTonoDuo) {
@@ -611,8 +619,33 @@ void procesarEmisionMorseDuoNoBloqueante() {
   }
 }
 
+void procesarRecepcionLoRa();  // Definida mas abajo
+
+/**
+ * Antes de transmitir: procesa una trama que haya llegado y aun no se haya leido (transmit()
+ * machacaria el buffer) y escucha el canal (CAD). Si la otra placa esta emitiendo, se pone en
+ * recepcion hasta que llegue su trama y vuelve a probar.
+ */
+void prepararCanalParaTransmitir() {
+  if (flagPaqueteRecibido) procesarRecepcionLoRa();
+
+  for (uint8_t intento = 0; intento < LORA_CAD_INTENTOS; intento++) {
+    int estadoCad = radio.scanChannel();
+    flagPaqueteRecibido = false;  // El fin del CAD tambien activa DIO1
+    if (estadoCad != RADIOLIB_LORA_DETECTED) return;  // Libre (o error de CAD): se transmite
+
+    Serial.println(F("[LORA TX] CANAL OCUPADO, ESPERANDO TRAMA"));
+    radio.startReceive();
+    unsigned long inicio = millis();
+    while (!flagPaqueteRecibido && millis() - inicio < LORA_ESPERA_OCUPADO_MS) yield();
+    if (flagPaqueteRecibido) procesarRecepcionLoRa();
+  }
+  Serial.println(F("[LORA TX] CANAL SIGUE OCUPADO, SE TRANSMITE IGUAL"));
+}
+
 void transmitirGrupoDuoLoRa(String grupo) {
   grupoDuoTransmitido = grupo;
+  prepararCanalParaTransmitir();
 
   uint8_t trama[TRAMA_LONG_MAX];
   trama[0] = 'M';
@@ -649,13 +682,14 @@ void transmitirGrupoDuoLoRa(String grupo) {
   // (esto sustituye al antiguo filtro de "eco" por comparacion de texto).
   flagPaqueteRecibido = false;
 
-  iniciarEmisionLocalDuo(grupo);
+  iniciarEmisionLocalDuo(grupo, wpmCW);
 }
 
 /**
- * Guarda un grupo recibido en la cola. Si esta llena se descarta el grupo nuevo.
+ * Guarda un grupo recibido y los wpm a los que hay que reproducirlo.
+ * Si la cola esta llena se descarta el grupo nuevo.
  */
-void encolarGrupoRxDuo(const char* grupo) {
+void encolarGrupoRxDuo(const char* grupo, uint8_t wpm) {
   if (colaRxNum >= COLA_RX_TAM) {
     Serial.println(F("[LORA RX] COLA LLENA, GRUPO DESCARTADO"));
     return;
@@ -663,6 +697,7 @@ void encolarGrupoRxDuo(const char* grupo) {
   uint8_t pos = (colaRxIni + colaRxNum) % COLA_RX_TAM;
   strncpy(colaRxDuo[pos], grupo, TRAMA_MAX_CARACTERES);
   colaRxDuo[pos][TRAMA_MAX_CARACTERES] = '\0';
+  colaRxWpm[pos] = wpm;
   colaRxNum++;
 }
 
@@ -674,19 +709,20 @@ void actualizarPantalla();  // Definida mas abajo
 void procesarColaRxDuo() {
   if (emitiendoMorseDuo || colaRxNum == 0) return;
 
-  uint32_t tDit = 1200 / wpmCW;
+  uint32_t tDit = 1200 / wpmEmisionDuo;  // Pausa a la velocidad del grupo que acaba de sonar
   uint32_t tWordGap = (tDit * 7 * espaciadoCW) / 100;
   if (millis() - finEmisionDuo < tWordGap) return;
 
   grupoDuoRecibido = String(colaRxDuo[colaRxIni]);
   grupoDuoRevelado = false;
+  uint8_t wpm = colaRxWpm[colaRxIni];
   colaRxIni = (colaRxIni + 1) % COLA_RX_TAM;
   colaRxNum--;
 
   // Se redibuja antes de empezar: iniciarEmisionLocalDuo() toma millis() despues
   actualizarPantalla();
   pantallaPendiente = false;
-  iniciarEmisionLocalDuo(grupoDuoRecibido);
+  iniciarEmisionLocalDuo(grupoDuoRecibido, wpm);
 }
 
 void procesarRecepcionLoRa() {
@@ -737,7 +773,10 @@ void procesarRecepcionLoRa() {
 
     if (!duplicada && tipo == TRAMA_TIPO_GRUPO_DUO && enPantalla4_Sub && subpantalla4Activa == 1 &&
         texto.length() > 0) {
-      encolarGrupoRxDuo(texto.c_str());
+      // Se reproduce a los wpm del emisor; si el valor no es razonable, a los locales
+      uint8_t wpmRx = trama[4];
+      if (wpmRx < WPM_MIN_DUO || wpmRx > WPM_MAX_DUO) wpmRx = wpmCW;
+      encolarGrupoRxDuo(texto.c_str(), wpmRx);
     }
   }
 

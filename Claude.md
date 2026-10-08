@@ -7,7 +7,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.4c**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.4d**. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -30,12 +30,16 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   (con SF9/125 kHz y 868,0 eran -31 dBm; sin comparar en las mismas condiciones).
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
-1. Koch: estadísticas por carácter (hoy la corrección solo cuenta errores) y modo Echo con el keyer.
-   Hecho en v0.3i: tabla en orden LCWO (41 caracteres, con `=`), lección N = N+1 caracteres.
-2. Trama LoRa v2 hecha en v0.4a (formato en el comentario de `main.cpp`). Falta: indicativo configurable por
-   placa (hoy constante `INDICATIVO`), reproducir a los wpm del emisor y pantalla para textos largos.
-3. Un paquete que llega durante `radio.transmit()` (bloqueante) se pierde al borrar el flag tras TX.
-4. A futuro: motor CW en una tarea FreeRTOS, audio I2S, keyer iámbico, decodificador (Goertzel).
+1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):
+   - Koch: estadísticas por carácter (marcar fallos en la corrección) y modo Echo (necesita keyer).
+   - Indicativo configurable por placa (hoy constante `INDICATIVO` = "EA4ILN" en las dos; con dos placas
+     no afecta al descarte de duplicados).
+2. Pantalla Duo para textos largos (cuando haya frases: QSO con keyer).
+3. A futuro: motor CW en una tarea FreeRTOS, audio I2S, keyer iámbico, decodificador (Goertzel).
+
+Hecho y probado: v0.3i tabla Koch LCWO; v0.4a trama v2; v0.4d Duo a los wpm del emisor (5-60, si no los
+locales) y antes de TX se lee la trama pendiente y se escucha el canal (CAD, 3 intentos, espera 100 ms).
+Nota: lo que llega *durante* `transmit()` se pierde por ser semidúplex, no por el firmware.
 
 ## Decisiones tomadas
 - Práctica en pareja con **tramas digitales**, no audio: un byte por carácter con bit centinela
