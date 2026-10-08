@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.3i - Tabla Koch en orden LCWO (41 caracteres, con =); la leccion N usa N+1 caracteres
+ * @version 0.4a - Trama LoRa v2 de longitud variable (un byte por caracter con centinela, seq, indicativo de 8)
  * @date 2026-10-08
  */
 
@@ -87,16 +87,59 @@ const char* obtenerCodigoMorse(char c) {
 }
 
 // ============================================================================
-// ESTRUCTURA DE PAQUETE DIGITAL LORA (14 BYTES)
+// TRAMA DIGITAL LORA v2 (LONGITUD VARIABLE)
 // ============================================================================
-struct __attribute__((packed)) TramaMrMorse {
-  uint8_t  magicHeader[2]; // "MM"
-  uint8_t  tipoMensaje;    // 0x01: GRUPO_KOCH
-  char     callsign[6];    // Indicativo (ej. "EA4ILN")
-  uint8_t  wpm;            // Velocidad de la trama enviada
-  uint8_t  longitudTexto;  // Numero de caracteres validos en payload
-  char     payload[5];     // Cadena del grupo transmitido
-};
+// Byte 0-1  : 'M' 'M'
+// Byte 2    : version (4 bits altos) | tipo (4 bits bajos)
+// Byte 3    : seq, numero de trama (para descartar duplicados)
+// Byte 4    : wpm del emisor
+// Byte 5-12 : indicativo, 8 caracteres rellenos con 0
+// Byte 13.. : de 1 a TRAMA_MAX_CARACTERES bytes, uno por caracter Morse.
+//   Cada byte es un 1 centinela seguido de los elementos, del primero al ultimo
+//   (punto = 0, raya = 1). Ej.: K (-.-) = 0b1101 = 0x0D. Caben hasta 7 elementos.
+//   0x00 = espacio entre palabras.
+#define TRAMA_VERSION          2
+#define TRAMA_TIPO_GRUPO_DUO   1
+#define TRAMA_LONG_CABECERA    13
+#define TRAMA_LONG_INDICATIVO  8
+#define TRAMA_MAX_CARACTERES   32
+#define TRAMA_LONG_MAX         (TRAMA_LONG_CABECERA + TRAMA_MAX_CARACTERES)
+#define MORSE_ESPACIO_PALABRA  0x00
+#define MORSE_NO_VALIDO        0x01  // Centinela sin elementos: caracter sin codigo Morse
+
+const char INDICATIVO[] = "EA4ILN";  // Pendiente: configurable por placa
+uint8_t seqTx = 0;                   // Se inicializa al azar en setup()
+
+uint8_t codificarCaracterMorse(char c) {
+  if (c == ' ') return MORSE_ESPACIO_PALABRA;
+  const char* codigo = obtenerCodigoMorse(c);
+  size_t n = strlen(codigo);
+  if (n == 0 || n > 7) return MORSE_NO_VALIDO;
+
+  uint8_t b = 1;
+  for (size_t i = 0; i < n; i++) b = (b << 1) | (codigo[i] == '-' ? 1 : 0);
+  return b;
+}
+
+// Devuelve el caracter de un byte de la trama: ' ' para el espacio y '*' si el
+// patron no esta en el diccionario
+char decodificarCaracterMorse(uint8_t b) {
+  if (b == MORSE_ESPACIO_PALABRA) return ' ';
+
+  int8_t centinela = 7;
+  while (centinela > 0 && !((b >> centinela) & 1)) centinela--;
+  if (centinela == 0) return '*';
+
+  char patron[8];
+  uint8_t n = 0;
+  for (int8_t bit = centinela - 1; bit >= 0; bit--) patron[n++] = ((b >> bit) & 1) ? '-' : '.';
+  patron[n] = '\0';
+
+  for (size_t i = 0; i < sizeof(DICCIONARIO_MORSE)/sizeof(PatronMorse); i++) {
+    if (strcmp(DICCIONARIO_MORSE[i].codigo, patron) == 0) return DICCIONARIO_MORSE[i].c;
+  }
+  return '*';
+}
 
 // ============================================================================
 // OBJETOS Y VARIABLES GLOBALES
@@ -197,7 +240,7 @@ unsigned long finEmisionDuo = 0;  // Instante en que termino la ultima emision (
 
 // Cola circular de grupos recibidos por LoRa pendientes de reproducir
 #define COLA_RX_TAM 8
-char colaRxDuo[COLA_RX_TAM][6];
+char colaRxDuo[COLA_RX_TAM][TRAMA_MAX_CARACTERES + 1];
 uint8_t colaRxIni = 0;
 uint8_t colaRxNum = 0;
 
@@ -467,6 +510,28 @@ void dibujarBarraAvanzarRetroceder(bool enfocada) {
 // ============================================================================
 // TRANSMISION Y RECEPCION LORA POR INTERRUPCION
 // ============================================================================
+/**
+ * Busca desde idxCharDuo el siguiente caracter con codigo Morse y lo deja en codigoElemDuo.
+ * Salta espacios (y avisa en hayEspacio) y caracteres sin codigo. False si no queda ninguno.
+ */
+bool buscarCaracterDuo(bool& hayEspacio) {
+  hayEspacio = false;
+  while (idxCharDuo < (int)cadenaMorseAEmitirDuo.length()) {
+    char c = cadenaMorseAEmitirDuo.charAt(idxCharDuo);
+    if (c == ' ') {
+      hayEspacio = true;
+    } else {
+      codigoElemDuo = obtenerCodigoMorse(c);
+      if (strlen(codigoElemDuo) > 0) {
+        idxElemDuo = 0;
+        return true;
+      }
+    }
+    idxCharDuo++;
+  }
+  return false;
+}
+
 void iniciarEmisionLocalDuo(String cadena) {
   cadena.trim();
   if (cadena.length() == 0) return;
@@ -474,10 +539,8 @@ void iniciarEmisionLocalDuo(String cadena) {
   conmutarEmisionMorse(false);
   cadenaMorseAEmitirDuo = cadena;
   idxCharDuo = 0;
-  idxElemDuo = 0;
-  codigoElemDuo = obtenerCodigoMorse(cadenaMorseAEmitirDuo.charAt(0));
-
-  if (strlen(codigoElemDuo) == 0) return;
+  bool hayEspacio;
+  if (!buscarCaracterDuo(hayEspacio)) return;
 
   emitiendoMorseDuo = true;
   estadoTonoDuo = false; 
@@ -512,10 +575,10 @@ void procesarEmisionMorseDuoNoBloqueante() {
       tiempoProximoDuo = millis() + tElementoGap;
     } else {
       idxCharDuo++;
-      if (idxCharDuo < (int)cadenaMorseAEmitirDuo.length()) {
-        codigoElemDuo = obtenerCodigoMorse(cadenaMorseAEmitirDuo.charAt(idxCharDuo));
-        idxElemDuo = 0;
-        tiempoProximoDuo = millis() + tCharGap;
+      bool hayEspacio;
+      if (buscarCaracterDuo(hayEspacio)) {
+        uint32_t tWordGap = (tDit * 7 * espaciadoCW) / 100;
+        tiempoProximoDuo = millis() + (hayEspacio ? tWordGap : tCharGap);
       } else {
         emitiendoMorseDuo = false;
         conmutarEmisionMorse(false);
@@ -533,23 +596,28 @@ void procesarEmisionMorseDuoNoBloqueante() {
 }
 
 void transmitirGrupoDuoLoRa(String grupo) {
-  grupoDuoTransmitido = grupo; 
+  grupoDuoTransmitido = grupo;
 
-  TramaMrMorse trama;
-  trama.magicHeader[0] = 'M';
-  trama.magicHeader[1] = 'M';
-  trama.tipoMensaje = 0x01;
-  memset(trama.callsign, 0, 6);
-  strncpy(trama.callsign, "EA4ILN", 6);
-  trama.wpm = wpmCW;
-  trama.longitudTexto = min((int)grupo.length(), 5);
-  memset(trama.payload, 0, 5);
-  memcpy(trama.payload, grupo.c_str(), trama.longitudTexto);
+  uint8_t trama[TRAMA_LONG_MAX];
+  trama[0] = 'M';
+  trama[1] = 'M';
+  trama[2] = (TRAMA_VERSION << 4) | TRAMA_TIPO_GRUPO_DUO;
+  trama[3] = seqTx++;
+  trama[4] = wpmCW;
+  memset(&trama[5], 0, TRAMA_LONG_INDICATIVO);
+  memcpy(&trama[5], INDICATIVO, min(strlen(INDICATIVO), (size_t)TRAMA_LONG_INDICATIVO));
 
-  Serial.print(F("[LORA TX] ENVIANDO POR AIRE: "));
+  size_t longitud = TRAMA_LONG_CABECERA;
+  for (size_t i = 0; i < grupo.length() && longitud < TRAMA_LONG_MAX; i++) {
+    uint8_t b = codificarCaracterMorse(grupo.charAt(i));
+    if (b != MORSE_NO_VALIDO) trama[longitud++] = b;
+  }
+  if (longitud == TRAMA_LONG_CABECERA) return;  // Nada que enviar
+
+  Serial.printf("[LORA TX] seq %u, %u bytes: ", trama[3], (unsigned)longitud);
   Serial.println(grupo);
 
-  int estadoTx = radio.transmit((uint8_t*)&trama, sizeof(TramaMrMorse));
+  int estadoTx = radio.transmit(trama, longitud);
   
   if (estadoTx == RADIOLIB_ERR_NONE) {
     Serial.println(F("[LORA TX] PAQUETE ENVIADO CON EXITO!"));
@@ -577,8 +645,8 @@ void encolarGrupoRxDuo(const char* grupo) {
     return;
   }
   uint8_t pos = (colaRxIni + colaRxNum) % COLA_RX_TAM;
-  strncpy(colaRxDuo[pos], grupo, 5);
-  colaRxDuo[pos][5] = '\0';
+  strncpy(colaRxDuo[pos], grupo, TRAMA_MAX_CARACTERES);
+  colaRxDuo[pos][TRAMA_MAX_CARACTERES] = '\0';
   colaRxNum++;
 }
 
@@ -612,32 +680,48 @@ void procesarRecepcionLoRa() {
   // Fuera del modo LoRa se descarta cualquier aviso pendiente
   if (!modoRadioRxActivo) return;
 
-  // Solo se acepta una trama del tamaño exacto
-  if (radio.getPacketLength() != sizeof(TramaMrMorse)) {
+  // Cabecera y al menos un caracter, sin pasar del maximo
+  size_t longitud = radio.getPacketLength();
+  if (longitud <= TRAMA_LONG_CABECERA || longitud > TRAMA_LONG_MAX) {
+    Serial.printf("[LORA RX] LONGITUD NO VALIDA: %u\n", (unsigned)longitud);
     radio.startReceive();
     return;
   }
 
-  TramaMrMorse tramaRx;
-  int state = radio.readData((uint8_t*)&tramaRx, sizeof(TramaMrMorse));
+  uint8_t trama[TRAMA_LONG_MAX];
+  int state = radio.readData(trama, longitud);
 
-  if (state == RADIOLIB_ERR_NONE) {
-    if (tramaRx.magicHeader[0] == 'M' && tramaRx.magicHeader[1] == 'M') {
-      rssiUltimo = radio.getRSSI();
-      snrUltimo = radio.getSNR();
-      pantallaPendiente = true;
+  if (state == RADIOLIB_ERR_NONE && trama[0] == 'M' && trama[1] == 'M' &&
+      (trama[2] >> 4) == TRAMA_VERSION) {
+    rssiUltimo = radio.getRSSI();
+    snrUltimo = radio.getSNR();
+    pantallaPendiente = true;
 
-      if (tramaRx.tipoMensaje == 0x01 && enPantalla4_Sub && subpantalla4Activa == 1) {
-        char bufferPayload[6] = {0};
-        memcpy(bufferPayload, tramaRx.payload, min((int)tramaRx.longitudTexto, 5));
-        String grupoRx = String(bufferPayload);
-        grupoRx.trim();
+    uint8_t tipo = trama[2] & 0x0F;
+    uint8_t seq = trama[3];
+    char indicativo[TRAMA_LONG_INDICATIVO + 1];
+    memcpy(indicativo, &trama[5], TRAMA_LONG_INDICATIVO);
+    indicativo[TRAMA_LONG_INDICATIVO] = '\0';
 
-        Serial.print(F("[LORA RX INTERRUPCION OK] NUEVO GRUPO REMOTO: "));
-        Serial.println(grupoRx);
+    // Duplicado: mismo emisor y mismo seq que la trama anterior
+    static bool haySeqRx = false;
+    static uint8_t ultimoSeqRx = 0;
+    static char ultimoIndicativoRx[TRAMA_LONG_INDICATIVO + 1] = "";
+    bool duplicada = haySeqRx && seq == ultimoSeqRx && strcmp(indicativo, ultimoIndicativoRx) == 0;
+    haySeqRx = true;
+    ultimoSeqRx = seq;
+    strcpy(ultimoIndicativoRx, indicativo);
 
-        if (grupoRx.length() > 0) encolarGrupoRxDuo(grupoRx.c_str());
-      }
+    String texto = "";
+    for (size_t i = TRAMA_LONG_CABECERA; i < longitud; i++) texto += decodificarCaracterMorse(trama[i]);
+    texto.trim();
+
+    Serial.printf("[LORA RX] %s seq %u wpm %u%s: ", indicativo, seq, trama[4], duplicada ? " (DUPLICADA)" : "");
+    Serial.println(texto);
+
+    if (!duplicada && tipo == TRAMA_TIPO_GRUPO_DUO && enPantalla4_Sub && subpantalla4Activa == 1 &&
+        texto.length() > 0) {
+      encolarGrupoRxDuo(texto.c_str());
     }
   }
 
@@ -1397,7 +1481,7 @@ void encenderPerifericos() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3i..."));
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.4a..."));
   
   encenderPerifericos();
 
@@ -1410,6 +1494,7 @@ void setup() {
   }
 
   randomSeed(esp_random());  // GPIO0 no es ADC en el S3: la semilla anterior era casi fija
+  seqTx = random(256);       // Si la otra placa se reinicia, que no repita el ultimo seq
 
   cargarDatosNVS();
   bateriaActual = leerBateria();
