@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Mr. Morse EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.3d - Entrada por eventos de boton (sin delay), pin de altavoz provisional GPIO7
+ * @version 0.3e - Cola de recepcion LoRa (los grupos que llegan mientras suena otro se reproducen despues)
  * @date 2026-10-08
  */
 
@@ -183,6 +183,13 @@ int idxElemDuo = 0;
 const char* codigoElemDuo = "";
 unsigned long tiempoProximoDuo = 0;
 bool estadoTonoDuo = false;
+unsigned long finEmisionDuo = 0;  // Instante en que termino la ultima emision (para el espacio entre grupos)
+
+// Cola circular de grupos recibidos por LoRa pendientes de reproducir
+#define COLA_RX_TAM 8
+char colaRxDuo[COLA_RX_TAM][6];
+uint8_t colaRxIni = 0;
+uint8_t colaRxNum = 0;
 
 uint8_t modoKeyer4_2 = 0;
 int rssiUltimo = 0;
@@ -463,7 +470,8 @@ void procesarEmisionMorseDuoNoBloqueante() {
       } else {
         emitiendoMorseDuo = false;
         conmutarEmisionMorse(false);
-        
+        finEmisionDuo = millis();
+
         if (modoRadioRxActivo) {
           radio.startReceive();
         }
@@ -508,18 +516,44 @@ void transmitirGrupoDuoLoRa(String grupo) {
   iniciarEmisionLocalDuo(grupo);
 }
 
+/**
+ * Guarda un grupo recibido en la cola. Si esta llena se descarta el grupo nuevo.
+ */
+void encolarGrupoRxDuo(const char* grupo) {
+  if (colaRxNum >= COLA_RX_TAM) {
+    Serial.println(F("[LORA RX] COLA LLENA, GRUPO DESCARTADO"));
+    return;
+  }
+  uint8_t pos = (colaRxIni + colaRxNum) % COLA_RX_TAM;
+  strncpy(colaRxDuo[pos], grupo, 5);
+  colaRxDuo[pos][5] = '\0';
+  colaRxNum++;
+}
+
+/**
+ * Si no suena nada y hay grupos en cola, reproduce el siguiente tras el espacio entre palabras.
+ */
+void procesarColaRxDuo() {
+  if (emitiendoMorseDuo || colaRxNum == 0) return;
+
+  uint32_t tDit = 1200 / wpmCW;
+  uint32_t tWordGap = (tDit * 7 * espaciadoCW) / 100;
+  if (millis() - finEmisionDuo < tWordGap) return;
+
+  grupoDuoRecibido = String(colaRxDuo[colaRxIni]);
+  grupoDuoRevelado = false;
+  colaRxIni = (colaRxIni + 1) % COLA_RX_TAM;
+  colaRxNum--;
+
+  iniciarEmisionLocalDuo(grupoDuoRecibido);
+}
+
 void procesarRecepcionLoRa() {
   if (!flagPaqueteRecibido) return;
   flagPaqueteRecibido = false;
 
   // Fuera del modo LoRa se descarta cualquier aviso pendiente
   if (!modoRadioRxActivo) return;
-
-  // Pendiente de mejorar: un paquete que llega mientras suena otro se pierde
-  if (emitiendoMorseDuo) {
-    radio.startReceive();
-    return;
-  }
 
   // Solo se acepta una trama del tamaño exacto
   if (radio.getPacketLength() != sizeof(TramaMrMorse)) {
@@ -541,13 +575,10 @@ void procesarRecepcionLoRa() {
         String grupoRx = String(bufferPayload);
         grupoRx.trim();
 
-        grupoDuoRecibido = grupoRx;
-        grupoDuoRevelado = false; 
-
         Serial.print(F("[LORA RX INTERRUPCION OK] NUEVO GRUPO REMOTO: "));
-        Serial.println(grupoDuoRecibido);
+        Serial.println(grupoRx);
 
-        iniciarEmisionLocalDuo(grupoDuoRecibido);
+        if (grupoRx.length() > 0) encolarGrupoRxDuo(grupoRx.c_str());
       }
     }
   }
@@ -570,6 +601,8 @@ void salirModoLoRa() {
   estadoTonoDuo = false;
   conmutarEmisionMorse(false);
 
+  colaRxIni = 0;
+  colaRxNum = 0;
   grupoDuoRecibido = "";
   grupoDuoTransmitido = "";
   grupoDuoRevelado = false;
@@ -1283,7 +1316,7 @@ void encenderPerifericos() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3d..."));
+  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v0.3e..."));
   
   encenderPerifericos();
 
@@ -1322,6 +1355,7 @@ void loop() {
   procesarMaquinaEstadosCW();
   procesarEmisionMorseDuoNoBloqueante();
   procesarRecepcionLoRa();
+  procesarColaRxDuo();
 
   static unsigned long ultimoRefresco = 0;
   if (millis() - ultimoRefresco > 3000) {
