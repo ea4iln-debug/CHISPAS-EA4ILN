@@ -102,7 +102,8 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   Barra: página "1/2" en el centro en PROP y POTA (opción "mas >"), `« opc »` en CONF. PROP sin "wifi"; en CONF el
   portal se llama **webconf**. POTA: línea de spot en 21 caracteres (referencia entera a la derecha; la frecuencia
   pierde el decimal y luego se recorta el indicativo si no cabe).
-- Ojo al editar con heredocs de Bash: la herramienta convierte `\` en `\` (se coló un byte nulo en `' '`).
+- Ojo al editar con heredocs de Bash: la herramienta reduce las barras invertidas dobles a una, y en un literal de C
+  como el del carácter nulo acaba entrando un byte 0 en el archivo. Para esos casos, editar con la herramienta Edit.
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):
