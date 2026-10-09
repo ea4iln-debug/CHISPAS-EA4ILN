@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.6h - Encoder KY-040 (19/20/48): girar mueve el foco, pulsar ejecuta, pulsar+girar edita valores
+ * @version 0.6k - POTA: linea de spot siempre en 21 caracteres; foco en "ant." o "sig." segun el sentido del cambio de pantalla
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.6h"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.6k"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -250,6 +250,8 @@ uint16_t numeroErrores = 0;
 uint8_t paginaListado3_3 = 0;    
 uint8_t opcionFinListado3_3 = 0; 
 uint8_t opcionPantallaCorregir = 0; 
+uint8_t opcionPractica = 0;  // Practica en marcha: 0 = pausa/seguir, 1 = salir
+uint8_t opcionResumen = 0;   // Resultado: 0 = volver, 1 = repetir
 
 uint8_t paginaStats3_5 = 0;
 #define PAGINAS_STATS_3_5 14    // 40 lecciones / 3 por pagina = 14 paginas; la 15 (indice 14) es la de borrado
@@ -266,6 +268,11 @@ uint8_t opcionDuo4_1 = 3;
 String grupoDuoTransmitido = "";
 String grupoDuoRecibido = "";
 bool grupoDuoRevelado = false;
+
+bool hayGrupoDuoPorRevelar() {
+  return grupoDuoRecibido.length() > 0 && !grupoDuoRevelado;
+}
+
 
 bool emitiendoMorseDuo = false;  // Hay un grupo de Duo en el motor CW
 unsigned long finEmisionDuo = 0;  // Instante en que termino la ultima emision (para el espacio entre grupos)
@@ -730,7 +737,7 @@ void dibujarPieCentrado(const String& txt) {
   display.print(txt);
 }
 
-void dibujarBarraAvanzarRetroceder(bool enfocada, bool hayOpciones) {
+void dibujarBarraAvanzarRetroceder(bool enfocada, const String& centro = "") {
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -749,11 +756,11 @@ void dibujarBarraAvanzarRetroceder(bool enfocada, bool hayOpciones) {
   display.setCursor(128 - w, 55);
   display.print(txtSig);
 
-  // "- : opc" = con pulsacion larga se recorren las opciones de la pantalla
-  if (hayOpciones) {
-    display.getTextBounds("- : opc", 0, 0, &x1, &y1, &w, &h);
+  // En el centro: indicador de pagina ("1/2") o "« opc »" si las opciones solo salen al girar
+  if (centro.length() > 0) {
+    display.getTextBounds(centro, 0, 0, &x1, &y1, &w, &h);
     display.setCursor((128 - w) / 2, 55);
-    display.print(F("- : opc"));
+    display.print(centro);
   }
 }
 
@@ -1016,14 +1023,14 @@ bool spotsPotaValidos = false;
 unsigned long spotsPotaIntentoMs = 0;  // 0 = nunca
 uint8_t paginaSpots = 0;
 
-#define OPCION_BARRA_PROP 3
+#define OPCION_BARRA_PROP 2
 #define OPCION_BARRA_SPOTS 2
-uint8_t opcionPantallaProp = OPCION_BARRA_PROP;  // 0 = pagina, 1 = actualizar, 2 = wifi (portal), 3 = barra ant./sig.
+uint8_t opcionPantallaProp = OPCION_BARRA_PROP;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
 uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
 
 #define OPCION_BARRA_CONFIG 2
-uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // 0 = portal, 1 = reset de fabrica, 2 = barra ant./sig.
+uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // 0 = webconf (portal), 1 = reset de fabrica, 2 = barra ant./sig.
 bool confirmandoFabrica = false;
 
 // Pagina "Setup" del portal: datos de la estacion y hora manual (para campo sin internet)
@@ -1361,7 +1368,7 @@ void renderizarPantallaInicio() {
   display.setCursor((128 - w) / 2, 38);
   display.print(linea);
 
-  dibujarBarraAvanzarRetroceder(true, false);
+  dibujarBarraAvanzarRetroceder(true);
 }
 
 void renderizarPantallaCW() {
@@ -1393,7 +1400,7 @@ void renderizarPantallaCW() {
     display.print(opcionPantalla3 == 1 ? "> " : "  ");
     display.print(F("< ESTADISTICAS >"));
 
-    dibujarBarraAvanzarRetroceder(opcionPantalla3 == 2, true);
+    dibujarBarraAvanzarRetroceder(opcionPantalla3 == 2);
 
   } else if (enSubpantallaCW && !enPractica3_2) {
     display.setTextSize(1);
@@ -1462,7 +1469,7 @@ void renderizarPantallaCW() {
         display.print(F("%"));
       }
 
-      dibujarPieCentrado(". : mas   - : volver");
+      dibujarPieCentrado("pag " + String(paginaStats3_5 + 1) + "/" + String(PAGINAS_STATS_3_5 + 1) + "   > volver");
 
     } else {
       display.setCursor(10, 16);
@@ -1478,7 +1485,7 @@ void renderizarPantallaCW() {
         display.println(F(" BORRAR ESTADISTICAS"));  // Solo estadisticas: el resto, en P8 (fabrica)
       }
 
-      dibujarPieCentrado(". : borrar   - : volver");
+      dibujarPieCentrado(confirmandoBorrado ? "> confirmar" : "> borrar");
     }
 
   } else if (enPractica3_2) {
@@ -1502,7 +1509,8 @@ void renderizarPantallaCW() {
       bool hayMasPaginas = (inicioChar + charPorPagina) < totalChars;
 
       if (hayMasPaginas) {
-        dibujarPieCentrado(". : mas...");
+        int paginas = (totalChars + charPorPagina - 1) / charPorPagina;
+        dibujarPieCentrado("pag " + String(paginaListado3_3 + 1) + "/" + String(paginas) + "   > mas");
       } else {
         String txtPie = (opcionFinListado3_3 == 0 ? "> " : "  ") + String("corregir  ") + 
                         (opcionFinListado3_3 == 1 ? "> " : "  ") + String("rep.");
@@ -1526,7 +1534,6 @@ void renderizarPantallaCW() {
       display.print(opcionPantallaCorregir == 2 ? "> " : "  ");
       display.print(F("REP."));
 
-      dibujarPieCentrado("- : nav   . : mod");
 
     } else if (estadoCW == CW_PANTALLA_RESUMEN_FINAL) {
       float pctAciertos = 0.0;
@@ -1546,7 +1553,8 @@ void renderizarPantallaCW() {
       display.setCursor(0, 41);
       display.print(F("REPETIR SI <90%")); // Criterio ajustado: estrictamente menor a 90%
 
-      dibujarPieCentrado(". : volver   - : rep.");
+      dibujarPieCentrado((opcionResumen == 0 ? "> " : "  ") + String("volver  ") +
+                         (opcionResumen == 1 ? "> " : "  ") + String("rep."));
 
     } else {
       display.setCursor(0, 12);
@@ -1572,7 +1580,8 @@ void renderizarPantallaCW() {
         }
       }
 
-      dibujarPieCentrado(". : pausa   - : salir");
+      dibujarPieCentrado((opcionPractica == 0 ? "> " : "  ") + String(estadoCW == CW_PAUSADO ? "seguir  " : "pausa  ") +
+                         (opcionPractica == 1 ? "> " : "  ") + String("salir"));
     }
   }
 }
@@ -1606,7 +1615,7 @@ void renderizarPantallaLora() {
     display.print(opcionPantalla4 == 1 ? "> " : "  ");
     display.print(F("< CW QSO (KEYER) >"));
 
-    dibujarBarraAvanzarRetroceder(opcionPantalla4 == 2, true);
+    dibujarBarraAvanzarRetroceder(opcionPantalla4 == 2);
 
   } else if (subpantalla4Activa == 1) {
     display.setTextSize(1);
@@ -1634,8 +1643,6 @@ void renderizarPantallaLora() {
         display.print(F("RX <- [")); display.print(grupoDuoRecibido); display.print(F("]"));
       } else {
         display.print(F("RX <- LED (OCULTO)"));
-        display.setCursor(0, 42);
-        display.print(F(" [-: rev]"));
       }
     } else {
       display.print(F("RX <- ESCUCHANDO..."));
@@ -1651,8 +1658,12 @@ void renderizarPantallaLora() {
       display.print(txtRssi);
     }
 
-    String txtPie4_1 = (opcionDuo4_1 == 3 ? "> " : "  ") + String("enviar  ") + 
-                       (opcionDuo4_1 == 4 ? "> " : "  ") + String("volver");
+    // "ver" solo aparece si hay un grupo recibido sin revelar (con el, 20 de los 21 caracteres)
+    bool conVer = hayGrupoDuoPorRevelar();
+    const char* sep = conVer ? " " : "  ";
+    String txtPie4_1 = (opcionDuo4_1 == 3 ? ">" : " ") + String("enviar") + sep;
+    if (conVer) txtPie4_1 += (opcionDuo4_1 == 4 ? ">" : " ") + String("ver") + sep;
+    txtPie4_1 += (opcionDuo4_1 == 5 ? ">" : " ") + String("volver");
     dibujarPieCentrado(txtPie4_1);
 
   } else if (subpantalla4Activa == 2) {
@@ -1669,7 +1680,7 @@ void renderizarPantallaLora() {
     display.setCursor(0, 38);
     display.print(F("RSSI: ")); display.print(rssiUltimo); display.print(F("DBM"));
 
-    dibujarPieCentrado(". : modo   - : volver");
+    dibujarPieCentrado("girar: modo  > volver");
   }
 }
 
@@ -1721,13 +1732,12 @@ void renderizarPantallaPropagacion() {
     }
   }
 
+  String txtPagina = String(paginaPropagacion + 1) + "/2";
   if (opcionPantallaProp == OPCION_BARRA_PROP) {
-    dibujarBarraAvanzarRetroceder(true, true);
+    dibujarBarraAvanzarRetroceder(true, txtPagina);
   } else {
-    // Maximo 21 caracteres: "> pag  > act.  > wifi"
-    String pie = (opcionPantallaProp == 0 ? "> " : "  ") + String("pag ") +
-                 (opcionPantallaProp == 1 ? "> " : "  ") + String("act. ") +
-                 (opcionPantallaProp == 2 ? "> " : "  ") + String("wifi");
+    String pie = (opcionPantallaProp == 0 ? "> " : "  ") + String("mas > ") + txtPagina +
+                 (opcionPantallaProp == 1 ? "  > " : "    ") + String("act.");
     dibujarPieCentrado(pie);
   }
 }
@@ -1748,14 +1758,26 @@ void renderizarPantallaSpots() {
       display.setCursor(0, 22);
       display.print(F("NO HAY SPOTS CW"));
     } else {
-      // Indicativo, frecuencia (kHz) y referencia; lo que no cabe se recorta
+      // Indicativo, frecuencia (kHz) y referencia en 21 caracteres. La referencia va entera y
+      // pegada a la derecha, con la frecuencia delante. Si no cabe todo, la frecuencia pierde
+      // el decimal ("14045.5" -> "14045") y, si aun asi no cabe, se recorta el indicativo.
+      const int ANCHO_LINEA = 21;
       display.setTextWrap(false);
       for (uint8_t i = 0; i < SPOTS_POR_PAGINA; i++) {
         uint8_t idx = paginaSpots * SPOTS_POR_PAGINA + i;
         if (idx >= numSpotsPota) break;
+        const SpotPota& sp = spotsPota[idx];
+        char frec[sizeof(sp.frecuencia)];
+        strlcpy(frec, sp.frecuencia, sizeof(frec));
+        int largoRef = strlen(sp.referencia);
+        if ((int)(strlen(sp.indicativo) + strlen(frec) + largoRef) + 2 > ANCHO_LINEA) {
+          char* punto = strchr(frec, '.');
+          if (punto) *punto = '\0';
+        }
+        int anchoIndicativo = max(1, ANCHO_LINEA - (int)strlen(frec) - largoRef - 2);
         char linea[40];
-        snprintf(linea, sizeof(linea), "%-7s%6s %s", spotsPota[idx].indicativo,
-                 spotsPota[idx].frecuencia, spotsPota[idx].referencia);
+        snprintf(linea, sizeof(linea), "%-*.*s %s %s", anchoIndicativo, anchoIndicativo,
+                 sp.indicativo, frec, sp.referencia);
         display.setCursor(0, 12 + i * 10);
         display.print(linea);
       }
@@ -1763,12 +1785,13 @@ void renderizarPantallaSpots() {
     }
   }
 
+  String txtPagina = String(paginaSpots + 1) + "/" + String(paginas);
   if (opcionPantallaSpots == OPCION_BARRA_SPOTS) {
-    dibujarBarraAvanzarRetroceder(true, true);
+    dibujarBarraAvanzarRetroceder(true, txtPagina);
   } else {
-    // Maximo 21 caracteres: "> mas 10/10   > act."
-    String pie = (opcionPantallaSpots == 0 ? "> " : "  ") + String("mas ") + String(paginaSpots + 1) + "/" + String(paginas) +
-                 (opcionPantallaSpots == 1 ? "   > " : "     ") + String("act.");
+    // Maximo 21 caracteres: "> mas > 10/10  > act."
+    String pie = (opcionPantallaSpots == 0 ? "> " : "  ") + String("mas > ") + txtPagina +
+                 (opcionPantallaSpots == 1 ? "  > " : "    ") + String("act.");
     dibujarPieCentrado(pie);
   }
 }
@@ -1889,7 +1912,7 @@ void renderizarPantallaSol() {
     display.print(linea);
   }
 
-  dibujarBarraAvanzarRetroceder(true, false);
+  dibujarBarraAvanzarRetroceder(true);
 }
 
 // ============================================================================
@@ -1947,9 +1970,10 @@ void renderizarPantallaConfig() {
   }
 
   if (opcionPantallaConfig == OPCION_BARRA_CONFIG) {
-    dibujarBarraAvanzarRetroceder(true, true);
+    // "« opc »" con los caracteres 0xAE y 0xAF de CP437
+    dibujarBarraAvanzarRetroceder(true, String((char)0xAE) + " opc " + String((char)0xAF));
   } else {
-    String pie = (opcionPantallaConfig == 0 ? "> " : "  ") + String("portal  ") +
+    String pie = (opcionPantallaConfig == 0 ? "> " : "  ") + String("webconf  ") +
                  (opcionPantallaConfig == 1 ? "> " : "  ") + String("fabrica");
     dibujarPieCentrado(pie);
   }
@@ -1983,6 +2007,7 @@ void iniciarPracticaCW() {
   paginaListado3_3 = 0;
   opcionFinListado3_3 = 0;
   opcionPantallaCorregir = 0;
+  opcionPractica = 0;
   totalCaracteresLeccion = gruposCW * caracteresCW;
 
   guardarUltimaConfiguracionNVS();
@@ -2179,284 +2204,273 @@ void ajustarValor(T& valor, int paso, int minimo, int maximo) {
   valor = (T)constrain((int)valor + paso, minimo, maximo);
 }
 
+/**
+ * Cambia de pantalla principal con las opciones en reposo y el foco en la barra: en "sig."
+ * si se avanza (o se va a Inicio) y en "ant." si se retrocede, para poder seguir en el mismo sentido
+ */
+void entrarEnPantalla(uint8_t pantalla, bool haciaAtras = false) {
+  pantallaActual = pantalla;
+  opcionNavegacionP1234 = haciaAtras ? 0 : 1;
+  if (pantalla == PANTALLA_CW) opcionPantalla3 = 2;
+  else if (pantalla == PANTALLA_LORA) opcionPantalla4 = 2;
+  else if (pantalla == PANTALLA_PROPAGACION) opcionPantallaProp = OPCION_BARRA_PROP;
+  else if (pantalla == PANTALLA_SPOTS) opcionPantallaSpots = OPCION_BARRA_SPOTS;
+  else if (pantalla == PANTALLA_CONFIG) { opcionPantallaConfig = OPCION_BARRA_CONFIG; confirmandoFabrica = false; }
+}
+
+// "ant." o "sig." desde la barra inferior
+void navegarDesdeBarra() {
+  if (opcionNavegacionP1234 == 0) entrarEnPantalla(pantallaActual == 1 ? TOTAL_PANTALLAS : pantallaActual - 1, true);
+  else entrarEnPantalla(pantallaActual == TOTAL_PANTALLAS ? 1 : pantallaActual + 1);
+  contadorPulsaciones++;
+}
+
 // ============================================================================
-// PROCESAMIENTO INTERACTIVO DE LOS EVENTOS DE BOTON
+// PROCESAMIENTO INTERACTIVO DE LOS EVENTOS DE ENTRADA
 // ============================================================================
+// Todo se puede hacer solo con el encoder: girar mueve el foco (o cambia el valor que se
+// edita) y pulsar ejecuta. La larga del eje es solo un atajo. El PRG corto es "atras":
+// sale de la edicion, sube un nivel y, en las pantallas principales, lleva a Inicio.
+// La larga del PRG queda libre (futuro: dormir la placa).
 void procesarBoton() {
   EventoBoton ev = leerEventoBoton();
+  if (ev == BOTON_NINGUNO || ev == BOTON_LARGA) return;
 
-  if (ev != BOTON_NINGUNO) {
-    // Traduccion comun: el eje pulsado hace lo que la corta del PRG. La larga del eje
-    // (ejeLarga) solo se usa donde la larga del PRG no se limita a mover el foco.
-    int8_t giro = (ev == ENC_DERECHA) ? 1 : (ev == ENC_IZQUIERDA) ? -1 : 0;
-    bool corta = (ev == BOTON_CORTA || ev == ENC_PULSA);
-    bool larga = (ev == BOTON_LARGA);
-    bool ejeLarga = (ev == ENC_LARGA);
+  int8_t giro = (ev == ENC_DERECHA) ? 1 : (ev == ENC_IZQUIERDA) ? -1 : 0;
+  bool pulsa = (ev == ENC_PULSA);
+  bool ejeLarga = (ev == ENC_LARGA);
+  bool atras = (ev == BOTON_CORTA);
 
-    // El PRG no edita valores; la larga del eje sale de la edicion sin hacer nada mas
-    if (ev == BOTON_CORTA || ev == BOTON_LARGA) editandoValor = false;
-    if (ejeLarga && editandoValor) {
-      editandoValor = false;
-      actualizarPantalla();
-      return;
+  // Mientras se edita un valor, "atras" y la larga del eje solo salen de la edicion
+  if ((atras || ejeLarga) && editandoValor) {
+    editandoValor = false;
+    actualizarPantalla();
+    return;
+  }
+
+  if (pantallaActual == PANTALLA_LORA) {
+    if (!enPantalla4_Sub) {
+      if (atras) {
+        entrarEnPantalla(PANTALLA_INICIO);
+      } else if (giro != 0) {
+        // Foco: [sig.] -> [CW DUO] -> [CW QSO] -> [ant.] -> [sig.] ...
+        moverFocoAnillo(opcionPantalla4, 2, giro);
+      } else if (pulsa) {
+        if (opcionPantalla4 == 0) {
+          enPantalla4_Sub = true; subpantalla4Activa = 1;
+          modoRadioRxActivo = true; opcionDuo4_1 = 3;
+        } else if (opcionPantalla4 == 1) {
+          enPantalla4_Sub = true; subpantalla4Activa = 2;
+          modoRadioRxActivo = true;
+        } else {
+          navegarDesdeBarra();
+        }
+      }
+
+    } else if (subpantalla4Activa == 1) {
+      // Duo. Foco: 0 wpm, 1 espaciado, 2 leccion, 3 enviar, 4 ver (solo si hay grupo oculto), 5 volver
+      if (atras) {
+        salirModoLoRa();
+      } else if (giro != 0) {
+        if (editandoValor) {
+          switch (opcionDuo4_1) {
+            case 0: ajustarValor(wpmCW, giro, 15, 30); break;
+            case 1: ajustarValor(espaciadoCW, giro * 10, 100, 200); break;
+            case 2: ajustarValor(leccionCW, giro, 1, 40); break;
+          }
+        } else {
+          do {
+            opcionDuo4_1 = (opcionDuo4_1 + 6 + giro) % 6;
+          } while (opcionDuo4_1 == 4 && !hayGrupoDuoPorRevelar());
+        }
+      } else if (ejeLarga) {
+        grupoDuoRevelado = true;  // Atajo de "ver"
+        if (opcionDuo4_1 == 4) opcionDuo4_1 = 3;
+      } else if (pulsa) {
+        switch (opcionDuo4_1) {
+          case 0: case 1: case 2:
+            editandoValor = !editandoValor;  // Pulsar, girar y pulsar
+            break;
+          case 3: {
+            uint8_t maxIdx = caracteresDeLeccion(leccionCW);
+            String nuevoGrupo = "";
+            for (int i = 0; i < caracteresCW; i++) nuevoGrupo += TABLA_KOCH[random(0, maxIdx)];
+            transmitirGrupoDuoLoRa(nuevoGrupo);
+            break;
+          }
+          case 4: grupoDuoRevelado = true; opcionDuo4_1 = 3; break;
+          case 5: salirModoLoRa(); break;
+        }
+      }
+
+    } else if (subpantalla4Activa == 2) {
+      // QSO (por hacer): girar cambia el modo, pulsar vuelve
+      if (giro != 0) modoKeyer4_2 = (modoKeyer4_2 + 3 + giro) % 3;
+      else if (atras || pulsa || ejeLarga) salirModoLoRa();
     }
 
-    if (pantallaActual == PANTALLA_LORA) {
-      if (!enPantalla4_Sub) {
-        if (giro != 0 || larga) {
-          // Foco: [sig.] -> [CW DUO] -> [CW QSO] -> [ant.] -> [sig.] ...
-          moverFocoAnillo(opcionPantalla4, 2, giro != 0 ? giro : 1);
-        } else if (corta) {
-          // PULSACION CORTA (.): EJECUTAR OPCION SELECCIONADA
-          if (opcionPantalla4 == 0) {
-            enPantalla4_Sub = true; subpantalla4Activa = 1;
-            modoRadioRxActivo = true; opcionDuo4_1 = 3;
-          } else if (opcionPantalla4 == 1) {
-            enPantalla4_Sub = true; subpantalla4Activa = 2;
-            modoRadioRxActivo = true;
-          } else if (opcionPantalla4 == 2) {
-            if (opcionNavegacionP1234 == 0) {
-              pantallaActual = PANTALLA_CW;
-              opcionPantalla3 = 2;          // Por defecto al entrar a P3: barra inferior
-              opcionNavegacionP1234 = 1;    // "sig."
-            } else {
-              pantallaActual = PANTALLA_PROPAGACION;
-              opcionPantallaProp = OPCION_BARRA_PROP;
-              opcionNavegacionP1234 = 1;
-            }
-            opcionPantalla4 = 2;
-          }
-        }
-      } else if (subpantalla4Activa == 1) {
-        if (giro != 0) {
-          if (editandoValor) {
-            switch (opcionDuo4_1) {
-              case 0: ajustarValor(wpmCW, giro, 15, 30); break;
-              case 1: ajustarValor(espaciadoCW, giro * 10, 100, 200); break;
-              case 2: ajustarValor(leccionCW, giro, 1, 40); break;
-            }
-          } else {
-            opcionDuo4_1 = (opcionDuo4_1 + 5 + giro) % 5;
-          }
-        } else if (larga || ejeLarga) {
-          if (grupoDuoRecibido.length() > 0 && !grupoDuoRevelado) {
-            grupoDuoRevelado = true;
-          } else if (larga) {
-            opcionDuo4_1 = (opcionDuo4_1 + 1) % 5;
-          }
-        } else if (ev == ENC_PULSA && opcionDuo4_1 <= 2) {
-          editandoValor = !editandoValor;  // wpm, espaciado o leccion: pulsar, girar y pulsar
-        } else if (corta) {
-          switch (opcionDuo4_1) {
-            case 0: wpmCW++; if (wpmCW > 30) wpmCW = 15; break;
-            case 1: espaciadoCW += 10; if (espaciadoCW > 200) espaciadoCW = 100; break;
-            case 2: leccionCW++; if (leccionCW > 40) leccionCW = 1; break;
-            case 3: {
-              uint8_t maxIdx = caracteresDeLeccion(leccionCW);
-              String nuevoGrupo = "";
-              for (int i = 0; i < caracteresCW; i++) nuevoGrupo += TABLA_KOCH[random(0, maxIdx)];
-              transmitirGrupoDuoLoRa(nuevoGrupo);
-              break;
-            }
-            case 4: salirModoLoRa(); break;
-          }
-        }
-      } else if (subpantalla4Activa == 2) {
-        if (giro != 0) {
-          modoKeyer4_2 = (modoKeyer4_2 + 3 + giro) % 3;
-        } else if (larga || ejeLarga) {
-          salirModoLoRa();
-        } else if (corta) {
-          modoKeyer4_2 = (modoKeyer4_2 + 1) % 3;
-        }
+  } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
+             pantallaActual == PANTALLA_CONFIG) {
+    // P4 y P5: [sig.] -> [mas >] -> [act.] -> [ant.]    P7: [sig.] -> [webconf] -> [fabrica] -> [ant.]
+    bool esProp = (pantallaActual == PANTALLA_PROPAGACION);
+    bool esConfig = (pantallaActual == PANTALLA_CONFIG);
+    uint8_t& opcion = esProp ? opcionPantallaProp : (esConfig ? opcionPantallaConfig : opcionPantallaSpots);
+    uint8_t barra = esProp ? OPCION_BARRA_PROP : (esConfig ? OPCION_BARRA_CONFIG : OPCION_BARRA_SPOTS);
+    if (atras) {
+      entrarEnPantalla(PANTALLA_INICIO);
+    } else if (giro != 0) {
+      confirmandoFabrica = false;
+      moverFocoAnillo(opcion, barra, giro);
+    } else if (pulsa) {
+      if (opcion == barra) {
+        navegarDesdeBarra();
+      } else if (esConfig && opcion == 0) {
+        abrirPortalWifi();
+      } else if (esConfig && opcion == 1) {
+        if (!confirmandoFabrica) confirmandoFabrica = true;
+        else resetFabrica();
+      } else if (esProp && opcion == 0) {
+        paginaPropagacion = (paginaPropagacion + 1) % 2;
+      } else if (esProp && opcion == 1) {
+        pedirActualizacionWifi();
+      } else if (!esProp && !esConfig && opcion == 0) {
+        uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
+        paginaSpots = (paginaSpots + 1) % paginas;
+      } else if (!esProp && !esConfig && opcion == 1) {
+        pedirActualizacionWifi();
       }
+    }
 
-    } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
-               pantallaActual == PANTALLA_CONFIG) {
-      // P5: [sig.] -> [pag] -> [act.] -> [wifi] -> [ant.]    P6: [sig.] -> [mas] -> [act.] -> [ant.]
-      // P8: [sig.] -> [portal] -> [fabrica] -> [ant.]
-      bool esProp = (pantallaActual == PANTALLA_PROPAGACION);
-      bool esConfig = (pantallaActual == PANTALLA_CONFIG);
-      uint8_t& opcion = esProp ? opcionPantallaProp : (esConfig ? opcionPantallaConfig : opcionPantallaSpots);
-      uint8_t barra = esProp ? OPCION_BARRA_PROP : (esConfig ? OPCION_BARRA_CONFIG : OPCION_BARRA_SPOTS);
-      if (giro != 0 || larga) {
-        confirmandoFabrica = false;
-        moverFocoAnillo(opcion, barra, giro != 0 ? giro : 1);
-      } else if (corta) {
-        if (opcion == barra) {
-          if (opcionNavegacionP1234 == 0) {
-            pantallaActual--;  // Propagacion -> LoRa, Spots -> Propagacion, Config -> Sol
-          } else {
-            pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
-          }
-          if (pantallaActual == PANTALLA_LORA) opcionPantalla4 = 2;
-          else if (pantallaActual == PANTALLA_PROPAGACION) opcionPantallaProp = OPCION_BARRA_PROP;
-          else if (pantallaActual == PANTALLA_SPOTS) opcionPantallaSpots = OPCION_BARRA_SPOTS;
-          opcionNavegacionP1234 = 1;
-        } else if (esConfig && opcion == 0) {
-          abrirPortalWifi();
-        } else if (esConfig && opcion == 1) {
-          if (!confirmandoFabrica) confirmandoFabrica = true;
-          else resetFabrica();
-        } else if (esProp && opcion == 0) {
-          paginaPropagacion = (paginaPropagacion + 1) % 2;
-        } else if (esProp && opcion == 1) {
-          pedirActualizacionWifi();
-        } else if (esProp && opcion == 2) {
-          abrirPortalWifi();  // Para cambiar de red
-        } else if (!esProp && !esConfig && opcion == 0) {
-          uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
-          paginaSpots = (paginaSpots + 1) % paginas;
-        } else if (!esProp && !esConfig && opcion == 1) {
-          pedirActualizacionWifi();
-        }
-      }
-
-    } else if (pantallaActual == PANTALLA_CW) {
-      if (enEstadisticas3_5) {
-        if (larga || ejeLarga) {
-          enEstadisticas3_5 = false; confirmandoBorrado = false;
-        } else if (giro != 0) {
-          // Paginas 0..PAGINAS_STATS_3_5 (la ultima es la de borrado)
-          confirmandoBorrado = false;
-          paginaStats3_5 = (paginaStats3_5 + PAGINAS_STATS_3_5 + 1 + giro) % (PAGINAS_STATS_3_5 + 1);
-        } else if (corta) {
-          if (paginaStats3_5 < PAGINAS_STATS_3_5) paginaStats3_5++;
-          else {
-            if (!confirmandoBorrado) confirmandoBorrado = true;
-            else { borrarTodasLasEstadisticasNVS(); confirmandoBorrado = false; paginaStats3_5 = 0; }
-          }
-        }
-      } else if (enPractica3_2) {
-        if (estadoCW == CW_PANTALLA_3_3_LISTADO) {
-          int charPorPagina = 63;
-          bool hayMasPaginas = ((paginaListado3_3 + 1) * charPorPagina) < textoCompletoLeccion.length();
-          if (giro > 0) {
-            // Derecha: pagina siguiente y, en la ultima, alterna entre "corregir" y "rep."
-            if (hayMasPaginas) paginaListado3_3++;
-            else opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
-          } else if (giro < 0) {
-            if (!hayMasPaginas && opcionFinListado3_3 == 1) opcionFinListado3_3 = 0;
-            else if (paginaListado3_3 > 0) paginaListado3_3--;
-          } else if (hayMasPaginas) {
-            if (corta || larga) paginaListado3_3++;
-          } else {
-            if (larga) opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
-            else if (corta) {
-              if (opcionFinListado3_3 == 0) { estadoCW = CW_PANTALLA_CORREGIR_ERRORES; opcionPantallaCorregir = 0; }
-              else iniciarPracticaCW();
-            }
-          }
-        } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
-          if (giro != 0) {
-            if (editandoValor && opcionPantallaCorregir == 0) ajustarValor(numeroErrores, giro, 0, totalCaracteresLeccion);
-            else opcionPantallaCorregir = (opcionPantallaCorregir + 3 + giro) % 3;
-          }
-          else if (larga) opcionPantallaCorregir = (opcionPantallaCorregir + 1) % 3;
-          else if (ev == ENC_PULSA && opcionPantallaCorregir == 0) editandoValor = !editandoValor;
-          else if (corta) {
-            if (opcionPantallaCorregir == 0) { numeroErrores++; if (numeroErrores > totalCaracteresLeccion) numeroErrores = 0; }
-            else if (opcionPantallaCorregir == 1) {
-              float pct = 0.0;
-              if (totalCaracteresLeccion > 0) pct = ((float)(totalCaracteresLeccion - numeroErrores) / (float)totalCaracteresLeccion) * 100.0;
-              registrarResultadoLeccionNVS(leccionCW, pct);
-              estadoCW = CW_PANTALLA_RESUMEN_FINAL;
-            } else if (opcionPantallaCorregir == 2) iniciarPracticaCW();
-          }
-        } else if (estadoCW == CW_PANTALLA_RESUMEN_FINAL) {
-          if (larga || ejeLarga) iniciarPracticaCW();
-          else if (corta) detenerPracticaCW();
+  } else if (pantallaActual == PANTALLA_CW) {
+    if (enEstadisticas3_5) {
+      // Girar pasa pagina (la ultima es la de borrado). Pulsar: volver, o borrar en la ultima
+      if (atras || ejeLarga) {
+        enEstadisticas3_5 = false; confirmandoBorrado = false;
+      } else if (giro != 0) {
+        confirmandoBorrado = false;
+        paginaStats3_5 = (paginaStats3_5 + PAGINAS_STATS_3_5 + 1 + giro) % (PAGINAS_STATS_3_5 + 1);
+      } else if (pulsa) {
+        if (paginaStats3_5 < PAGINAS_STATS_3_5) {
+          enEstadisticas3_5 = false;
+        } else if (!confirmandoBorrado) {
+          confirmandoBorrado = true;
         } else {
-          // Practica en marcha o en pausa: el giro no hace nada
-          if (larga || ejeLarga) detenerPracticaCW();
-          else if (corta) {
-            if (estadoCW == CW_PAUSADO) estadoCW = CW_GENERAR_GRUPO;
-            else { estadoCW = CW_PAUSADO; motorCWDetener(); }
-          }
+          borrarTodasLasEstadisticasNVS(); confirmandoBorrado = false; paginaStats3_5 = 0;
         }
-      } else if (enSubpantallaCW) {
-        if (giro != 0) {
-          if (editandoValor) {
-            switch (opcionSubpantalla) {
-              case 0: ajustarValor(wpmCW, giro, 15, 30); break;
-              case 1: ajustarValor(espaciadoCW, giro * 10, 100, 200); break;
-              case 2: ajustarValor(leccionCW, giro, 1, 40); break;
-              case 3: ajustarValor(caracteresCW, giro, 1, 5); break;
-              case 4: ajustarValor(gruposCW, giro * 10, 10, 50); break;
-            }
+      }
+
+    } else if (enPractica3_2) {
+      if (estadoCW == CW_PANTALLA_3_3_LISTADO) {
+        int charPorPagina = 63;
+        bool hayMasPaginas = ((paginaListado3_3 + 1) * charPorPagina) < textoCompletoLeccion.length();
+        if (atras) {
+          if (paginaListado3_3 > 0) { paginaListado3_3--; opcionFinListado3_3 = 0; }
+        } else if (giro > 0) {
+          // Derecha: pagina siguiente y, en la ultima, alterna entre "corregir" y "rep."
+          if (hayMasPaginas) paginaListado3_3++;
+          else opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
+        } else if (giro < 0) {
+          if (!hayMasPaginas && opcionFinListado3_3 == 1) opcionFinListado3_3 = 0;
+          else if (paginaListado3_3 > 0) paginaListado3_3--;
+        } else if (pulsa) {
+          if (hayMasPaginas) paginaListado3_3++;
+          else if (opcionFinListado3_3 == 0) { estadoCW = CW_PANTALLA_CORREGIR_ERRORES; opcionPantallaCorregir = 0; }
+          else iniciarPracticaCW();
+        }
+
+      } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
+        if (atras) {
+          estadoCW = CW_PANTALLA_3_3_LISTADO;
+        } else if (giro != 0) {
+          if (editandoValor) ajustarValor(numeroErrores, giro, 0, totalCaracteresLeccion);
+          else opcionPantallaCorregir = (opcionPantallaCorregir + 3 + giro) % 3;
+        } else if (pulsa) {
+          if (opcionPantallaCorregir == 0) {
+            editandoValor = !editandoValor;
+          } else if (opcionPantallaCorregir == 1) {
+            float pct = 0.0;
+            if (totalCaracteresLeccion > 0) pct = ((float)(totalCaracteresLeccion - numeroErrores) / (float)totalCaracteresLeccion) * 100.0;
+            registrarResultadoLeccionNVS(leccionCW, pct);
+            estadoCW = CW_PANTALLA_RESUMEN_FINAL;
+            opcionResumen = 0;
           } else {
-            opcionSubpantalla = (opcionSubpantalla + 7 + giro) % 7;
+            iniciarPracticaCW();
           }
         }
-        else if (larga) opcionSubpantalla = (opcionSubpantalla + 1) % 7;
-        else if (ev == ENC_PULSA && opcionSubpantalla <= 4) editandoValor = !editandoValor;
-        else if (corta) {
-          switch (opcionSubpantalla) {
-            case 0: wpmCW++; if (wpmCW > 30) wpmCW = 15; break;
-            case 1: espaciadoCW += 10; if (espaciadoCW > 200) espaciadoCW = 100; break;
-            case 2: leccionCW++; if (leccionCW > 40) leccionCW = 1; break;
-            case 3: caracteresCW++; if (caracteresCW > 5) caracteresCW = 1; break;
-            case 4: gruposCW += 10; if (gruposCW > 50) gruposCW = 10; break;
-            case 5: iniciarPracticaCW(); break;
-            case 6: enSubpantallaCW = false; break;
-          }
+
+      } else if (estadoCW == CW_PANTALLA_RESUMEN_FINAL) {
+        // Foco: 0 volver, 1 repetir. La larga del eje es atajo de repetir
+        if (atras) detenerPracticaCW();
+        else if (ejeLarga) iniciarPracticaCW();
+        else if (giro != 0) opcionResumen = (opcionResumen + 1) % 2;
+        else if (pulsa) {
+          if (opcionResumen == 0) detenerPracticaCW();
+          else iniciarPracticaCW();
         }
+
       } else {
-        if (giro != 0 || larga) {
-          // Foco: [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [ant.] -> [sig.] ...
-          moverFocoAnillo(opcionPantalla3, 2, giro != 0 ? giro : 1);
-        } else if (corta) {
-          // PULSACION CORTA (.): EJECUTAR OPCION SELECCIONADA
-          if (opcionPantalla3 == 0) {
-            enSubpantallaCW = true; 
-            opcionSubpantalla = 5;
-          } else if (opcionPantalla3 == 1) {
-            enEstadisticas3_5 = true; 
-            paginaStats3_5 = 0; 
-            confirmandoBorrado = false;
-          } else if (opcionPantalla3 == 2) {
-            if (opcionNavegacionP1234 == 0) {
-              pantallaActual = PANTALLA_INICIO;
-              opcionNavegacionP1234 = 1;
-            } else {
-              pantallaActual = PANTALLA_LORA;
-              opcionPantalla4 = 2;
-              opcionNavegacionP1234 = 1;
-            }
-            opcionPantalla3 = 2; 
-          }
+        // Practica en marcha o en pausa. Foco: 0 pausa/seguir, 1 salir. La larga del eje es atajo de salir
+        if (atras || ejeLarga) {
+          detenerPracticaCW();
+        } else if (giro != 0) {
+          opcionPractica = (opcionPractica + 1) % 2;
+        } else if (pulsa) {
+          if (opcionPractica == 1) detenerPracticaCW();
+          else if (estadoCW == CW_PAUSADO) estadoCW = CW_GENERAR_GRUPO;
+          else { estadoCW = CW_PAUSADO; motorCWDetener(); }
         }
+      }
+
+    } else if (enSubpantallaCW) {
+      // Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos, 5 iniciar, 6 volver
+      if (atras) {
+        enSubpantallaCW = false;
+      } else if (giro != 0) {
+        if (editandoValor) {
+          switch (opcionSubpantalla) {
+            case 0: ajustarValor(wpmCW, giro, 15, 30); break;
+            case 1: ajustarValor(espaciadoCW, giro * 10, 100, 200); break;
+            case 2: ajustarValor(leccionCW, giro, 1, 40); break;
+            case 3: ajustarValor(caracteresCW, giro, 1, 5); break;
+            case 4: ajustarValor(gruposCW, giro * 10, 10, 50); break;
+          }
+        } else {
+          opcionSubpantalla = (opcionSubpantalla + 7 + giro) % 7;
+        }
+      } else if (pulsa) {
+        if (opcionSubpantalla <= 4) editandoValor = !editandoValor;
+        else if (opcionSubpantalla == 5) iniciarPracticaCW();
+        else enSubpantallaCW = false;
       }
 
     } else {
-      // Pantallas sin opciones: el foco solo alterna entre "ant." y "sig."
-      if (giro != 0 || larga) opcionNavegacionP1234 = (opcionNavegacionP1234 == 0) ? 1 : 0;
-      else if (corta) {
-        if (opcionNavegacionP1234 == 0) pantallaActual = (pantallaActual == 1) ? TOTAL_PANTALLAS : pantallaActual - 1;
-        else pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
-        contadorPulsaciones++;
-        
-        if (pantallaActual == PANTALLA_CW) {
-          opcionPantalla3 = 2;       // Foco en barra inferior
-          opcionNavegacionP1234 = 1; // Apuntando por defecto a "sig."
-        } else if (pantallaActual == PANTALLA_LORA) {
-          opcionPantalla4 = 2;
-          opcionNavegacionP1234 = 1;
-        } else if (pantallaActual == PANTALLA_SPOTS) {
-          opcionPantallaSpots = OPCION_BARRA_SPOTS;
-          opcionNavegacionP1234 = 1;
-        } else if (pantallaActual == PANTALLA_CONFIG) {
-          opcionPantallaConfig = OPCION_BARRA_CONFIG;
-          confirmandoFabrica = false;
-          opcionNavegacionP1234 = 1;
+      if (atras) {
+        entrarEnPantalla(PANTALLA_INICIO);
+      } else if (giro != 0) {
+        // Foco: [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [ant.] -> [sig.] ...
+        moverFocoAnillo(opcionPantalla3, 2, giro);
+      } else if (pulsa) {
+        if (opcionPantalla3 == 0) {
+          enSubpantallaCW = true;
+          opcionSubpantalla = 5;
+        } else if (opcionPantalla3 == 1) {
+          enEstadisticas3_5 = true;
+          paginaStats3_5 = 0;
+          confirmandoBorrado = false;
         } else {
-          opcionNavegacionP1234 = 1;
+          navegarDesdeBarra();
         }
       }
     }
 
-    actualizarPantalla();
+  } else {
+    // Pantallas sin opciones (Inicio, Sol): el foco solo alterna entre "ant." y "sig."
+    if (atras) entrarEnPantalla(PANTALLA_INICIO);
+    else if (giro != 0) opcionNavegacionP1234 = (opcionNavegacionP1234 == 0) ? 1 : 0;
+    else if (pulsa) navegarDesdeBarra();
   }
+
+  actualizarPantalla();
 }
 
 // ============================================================================

@@ -8,7 +8,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (9 oct 2026)
-- Firmware: `src/main.cpp` **v0.6h** (9 oct 2026), cargada y probada en la placa del encoder (COM16); la otra sigue en v0.6c. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.6k** (9 oct 2026), cargada y probada en la placa del encoder (COM16); la otra sigue en v0.6c. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -94,8 +94,15 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   `ENC_DERECHA/IZQUIERDA/PULSA/LARGA` además de `BOTON_CORTA/LARGA`. Girar = foco (`moverFocoAnillo()`), pulsar = corta,
   pulsar sobre un valor = editar girando (`editandoValor`, vídeo inverso, sin dar la vuelta), larga del eje = larga
   del PRG salvo donde esta solo mueve el foco. El PRG sigue igual.
-- **En discusión:** quitar `- : opc` y las ayudas del pie pensadas para el PRG, dejar la navegación solo con el
-  encoder y dar otro uso al PRG.
+- **Manejo (v0.6i–k, probado):** todo se hace con el encoder; la larga del eje es solo atajo. **PRG corto = atrás**
+  (sale de la edición, sube un nivel, en pantallas principales va a Inicio). **PRG largo libre**: reservado para dormir
+  la placa (deep sleep, despertar con GPIO0; sin probar). Acciones que antes eran pulsación larga pasan a opciones con
+  foco (práctica: pausa/seguir y salir; resultado: volver y rep.; Duo: "ver" solo si hay grupo oculto; estadísticas:
+  volver). `entrarEnPantalla(p, haciaAtras)`: al cambiar de pantalla el foco queda en la flecha usada (sig./ant.).
+  Barra: página "1/2" en el centro en PROP y POTA (opción "mas >"), `« opc »` en CONF. PROP sin "wifi"; en CONF el
+  portal se llama **webconf**. POTA: línea de spot en 21 caracteres (referencia entera a la derecha; la frecuencia
+  pierde el decimal y luego se recorta el indicativo si no cabe).
+- Ojo al editar con heredocs de Bash: la herramienta convierte `\` en `\` (se coló un byte nulo en `' '`).
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):
