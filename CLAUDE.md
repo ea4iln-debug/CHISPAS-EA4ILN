@@ -8,7 +8,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (9 oct 2026)
-- Firmware: `src/main.cpp` **v0.6n** (9 oct 2026), cargada en las dos placas (la del encoder en COM16 y la desnuda). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.7a** (10 oct 2026), cargada en la placa del encoder y las palas (COM16); la desnuda sigue en v0.6n. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -117,6 +117,15 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   lección Koch fue ≥ 90 % hace menos de 15 min. Con la cara a la vista, `actualizarPantalla()` no dibuja.
 - **Koch:** la letra nueva de la lección sale el 25 % de las veces (`PESO_LETRA_NUEVA_PCT`, `caracterKochAleatorio()`,
   también en Duo); con 4 caracteres o menos, reparto uniforme.
+- **Keyer iámbico (v0.7a, probado en placa con palas en GPIO4/5, 10 oct 2026):** pantalla CW > `< KEYER >`. Tarea
+  FreeRTOS `keyer` (núcleo 1, prioridad del motor CW) que lee las palas cada 1 ms; solo activa en su pantalla.
+  Memoria de la pala contraria: modo A solo en la pausa entre elementos; modo B también durante el elemento.
+  Descodifica lo manipulado (silencio de 2 puntos = fin de carácter, 5 = espacio; patrón desconocido = `*`) y lo pasa
+  a `loop()` por una cola; también sale por serie. Opciones: wpm 10–40 (editar), MODO A/B, palas NORM/INV, borrar,
+  volver; se guardan en `mr_morse` (`kwpm`, `kmodob`, `kinv`) al salir. Salida solo por LED (y tono en GPIO7 cuando
+  haya buzzer); KEY (GPIO2) aún no. Probado: letras con una pala cada vez descodificadas bien (S, H, M, O, K).
+  El usuario aún no sabe manipular: el apretón iámbico y el texto largo no se han validado con él.
+- Grabar el puerto serie sin reiniciar la placa: pyserial con `dtr = False` y `rts = False` antes de `open()`.
 - Ojo al editar con heredocs de Bash: la herramienta reduce las barras invertidas dobles a una, y en un literal de C
   como el del carácter nulo acaba entrando un byte 0 en el archivo. Para esos casos, editar con la herramienta Edit.
 

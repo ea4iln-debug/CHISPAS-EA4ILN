@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.6n - Bateria: con USB y sin bateria se detecta por la dispersion de la lectura (el cargador oscila)
+ * @version 0.7a - Keyer iambico (modos A y B) en una tarea FreeRTOS, con descodificacion de lo manipulado (CW > KEYER)
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.6n"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.7a"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -239,7 +239,16 @@ StatsLeccion statsKoch[40];
 bool enSubpantallaCW = false;
 bool enPractica3_2 = false;
 bool enEstadisticas3_5 = false;
-uint8_t opcionPantalla3 = 2; // 0=CONTINUAR, 1=ESTADISTICAS, 2=BARRA INFERIOR (ant/sig)
+#define OPCION_BARRA_CW 3
+uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=CONTINUAR, 1=ESTADISTICAS, 2=KEYER, 3=BARRA INFERIOR (ant/sig)
+
+// Keyer iambico (pantalla CW > KEYER). La configuracion se guarda en NVS al salir
+uint8_t keyerWpm = 20;
+bool keyerModoB = false;            // false = modo A
+bool keyerPalasInvertidas = false;  // true = punta de la clavija = raya
+bool enKeyer = false;               // Subpantalla del keyer abierta
+uint8_t opcionKeyer = 0;            // 0 = wpm, 1 = modo, 2 = palas, 3 = borrar, 4 = volver
+String textoKeyer = "";             // Lo descodificado de la manipulacion
 
 uint8_t wpmCW = 25;
 uint16_t espaciadoCW = 200;
@@ -487,6 +496,159 @@ void motorCWEmitir(const char* texto, uint8_t wpm, uint16_t espaciado, const cha
 }
 
 // ============================================================================
+// KEYER IAMBICO EN UNA TAREA FREERTOS
+// ============================================================================
+// Lee las palas cada 1 ms y genera puntos y rayas con la misma prioridad que el motor CW
+// (no suenan a la vez: el keyer solo esta activo en su pantalla). Como sabe que elementos
+// ha generado, descodifica lo manipulado y lo pasa a loop() por una cola.
+// Memoria de la pala contraria: modo A, solo si se pulsa en la pausa entre elementos;
+// modo B, tambien durante el elemento (al soltar un apreton sale un elemento mas).
+#define KEYER_WPM_MIN 10
+#define KEYER_WPM_MAX 40
+#define KEYER_PILA    3072
+
+void guardarKeyerNVS();         // Definida en la seccion NVS
+extern bool pantallaPendiente;  // Definida con la bateria
+
+TaskHandle_t tareaKeyer = NULL;
+QueueHandle_t colaKeyerTexto = NULL;  // Caracteres descodificados, de la tarea a loop()
+volatile bool keyerActivo = false;
+
+char decodificarPatron(const char* patron) {
+  for (size_t i = 0; i < sizeof(DICCIONARIO_MORSE) / sizeof(PatronMorse); i++) {
+    if (strcmp(DICCIONARIO_MORSE[i].codigo, patron) == 0) return DICCIONARIO_MORSE[i].c;
+  }
+  return '*';
+}
+
+void leerPalas(bool& dit, bool& dah) {
+  bool punta = digitalRead(KEYER_PADDLE_DIT) == LOW;
+  bool anillo = digitalRead(KEYER_PADDLE_DAH) == LOW;
+  dit = keyerPalasInvertidas ? anillo : punta;
+  dah = keyerPalasInvertidas ? punta : anillo;
+}
+
+void tareaKeyerFn(void* parametro) {
+  enum { K_ESPERA, K_ELEMENTO, K_PAUSA } estado = K_ESPERA;
+  char elemento = 0;  // Ultimo elemento generado ('.' o '-')
+  bool memoriaDit = false, memoriaDah = false;
+  char patron[9];
+  uint8_t largo = 0;              // Elementos del caracter en curso (8 = demasiados: error)
+  bool espacioPendiente = false;  // Tras un caracter: falta ver si hay espacio entre palabras
+  TickType_t finFase = 0, finUltimoElemento = 0;
+
+  for (;;) {
+    if (!keyerActivo) {
+      conmutarEmisionMorse(false);
+      estado = K_ESPERA;
+      largo = 0;
+      espacioPendiente = false;
+      memoriaDit = memoriaDah = false;
+      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);  // Hasta que se abra la pantalla del keyer
+      continue;
+    }
+
+    vTaskDelay(1);
+    TickType_t ahora = xTaskGetTickCount();
+    TickType_t dit = pdMS_TO_TICKS(1200 / keyerWpm);
+    bool pDit, pDah;
+    leerPalas(pDit, pDah);
+    char siguiente = 0;
+
+    switch (estado) {
+      case K_ELEMENTO:
+        if (keyerModoB) {
+          if (elemento == '.' && pDah) memoriaDah = true;
+          if (elemento == '-' && pDit) memoriaDit = true;
+        }
+        if ((int32_t)(ahora - finFase) >= 0) {
+          conmutarEmisionMorse(false);
+          finUltimoElemento = ahora;
+          finFase = ahora + dit;
+          estado = K_PAUSA;
+        }
+        break;
+
+      case K_PAUSA:
+        if (elemento == '.' && pDah) memoriaDah = true;
+        if (elemento == '-' && pDit) memoriaDit = true;
+        if ((int32_t)(ahora - finFase) >= 0) {
+          // Se alterna si hay memoria o la pala contraria esta pulsada; si no, se repite la misma
+          if (elemento == '.') siguiente = (memoriaDah || pDah) ? '-' : (pDit ? '.' : 0);
+          else siguiente = (memoriaDit || pDit) ? '.' : (pDah ? '-' : 0);
+          memoriaDit = memoriaDah = false;
+          if (siguiente == 0) estado = K_ESPERA;
+        }
+        break;
+
+      case K_ESPERA:
+        if (pDit || pDah) {
+          siguiente = (pDit && pDah) ? (elemento == '.' ? '-' : '.') : (pDit ? '.' : '-');
+        } else {
+          // Silencio desde el ultimo elemento: 2 puntos cierran el caracter y 5, la palabra
+          TickType_t silencio = ahora - finUltimoElemento;
+          if (largo > 0 && silencio >= 2 * dit) {
+            patron[min(largo, (uint8_t)8)] = '\0';
+            char c = (largo <= 7) ? decodificarPatron(patron) : '*';
+            xQueueSend(colaKeyerTexto, &c, 0);
+            largo = 0;
+            espacioPendiente = true;
+          } else if (espacioPendiente && silencio >= 5 * dit) {
+            char c = ' ';
+            xQueueSend(colaKeyerTexto, &c, 0);
+            espacioPendiente = false;
+          }
+        }
+        break;
+    }
+
+    if (siguiente != 0) {
+      elemento = siguiente;
+      if (largo < 8) patron[largo] = siguiente;
+      if (largo < 8) largo++;
+      espacioPendiente = false;
+      conmutarEmisionMorse(true);
+      finFase = ahora + (siguiente == '.' ? dit : 3 * dit);
+      estado = K_ELEMENTO;
+    }
+  }
+}
+
+void iniciarKeyer() {
+  colaKeyerTexto = xQueueCreate(64, sizeof(char));
+  xTaskCreatePinnedToCore(tareaKeyerFn, "keyer", KEYER_PILA, NULL, MOTOR_CW_PRIORIDAD,
+                          &tareaKeyer, MOTOR_CW_NUCLEO);
+}
+
+void entrarEnKeyer() {
+  motorCWDetener();
+  enKeyer = true;
+  opcionKeyer = 0;
+  textoKeyer = "";
+  xQueueReset(colaKeyerTexto);
+  keyerActivo = true;
+  xTaskNotifyGive(tareaKeyer);
+}
+
+void salirDeKeyer() {
+  keyerActivo = false;  // La tarea apaga LED y tono en menos de 1 ms
+  enKeyer = false;
+  editandoValor = false;
+  guardarKeyerNVS();
+}
+
+// Pasa a la pantalla lo que el keyer ha descodificado (y por serie, para depurar)
+void procesarTextoKeyer() {
+  char c;
+  while (xQueueReceive(colaKeyerTexto, &c, 0) == pdTRUE) {
+    textoKeyer += c;
+    if (textoKeyer.length() > 200) textoKeyer.remove(0, textoKeyer.length() - 200);
+    Serial.print(c);
+    pantallaPendiente = true;
+  }
+}
+
+// ============================================================================
 // MEMORIA PERSISTENTE NVS
 // ============================================================================
 void cargarDatosNVS() {
@@ -496,6 +658,9 @@ void cargarDatosNVS() {
   leccionCW = prefs.getUChar("leccion", 4);
   caracteresCW = prefs.getUChar("caract", 5);
   gruposCW = prefs.getUChar("grupos", 20);
+  keyerWpm = constrain(prefs.getUChar("kwpm", 20), 10, 40);  // KEYER_WPM_MIN/MAX
+  keyerModoB = prefs.getBool("kmodob", false);
+  keyerPalasInvertidas = prefs.getBool("kinv", false);
 
   for (int i = 0; i < 40; i++) {
     String kComp = "c_" + String(i);
@@ -516,6 +681,14 @@ void guardarUltimaConfiguracionNVS() {
   prefs.putUChar("leccion", leccionCW);
   prefs.putUChar("caract", caracteresCW);
   prefs.putUChar("grupos", gruposCW);
+  prefs.end();
+}
+
+void guardarKeyerNVS() {
+  prefs.begin("mr_morse", false);
+  prefs.putUChar("kwpm", keyerWpm);
+  prefs.putBool("kmodob", keyerModoB);
+  prefs.putBool("kinv", keyerPalasInvertidas);
   prefs.end();
 }
 
@@ -1399,16 +1572,44 @@ void renderizarPantallaInicio() {
 void renderizarPantallaCW() {
   display.setTextColor(SSD1306_WHITE);
 
-  if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
+  if (enKeyer) {
     display.setTextSize(1);
-    
+
+    // Opciones: ">20WPM >MODO A >NORM" (20 caracteres)
+    display.setCursor(0, 12);
+    display.print(opcionKeyer == 0 ? ">" : " ");
+    imprimirValor(opcionKeyer == 0, String(keyerWpm) + "WPM");
+    display.print(opcionKeyer == 1 ? " >" : "  ");
+    display.print(keyerModoB ? F("MODO B") : F("MODO A"));
+    display.print(opcionKeyer == 2 ? " >" : "  ");
+    display.print(keyerPalasInvertidas ? F("INV") : F("NORM"));
+
+    // Texto descodificado: 3 lineas de 21 caracteres. Al llenarse se quitan lineas enteras
+    // por arriba, para que el texto no se desplace caracter a caracter
+    String t = textoKeyer + "_";
+    const int ANCHO = 21;
+    if (t.length() > 3 * ANCHO) {
+      int sobran = t.length() - 3 * ANCHO;
+      t = t.substring(((sobran + ANCHO - 1) / ANCHO) * ANCHO);
+    }
+    for (int linea = 0; linea < 3 && linea * ANCHO < (int)t.length(); linea++) {
+      display.setCursor(0, 23 + linea * 9);
+      display.print(t.substring(linea * ANCHO, min((int)t.length(), (linea + 1) * ANCHO)));
+    }
+
+    dibujarPieCentrado((opcionKeyer == 3 ? "> " : "  ") + String("borrar   ") +
+                       (opcionKeyer == 4 ? "> " : "  ") + String("volver"));
+
+  } else if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
+    display.setTextSize(1);
+
     const char* titulo = " ENTRENADOR CW ";
     int16_t x1, y1;
     uint16_t w, h;
     display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
-    
+
     int x = (128 - w) / 2;
-    int y = 14;
+    int y = 13;
 
     display.fillRect(x - 2, y - 2, w + 4, h + 4, SSD1306_WHITE);
     display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
@@ -1417,15 +1618,19 @@ void renderizarPantallaCW() {
 
     display.setTextColor(SSD1306_WHITE);
 
-    display.setCursor(15, 28);
+    display.setCursor(15, 24);
     display.print(opcionPantalla3 == 0 ? "> " : "  ");
     display.print(F("< CONTINUAR >"));
 
-    display.setCursor(15, 38);
+    display.setCursor(15, 33);
     display.print(opcionPantalla3 == 1 ? "> " : "  ");
     display.print(F("< ESTADISTICAS >"));
 
-    dibujarBarraAvanzarRetroceder(opcionPantalla3 == 2);
+    display.setCursor(15, 42);
+    display.print(opcionPantalla3 == 2 ? "> " : "  ");
+    display.print(F("< KEYER >"));
+
+    dibujarBarraAvanzarRetroceder(opcionPantalla3 == OPCION_BARRA_CW);
 
   } else if (enSubpantallaCW && !enPractica3_2) {
     display.setTextSize(1);
@@ -2555,7 +2760,7 @@ void ajustarValor(T& valor, int paso, int minimo, int maximo) {
 void entrarEnPantalla(uint8_t pantalla, bool haciaAtras = false) {
   pantallaActual = pantalla;
   opcionNavegacionP1234 = haciaAtras ? 0 : 1;
-  if (pantalla == PANTALLA_CW) opcionPantalla3 = 2;
+  if (pantalla == PANTALLA_CW) opcionPantalla3 = OPCION_BARRA_CW;
   else if (pantalla == PANTALLA_LORA) opcionPantalla4 = 2;
   else if (pantalla == PANTALLA_PROPAGACION) opcionPantallaProp = OPCION_BARRA_PROP;
   else if (pantalla == PANTALLA_SPOTS) opcionPantallaSpots = OPCION_BARRA_SPOTS;
@@ -2696,7 +2901,24 @@ void procesarBoton() {
     }
 
   } else if (pantallaActual == PANTALLA_CW) {
-    if (enEstadisticas3_5) {
+    if (enKeyer) {
+      // Foco: 0 wpm, 1 modo, 2 palas, 3 borrar, 4 volver. Las palas funcionan con cualquier foco
+      if (atras || ejeLarga) {
+        salirDeKeyer();
+      } else if (giro != 0) {
+        if (editandoValor) ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
+        else opcionKeyer = (opcionKeyer + 5 + giro) % 5;
+      } else if (pulsa) {
+        switch (opcionKeyer) {
+          case 0: editandoValor = !editandoValor; break;
+          case 1: keyerModoB = !keyerModoB; break;
+          case 2: keyerPalasInvertidas = !keyerPalasInvertidas; break;
+          case 3: textoKeyer = ""; break;
+          case 4: salirDeKeyer(); break;
+        }
+      }
+
+    } else if (enEstadisticas3_5) {
       // Girar pasa pagina (la ultima es la de borrado). Pulsar: volver, o borrar en la ultima
       if (atras || ejeLarga) {
         enEstadisticas3_5 = false; confirmandoBorrado = false;
@@ -2803,8 +3025,8 @@ void procesarBoton() {
       if (atras) {
         entrarEnPantalla(PANTALLA_INICIO);
       } else if (giro != 0) {
-        // Foco: [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [ant.] -> [sig.] ...
-        moverFocoAnillo(opcionPantalla3, 2, giro);
+        // Foco: [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [KEYER] -> [ant.] -> [sig.] ...
+        moverFocoAnillo(opcionPantalla3, OPCION_BARRA_CW, giro);
       } else if (pulsa) {
         if (opcionPantalla3 == 0) {
           enSubpantallaCW = true;
@@ -2813,6 +3035,8 @@ void procesarBoton() {
           enEstadisticas3_5 = true;
           paginaStats3_5 = 0;
           confirmandoBorrado = false;
+        } else if (opcionPantalla3 == 2) {
+          entrarEnKeyer();
         } else {
           navegarDesdeBarra();
         }
@@ -2859,6 +3083,7 @@ void setup() {
   
   encenderPerifericos();
   iniciarMotorCW();
+  iniciarKeyer();
   iniciarEncoder();
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -2963,6 +3188,7 @@ void procesarBateriaYPantalla() {
 
 void loop() {
   procesarBoton();
+  procesarTextoKeyer();
   procesarCara();
   procesarMaquinaEstadosCW();
   procesarFinEmisionDuo();
