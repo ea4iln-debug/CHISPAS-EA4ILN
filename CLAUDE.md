@@ -122,6 +122,14 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
    - Aceleración del giro: al girar rápido, los valores avanzan de 5 en 5 (p. ej. lección 1–40).
    - Modo Echo del Koch: necesita keyer (palas), no el encoder.
    - El indicativo por placa ya está resuelto: se cambia en webconf y se guarda en `mr_estacion`.
+   - Consumo y recursos (propuesto 9 oct 2026, para estudiar más adelante). **Primero medir**: línea por serie cada
+     minuto con heap libre, mínimo histórico, pila libre de cada tarea (`uxTaskGetStackHighWaterMark`) y uso de NVS
+     (`nvs_get_stats`); consumo con polímetro o medidor USB antes y después de cada cambio. Luego, por orden:
+     (1) `loop()` gira sin pausa y tiene el núcleo 1 al 100 %: `delay(1)` por vuelta o bajar la CPU a 80–160 MHz fuera
+     del WiFi; (2) la LoRa está en recepción siempre: dormirla fuera de Duo (~5 mA); (3) bajar el brillo de la OLED
+     con la cara dormida; (4) deep sleep con PRG largo. Vigilar la fragmentación por el uso de `String` con muchas
+     horas encendido. Cifras de v0.6m: flash 1,12 MB de 3,19 MB (app0); RAM estática 51,8 KB de 320 KB; app1 (OTA)
+     y spiffs (1,5 MB, para el CSV de POTA) sin usar; la cara ocupa ~40 % del bucle mientras se ve.
 2. Pantalla Duo para textos largos (cuando haya frases: QSO con keyer).
 3. A futuro: audio I2S, keyer iámbico, decodificador (Goertzel).
 
