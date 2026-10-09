@@ -637,7 +637,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 """
 
 def header(titulo, n, total):
-    return (f'<header><h1>{esc(titulo)}</h1><div class="r">Mr. Morse EA4ILN · prototipo en protoboard · '
+    return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
             f'firmware v0.6b<br>9 oct 2026 · hoja {n} de {total}</div></header>')
 
 
@@ -724,7 +724,7 @@ def main():
 <p style="font-size:8pt;color:#777;margin-top:2mm">Valores de partida sin probar en banco. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
 </div></div></div>''')
 
-    doc = f'<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Mr. Morse · esquema de conexiones</title><style>{CSS}</style></head><body>{"".join(pages)}</body></html>'
+    doc = f'<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Chispas · esquema de conexiones</title><style>{CSS}</style></head><body>{"".join(pages)}</body></html>'
     with open(OUT, "w", encoding="utf-8") as f:
         f.write(doc)
 

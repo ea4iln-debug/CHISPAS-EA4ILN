@@ -1,13 +1,14 @@
-# Mr. Morse EA4ILN — contexto del proyecto
+# Chispas EA4ILN — contexto del proyecto
 
 ## Qué es
-Dispositivo portátil de CW para radioaficionados (indicativo EA4ILN) sobre una **Heltec WiFi LoRa 32 V3**
+**Chispas** (antes "Mr. Morse"; "chispas" era el apodo del radiotelegrafista de a bordo):
+dispositivo portátil de CW para radioaficionados (indicativo EA4ILN) sobre una **Heltec WiFi LoRa 32 V3**
 (ESP32-S3FN8, SX1262 a 868 MHz, OLED 0,96", sin PSRAM, 8 MB de flash). Núcleo actual: entrenador Koch
 estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decodificador desde transceptor,
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (9 oct 2026)
-- Firmware: `src/main.cpp` **v0.6c**, cargada en las dos placas y subida a GitHub (9 oct 2026). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.6g** (9 oct 2026), cargada solo en la placa de COM6; la otra sigue en v0.6c. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -15,7 +16,7 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 - Pantallas (v0.5d, constantes `PANTALLA_*`): 1 Inicio, 2 CW (Koch), 3 LoRa (Duo/QSO), 4 Propagación, 5 POTA,
   6 Sol, 7 Configuración (indicativo, locator, LoRa, batería, FW, portal, reset de fábrica). La antigua pantalla
   de debug se eliminó. Cabecera con nombre corto de pantalla; `- : opc` en la barra si hay opciones.
-- NVS: `mr_morse` (entrenador y estadísticas), `mr_estacion` (indicativo, locator); WiFi en el NVS del ESP32.
+- NVS: `mr_morse` (entrenador y estadísticas; el nombre se mantiene para no perder lo guardado al renombrar el aparato), `mr_estacion` (indicativo, locator); WiFi en el NVS del ESP32.
   Borrar estadísticas solo borra estadísticas; el reset de fábrica lo borra todo.
 - Hardware en curso: prototipo en protoboard (sección más abajo). La PCB y `pins.h` siguen aplazados.
 - La entrada está abstraída en `leerEventoBoton()` (BOTON_CORTA / BOTON_LARGA): al montar el rotary y el
@@ -41,7 +42,7 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   También se imprime por serie el motivo del reinicio y ya no hay `for(;;)` si falla la OLED.
 
 - WiFi (v0.5a, probado): pantallas 5 (propagación, hamqsl.com) y 6 (spots POTA solo CW). El WiFi solo se
-  enciende en esas pantallas. Red por portal WiFiManager (`MrMorse-XXXX`, clave `PORTAL_CLAVE`, 192.168.4.1),
+  enciende en esas pantallas. Red por portal WiFiManager (`Chispas-XXXX`, clave `PORTAL_CLAVE` = `chispas73`, 192.168.4.1),
   guardada en NVS. Hora NTP (CET/CEST) en la cabecera de todas las pantallas. HTTPS con `setInsecure()`.
   Refresco: propagación 30 min, POTA 2 min (sin límites publicados: consultar con moderación).
 - v0.5b (probado): pantalla 5 con segunda página de condiciones por banda (hamqsl, día/noche); pantalla 7
@@ -64,6 +65,17 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   redibujado ya se hacen aunque suene CW. `DEBUG_CW` mide desde la tarea.
 
 ## Dónde lo dejamos (9 oct 2026) y siguiente sesión
+- **RECORDAR AL USUARIO al empezar la sesión:** renombrar el repositorio en GitHub (Settings → Repository name,
+  p. ej. `Chispas-EA4ILN`). Después: `git remote set-url origin <url nueva>`, quitar este aviso y, si quiere,
+  renombrar la carpeta local `Mr.-Morse-EA4ILN` con VS Code cerrado.
+- Tarde del 9 oct: v0.6d batería (umbral "sin batería" 2,6 V tomado de Meshtastic, suavizado al 50 %),
+  v0.6e/f/g pantalla de inicio y **cambio de nombre a Chispas** (portal `Chispas-XXXX`, clave `chispas73`).
+  **Pendiente de probar:** con la placa por USB y **sin batería**, la pantalla de Configuración debe decir
+  `SIN BATERIA`; si muestra una tensión, anotarla y ajustar `VBAT_SIN_BATERIA`. Cargar v0.6g en la segunda placa.
+- Detectar USB y carga: la V3 no lo permite por software (Meshtastic tampoco; solo estima con > 4,20 V, que con
+  nuestro factor calibrado casi no ocurre). Propuesta sin decidir: divisor 100k/150k del pin 5V (J2-2) a GPIO33
+  (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.
+- Aspecto de pantallas: el usuario prefiere mantener el estilo actual (fuente 5×7, sin imitar Meshtastic).
 - Hecho hoy: batería calibrada (v0.5f), motor CW en tarea FreeRTOS (v0.6a/b, probado), lista de la compra revisada,
   esquema `docs/esquema_protoboard.pdf` y v0.6c (palas 4/5, KEY en GPIO2 en BAJO). Todo con commit y push.
 - Sin confirmar: que GPIO2 mide 0 V con el polímetro tras arrancar y tras RST con la v0.6c.

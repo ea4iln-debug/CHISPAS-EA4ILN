@@ -1,12 +1,12 @@
 /**
  * @file main.cpp
- * @author Mr. Morse EA4ILN Project
+ * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.6c - Pines del prototipo: palas en GPIO4/5 y salida KEY en GPIO2 (en BAJO desde el arranque)
+ * @version 0.6g - El aparato pasa a llamarse Chispas; inicio con el nombre en un marco; bateria: umbral 2,6 V y suavizado
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.6c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.6g"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -65,6 +65,8 @@
 
 #define VBAT_ADC_PIN    1   // Pin ADC para lectura del divisor de voltaje de la bateria
 #define ADC_CTRL_PIN    37  // Habilitacion del divisor de tension de bateria
+// Sin bateria la V3 no lee 0: Meshtastic anota unos 2,2 V y usa 2,6 V como umbral (aqui sin comprobar)
+#define VBAT_SIN_BATERIA 2.6f
 #define VBAT_MULTIPLIER 4.9f   // Divisor 390k/100k de la V3. Calibrado con polimetro: 4,10 V reales / 836,7 mV en el pin (2,5 dB)
 #define TIEMPO_PULSACION_LARGA 600 // Umbral en ms para detectar pulsacion larga del boton PRG
 #define TIEMPO_ANTIRREBOTE_MS  30  // Pulsaciones mas cortas se ignoran (rebotes)
@@ -595,14 +597,20 @@ BateriaInfo leerBateria() {
 
   float voltaje = (mvPromedio * VBAT_MULTIPLIER) / 1000.0;
 
+  // Suavizado como Meshtastic: cada lectura se promedia al 50 % con la anterior, para que el
+  // porcentaje no baile. La primera lectura (o la primera tras volver la bateria) arranca el filtro.
+  static float voltajeFiltrado = 0;
+
   BateriaInfo bat;
-  if (voltaje < 1.0) {
+  if (voltaje < VBAT_SIN_BATERIA) {
+    voltajeFiltrado = 0;
     bat.voltaje = 0.0;
     bat.porcentaje = 0;
     bat.estado = SOLO_USB;
   } else {
-    bat.voltaje = voltaje;
-    bat.porcentaje = porcentajeLiIon(voltaje);
+    voltajeFiltrado = (voltajeFiltrado == 0) ? voltaje : voltajeFiltrado + (voltaje - voltajeFiltrado) * 0.5;
+    bat.voltaje = voltajeFiltrado;
+    bat.porcentaje = porcentajeLiIon(voltajeFiltrado);
     bat.estado = BAT_DESCARGA;
   }
   return bat;
@@ -957,7 +965,7 @@ void salirModoLoRa() {
 // SOTA no se incluye: sus condiciones de uso exigen aprobacion previa para software generado por IA.
 #define WIFI_TIMEOUT_CONEXION_MS 15000
 #define PORTAL_TIMEOUT_S         300
-#define PORTAL_CLAVE             "mrmorse73"  // Clave del punto de acceso de configuracion (minimo 8)
+#define PORTAL_CLAVE             "chispas73"  // Clave del punto de acceso de configuracion (minimo 8)
 #define ZONA_HORARIA             "CET-1CEST,M3.5.0,M10.5.0/3"  // Peninsula
 #define URL_PROPAGACION          "https://www.hamqsl.com/solarxml.php"
 #define URL_POTA                 "https://api.pota.app/spot/activator"
@@ -1060,7 +1068,7 @@ void abrirPortalWifi() {
   if (nombrePortal[0] == '\0') {
     uint8_t mac[6];
     WiFi.macAddress(mac);
-    snprintf(nombrePortal, sizeof(nombrePortal), "MrMorse-%02X%02X", mac[4], mac[5]);
+    snprintf(nombrePortal, sizeof(nombrePortal), "Chispas-%02X%02X", mac[4], mac[5]);
   }
   static bool parametrosAnadidos = false;
   if (!parametrosAnadidos) {
@@ -1120,7 +1128,7 @@ bool descargarUrl(const char* url, String& cuerpo) {
   HTTPClient http;
   http.setTimeout(8000);
   if (!http.begin(cliente, url)) return false;
-  http.setUserAgent("MrMorse-EA4ILN/" FW_VERSION);
+  http.setUserAgent("Chispas-EA4ILN/" FW_VERSION);
   int codigo = http.GET();
   if (codigo == HTTP_CODE_OK) cuerpo = http.getString();
   else Serial.printf("[WIFI] %s -> HTTP %d\n", url, codigo);
@@ -1322,26 +1330,26 @@ bool dibujarEstadoWifi() {
 // RENDERIZADO PANTALLAS (1 A 6)
 // ============================================================================
 void renderizarPantallaInicio() {
-  const char* titulo = " MR. MORSE EA4ILN ";
   int16_t x1, y1;
   uint16_t w, h;
-  display.setTextSize(1);
-  display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
-
-  int x = (128 - w) / 2;
-  int y = 26;
-
-  display.fillRect(x - 2, y - 2, w + 4, h + 4, SSD1306_WHITE);
-  display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-  display.setCursor(x, y);
-  display.print(titulo);
-
-  // Version del firmware cargado, centrada bajo el titulo
   display.setTextColor(SSD1306_WHITE);
-  String txtVersion = "FW v" + String(FW_VERSION);
-  display.getTextBounds(txtVersion.c_str(), 0, 0, &x1, &y1, &w, &h);
-  display.setCursor((128 - w) / 2, 40);
-  display.print(txtVersion);
+
+  // Marco redondeado entre la cabecera (linea en y=9) y la barra inferior (y=52)
+  display.drawRoundRect(4, 12, 120, 38, 4, SSD1306_WHITE);
+
+  // Nombre del aparato, grande (tamano 2: 12x16 px por caracter)
+  const char* titulo = "CHISPAS";  // Apodo del radiotelegrafista de a bordo (en ingles, "Sparks")
+  display.setTextSize(2);
+  display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((128 - w) / 2, 18);
+  display.print(titulo);
+  display.setTextSize(1);
+
+  // Indicativo y version, en pequeno
+  String linea = "de " + String(indicativoEstacion) + "  v" + FW_VERSION;
+  display.getTextBounds(linea.c_str(), 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((128 - w) / 2, 38);
+  display.print(linea);
 
   dibujarBarraAvanzarRetroceder(true, false);
 }
@@ -2345,7 +2353,7 @@ void setup() {
 
   Serial.begin(115200);
   delay(1000);
-  Serial.println(F("\n[INIT] Mr. Morse EA4ILN v" FW_VERSION "..."));
+  Serial.println(F("\n[INIT] Chispas EA4ILN v" FW_VERSION "..."));
   
   encenderPerifericos();
   iniciarMotorCW();
