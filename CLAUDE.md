@@ -8,7 +8,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (9 oct 2026)
-- Firmware: `src/main.cpp` **v0.7a** (10 oct 2026), cargada en la placa del encoder y las palas (COM16); la desnuda sigue en v0.6n. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.7b** (10 oct 2026), cargada en la placa del encoder y las palas (COM16); la desnuda sigue en v0.6n. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -125,6 +125,13 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   volver; se guardan en `mr_morse` (`kwpm`, `kmodob`, `kinv`) al salir. Salida solo por LED (y tono en GPIO7 cuando
   haya buzzer); KEY (GPIO2) aún no. Probado: letras con una pala cada vez descodificadas bien (S, H, M, O, K).
   El usuario aún no sabe manipular: el apretón iámbico y el texto largo no se han validado con él.
+- **Modo Echo (v0.7b, probado en placa: 7/12 aciertos, "está bien" según el usuario):** pantalla CW > `< ECHO >`
+  (la pantalla CW pierde el título para que quepan 4 opciones: CONTINUAR, ESTADÍSTICAS, KEYER, ECHO). Chispas emite
+  con el motor CW 1–5 letras de la lección Koch (`caracterKochAleatorio`), a los wpm del keyer; mientras emite, el
+  keyer está en pausa (`keyerPausar()`/`keyerReanudar()`). Se evalúa al llegar a las letras del reto o con un silencio
+  de palabra. Acierto: "BIEN!" y otro reto a 1,2 s. Fallo: "MAL: R  K -.-" y se repite el mismo a 3 s. Opciones: wpm,
+  largo (`elargo`), ver la letra antes (`ever`, SÍ por defecto, para aprender), repetir (no cuenta) y volver.
+  Marcador de aciertos/intentos. Resultados por serie (`[ECHO] U -> V: MAL (5/8)`).
 - Grabar el puerto serie sin reiniciar la placa: pyserial con `dtr = False` y `rts = False` antes de `open()`.
 - Ojo al editar con heredocs de Bash: la herramienta reduce las barras invertidas dobles a una, y en un literal de C
   como el del carácter nulo acaba entrando un byte 0 en el archivo. Para esos casos, editar con la herramienta Edit.
@@ -136,7 +143,6 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
      adelante, opcional: repetir más las letras flojas (no es como LCWO).
    - Editar indicativo y locator en el aparato, carácter a carácter con el encoder (sin móvil ni webconf).
    - Aceleración del giro: al girar rápido, los valores avanzan de 5 en 5 (p. ej. lección 1–40).
-   - Modo Echo del Koch: necesita keyer (palas), no el encoder.
    - El indicativo por placa ya está resuelto: se cambia en webconf y se guarda en `mr_estacion`.
    - Consumo y recursos (propuesto 9 oct 2026, para estudiar más adelante). **Primero medir**: línea por serie cada
      minuto con heap libre, mínimo histórico, pila libre de cada tarea (`uxTaskGetStackHighWaterMark`) y uso de NVS

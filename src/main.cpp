@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.7a - Keyer iambico (modos A y B) en una tarea FreeRTOS, con descodificacion de lo manipulado (CW > KEYER)
+ * @version 0.7b - Modo Echo: Chispas emite letras de la leccion Koch y se repiten con las palas (CW > ECHO)
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.7a"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.7b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -239,8 +239,8 @@ StatsLeccion statsKoch[40];
 bool enSubpantallaCW = false;
 bool enPractica3_2 = false;
 bool enEstadisticas3_5 = false;
-#define OPCION_BARRA_CW 3
-uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=CONTINUAR, 1=ESTADISTICAS, 2=KEYER, 3=BARRA INFERIOR (ant/sig)
+#define OPCION_BARRA_CW 4
+uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=CONTINUAR, 1=ESTADISTICAS, 2=KEYER, 3=ECHO, 4=BARRA INFERIOR (ant/sig)
 
 // Keyer iambico (pantalla CW > KEYER). La configuracion se guarda en NVS al salir
 uint8_t keyerWpm = 20;
@@ -249,6 +249,19 @@ bool keyerPalasInvertidas = false;  // true = punta de la clavija = raya
 bool enKeyer = false;               // Subpantalla del keyer abierta
 uint8_t opcionKeyer = 0;            // 0 = wpm, 1 = modo, 2 = palas, 3 = borrar, 4 = volver
 String textoKeyer = "";             // Lo descodificado de la manipulacion
+
+// Modo Echo (pantalla CW > ECHO): Chispas emite letras de la leccion Koch y hay que repetirlas con las palas
+enum EstadoEcho { ECHO_REPRODUCIENDO, ECHO_ESCUCHANDO, ECHO_RESULTADO };
+bool enEcho = false;
+uint8_t opcionEcho = 3;          // 0 = wpm, 1 = largo, 2 = ver, 3 = repetir, 4 = volver
+uint8_t echoLargo = 1;           // Letras por reto (1-5)
+bool echoVerObjetivo = true;     // Ensenar la letra antes de manipularla (para aprender)
+EstadoEcho estadoEcho = ECHO_REPRODUCIENDO;
+String echoObjetivo = "";
+String echoRespuesta = "";
+bool echoAcierto = false;
+uint16_t echoAciertos = 0, echoIntentos = 0;
+unsigned long echoFinResultadoMs = 0;
 
 uint8_t wpmCW = 25;
 uint16_t espaciadoCW = 200;
@@ -637,13 +650,106 @@ void salirDeKeyer() {
   guardarKeyerNVS();
 }
 
+// Para y reanuda el keyer sin salir de la pantalla (en Echo, mientras Chispas emite).
+// Al pararlo, la espera deja que la tarea apague el LED antes de que lo use el motor CW
+void keyerPausar() {
+  keyerActivo = false;
+  vTaskDelay(3);
+}
+
+void keyerReanudar() {
+  xQueueReset(colaKeyerTexto);
+  keyerActivo = true;
+  xTaskNotifyGive(tareaKeyer);
+}
+
+// ============================================================================
+// MODO ECHO: CHISPAS EMITE Y HAY QUE REPETIRLO CON LAS PALAS
+// ============================================================================
+#define ECHO_PAUSA_ACIERTO_MS 1200
+#define ECHO_PAUSA_FALLO_MS   3000
+
+/**
+ * Emite un reto. Con repetirMismo vuelve a emitir el actual (tras un fallo o con "repetir").
+ * Las letras salen de la leccion Koch, con la letra nueva al 25 %.
+ */
+void echoNuevoReto(bool repetirMismo) {
+  if (!repetirMismo || echoObjetivo.length() == 0) {
+    echoObjetivo = "";
+    for (uint8_t i = 0; i < echoLargo; i++) echoObjetivo += caracterKochAleatorio(leccionCW);
+  }
+  echoRespuesta = "";
+  keyerPausar();
+  motorCWEmitir(echoObjetivo.c_str(), keyerWpm, espaciadoCW, "ECHO");
+  estadoEcho = ECHO_REPRODUCIENDO;
+  pantallaPendiente = true;
+}
+
+void entrarEnEcho() {
+  motorCWDetener();
+  enEcho = true;
+  opcionEcho = 3;
+  echoAciertos = 0;
+  echoIntentos = 0;
+  echoObjetivo = "";
+  echoNuevoReto(false);
+}
+
+void salirDeEcho() {
+  keyerPausar();
+  motorCWDetener();
+  enEcho = false;
+  editandoValor = false;
+  guardarKeyerNVS();
+}
+
+void echoEvaluar() {
+  echoIntentos++;
+  echoAcierto = (echoRespuesta == echoObjetivo);
+  if (echoAcierto) echoAciertos++;
+  Serial.printf("\n[ECHO] %s -> %s: %s (%u/%u)\n", echoObjetivo.c_str(), echoRespuesta.c_str(),
+                echoAcierto ? "BIEN" : "MAL", echoAciertos, echoIntentos);
+  keyerPausar();
+  estadoEcho = ECHO_RESULTADO;
+  echoFinResultadoMs = millis() + (echoAcierto ? ECHO_PAUSA_ACIERTO_MS : ECHO_PAUSA_FALLO_MS);
+  pantallaPendiente = true;
+}
+
+// Un caracter descodificado del keyer durante el Echo
+void echoRecibirCaracter(char c) {
+  if (estadoEcho != ECHO_ESCUCHANDO) return;
+  if (c == ' ') {
+    // Silencio largo con algo manipulado: se da por terminada la respuesta aunque sea corta
+    if (echoRespuesta.length() > 0) echoEvaluar();
+    return;
+  }
+  echoRespuesta += c;
+  pantallaPendiente = true;
+  if (echoRespuesta.length() >= echoObjetivo.length()) echoEvaluar();
+}
+
+void procesarEcho() {
+  if (!enEcho) return;
+  if (estadoEcho == ECHO_REPRODUCIENDO && !motorCWOcupado()) {
+    keyerReanudar();  // Turno del usuario
+    estadoEcho = ECHO_ESCUCHANDO;
+    pantallaPendiente = true;
+  } else if (estadoEcho == ECHO_RESULTADO && (long)(millis() - echoFinResultadoMs) >= 0) {
+    echoNuevoReto(!echoAcierto);  // Tras un fallo se repite el mismo
+  }
+}
+
 // Pasa a la pantalla lo que el keyer ha descodificado (y por serie, para depurar)
 void procesarTextoKeyer() {
   char c;
   while (xQueueReceive(colaKeyerTexto, &c, 0) == pdTRUE) {
+    Serial.print(c);
+    if (enEcho) {
+      echoRecibirCaracter(c);
+      continue;
+    }
     textoKeyer += c;
     if (textoKeyer.length() > 200) textoKeyer.remove(0, textoKeyer.length() - 200);
-    Serial.print(c);
     pantallaPendiente = true;
   }
 }
@@ -661,6 +767,8 @@ void cargarDatosNVS() {
   keyerWpm = constrain(prefs.getUChar("kwpm", 20), 10, 40);  // KEYER_WPM_MIN/MAX
   keyerModoB = prefs.getBool("kmodob", false);
   keyerPalasInvertidas = prefs.getBool("kinv", false);
+  echoLargo = constrain(prefs.getUChar("elargo", 1), 1, 5);
+  echoVerObjetivo = prefs.getBool("ever", true);
 
   for (int i = 0; i < 40; i++) {
     String kComp = "c_" + String(i);
@@ -689,6 +797,8 @@ void guardarKeyerNVS() {
   prefs.putUChar("kwpm", keyerWpm);
   prefs.putBool("kmodob", keyerModoB);
   prefs.putBool("kinv", keyerPalasInvertidas);
+  prefs.putUChar("elargo", echoLargo);
+  prefs.putBool("ever", echoVerObjetivo);
   prefs.end();
 }
 
@@ -1600,35 +1710,65 @@ void renderizarPantallaCW() {
     dibujarPieCentrado((opcionKeyer == 3 ? "> " : "  ") + String("borrar   ") +
                        (opcionKeyer == 4 ? "> " : "  ") + String("volver"));
 
-  } else if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
+  } else if (enEcho) {
     display.setTextSize(1);
 
-    const char* titulo = " ENTRENADOR CW ";
+    // Opciones: ">15WPM >1LET >VER SI" (20 caracteres)
+    display.setCursor(0, 12);
+    display.print(opcionEcho == 0 ? ">" : " ");
+    imprimirValor(opcionEcho == 0, String(keyerWpm) + "WPM");
+    display.print(opcionEcho == 1 ? " >" : "  ");
+    imprimirValor(opcionEcho == 1, String(echoLargo) + "LET");
+    display.print(opcionEcho == 2 ? " >" : "  ");
+    display.print(echoVerObjetivo ? F("VER SI") : F("VER NO"));
+
+    // El reto en grande (con "VER NO", "?" hasta el resultado)
+    bool mostrar = echoVerObjetivo || estadoEcho == ECHO_RESULTADO;
+    String reto = "";
+    for (uint8_t i = 0; i < echoObjetivo.length(); i++) reto += mostrar ? echoObjetivo.charAt(i) : '?';
     int16_t x1, y1;
     uint16_t w, h;
-    display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
+    display.setTextSize(2);
+    display.getTextBounds(reto, 0, 0, &x1, &y1, &w, &h);
+    display.setCursor((128 - w) / 2, 23);
+    display.print(reto);
+    display.setTextSize(1);
 
-    int x = (128 - w) / 2;
-    int y = 13;
+    // Aciertos / intentos, a la derecha
+    String marcador = String(echoAciertos) + "/" + String(echoIntentos);
+    display.getTextBounds(marcador, 0, 0, &x1, &y1, &w, &h);
+    display.setCursor(128 - w, 27);
+    display.print(marcador);
 
-    display.fillRect(x - 2, y - 2, w + 4, h + 4, SSD1306_WHITE);
-    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-    display.setCursor(x, y);
-    display.print(titulo);
+    // Estado
+    display.setCursor(0, 42);
+    if (estadoEcho == ECHO_REPRODUCIENDO) {
+      display.print(F("ESCUCHA..."));
+    } else if (estadoEcho == ECHO_ESCUCHANDO) {
+      display.print(F("TU TURNO: ")); display.print(echoRespuesta); display.print('_');
+    } else if (echoAcierto) {
+      display.print(F("BIEN!"));
+    } else {
+      // Lo manipulado y, con una sola letra, el codigo correcto: "MAL: R  K -.-"
+      display.print(F("MAL: ")); display.print(echoRespuesta);
+      if (echoObjetivo.length() == 1) {
+        display.print(F("  ")); display.print(echoObjetivo); display.print(' ');
+        display.print(obtenerCodigoMorse(echoObjetivo.charAt(0)));
+      }
+    }
 
-    display.setTextColor(SSD1306_WHITE);
+    dibujarPieCentrado((opcionEcho == 3 ? "> " : "  ") + String("repetir   ") +
+                       (opcionEcho == 4 ? "> " : "  ") + String("volver"));
 
-    display.setCursor(15, 24);
-    display.print(opcionPantalla3 == 0 ? "> " : "  ");
-    display.print(F("< CONTINUAR >"));
-
-    display.setCursor(15, 33);
-    display.print(opcionPantalla3 == 1 ? "> " : "  ");
-    display.print(F("< ESTADISTICAS >"));
-
-    display.setCursor(15, 42);
-    display.print(opcionPantalla3 == 2 ? "> " : "  ");
-    display.print(F("< KEYER >"));
+  } else if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
+    // Sin titulo (la cabecera ya dice CW): cuatro opciones
+    display.setTextSize(1);
+    const char* opciones[] = { "< CONTINUAR >", "< ESTADISTICAS >", "< KEYER >", "< ECHO >" };
+    for (uint8_t i = 0; i < 4; i++) {
+      display.setCursor(15, 14 + i * 9);
+      display.print(opcionPantalla3 == i ? "> " : "  ");
+      display.print(opciones[i]);
+    }
 
     dibujarBarraAvanzarRetroceder(opcionPantalla3 == OPCION_BARRA_CW);
 
@@ -2901,7 +3041,30 @@ void procesarBoton() {
     }
 
   } else if (pantallaActual == PANTALLA_CW) {
-    if (enKeyer) {
+    if (enEcho) {
+      // Foco: 0 wpm, 1 largo, 2 ver, 3 repetir, 4 volver. Las palas funcionan con cualquier foco
+      if (atras || ejeLarga) {
+        salirDeEcho();
+      } else if (giro != 0) {
+        if (editandoValor && opcionEcho == 0) ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
+        else if (editandoValor && opcionEcho == 1) ajustarValor(echoLargo, giro, 1, 5);
+        else opcionEcho = (opcionEcho + 5 + giro) % 5;
+      } else if (pulsa) {
+        switch (opcionEcho) {
+          case 0:
+            editandoValor = !editandoValor;
+            break;
+          case 1:
+            editandoValor = !editandoValor;
+            if (!editandoValor) echoNuevoReto(false);  // Nuevo largo: reto nuevo
+            break;
+          case 2: echoVerObjetivo = !echoVerObjetivo; break;
+          case 3: echoNuevoReto(true); break;  // Volver a oirlo (no cuenta como intento)
+          case 4: salirDeEcho(); break;
+        }
+      }
+
+    } else if (enKeyer) {
       // Foco: 0 wpm, 1 modo, 2 palas, 3 borrar, 4 volver. Las palas funcionan con cualquier foco
       if (atras || ejeLarga) {
         salirDeKeyer();
@@ -3025,7 +3188,7 @@ void procesarBoton() {
       if (atras) {
         entrarEnPantalla(PANTALLA_INICIO);
       } else if (giro != 0) {
-        // Foco: [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [KEYER] -> [ant.] -> [sig.] ...
+        // Foco: [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [KEYER] -> [ECHO] -> [ant.] -> [sig.] ...
         moverFocoAnillo(opcionPantalla3, OPCION_BARRA_CW, giro);
       } else if (pulsa) {
         if (opcionPantalla3 == 0) {
@@ -3037,6 +3200,8 @@ void procesarBoton() {
           confirmandoBorrado = false;
         } else if (opcionPantalla3 == 2) {
           entrarEnKeyer();
+        } else if (opcionPantalla3 == 3) {
+          entrarEnEcho();
         } else {
           navegarDesdeBarra();
         }
@@ -3189,6 +3354,7 @@ void procesarBateriaYPantalla() {
 void loop() {
   procesarBoton();
   procesarTextoKeyer();
+  procesarEcho();
   procesarCara();
   procesarMaquinaEstadosCW();
   procesarFinEmisionDuo();
