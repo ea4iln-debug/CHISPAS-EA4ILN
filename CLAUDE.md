@@ -82,7 +82,10 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 - Aspecto de pantallas: el usuario prefiere mantener el estilo actual (fuente 5×7, sin imitar Meshtastic).
 - Hecho hoy: batería calibrada (v0.5f), motor CW en tarea FreeRTOS (v0.6a/b, probado), lista de la compra revisada,
   esquema `docs/esquema_protoboard.pdf` y v0.6c (palas 4/5, KEY en GPIO2 en BAJO). Todo con commit y push.
-- Sin confirmar: que GPIO2 mide 0 V con el polímetro tras arrancar y tras RST con la v0.6c.
+- GPIO2 medido con polímetro (v0.6n, placa desnuda, 9 oct 2026): 0 V en marcha; picos momentáneos de 0,3–0,5 V al
+  arrancar y al pulsar RST (pin al aire hasta `setup()`). Por debajo de los ~1,1 V que necesita el LED del PC817:
+  no manipula. El polímetro no ve pulsos de microsegundos. **Recomendado: 10 kΩ de GPIO2 a GND** (pull-down, para
+  que esté en BAJO también durante el reset); añadirlo al esquema cuando se monte la salida KEY.
 - Siguiente, por el orden de montaje de la hoja 6 del esquema:
   1. Raíles 3V3/GND de la Heltec a la protoboard (comprobar 3,3 V y que no hay cortocircuito).
   2. Programa de prueba de pines por serie (19, 20, 48 y reserva 38–40) con el encoder conectado: decide si el
