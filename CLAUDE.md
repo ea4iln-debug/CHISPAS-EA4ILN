@@ -115,6 +115,18 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 3 (futuro) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido |
 | BME280 (futuro) | I2C 0x76. Si 17/18 no salen al conector, segundo bus (Wire1) en dos pines libres |
 
+Posición física (fotos del usuario, 9 oct 2026; pin 1 = GND, pad cuadrado, el más cercano al USB):
+- J3: 18 GPIO7 tono · 17 GPIO6 decod. · 16 GPIO5 DAH · 15 GPIO4 DIT · 14 GPIO3 GPS en · 13 GPIO2 KEY · 12 GPIO1 (VBAT, no)
+  · 11/10/9 GPIO38/39/40 (plan B encoder) · 8/7 GPIO41/42 · 6/5 GPIO45/46 (no) · 4 GPIO37 (no) · 3/2 **3V3** · 1 **GND**.
+- J2: 18/17 GPIO19/20 encoder CLK/DT · 16 GPIO21 (OLED_RST) · 15 GPIO26 (flash, no) · 14 GPIO48 encoder SW · 13 GPIO47 GPS RX
+  · 12/11 GPIO33/34 · 10 GPIO35 (LED) · 9 GPIO36 (Vext) · 8 GPIO0 (PRG) · 7 RST · 6/5 GPIO43/44 (UART0) · 4/3 Ve · 2 5V · 1 GND.
+- `Ve` es Vext (conmutada por GPIO36, alimenta la OLED): los módulos van a 3V3 de J3. `5V` solo tiene tensión con USB.
+- GPIO17/18 (I2C de la OLED) no salen a los conectores, pero hay dos **pads de prueba "17" y "18" por detrás**.
+  BME280 (futuro): recomendado Wire1 en GPIO41/42 para el prototipo; los pads 17/18 (mismo bus, 0x76 no choca con
+  la OLED 0x3C) solo si faltan pines, soldando hilo fino y fijándolo. Sin decidir.
+- GPIO3 es pin de arranque (JTAG) solo si hay un eFuse grabado (de fábrica no): el 100 kΩ del enable del GPS no
+  debería afectar (razonado, sin probar).
+
 Esquema de conexiones: `docs/esquema_protoboard.pdf` (6 hojas), generado con `docs/gen_esquema.py` (HTML/SVG; el PDF
 se imprime con Edge sin interfaz). Si cambia algún pin, actualizar el script y regenerar el PDF.
 Pines aún libres según el pinout publicado de la V3 (sin comprobar en la placa): 38–42, 33 y 34.
