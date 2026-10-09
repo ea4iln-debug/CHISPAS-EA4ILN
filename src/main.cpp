@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.7b - Modo Echo: Chispas emite letras de la leccion Koch y se repiten con las palas (CW > ECHO)
+ * @version 0.7e - Pantalla CW al estilo LoRa (KOCH, KEYER, ECHO); webconf: hora UTC en la cabecera (12:05Z)
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.7b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.7e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -161,6 +161,7 @@ const char* obtenerCodigoMorse(char c) {
 #define LOCATOR_POR_DEFECTO    "IM68mu"
 char indicativoEstacion[TRAMA_LONG_INDICATIVO + 1] = INDICATIVO_POR_DEFECTO;
 char locatorEstacion[7] = LOCATOR_POR_DEFECTO;
+bool horaUtcCabecera = false;  // Hora de la cabecera en UTC ("12:05Z") en vez de local; se elige en webconf
 uint8_t seqTx = 0;                   // Se inicializa al azar en setup()
 
 uint8_t codificarCaracterMorse(char c) {
@@ -239,8 +240,8 @@ StatsLeccion statsKoch[40];
 bool enSubpantallaCW = false;
 bool enPractica3_2 = false;
 bool enEstadisticas3_5 = false;
-#define OPCION_BARRA_CW 4
-uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=CONTINUAR, 1=ESTADISTICAS, 2=KEYER, 3=ECHO, 4=BARRA INFERIOR (ant/sig)
+#define OPCION_BARRA_CW 3
+uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=KOCH, 1=KEYER, 2=ECHO, 3=BARRA INFERIOR (ant/sig)
 
 // Keyer iambico (pantalla CW > KEYER). La configuracion se guarda en NVS al salir
 uint8_t keyerWpm = 20;
@@ -852,6 +853,7 @@ void cargarEstacionNVS() {
   prefs.begin("mr_estacion", true);
   strlcpy(indicativoEstacion, prefs.getString("call", INDICATIVO_POR_DEFECTO).c_str(), sizeof(indicativoEstacion));
   strlcpy(locatorEstacion, prefs.getString("loc", LOCATOR_POR_DEFECTO).c_str(), sizeof(locatorEstacion));
+  horaUtcCabecera = prefs.getBool("utc", false);
   prefs.end();
 }
 
@@ -859,6 +861,7 @@ void guardarEstacionNVS() {
   prefs.begin("mr_estacion", false);
   prefs.putString("call", indicativoEstacion);
   prefs.putString("loc", locatorEstacion);
+  prefs.putBool("utc", horaUtcCabecera);
   prefs.end();
 }
 
@@ -992,11 +995,19 @@ void dibujarEncabezado() {
     display.print(txtRight);
 
   } else {
-    // Hora local, en cuanto se haya sincronizado por NTP (el reloj interno la mantiene sin WiFi)
+    // Hora local o UTC ("12:05Z", segun webconf), en cuanto se haya sincronizado por NTP
+    // (el reloj interno la mantiene sin WiFi)
     struct tm local;
     if (horaLocalValida(local)) {
-      char txtHora[6];
-      snprintf(txtHora, sizeof(txtHora), "%02d:%02d", local.tm_hour, local.tm_min);
+      char txtHora[8];
+      if (horaUtcCabecera) {
+        time_t ahora = time(nullptr);
+        struct tm utc;
+        gmtime_r(&ahora, &utc);
+        snprintf(txtHora, sizeof(txtHora), "%02d:%02dZ", utc.tm_hour, utc.tm_min);
+      } else {
+        snprintf(txtHora, sizeof(txtHora), "%02d:%02d", local.tm_hour, local.tm_min);
+      }
       display.setCursor(0, 0);
       display.print(txtHora);
     }
@@ -1346,6 +1357,19 @@ WiFiManagerParameter paramIndicativo("call", "Indicativo", INDICATIVO_POR_DEFECT
 WiFiManagerParameter paramLocator("loc", "Locator (4 o 6 caracteres)", LOCATOR_POR_DEFECTO, 6);
 WiFiManagerParameter paramHora("hora", "Hora local AAAA-MM-DD HH:MM (vacio = no cambiar)", "", 16);
 
+// Casilla del portal. WiFiManager no tiene casillas: es un campo cuyo HTML dice type="checkbox".
+// Marcada envia "1" y sin marcar no envia nada (valor vacio). "checked" depende del estado guardado
+class ParametroCasilla : public WiFiManagerParameter {
+ public:
+  bool marcada = false;
+  ParametroCasilla(const char* id, const char* etiqueta)
+    : WiFiManagerParameter(id, etiqueta, "1", 2, "type=\"checkbox\"", WFM_LABEL_AFTER) {}
+  const char* getCustomHTML() const override {
+    return marcada ? "type=\"checkbox\" checked" : "type=\"checkbox\"";
+  }
+};
+ParametroCasilla paramHoraUtc("utc", "Hora UTC en la cabecera (12:05Z) en vez de la local");
+
 bool locatorALatLon(const char* loc, float& lat, float& lon);  // Definida en la pantalla 7
 
 void guardarParametrosPortal() {
@@ -1367,8 +1391,13 @@ void guardarParametrosPortal() {
   if (locatorALatLon(loc.c_str(), lat, lon)) strlcpy(locatorEstacion, loc.c_str(), sizeof(locatorEstacion));
   else Serial.printf("[PORTAL] LOCATOR NO VALIDO: %s\n", loc.c_str());
 
+  horaUtcCabecera = strlen(paramHoraUtc.getValue()) > 0;
+  paramHoraUtc.marcada = horaUtcCabecera;
+  paramHoraUtc.setValue("1", 2);  // Para que vuelva a enviar "1" si se marca otra vez
+
   guardarEstacionNVS();
-  Serial.printf("[PORTAL] ESTACION: %s %s\n", indicativoEstacion, locatorEstacion);
+  Serial.printf("[PORTAL] ESTACION: %s %s, hora %s\n", indicativoEstacion, locatorEstacion,
+                horaUtcCabecera ? "UTC" : "local");
 
   String hora = paramHora.getValue();
   hora.trim();
@@ -1400,6 +1429,7 @@ void abrirPortalWifi() {
     wm.addParameter(&paramIndicativo);
     wm.addParameter(&paramLocator);
     wm.addParameter(&paramHora);
+    wm.addParameter(&paramHoraUtc);
     const char* menu[] = { "wifi", "param", "exit" };  // "param" = pagina "Setup"
     wm.setMenu(menu, 3);
     wm.setSaveParamsCallback(guardarParametrosPortal);
@@ -1408,6 +1438,8 @@ void abrirPortalWifi() {
   paramIndicativo.setValue(indicativoEstacion, TRAMA_LONG_INDICATIVO);
   paramLocator.setValue(locatorEstacion, 6);
   paramHora.setValue("", 16);
+  paramHoraUtc.setValue("1", 2);
+  paramHoraUtc.marcada = horaUtcCabecera;
 
   WiFi.mode(WIFI_STA);
   wm.setConfigPortalBlocking(false);
@@ -1761,18 +1793,31 @@ void renderizarPantallaCW() {
                        (opcionEcho == 4 ? "> " : "  ") + String("volver"));
 
   } else if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
-    // Sin titulo (la cabecera ya dice CW): cuatro opciones
+    // Mismo estilo que la pantalla LoRa: titulo en negativo y tres opciones
     display.setTextSize(1);
-    const char* opciones[] = { "< CONTINUAR >", "< ESTADISTICAS >", "< KEYER >", "< ECHO >" };
-    for (uint8_t i = 0; i < 4; i++) {
-      display.setCursor(15, 14 + i * 9);
+
+    const char* titulo = " ENTRENADOR CW ";
+    int16_t x1, y1;
+    uint16_t w, h;
+    display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
+    int x = (128 - w) / 2;
+    int y = 13;
+    display.fillRect(x - 2, y - 2, w + 4, h + 4, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.setCursor(x, y);
+    display.print(titulo);
+    display.setTextColor(SSD1306_WHITE);
+
+    const char* opciones[] = { "< KOCH >", "< KEYER >", "< ECHO >" };
+    for (uint8_t i = 0; i < 3; i++) {
+      display.setCursor(15, 24 + i * 9);
       display.print(opcionPantalla3 == i ? "> " : "  ");
       display.print(opciones[i]);
     }
 
     dibujarBarraAvanzarRetroceder(opcionPantalla3 == OPCION_BARRA_CW);
 
-  } else if (enSubpantallaCW && !enPractica3_2) {
+  } else if (enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
     display.setTextSize(1);
 
     display.setCursor(0, 12);
@@ -1794,6 +1839,11 @@ void renderizarPantallaCW() {
     display.setCursor(0, 42);
     display.print(opcionSubpantalla == 4 ? ">" : " ");
     display.print(F("GRUPOS: ")); imprimirValor(opcionSubpantalla == 4, String(gruposCW));
+
+    // Estadisticas de las lecciones: ultima opcion, en el hueco a la derecha de GRUPOS
+    display.setCursor(82, 42);
+    display.print(opcionSubpantalla == 7 ? ">" : " ");
+    display.print(F("ESTAD."));
 
     String txtPie3_1 = (opcionSubpantalla == 5 ? "> " : "  ") + String("iniciar  ") + 
                        (opcionSubpantalla == 6 ? "> " : "  ") + String("volver");
@@ -3163,7 +3213,10 @@ void procesarBoton() {
       }
 
     } else if (enSubpantallaCW) {
-      // Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos, 5 iniciar, 6 volver
+      // Configuracion de KOCH. Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos,
+      // 7 estadisticas, 5 iniciar, 6 volver (en ese orden de recorrido; ESTAD. va junto a GRUPOS)
+      static const uint8_t ORDEN_FOCO[] = { 0, 1, 2, 3, 4, 7, 5, 6 };
+      const uint8_t N_FOCO = sizeof(ORDEN_FOCO);
       if (atras) {
         enSubpantallaCW = false;
       } else if (giro != 0) {
@@ -3176,11 +3229,18 @@ void procesarBoton() {
             case 4: ajustarValor(gruposCW, giro * 10, 10, 50); break;
           }
         } else {
-          opcionSubpantalla = (opcionSubpantalla + 7 + giro) % 7;
+          uint8_t pos = 0;
+          while (pos < N_FOCO && ORDEN_FOCO[pos] != opcionSubpantalla) pos++;
+          opcionSubpantalla = ORDEN_FOCO[(pos + N_FOCO + giro) % N_FOCO];
         }
       } else if (pulsa) {
         if (opcionSubpantalla <= 4) editandoValor = !editandoValor;
         else if (opcionSubpantalla == 5) iniciarPracticaCW();
+        else if (opcionSubpantalla == 7) {
+          enEstadisticas3_5 = true;  // Al salir se vuelve aqui
+          paginaStats3_5 = 0;
+          confirmandoBorrado = false;
+        }
         else enSubpantallaCW = false;
       }
 
@@ -3188,19 +3248,15 @@ void procesarBoton() {
       if (atras) {
         entrarEnPantalla(PANTALLA_INICIO);
       } else if (giro != 0) {
-        // Foco: [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [KEYER] -> [ECHO] -> [ant.] -> [sig.] ...
+        // Foco: [sig.] -> [KOCH] -> [KEYER] -> [ECHO] -> [ant.] -> [sig.] ...
         moverFocoAnillo(opcionPantalla3, OPCION_BARRA_CW, giro);
       } else if (pulsa) {
         if (opcionPantalla3 == 0) {
           enSubpantallaCW = true;
           opcionSubpantalla = 5;
         } else if (opcionPantalla3 == 1) {
-          enEstadisticas3_5 = true;
-          paginaStats3_5 = 0;
-          confirmandoBorrado = false;
-        } else if (opcionPantalla3 == 2) {
           entrarEnKeyer();
-        } else if (opcionPantalla3 == 3) {
+        } else if (opcionPantalla3 == 2) {
           entrarEnEcho();
         } else {
           navegarDesdeBarra();

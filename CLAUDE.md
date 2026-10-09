@@ -8,7 +8,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (9 oct 2026)
-- Firmware: `src/main.cpp` **v0.7b** (10 oct 2026), cargada en la placa del encoder y las palas (COM16); la desnuda sigue en v0.6n. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.7e** (10 oct 2026), cargada en la placa del encoder y las palas (COM16); la desnuda sigue en v0.6n. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -132,6 +132,13 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   de palabra. Acierto: "BIEN!" y otro reto a 1,2 s. Fallo: "MAL: R  K -.-" y se repite el mismo a 3 s. Opciones: wpm,
   largo (`elargo`), ver la letra antes (`ever`, SÍ por defecto, para aprender), repetir (no cuenta) y volver.
   Marcador de aciertos/intentos. Resultados por serie (`[ECHO] U -> V: MAL (5/8)`).
+- **Pantalla CW (v0.7c/d, probada):** estilo LoRa, título " ENTRENADOR CW " en negativo y `< KOCH >`, `< KEYER >`,
+  `< ECHO >` (no caben 4 opciones con 9 px por línea). Estadísticas dentro de KOCH como última opción (`>ESTAD.` a la
+  derecha de GRUPOS; foco 7 en el orden wpm, sp, lección, caracteres, grupos, ESTAD., iniciar, volver); al salir de
+  estadísticas se vuelve a la configuración de KOCH.
+- **Hora UTC en la cabecera (v0.7e, sin probar):** casilla en la página Setup de webconf (`ParametroCasilla`, que
+  sobrescribe `getCustomHTML()` para el "checked"); se guarda en `mr_estacion` (`utc`). Con ella, la cabecera muestra
+  `12:05Z` en vez de la hora local.
 - Grabar el puerto serie sin reiniciar la placa: pyserial con `dtr = False` y `rts = False` antes de `open()`.
 - Ojo al editar con heredocs de Bash: la herramienta reduce las barras invertidas dobles a una, y en un literal de C
   como el del carácter nulo acaba entrando un byte 0 en el archivo. Para esos casos, editar con la herramienta Edit.
