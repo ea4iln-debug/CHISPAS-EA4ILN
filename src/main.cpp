@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.7e - Pantalla CW al estilo LoRa (KOCH, KEYER, ECHO); webconf: hora UTC en la cabecera (12:05Z)
+ * @version 0.7k - Sin conexion WiFi en PROP, POTA y SOL: mensaje fijo con "abrir webconf" (el portal ya no se abre solo)
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.7e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.7k"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -20,6 +20,7 @@
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include "qrcode.h"  // Componente qrcode de ESP-IDF, incluido en el core (esp_qrcode_generate)
 
 // ============================================================================
 // DEFINICION DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
@@ -1310,7 +1311,8 @@ void salirModoLoRa() {
 #define MAX_SPOTS_POTA           40
 #define SPOTS_POR_PAGINA         4
 
-enum EstadoWifi { WIFI_APAGADO, WIFI_CONECTANDO, WIFI_PORTAL, WIFI_CONECTADO };
+enum EstadoWifi { WIFI_APAGADO, WIFI_CONECTANDO, WIFI_PORTAL, WIFI_CONECTADO, WIFI_SIN_CONEXION };
+uint8_t opcionSinConexion = 0;  // Sin conexion en PROP, POTA o SOL: 0 = "abrir webconf", 1 = barra ant./sig.
 EstadoWifi estadoWifi = WIFI_APAGADO;
 unsigned long inicioConexionWifi = 0;
 WiFiManager wm;
@@ -1355,7 +1357,21 @@ bool confirmandoFabrica = false;
 // Pagina "Setup" del portal: datos de la estacion y hora manual (para campo sin internet)
 WiFiManagerParameter paramIndicativo("call", "Indicativo", INDICATIVO_POR_DEFECTO, TRAMA_LONG_INDICATIVO);
 WiFiManagerParameter paramLocator("loc", "Locator (4 o 6 caracteres)", LOCATOR_POR_DEFECTO, 6);
-WiFiManagerParameter paramHora("hora", "Hora local AAAA-MM-DD HH:MM (vacio = no cambiar)", "", 16);
+// Hora manual en formato espanol. Dentro del campo, como pista, la hora que tiene Chispas al abrir el portal
+class ParametroHora : public WiFiManagerParameter {
+ public:
+  char pista[48] = "placeholder='HH:MM DD-MM-AAAA'";
+  ParametroHora() : WiFiManagerParameter("hora", "Hora local, HH:MM DD-MM-AAAA (vacío = no cambiarla)", "", 16) {}
+  const char* getCustomHTML() const override { return pista; }
+  void actualizarPista() {
+    struct tm t;
+    if (getLocalTime(&t, 0) && t.tm_year > 120) {
+      snprintf(pista, sizeof(pista), "placeholder='%02d:%02d %02d-%02d-%04d'",
+               t.tm_hour, t.tm_min, t.tm_mday, t.tm_mon + 1, t.tm_year + 1900);
+    }
+  }
+};
+ParametroHora paramHora;
 
 // Casilla del portal. WiFiManager no tiene casillas: es un campo cuyo HTML dice type="checkbox".
 // Marcada envia "1" y sin marcar no envia nada (valor vacio). "checked" depende del estado guardado
@@ -1399,11 +1415,13 @@ void guardarParametrosPortal() {
   Serial.printf("[PORTAL] ESTACION: %s %s, hora %s\n", indicativoEstacion, locatorEstacion,
                 horaUtcCabecera ? "UTC" : "local");
 
+  // "14:05 10-10-2026" (tambien vale con barras: "14:05 10/10/2026")
   String hora = paramHora.getValue();
   hora.trim();
+  hora.replace('/', '-');
   if (hora.length() > 0) {
     int a, me, d, h, mi;
-    if (sscanf(hora.c_str(), "%d-%d-%d %d:%d", &a, &me, &d, &h, &mi) == 5 &&
+    if (sscanf(hora.c_str(), "%d:%d %d-%d-%d", &h, &mi, &d, &me, &a) == 5 &&
         a >= 2024 && me >= 1 && me <= 12 && d >= 1 && d <= 31 && h >= 0 && h <= 23 && mi >= 0 && mi <= 59) {
       struct tm t = {};
       t.tm_year = a - 1900; t.tm_mon = me - 1; t.tm_mday = d;
@@ -1418,12 +1436,105 @@ void guardarParametrosPortal() {
   pantallaPendiente = true;
 }
 
+// ----------------------------------------------------------------------------
+// QR DEL PORTAL: al escanearlo, el movil se une a la red de Chispas (y suele abrir el portal solo)
+// ----------------------------------------------------------------------------
+// Con el portal abierto, la pantalla muestra los datos en texto (red, clave e IP). En CONF, la
+// opcion "ver qr" muestra a pantalla completa el QR de WiFi: al escanearlo, el movil se une a la red
+// de Chispas (la pagina del portal se abre sola o no segun el movil). Cualquier giro o pulsacion
+// vuelve a los datos.
+#define QR_MAX_MODULOS 41  // Hasta la version 6 del QR (sobra: el de WiFi ocupa una version 3, 29x29)
+
+enum VistaPortal { VISTA_DATOS, VISTA_QR_RED };
+
+struct CodigoQr {
+  uint8_t modulos[(QR_MAX_MODULOS * QR_MAX_MODULOS + 7) / 8];  // Un bit por modulo (1 = negro)
+  uint8_t tam;                                                 // Modulos por lado (0 = no hay QR)
+};
+CodigoQr qrRed = {{0}, 0};
+CodigoQr* qrDestino = nullptr;  // Donde guarda guardarQrGenerado() (el callback no admite contexto)
+
+VistaPortal vistaPortal = VISTA_DATOS;
+
+// Llamada por esp_qrcode_generate() con el QR ya codificado: se copia a *qrDestino
+void guardarQrGenerado(esp_qrcode_handle_t qr) {
+  int n = esp_qrcode_get_size(qr);
+  if (qrDestino == nullptr || n > QR_MAX_MODULOS) return;
+  memset(qrDestino->modulos, 0, sizeof(qrDestino->modulos));
+  for (int y = 0; y < n; y++) {
+    for (int x = 0; x < n; x++) {
+      if (esp_qrcode_get_module(qr, x, y)) qrDestino->modulos[(y * n + x) / 8] |= 1 << ((y * n + x) % 8);
+    }
+  }
+  qrDestino->tam = n;
+}
+
+void generarQr(CodigoQr& destino, const char* texto) {
+  esp_qrcode_config_t cfg = ESP_QRCODE_CONFIG_DEFAULT();
+  cfg.display_func = guardarQrGenerado;
+  cfg.max_qrcode_version = 6;
+  cfg.qrcode_ecc_level = ESP_QRCODE_ECC_LOW;  // Modulos mas grandes, mejor para una pantalla pequena
+  destino.tam = 0;
+  qrDestino = &destino;
+  if (esp_qrcode_generate(&cfg, texto) != ESP_OK) Serial.printf("[PORTAL] NO SE PUDO GENERAR EL QR: %s\n", texto);
+  else Serial.printf("[PORTAL] QR %ux%u: %s\n", destino.tam, destino.tam, texto);
+  qrDestino = nullptr;
+}
+
+/**
+ * QR estandar de WiFi ("WIFI:T:WPA;S:<red>;P:<clave>;;"), que entienden las camaras de Android e iOS.
+ * La red y la clave no llevan ; , : ni comillas, asi que no hace falta escaparlas.
+ */
+void generarQrPortal() {
+  char texto[64];
+  snprintf(texto, sizeof(texto), "WIFI:T:WPA;S:%s;P:%s;;", nombrePortal, PORTAL_CLAVE);
+  generarQr(qrRed, texto);
+}
+
+bool viendoQrPortal() {
+  return estadoWifi == WIFI_PORTAL && vistaPortal == VISTA_QR_RED && qrRed.tam > 0;
+}
+
+// QR a la izquierda (blanco con modulos negros y margen de 1 modulo); devuelve el ancho ocupado
+int dibujarQr(const CodigoQr& qr) {
+  int escala = ((qr.tam + 2) * 2 <= 64) ? 2 : 1;
+  int lado = (qr.tam + 2) * escala;
+  int y0 = (64 - lado) / 2;
+  display.fillRect(0, y0, lado, lado, SSD1306_WHITE);
+  for (int y = 0; y < qr.tam; y++) {
+    for (int x = 0; x < qr.tam; x++) {
+      int i = y * qr.tam + x;
+      if (qr.modulos[i / 8] & (1 << (i % 8))) {
+        display.fillRect((x + 1) * escala, y0 + (y + 1) * escala, escala, escala, SSD1306_BLACK);
+      }
+    }
+  }
+  return lado;
+}
+
+// QR de la red a la izquierda y explicacion a la derecha
+void dibujarPantallaQr() {
+  display.clearDisplay();
+  int xt = dibujarQr(qrRed) + 4;
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(xt, 2);  display.print(F("WEBCONF"));
+  display.drawLine(xt, 11, 127, 11, SSD1306_WHITE);
+  display.setCursor(xt, 16); display.print(F("ESCANEA"));
+  display.setCursor(xt, 26); display.print(F("PARA UNIR"));
+  display.setCursor(xt, 36); display.print(F("EL MOVIL"));
+  display.setCursor(xt, 55); display.print(F("> DATOS"));
+  display.display();
+}
+
 void abrirPortalWifi() {
   if (nombrePortal[0] == '\0') {
     uint8_t mac[6];
     WiFi.macAddress(mac);
     snprintf(nombrePortal, sizeof(nombrePortal), "Chispas-%02X%02X", mac[4], mac[5]);
   }
+  if (qrRed.tam == 0) generarQrPortal();
+  vistaPortal = VISTA_DATOS;  // Por defecto, los datos; el QR es opcion de CONF
   static bool parametrosAnadidos = false;
   if (!parametrosAnadidos) {
     wm.addParameter(&paramIndicativo);
@@ -1438,6 +1549,7 @@ void abrirPortalWifi() {
   paramIndicativo.setValue(indicativoEstacion, TRAMA_LONG_INDICATIVO);
   paramLocator.setValue(locatorEstacion, 6);
   paramHora.setValue("", 16);
+  paramHora.actualizarPista();
   paramHoraUtc.setValue("1", 2);
   paramHoraUtc.marcada = horaUtcCabecera;
 
@@ -1450,10 +1562,23 @@ void abrirPortalWifi() {
   pantallaPendiente = true;
 }
 
+/**
+ * Sin red guardada o si no conecta: no se abre el portal solo; la pantalla lo explica y ofrece
+ * "abrir webconf" (el usuario decide).
+ */
+void quedarseSinConexion() {
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  estadoWifi = WIFI_SIN_CONEXION;
+  opcionSinConexion = 0;  // Foco en "abrir webconf"
+  pantallaPendiente = true;
+}
+
 void encenderWifi() {
   WiFi.mode(WIFI_STA);
   if (!wm.getWiFiIsSaved()) {
-    abrirPortalWifi();
+    Serial.println(F("[WIFI] NO HAY RED GUARDADA"));
+    quedarseSinConexion();
     return;
   }
   WiFi.begin();  // Red guardada
@@ -1595,12 +1720,15 @@ void pedirActualizacionWifi() {
  */
 void procesarWifi() {
   static uint8_t pantallaAnterior = 0;
-  // P5 y P6 encienden el WiFi al entrar; en P8 solo se usa si se abre el portal.
-  // Al ir a cualquier otra pantalla se apaga.
+  // PROP y POTA encienden el WiFi al entrar; SOL tambien, pero solo si aun no hay hora (para
+  // sincronizarla por NTP). Si no conecta, en las tres se abre el portal solo. En CONF solo se usa
+  // si se abre el portal. Al ir a cualquier otra pantalla se apaga.
   if (pantallaActual != pantallaAnterior) {
-    bool enDatos = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS);
-    bool usaWifi = enDatos || pantallaActual == PANTALLA_CONFIG;
-    if (enDatos && estadoWifi == WIFI_APAGADO) encenderWifi();
+    struct tm hora;
+    bool solSinHora = pantallaActual == PANTALLA_SOL && !horaLocalValida(hora);
+    bool enDatos = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS || solSinHora);
+    bool usaWifi = enDatos || pantallaActual == PANTALLA_CONFIG || pantallaActual == PANTALLA_SOL;
+    if (enDatos && (estadoWifi == WIFI_APAGADO || estadoWifi == WIFI_SIN_CONEXION)) encenderWifi();
     if (!usaWifi && estadoWifi != WIFI_APAGADO) apagarWifi();
     pantallaAnterior = pantallaActual;
   }
@@ -1611,7 +1739,7 @@ void procesarWifi() {
         wifiConectado();
       } else if (millis() - inicioConexionWifi > WIFI_TIMEOUT_CONEXION_MS) {
         Serial.println(F("[WIFI] NO CONECTA"));
-        abrirPortalWifi();
+        quedarseSinConexion();
       }
       break;
 
@@ -1621,6 +1749,11 @@ void procesarWifi() {
       } else if (!wm.getConfigPortalActive()) {
         Serial.println(F("[WIFI] PORTAL CERRADO POR TIEMPO"));
         apagarWifi();
+        // En PROP, POTA o SOL se vuelve al aviso de "sin conexion" (con "abrir webconf")
+        if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
+            pantallaActual == PANTALLA_SOL) {
+          quedarseSinConexion();
+        }
         pantallaPendiente = true;
       }
       break;
@@ -1675,12 +1808,30 @@ bool dibujarEstadoWifi() {
       display.print(F("WEB   192.168.4.1"));
       return true;
     case WIFI_APAGADO:
+      // Solo se ve un instante al entrar en PROP, POTA o SOL, justo antes de empezar a conectar
       display.setCursor(0, 22);
-      display.print(F("WIFI APAGADO"));
+      display.print(F("CONECTANDO WIFI..."));
+      return true;
+    case WIFI_SIN_CONEXION:
+      // El pie lo pone dibujarPieSinConexion() en cada pantalla
+      display.setCursor(0, 12);
+      display.print(F("SIN CONEXION WIFI"));
+      display.setCursor(0, 24);
+      display.print(F("LA RED NO ESTA O NO"));
+      display.setCursor(0, 33);
+      display.print(F("HAY NINGUNA GUARDADA."));
+      display.setCursor(0, 42);
+      display.print(F("CONFIGURALA:"));
       return true;
     default:
       return false;
   }
+}
+
+// Pie de PROP, POTA y SOL sin conexion: "abrir webconf" o, al girar, la barra ant./sig.
+void dibujarPieSinConexion() {
+  if (opcionSinConexion == 1) dibujarBarraAvanzarRetroceder(true, String((char)0xAE) + " opc " + String((char)0xAF));
+  else dibujarPieCentrado("> abrir webconf");
 }
 
 // ============================================================================
@@ -2152,6 +2303,10 @@ void renderizarPantallaPropagacion() {
     }
   }
 
+  if (estadoWifi == WIFI_SIN_CONEXION) {
+    dibujarPieSinConexion();
+    return;
+  }
   String txtPagina = String(paginaPropagacion + 1) + "/2";
   if (opcionPantallaProp == OPCION_BARRA_PROP) {
     dibujarBarraAvanzarRetroceder(true, txtPagina);
@@ -2205,6 +2360,10 @@ void renderizarPantallaSpots() {
     }
   }
 
+  if (estadoWifi == WIFI_SIN_CONEXION) {
+    dibujarPieSinConexion();
+    return;
+  }
   String txtPagina = String(paginaSpots + 1) + "/" + String(paginas);
   if (opcionPantallaSpots == OPCION_BARRA_SPOTS) {
     dibujarBarraAvanzarRetroceder(true, txtPagina);
@@ -2292,16 +2451,26 @@ void renderizarPantallaSol() {
 
   float lat, lon;
   struct tm local;
-  if (!locatorALatLon(locatorEstacion, lat, lon)) {
+  bool conHora = horaLocalValida(local);
+  if (estadoWifi == WIFI_PORTAL || estadoWifi == WIFI_CONECTANDO || estadoWifi == WIFI_SIN_CONEXION ||
+      (!conHora && estadoWifi == WIFI_APAGADO)) {
+    // Sin hora, SOL enciende el WiFi para sincronizarla (APAGADO solo se ve un instante al entrar)
+    dibujarEstadoWifi();
+  } else if (!locatorALatLon(locatorEstacion, lat, lon)) {
     display.setCursor(0, 22);
     display.print(F("LOCATOR NO VALIDO"));
-  } else if (!horaLocalValida(local)) {
+    display.setCursor(0, 32);
+    display.print(F("CAMBIALO EN WEBCONF"));
+  } else if (!conHora && estadoWifi == WIFI_CONECTADO) {
+    display.setCursor(0, 22);
+    display.print(F("SINCRONIZANDO HORA..."));  // NTP tarda un momento tras conectar
+  } else if (!conHora) {
     display.setCursor(0, 12);
     display.print(F("SIN HORA."));
     display.setCursor(0, 22);
-    display.print(F("SINCRONIZALA ENTRANDO"));
+    display.print(F("PONLA EN WEBCONF"));
     display.setCursor(0, 32);
-    display.print(F("EN LA PANTALLA 5"));
+    display.print(F("(PANTALLA CONF.)"));
   } else {
     time_t ahora = time(nullptr);
     struct tm utc;
@@ -2332,7 +2501,8 @@ void renderizarPantallaSol() {
     display.print(linea);
   }
 
-  dibujarBarraAvanzarRetroceder(true);
+  if (estadoWifi == WIFI_SIN_CONEXION) dibujarPieSinConexion();
+  else dibujarBarraAvanzarRetroceder(true);
 }
 
 // ============================================================================
@@ -2393,7 +2563,7 @@ void renderizarPantallaConfig() {
     // "« opc »" con los caracteres 0xAE y 0xAF de CP437
     dibujarBarraAvanzarRetroceder(true, String((char)0xAE) + " opc " + String((char)0xAF));
   } else {
-    String pie = (opcionPantallaConfig == 0 ? "> " : "  ") + String("webconf  ") +
+    String pie = (opcionPantallaConfig == 0 ? "> " : "  ") + String(estadoWifi == WIFI_PORTAL ? "ver qr  " : "webconf  ") +
                  (opcionPantallaConfig == 1 ? "> " : "  ") + String("fabrica");
     dibujarPieCentrado(pie);
   }
@@ -2401,6 +2571,10 @@ void renderizarPantallaConfig() {
 
 void actualizarPantalla() {
   if (caraActiva) return;  // La cara se dibuja sola (procesarCara)
+  if (viendoQrPortal()) {  // Portal abierto: QR a pantalla completa
+    dibujarPantallaQr();
+    return;
+  }
   display.clearDisplay();
   dibujarEncabezado();
 
@@ -2986,10 +3160,30 @@ void procesarBoton() {
   }
   if (ev == BOTON_LARGA) return;  // Libre (futuro: dormir la placa)
 
+  // Con el QR del portal a la vista, cualquier giro o pulsacion (tambien "atras") vuelve a los datos
+  if (viendoQrPortal()) {
+    vistaPortal = VISTA_DATOS;
+    actualizarPantalla();
+    return;
+  }
+
   int8_t giro = (ev == ENC_DERECHA) ? 1 : (ev == ENC_IZQUIERDA) ? -1 : 0;
   bool pulsa = (ev == ENC_PULSA);
   bool ejeLarga = (ev == ENC_LARGA);
   bool atras = (ev == BOTON_CORTA);
+
+  // PROP, POTA o SOL sin conexion WiFi: [sig.] -> [abrir webconf] -> [ant.]
+  if (estadoWifi == WIFI_SIN_CONEXION && (pantallaActual == PANTALLA_PROPAGACION ||
+      pantallaActual == PANTALLA_SPOTS || pantallaActual == PANTALLA_SOL)) {
+    if (atras) entrarEnPantalla(PANTALLA_INICIO);
+    else if (giro != 0) moverFocoAnillo(opcionSinConexion, 1, giro);
+    else if (pulsa) {
+      if (opcionSinConexion == 0) abrirPortalWifi();
+      else navegarDesdeBarra();
+    }
+    actualizarPantalla();
+    return;
+  }
 
   // Mientras se edita un valor, "atras" y la larga del eje solo salen de la edicion
   if ((atras || ejeLarga) && editandoValor) {
@@ -3074,7 +3268,8 @@ void procesarBoton() {
       if (opcion == barra) {
         navegarDesdeBarra();
       } else if (esConfig && opcion == 0) {
-        abrirPortalWifi();
+        if (estadoWifi == WIFI_PORTAL) vistaPortal = VISTA_QR_RED;  // "ver qr": el portal ya esta abierto
+        else abrirPortalWifi();
       } else if (esConfig && opcion == 1) {
         if (!confirmandoFabrica) confirmandoFabrica = true;
         else resetFabrica();

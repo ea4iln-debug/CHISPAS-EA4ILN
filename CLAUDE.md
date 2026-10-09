@@ -13,7 +13,7 @@ el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manip
   renombrar la carpeta local con VS Code cerrado.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.7e**, cargada en la placa 1 (protoboard con encoder, palas y batería; COM16). La
+- Firmware: `src/main.cpp` **v0.7k**, cargada en la placa 1 (protoboard con encoder, palas y batería; COM16). La
   placa 2 (desnuda) sigue en v0.6n. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
   6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
@@ -70,16 +70,29 @@ el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manip
   oculto. QSO (subpantalla 2) es aún un marcador sin funcionalidad.
 - **Radio** (v0.4c, `#define LORA_*`): 868,1 MHz, SF7, 250 kHz, CR 4/7, sync 0x12, 10 dBm, TCXO 1,8 V (DIO2 como RF
   switch lo activa RadioLib 6.6 en `begin()`; SPI 9/11/10). RSSI a 2 m: unos -40/-45 dBm.
-- **WiFi** (v0.5a/b): solo encendido en PROP y POTA. Red por portal WiFiManager (**webconf** en CONF; `Chispas-XXXX`,
-  clave `PORTAL_CLAVE` = `chispas73`, 192.168.4.1), guardada en NVS. Página Setup: indicativo, locator, hora manual
-  y casilla de hora UTC. Hora NTP (CET/CEST). HTTPS con `setInsecure()`. PROP: hamqsl.com cada 30 min, dos páginas
-  (índices y condiciones por banda). POTA: spots solo CW cada 2 min (sin límites publicados: con moderación); línea de
-  spot en 21 caracteres (referencia entera a la derecha; la frecuencia pierde el decimal y luego se recorta el
-  indicativo si no cabe).
-- **Hora UTC en la cabecera** (v0.7e, **sin probar**): casilla en Setup de webconf (`ParametroCasilla`, que sobrescribe
-  `getCustomHTML()` para el "checked"); en `mr_estacion` (`utc`). Muestra `12:05Z` en vez de la hora local.
-- **Sol** (pantalla 6, sin WiFi): salida/puesta, ventanas de línea gris (sol entre -6° y +6°) y altura actual con las
-  ecuaciones de NOAA para el locator de la estación (por defecto IM68mu). Necesita hora.
+- **WiFi** (v0.5a/b, v0.7k): se enciende al entrar en PROP y POTA, y en SOL solo si no hay hora (para el NTP).
+  Si no hay red guardada o no conecta en 15 s, el portal **no se abre solo**: estado `WIFI_SIN_CONEXION` con aviso fijo
+  y opción `> abrir webconf` (foco por defecto; girar lleva a ant./sig.; `opcionSinConexion`); si el portal se cierra
+  por tiempo (5 min) en esas pantallas, vuelve el aviso. Al reentrar se reintenta. Hora NTP (CET/CEST) al conectar.
+  HTTPS con `setInsecure()`. PROP: hamqsl.com cada 30 min, dos páginas (índices y condiciones por banda). POTA: spots
+  solo CW cada 2 min (sin límites publicados: con moderación); línea de spot en 21 caracteres (referencia entera a la
+  derecha; la frecuencia pierde el decimal y luego se recorta el indicativo si no cabe).
+- **Webconf** (portal WiFiManager, `Chispas-XXXX`, clave `PORTAL_CLAVE` = `chispas73`, 192.168.4.1; v0.7f–k,
+  probado): se abre con la opción **webconf** de CONF o desde el aviso de sin conexión, y muestra los datos (red,
+  clave, web). Con el portal abierto, en CONF la opción pasa a **`ver qr`**: QR de WiFi a pantalla completa
+  (`WIFI:T:WPA;S:...;P:...;;`, versión 3, 29×29, a 2 px por módulo), generado con el componente `qrcode` de ESP-IDF
+  que trae el core (`esp_qrcode_generate`, sin librerías extra); cualquier giro o pulsación vuelve a los datos. El QR
+  une el móvil a la red, pero la página del portal se abre sola o no según el móvil (no depende de Chispas; se probó
+  y se descartó un segundo QR con la URL). **Portal en castellano**: `include/wm_strings_chispas.h` (traducción propia
+  basada en `wm_strings_es.h` de WiFiManager 2.0.17, que estaba a medias), activada con `build_flags` `-I include` y
+  `-DWM_STRINGS_FILE` en `platformio.ini`; menú "Red WiFi", "Estación y hora", "Salir". Si se actualiza WiFiManager,
+  comparar con su `wm_strings_en.h`. Página "Estación y hora": indicativo, locator, hora manual en formato
+  **HH:MM DD-MM-AAAA** (acepta barras; la pista del campo es la hora actual: `ParametroHora`) y casilla de **hora UTC**
+  (`ParametroCasilla`, que sobrescribe `getCustomHTML()` para el "checked"; en `mr_estacion`, `utc`): la cabecera
+  muestra `12:05Z` en vez de la hora local.
+- **Sol** (pantalla 6): salida/puesta, ventanas de línea gris (sol entre -6° y +6°) y altura actual con las ecuaciones
+  de NOAA para el locator de la estación (por defecto IM68mu). Necesita hora: sin ella enciende el WiFi
+  (`CONECTANDO WIFI...`, luego `SINCRONIZANDO HORA...`); con hora no usa el WiFi.
 - **SOTA: no programar el cliente.** Sus condiciones (api-db2.sota.org.uk/docs) exigen unirse al grupo
   "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Lo decide el usuario.
 - **Batería**: divisor activado con GPIO37 **HIGH** en estas placas (Meshtastic declara LOW). Atenuación 2,5 dB,
@@ -101,7 +114,7 @@ el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manip
   que necesita el LED del PC817. **Recomendado: 10 kΩ de GPIO2 a GND**; añadirlo al esquema al montar la salida KEY.
 
 ## Pendiente
-1. **Por probar:** hora UTC desde webconf; cargar la versión actual en la placa 2.
+1. **Por hacer:** cargar la versión actual en la placa 2 (sigue en v0.6n).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas): buzzer, auriculares y volumen (tono en
    GPIO7 ya programado); salida KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue
    (opcionales: enable del GPS y BME280). Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm.
