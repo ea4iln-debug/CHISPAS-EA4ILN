@@ -8,7 +8,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (9 oct 2026)
-- Firmware: `src/main.cpp` **v0.6g** (9 oct 2026), cargada solo en la placa de COM6; la otra sigue en v0.6c. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.6h** (9 oct 2026), cargada y probada en la placa del encoder (COM16); la otra sigue en v0.6c. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -87,6 +87,15 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
      (estadísticas por carácter, indicativo por placa).
   4. Después: palas y keyer iámbico (usa el motor CW), tono por buzzer, KEY, decodificador y GPS cuando llegue.
 - Falta comprar: divisor minijack 1→2, 2 pulsadores 6×6 mm (y soldador si no tiene).
+
+- **Encoder (v0.6h, probado en placa):** se queda en 19/20/48 (prueba con `pio run -e prueba_pines`: giros exactos,
+  38/39/40 libres fijos a 1; el pulsador del eje rebota al soltar). Lectura por interrupción en CLK/DT con tabla de
+  cuadratura (`isrEncoder`, en IRAM, lee `GPIO_IN_REG`); pulsadores PRG y eje con `leerPulsador()`. Eventos:
+  `ENC_DERECHA/IZQUIERDA/PULSA/LARGA` además de `BOTON_CORTA/LARGA`. Girar = foco (`moverFocoAnillo()`), pulsar = corta,
+  pulsar sobre un valor = editar girando (`editandoValor`, vídeo inverso, sin dar la vuelta), larga del eje = larga
+  del PRG salvo donde esta solo mueve el foco. El PRG sigue igual.
+- **En discusión:** quitar `- : opc` y las ayudas del pie pensadas para el PRG, dejar la navegación solo con el
+  encoder y dar otro uso al PRG.
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):

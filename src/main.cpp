@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.6g - El aparato pasa a llamarse Chispas; inicio con el nombre en un marco; bateria: umbral 2,6 V y suavizado
+ * @version 0.6h - Encoder KY-040 (19/20/48): girar mueve el foco, pulsar ejecuta, pulsar+girar edita valores
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.6g"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.6h"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -57,6 +57,10 @@
 #define KEYER_PADDLE_DIT 4  // Entrada manipulador yambico (Punto), punta del jack J1
 #define KEYER_PADDLE_DAH 5  // Entrada manipulador yambico (Raya), anillo del jack J1
 #define KEY_OUT_PIN      2  // Salida KEY a la emisora por el PC817: ALTO = manipulando. En BAJO desde el arranque
+// Encoder KY-040. 19/20 son USB D-/D+ del S3, pero probados en placa como entradas: funcionan
+#define ENC_CLK_PIN     19  // Pull-up de 10 kOhm en el modulo
+#define ENC_DT_PIN      20  // Pull-up de 10 kOhm en el modulo
+#define ENC_SW_PIN      48  // Pulsador del eje, sin pull-up en el modulo: INPUT_PULLUP
 #define SPEAKER_PWM_PIN  7  // Salida PWM provisional (GPIO libre del header). El GPIO25 no existe en el S3
 
 #define FREC_AUDIO_HZ    600// Tono Morse local (600 Hz)
@@ -203,9 +207,7 @@ int contadorPulsaciones = 0;
 String estadoLoraStr = "INICIANDO...";
 bool modoRadioRxActivo = false;
 
-bool ultimoEstadoBoton = HIGH;
-unsigned long tiempoInicioPulsacion = 0;
-bool procesandoPulsacion = false;
+bool editandoValor = false;  // Con el encoder: el valor con el foco se cambia girando (sale en video inverso)
 
 struct StatsLeccion {
   uint16_t vecesCompletada;
@@ -709,6 +711,13 @@ void dibujarEncabezado() {
   display.drawLine(0, 9, 128, 9, SSD1306_WHITE);
 }
 
+// Valor editable: en video inverso mientras se cambia girando el encoder
+void imprimirValor(bool foco, const String& valor) {
+  if (foco && editandoValor) display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+  display.print(valor);
+  display.setTextColor(SSD1306_WHITE);
+}
+
 void dibujarPieCentrado(const String& txt) {
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setTextSize(1);
@@ -943,6 +952,7 @@ void procesarRecepcionLoRa() {
 void salirModoLoRa() {
   enPantalla4_Sub = false;
   subpantalla4Activa = 0;
+  editandoValor = false;
   modoRadioRxActivo = false;
   flagPaqueteRecibido = false;
 
@@ -1390,23 +1400,23 @@ void renderizarPantallaCW() {
 
     display.setCursor(0, 12);
     display.print(opcionSubpantalla == 0 ? ">" : " ");
-    display.print(F("WPM: ")); display.print(wpmCW);
+    display.print(F("WPM: ")); imprimirValor(opcionSubpantalla == 0, String(wpmCW));
 
     display.setCursor(64, 12);
     display.print(opcionSubpantalla == 1 ? ">" : " ");
-    display.print(F("SP: ")); display.print(espaciadoCW); display.print(F("%"));
+    display.print(F("SP: ")); imprimirValor(opcionSubpantalla == 1, String(espaciadoCW) + "%");
 
     display.setCursor(0, 22);
     display.print(opcionSubpantalla == 2 ? ">" : " ");
-    display.print(F("LECCION: ")); display.print(leccionCW);
+    display.print(F("LECCION: ")); imprimirValor(opcionSubpantalla == 2, String(leccionCW));
 
     display.setCursor(0, 32);
     display.print(opcionSubpantalla == 3 ? ">" : " ");
-    display.print(F("CARACTERES: ")); display.print(caracteresCW);
+    display.print(F("CARACTERES: ")); imprimirValor(opcionSubpantalla == 3, String(caracteresCW));
 
     display.setCursor(0, 42);
     display.print(opcionSubpantalla == 4 ? ">" : " ");
-    display.print(F("GRUPOS: ")); display.print(gruposCW);
+    display.print(F("GRUPOS: ")); imprimirValor(opcionSubpantalla == 4, String(gruposCW));
 
     String txtPie3_1 = (opcionSubpantalla == 5 ? "> " : "  ") + String("iniciar  ") + 
                        (opcionSubpantalla == 6 ? "> " : "  ") + String("volver");
@@ -1506,7 +1516,7 @@ void renderizarPantallaCW() {
       display.setCursor(0, 26);
       display.print(opcionPantallaCorregir == 0 ? "> " : "  ");
       display.print(F("ERRORES: "));
-      display.print(numeroErrores);
+      imprimirValor(opcionPantallaCorregir == 0, String(numeroErrores));
       display.print(F(" / "));
       display.print(totalCaracteresLeccion);
 
@@ -1603,15 +1613,15 @@ void renderizarPantallaLora() {
 
     display.setCursor(0, 11);
     display.print(opcionDuo4_1 == 0 ? ">" : " ");
-    display.print(F("WPM:")); display.print(wpmCW);
+    display.print(F("WPM:")); imprimirValor(opcionDuo4_1 == 0, String(wpmCW));
 
     display.setCursor(52, 11);
     display.print(opcionDuo4_1 == 1 ? ">" : " ");
-    display.print(F("SP:")); display.print(espaciadoCW); display.print(F("%"));
+    display.print(F("SP:")); imprimirValor(opcionDuo4_1 == 1, String(espaciadoCW) + "%");
 
     display.setCursor(0, 21);
     display.print(opcionDuo4_1 == 2 ? ">" : " ");
-    display.print(F("LECC:")); display.print(leccionCW);
+    display.print(F("LECC:")); imprimirValor(opcionDuo4_1 == 2, String(leccionCW));
 
     if (grupoDuoTransmitido.length() > 0) {
       display.setCursor(52, 21);
@@ -1654,7 +1664,7 @@ void renderizarPantallaLora() {
     else display.print(F("MODO ECO"));
 
     display.setCursor(0, 26);
-    display.print(F("PINS: DIT=G2 DAH=G3"));
+    display.print(F("PINS: DIT=G4 DAH=G5"));
 
     display.setCursor(0, 38);
     display.print(F("RSSI: ")); display.print(rssiUltimo); display.print(F("DBM"));
@@ -2047,34 +2057,126 @@ void procesarMaquinaEstadosCW() {
 // ============================================================================
 // ENTRADA DE USUARIO: EVENTOS DE BOTON
 // ============================================================================
-// Toda la logica de menus trabaja con eventos (corta / larga), no con el hardware.
-// Cuando monte el rotary y el pulsador de funcion, solo hay que cambiar leerEventoBoton()
-// (o anadir otra fuente de eventos); los menus de procesarBoton() no se tocan.
-enum EventoBoton { BOTON_NINGUNO, BOTON_CORTA, BOTON_LARGA };
+// Toda la logica de menus trabaja con eventos, no con el hardware. Hay dos fuentes:
+// - Boton PRG: corta / larga, como siempre.
+// - Encoder: giro a derecha / izquierda (mueve el foco o cambia el valor que se edita),
+//   pulsacion corta del eje (= corta del PRG) y larga del eje (= larga del PRG, salvo
+//   donde esta solo mueve el foco: ahi no hace nada, o sale de la edicion).
+enum EventoBoton { BOTON_NINGUNO, BOTON_CORTA, BOTON_LARGA, ENC_DERECHA, ENC_IZQUIERDA, ENC_PULSA, ENC_LARGA };
+
+struct Pulsador {
+  uint8_t pin;
+  bool ultimoEstado;
+  unsigned long inicio;
+  bool pulsando;
+};
+Pulsador pulsadorPrg = { BUTTON_PIN, HIGH, 0, false };
+Pulsador pulsadorEje = { ENC_SW_PIN, HIGH, 0, false };
 
 /**
- * Lee el boton PRG sin bloquear y devuelve un evento cuando se SUELTA el boton.
- * Corta: mas de TIEMPO_ANTIRREBOTE_MS. Larga: >= TIEMPO_PULSACION_LARGA.
+ * Lee un pulsador sin bloquear y da el evento al SOLTARLO: 1 = corta (mas de
+ * TIEMPO_ANTIRREBOTE_MS), 2 = larga (>= TIEMPO_PULSACION_LARGA), 0 = nada.
+ * Los rebotes dan pulsaciones de menos de TIEMPO_ANTIRREBOTE_MS y se ignoran
+ * (el pulsador del encoder rebota al soltar: probado en placa).
+ */
+uint8_t leerPulsador(Pulsador& p) {
+  bool estadoActual = digitalRead(p.pin);
+  uint8_t ev = 0;
+
+  if (p.ultimoEstado == HIGH && estadoActual == LOW) {
+    p.inicio = millis();
+    p.pulsando = true;
+  }
+
+  if (p.ultimoEstado == LOW && estadoActual == HIGH && p.pulsando) {
+    unsigned long duracion = millis() - p.inicio;
+    p.pulsando = false;
+
+    if (duracion >= TIEMPO_PULSACION_LARGA) ev = 2;
+    else if (duracion > TIEMPO_ANTIRREBOTE_MS) ev = 1;
+  }
+
+  p.ultimoEstado = estadoActual;
+  return ev;
+}
+
+// Encoder por interrupcion: un cambio en CLK o DT avanza un decodificador de cuadratura por tabla.
+// El KY-040 da 4 transiciones por paso y reposa con CLK = DT = 1. Los rebotes van y vuelven
+// en la tabla y no suman pasos. Sentido horario = positivo (probado en placa).
+static_assert(ENC_CLK_PIN < 32 && ENC_DT_PIN < 32, "La ISR lee CLK y DT de GPIO_IN_REG (GPIO 0-31)");
+DRAM_ATTR const int8_t TABLA_CUADRATURA[16] = { 0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0 };
+volatile uint8_t encEstado = 3;
+volatile int8_t encAcumulado = 0;
+volatile int16_t encPasos = 0;  // Pasos pendientes de procesar (+ horario, - antihorario)
+portMUX_TYPE muxEncoder = portMUX_INITIALIZER_UNLOCKED;
+
+// Solo registros y datos en RAM: puede ejecutarse mientras se escribe la flash (NVS)
+void IRAM_ATTR isrEncoder() {
+  uint32_t entradas = REG_READ(GPIO_IN_REG);
+  uint8_t nuevo = (((entradas >> ENC_CLK_PIN) & 1) << 1) | ((entradas >> ENC_DT_PIN) & 1);
+  portENTER_CRITICAL_ISR(&muxEncoder);
+  if (nuevo != encEstado) {
+    encAcumulado += TABLA_CUADRATURA[(encEstado << 2) | nuevo];
+    encEstado = nuevo;
+    if (nuevo == 3) {
+      if (encAcumulado >= 2) encPasos++;
+      else if (encAcumulado <= -2) encPasos--;
+      encAcumulado = 0;
+    }
+  }
+  portEXIT_CRITICAL_ISR(&muxEncoder);
+}
+
+void iniciarEncoder() {
+  pinMode(ENC_CLK_PIN, INPUT_PULLUP);
+  pinMode(ENC_DT_PIN, INPUT_PULLUP);
+  pinMode(ENC_SW_PIN, INPUT_PULLUP);
+  encEstado = (digitalRead(ENC_CLK_PIN) << 1) | digitalRead(ENC_DT_PIN);
+  attachInterrupt(digitalPinToInterrupt(ENC_CLK_PIN), isrEncoder, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ENC_DT_PIN), isrEncoder, CHANGE);
+}
+
+/**
+ * Devuelve el siguiente evento de entrada: primero el PRG, luego el pulsador del eje y
+ * luego un paso de giro (si se acumulan varios, se entregan de uno en uno).
  */
 EventoBoton leerEventoBoton() {
-  bool estadoActual = digitalRead(BUTTON_PIN);
-  EventoBoton ev = BOTON_NINGUNO;
+  uint8_t prg = leerPulsador(pulsadorPrg);
+  if (prg == 1) return BOTON_CORTA;
+  if (prg == 2) return BOTON_LARGA;
 
-  if (ultimoEstadoBoton == HIGH && estadoActual == LOW) {
-    tiempoInicioPulsacion = millis();
-    procesandoPulsacion = true;
-  }
+  uint8_t eje = leerPulsador(pulsadorEje);
+  if (eje == 1) return ENC_PULSA;
+  if (eje == 2) return ENC_LARGA;
 
-  if (ultimoEstadoBoton == LOW && estadoActual == HIGH && procesandoPulsacion) {
-    unsigned long duracion = millis() - tiempoInicioPulsacion;
-    procesandoPulsacion = false;
+  int16_t pasos;
+  portENTER_CRITICAL(&muxEncoder);
+  pasos = encPasos;
+  if (pasos > 0) encPasos--;
+  else if (pasos < 0) encPasos++;
+  portEXIT_CRITICAL(&muxEncoder);
+  if (pasos > 0) return ENC_DERECHA;
+  if (pasos < 0) return ENC_IZQUIERDA;
+  return BOTON_NINGUNO;
+}
 
-    if (duracion >= TIEMPO_PULSACION_LARGA) ev = BOTON_LARGA;
-    else if (duracion > TIEMPO_ANTIRREBOTE_MS) ev = BOTON_CORTA;
-  }
+/**
+ * Mueve el foco por el anillo de una pantalla: posicion 0 = "sig.", 1..barra = opciones
+ * 0..barra-1 y barra+1 = "ant.". Con paso +1 es el ciclo de siempre de la pulsacion larga.
+ */
+void moverFocoAnillo(uint8_t& opcion, uint8_t barra, int8_t paso) {
+  uint8_t n = barra + 2;
+  uint8_t pos = (opcion == barra) ? (opcionNavegacionP1234 == 1 ? 0 : barra + 1) : opcion + 1;
+  pos = (pos + n + paso) % n;
+  if (pos == 0) { opcion = barra; opcionNavegacionP1234 = 1; }
+  else if (pos == barra + 1) { opcion = barra; opcionNavegacionP1234 = 0; }
+  else opcion = pos - 1;
+}
 
-  ultimoEstadoBoton = estadoActual;
-  return ev;
+// Cambia un valor con el encoder, sin dar la vuelta al llegar a los limites
+template <typename T>
+void ajustarValor(T& valor, int paso, int minimo, int maximo) {
+  valor = (T)constrain((int)valor + paso, minimo, maximo);
 }
 
 // ============================================================================
@@ -2084,24 +2186,27 @@ void procesarBoton() {
   EventoBoton ev = leerEventoBoton();
 
   if (ev != BOTON_NINGUNO) {
+    // Traduccion comun: el eje pulsado hace lo que la corta del PRG. La larga del eje
+    // (ejeLarga) solo se usa donde la larga del PRG no se limita a mover el foco.
+    int8_t giro = (ev == ENC_DERECHA) ? 1 : (ev == ENC_IZQUIERDA) ? -1 : 0;
+    bool corta = (ev == BOTON_CORTA || ev == ENC_PULSA);
+    bool larga = (ev == BOTON_LARGA);
+    bool ejeLarga = (ev == ENC_LARGA);
+
+    // El PRG no edita valores; la larga del eje sale de la edicion sin hacer nada mas
+    if (ev == BOTON_CORTA || ev == BOTON_LARGA) editandoValor = false;
+    if (ejeLarga && editandoValor) {
+      editandoValor = false;
+      actualizarPantalla();
+      return;
+    }
 
     if (pantallaActual == PANTALLA_LORA) {
       if (!enPantalla4_Sub) {
-        if (ev == BOTON_LARGA) {
-          // CICLO ROTATIVO PANTALLA 4 CON PULSACION LARGA (-):
-          // [sig.] -> [CW DUO] -> [CW QSO] -> [ant.] -> [sig.] ...
-          if (opcionPantalla4 == 2 && opcionNavegacionP1234 == 1) {
-            opcionPantalla4 = 0;
-          } else if (opcionPantalla4 == 0) {
-            opcionPantalla4 = 1;
-          } else if (opcionPantalla4 == 1) {
-            opcionPantalla4 = 2;
-            opcionNavegacionP1234 = 0;
-          } else if (opcionPantalla4 == 2 && opcionNavegacionP1234 == 0) {
-            opcionPantalla4 = 2;
-            opcionNavegacionP1234 = 1;
-          }
-        } else if (ev == BOTON_CORTA) {
+        if (giro != 0 || larga) {
+          // Foco: [sig.] -> [CW DUO] -> [CW QSO] -> [ant.] -> [sig.] ...
+          moverFocoAnillo(opcionPantalla4, 2, giro != 0 ? giro : 1);
+        } else if (corta) {
           // PULSACION CORTA (.): EJECUTAR OPCION SELECCIONADA
           if (opcionPantalla4 == 0) {
             enPantalla4_Sub = true; subpantalla4Activa = 1;
@@ -2123,13 +2228,25 @@ void procesarBoton() {
           }
         }
       } else if (subpantalla4Activa == 1) {
-        if (ev == BOTON_LARGA) {
+        if (giro != 0) {
+          if (editandoValor) {
+            switch (opcionDuo4_1) {
+              case 0: ajustarValor(wpmCW, giro, 15, 30); break;
+              case 1: ajustarValor(espaciadoCW, giro * 10, 100, 200); break;
+              case 2: ajustarValor(leccionCW, giro, 1, 40); break;
+            }
+          } else {
+            opcionDuo4_1 = (opcionDuo4_1 + 5 + giro) % 5;
+          }
+        } else if (larga || ejeLarga) {
           if (grupoDuoRecibido.length() > 0 && !grupoDuoRevelado) {
             grupoDuoRevelado = true;
-          } else {
+          } else if (larga) {
             opcionDuo4_1 = (opcionDuo4_1 + 1) % 5;
           }
-        } else if (ev == BOTON_CORTA) {
+        } else if (ev == ENC_PULSA && opcionDuo4_1 <= 2) {
+          editandoValor = !editandoValor;  // wpm, espaciado o leccion: pulsar, girar y pulsar
+        } else if (corta) {
           switch (opcionDuo4_1) {
             case 0: wpmCW++; if (wpmCW > 30) wpmCW = 15; break;
             case 1: espaciadoCW += 10; if (espaciadoCW > 200) espaciadoCW = 100; break;
@@ -2145,9 +2262,11 @@ void procesarBoton() {
           }
         }
       } else if (subpantalla4Activa == 2) {
-        if (ev == BOTON_LARGA) {
+        if (giro != 0) {
+          modoKeyer4_2 = (modoKeyer4_2 + 3 + giro) % 3;
+        } else if (larga || ejeLarga) {
           salirModoLoRa();
-        } else if (ev == BOTON_CORTA) {
+        } else if (corta) {
           modoKeyer4_2 = (modoKeyer4_2 + 1) % 3;
         }
       }
@@ -2160,19 +2279,10 @@ void procesarBoton() {
       bool esConfig = (pantallaActual == PANTALLA_CONFIG);
       uint8_t& opcion = esProp ? opcionPantallaProp : (esConfig ? opcionPantallaConfig : opcionPantallaSpots);
       uint8_t barra = esProp ? OPCION_BARRA_PROP : (esConfig ? OPCION_BARRA_CONFIG : OPCION_BARRA_SPOTS);
-      if (ev == BOTON_LARGA) confirmandoFabrica = false;
-      if (ev == BOTON_LARGA) {
-        if (opcion == barra && opcionNavegacionP1234 == 1) {
-          opcion = 0;
-        } else if (opcion < barra - 1) {
-          opcion++;
-        } else if (opcion == barra - 1) {
-          opcion = barra;
-          opcionNavegacionP1234 = 0;
-        } else {
-          opcionNavegacionP1234 = 1;
-        }
-      } else if (ev == BOTON_CORTA) {
+      if (giro != 0 || larga) {
+        confirmandoFabrica = false;
+        moverFocoAnillo(opcion, barra, giro != 0 ? giro : 1);
+      } else if (corta) {
         if (opcion == barra) {
           if (opcionNavegacionP1234 == 0) {
             pantallaActual--;  // Propagacion -> LoRa, Spots -> Propagacion, Config -> Sol
@@ -2204,9 +2314,13 @@ void procesarBoton() {
 
     } else if (pantallaActual == PANTALLA_CW) {
       if (enEstadisticas3_5) {
-        if (ev == BOTON_LARGA) {
+        if (larga || ejeLarga) {
           enEstadisticas3_5 = false; confirmandoBorrado = false;
-        } else if (ev == BOTON_CORTA) {
+        } else if (giro != 0) {
+          // Paginas 0..PAGINAS_STATS_3_5 (la ultima es la de borrado)
+          confirmandoBorrado = false;
+          paginaStats3_5 = (paginaStats3_5 + PAGINAS_STATS_3_5 + 1 + giro) % (PAGINAS_STATS_3_5 + 1);
+        } else if (corta) {
           if (paginaStats3_5 < PAGINAS_STATS_3_5) paginaStats3_5++;
           else {
             if (!confirmandoBorrado) confirmandoBorrado = true;
@@ -2217,17 +2331,30 @@ void procesarBoton() {
         if (estadoCW == CW_PANTALLA_3_3_LISTADO) {
           int charPorPagina = 63;
           bool hayMasPaginas = ((paginaListado3_3 + 1) * charPorPagina) < textoCompletoLeccion.length();
-          if (hayMasPaginas) { paginaListado3_3++; } 
-          else {
-            if (ev == BOTON_LARGA) opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
-            else if (ev == BOTON_CORTA) {
+          if (giro > 0) {
+            // Derecha: pagina siguiente y, en la ultima, alterna entre "corregir" y "rep."
+            if (hayMasPaginas) paginaListado3_3++;
+            else opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
+          } else if (giro < 0) {
+            if (!hayMasPaginas && opcionFinListado3_3 == 1) opcionFinListado3_3 = 0;
+            else if (paginaListado3_3 > 0) paginaListado3_3--;
+          } else if (hayMasPaginas) {
+            if (corta || larga) paginaListado3_3++;
+          } else {
+            if (larga) opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
+            else if (corta) {
               if (opcionFinListado3_3 == 0) { estadoCW = CW_PANTALLA_CORREGIR_ERRORES; opcionPantallaCorregir = 0; }
               else iniciarPracticaCW();
             }
           }
         } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
-          if (ev == BOTON_LARGA) opcionPantallaCorregir = (opcionPantallaCorregir + 1) % 3;
-          else if (ev == BOTON_CORTA) {
+          if (giro != 0) {
+            if (editandoValor && opcionPantallaCorregir == 0) ajustarValor(numeroErrores, giro, 0, totalCaracteresLeccion);
+            else opcionPantallaCorregir = (opcionPantallaCorregir + 3 + giro) % 3;
+          }
+          else if (larga) opcionPantallaCorregir = (opcionPantallaCorregir + 1) % 3;
+          else if (ev == ENC_PULSA && opcionPantallaCorregir == 0) editandoValor = !editandoValor;
+          else if (corta) {
             if (opcionPantallaCorregir == 0) { numeroErrores++; if (numeroErrores > totalCaracteresLeccion) numeroErrores = 0; }
             else if (opcionPantallaCorregir == 1) {
               float pct = 0.0;
@@ -2237,18 +2364,33 @@ void procesarBoton() {
             } else if (opcionPantallaCorregir == 2) iniciarPracticaCW();
           }
         } else if (estadoCW == CW_PANTALLA_RESUMEN_FINAL) {
-          if (ev == BOTON_LARGA) iniciarPracticaCW();
-          else if (ev == BOTON_CORTA) detenerPracticaCW();
+          if (larga || ejeLarga) iniciarPracticaCW();
+          else if (corta) detenerPracticaCW();
         } else {
-          if (ev == BOTON_LARGA) detenerPracticaCW();
-          else if (ev == BOTON_CORTA) {
+          // Practica en marcha o en pausa: el giro no hace nada
+          if (larga || ejeLarga) detenerPracticaCW();
+          else if (corta) {
             if (estadoCW == CW_PAUSADO) estadoCW = CW_GENERAR_GRUPO;
             else { estadoCW = CW_PAUSADO; motorCWDetener(); }
           }
         }
       } else if (enSubpantallaCW) {
-        if (ev == BOTON_LARGA) opcionSubpantalla = (opcionSubpantalla + 1) % 7;
-        else if (ev == BOTON_CORTA) {
+        if (giro != 0) {
+          if (editandoValor) {
+            switch (opcionSubpantalla) {
+              case 0: ajustarValor(wpmCW, giro, 15, 30); break;
+              case 1: ajustarValor(espaciadoCW, giro * 10, 100, 200); break;
+              case 2: ajustarValor(leccionCW, giro, 1, 40); break;
+              case 3: ajustarValor(caracteresCW, giro, 1, 5); break;
+              case 4: ajustarValor(gruposCW, giro * 10, 10, 50); break;
+            }
+          } else {
+            opcionSubpantalla = (opcionSubpantalla + 7 + giro) % 7;
+          }
+        }
+        else if (larga) opcionSubpantalla = (opcionSubpantalla + 1) % 7;
+        else if (ev == ENC_PULSA && opcionSubpantalla <= 4) editandoValor = !editandoValor;
+        else if (corta) {
           switch (opcionSubpantalla) {
             case 0: wpmCW++; if (wpmCW > 30) wpmCW = 15; break;
             case 1: espaciadoCW += 10; if (espaciadoCW > 200) espaciadoCW = 100; break;
@@ -2260,21 +2402,10 @@ void procesarBoton() {
           }
         }
       } else {
-        if (ev == BOTON_LARGA) {
-          // CICLO ROTATIVO PANTALLA 3 CON PULSACION LARGA (-):
-          // [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [ant.] -> [sig.] ...
-          if (opcionPantalla3 == 2 && opcionNavegacionP1234 == 1) {
-            opcionPantalla3 = 0;
-          } else if (opcionPantalla3 == 0) {
-            opcionPantalla3 = 1;
-          } else if (opcionPantalla3 == 1) {
-            opcionPantalla3 = 2;
-            opcionNavegacionP1234 = 0;
-          } else if (opcionPantalla3 == 2 && opcionNavegacionP1234 == 0) {
-            opcionPantalla3 = 2;
-            opcionNavegacionP1234 = 1;
-          }
-        } else if (ev == BOTON_CORTA) {
+        if (giro != 0 || larga) {
+          // Foco: [sig.] -> [CONTINUAR] -> [ESTADISTICAS] -> [ant.] -> [sig.] ...
+          moverFocoAnillo(opcionPantalla3, 2, giro != 0 ? giro : 1);
+        } else if (corta) {
           // PULSACION CORTA (.): EJECUTAR OPCION SELECCIONADA
           if (opcionPantalla3 == 0) {
             enSubpantallaCW = true; 
@@ -2298,8 +2429,9 @@ void procesarBoton() {
       }
 
     } else {
-      if (ev == BOTON_LARGA) opcionNavegacionP1234 = (opcionNavegacionP1234 == 0) ? 1 : 0;
-      else if (ev == BOTON_CORTA) {
+      // Pantallas sin opciones: el foco solo alterna entre "ant." y "sig."
+      if (giro != 0 || larga) opcionNavegacionP1234 = (opcionNavegacionP1234 == 0) ? 1 : 0;
+      else if (corta) {
         if (opcionNavegacionP1234 == 0) pantallaActual = (pantallaActual == 1) ? TOTAL_PANTALLAS : pantallaActual - 1;
         else pantallaActual = (pantallaActual == TOTAL_PANTALLAS) ? 1 : pantallaActual + 1;
         contadorPulsaciones++;
@@ -2357,6 +2489,7 @@ void setup() {
   
   encenderPerifericos();
   iniciarMotorCW();
+  iniciarEncoder();
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
