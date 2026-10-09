@@ -8,7 +8,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (9 oct 2026)
-- Firmware: `src/main.cpp` **v0.6m** (9 oct 2026), cargada y probada en la placa del encoder (COM16); la otra sigue en v0.6c. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.6n** (9 oct 2026), cargada en las dos placas (la del encoder en COM16 y la desnuda). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -70,8 +70,12 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   renombrar la carpeta local `Mr.-Morse-EA4ILN` con VS Code cerrado.
 - Tarde del 9 oct: v0.6d batería (umbral "sin batería" 2,6 V tomado de Meshtastic, suavizado al 50 %),
   v0.6e/f/g pantalla de inicio y **cambio de nombre a Chispas** (portal `Chispas-XXXX`, clave `chispas73`).
-  **Pendiente de probar:** con la placa por USB y **sin batería**, la pantalla de Configuración debe decir
-  `SIN BATERIA`; si muestra una tensión, anotarla y ajustar `VBAT_SIN_BATERIA`. Cargar v0.6g en la segunda placa.
+  **Batería sin conectar con USB (v0.6n, probado en las dos placas):** el umbral de 2,6 V no servía: sin batería el
+  cargador deja una media de ~4,17 V (CONF decía 4,19 V), pero oscila. Medido con `pio run -e prueba_bateria`
+  (ráfaga de 500 lecturas en 44 ms): dispersión 0,25 V y pico a pico 0,86 V sin batería, frente a 0,002 V y 0,03 V
+  con batería. `leerBateria()` toma 200 lecturas seguidas y, si la dispersión supera 0,08 V
+  (`VBAT_DISPERSION_SIN_BATERIA`), indica "sin batería" (`PWR` en la cabecera). Con batería, 88 %; al quitarla, `PWR`;
+  al volver, 88 %.
 - Detectar USB y carga: la V3 no lo permite por software (Meshtastic tampoco; solo estima con > 4,20 V, que con
   nuestro factor calibrado casi no ocurre). Propuesta sin decidir: divisor 100k/150k del pin 5V (J2-2) a GPIO33
   (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.

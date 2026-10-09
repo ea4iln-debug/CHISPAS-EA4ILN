@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.6m - Cara de robot con boca y mas gestos (risa, ojos apretados, guino, picara, nerviosa); letra nueva Koch al 25 %
+ * @version 0.6n - Bateria: con USB y sin bateria se detecta por la dispersion de la lectura (el cargador oscila)
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.6m"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.6n"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -69,8 +69,13 @@
 
 #define VBAT_ADC_PIN    1   // Pin ADC para lectura del divisor de voltaje de la bateria
 #define ADC_CTRL_PIN    37  // Habilitacion del divisor de tension de bateria
-// Sin bateria la V3 no lee 0: Meshtastic anota unos 2,2 V y usa 2,6 V como umbral (aqui sin comprobar)
-#define VBAT_SIN_BATERIA 2.6f
+// Sin bateria y con USB, en estas placas el cargador deja una media de unos 4,17 V (como una bateria
+// llena) pero oscila: medido con pruebas/prueba_bateria.cpp, dispersion de 0,25 V sin bateria frente
+// a 0,002 V con bateria (rafaga de lecturas seguidas). Por eso se mira la dispersion, no la tension.
+// El umbral de 2,6 V (de Meshtastic, que anota unos 2,2 V sin bateria) se deja por si acaso.
+#define VBAT_SIN_BATERIA            2.6f
+#define VBAT_DISPERSION_SIN_BATERIA 0.08f  // V: por encima, no hay bateria
+#define VBAT_LECTURAS               200    // Lecturas seguidas por medida (unos 18 ms)
 #define VBAT_MULTIPLIER 4.9f   // Divisor 390k/100k de la V3. Calibrado con polimetro: 4,10 V reales / 836,7 mV en el pin (2,5 dB)
 #define TIEMPO_PULSACION_LARGA 600 // Umbral en ms para detectar pulsacion larga del boton PRG
 #define TIEMPO_ANTIRREBOTE_MS  30  // Pulsaciones mas cortas se ignoran (rebotes)
@@ -610,12 +615,17 @@ BateriaInfo leerBateria() {
   analogReadResolution(12);
   analogSetPinAttenuation(VBAT_ADC_PIN, ADC_2_5db);
 
+  // Rafaga de lecturas seguidas (unos 18 ms): de ella salen la media y la dispersion
   uint32_t sumaMv = 0;
-  for (int i = 0; i < 15; i++) {
-    sumaMv += analogReadMilliVolts(VBAT_ADC_PIN);
-    delay(1);
+  uint64_t sumaCuadrados = 0;
+  for (int i = 0; i < VBAT_LECTURAS; i++) {
+    uint32_t mv = analogReadMilliVolts(VBAT_ADC_PIN);
+    sumaMv += mv;
+    sumaCuadrados += (uint64_t)mv * mv;
   }
-  float mvPromedio = sumaMv / 15.0;
+  float mvPromedio = (float)sumaMv / VBAT_LECTURAS;
+  float varianza = (float)sumaCuadrados / VBAT_LECTURAS - mvPromedio * mvPromedio;
+  float dispersion = sqrtf(max(varianza, 0.0f)) * VBAT_MULTIPLIER / 1000.0f;  // En V de bateria
 
   digitalWrite(ADC_CTRL_PIN, LOW);
 
@@ -626,7 +636,7 @@ BateriaInfo leerBateria() {
   static float voltajeFiltrado = 0;
 
   BateriaInfo bat;
-  if (voltaje < VBAT_SIN_BATERIA) {
+  if (voltaje < VBAT_SIN_BATERIA || dispersion > VBAT_DISPERSION_SIN_BATERIA) {
     voltajeFiltrado = 0;
     bat.voltaje = 0.0;
     bat.porcentaje = 0;
@@ -640,7 +650,7 @@ BateriaInfo leerBateria() {
   return bat;
 }
 
-// leerBateria() bloquea unos 25 ms: se lee cada 30 s fuera de la emision CW y el
+// leerBateria() bloquea unos 30 ms: se lee cada 30 s fuera de la emision CW y el
 // dibujo usa este valor en cache
 #define INTERVALO_BATERIA_MS 30000
 BateriaInfo bateriaActual = {0.0, 0, SOLO_USB};
