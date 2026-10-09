@@ -8,7 +8,7 @@ estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decod
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
 ## Estado actual (9 oct 2026)
-- Firmware: `src/main.cpp` **v0.6k** (9 oct 2026), cargada y probada en la placa del encoder (COM16); la otra sigue en v0.6c. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+- Firmware: `src/main.cpp` **v0.6m** (9 oct 2026), cargada y probada en la placa del encoder (COM16); la otra sigue en v0.6c. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -102,14 +102,26 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   Barra: página "1/2" en el centro en PROP y POTA (opción "mas >"), `« opc »` en CONF. PROP sin "wifi"; en CONF el
   portal se llama **webconf**. POTA: línea de spot en 21 caracteres (referencia entera a la derecha; la frecuencia
   pierde el decimal y luego se recorta el indicativo si no cabe).
+- **Cara de Chispas (v0.6l/m, probada; "es la cara de Chispas", según el usuario):** salvapantallas de Inicio,
+  diseño propio inspirado en Eilik (no copiarlo). Ojos y boca dibujados con primitivas, sin imágenes (~5 KB de flash).
+  Aparece a los 15 s sin tocar nada en Inicio, alterna 45 s de cara y 8 s de Inicio, y a los 5 min se duerme;
+  cualquier giro o pulsación la quita sin hacer nada más (constantes `CARA_*`). Gestos al azar cada 6–15 s: contenta,
+  risa, `>_<`, guiño, pícara (`ω`), nerviosa (gota), sorpresa. Cansada con batería < 20 %; más alegre si la última
+  lección Koch fue ≥ 90 % hace menos de 15 min. Con la cara a la vista, `actualizarPantalla()` no dibuja.
+- **Koch:** la letra nueva de la lección sale el 25 % de las veces (`PESO_LETRA_NUEVA_PCT`, `caracterKochAleatorio()`,
+  también en Duo); con 4 caracteres o menos, reparto uniforme.
 - Ojo al editar con heredocs de Bash: la herramienta reduce las barras invertidas dobles a una, y en un literal de C
   como el del carácter nulo acaba entrando un byte 0 en el archivo. Para esos casos, editar con la herramienta Edit.
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
-1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):
-   - Koch: estadísticas por carácter (marcar fallos en la corrección) y modo Echo (necesita keyer).
-   - Indicativo configurable por placa (hoy constante `INDICATIVO` = "EA4ILN" en las dos; con dos placas
-     no afecta al descarte de duplicados).
+1. Ideas con el encoder, para repensar más adelante (el usuario las aparca, 9 oct 2026):
+   - **Estadísticas por carácter en el Koch** (recomendada): al corregir, recorrer el texto emitido con el encoder
+     y marcar los caracteres fallados; guardar aciertos/fallos por letra en NVS y mostrar las más flojas. Más
+     adelante, opcional: repetir más las letras flojas (no es como LCWO).
+   - Editar indicativo y locator en el aparato, carácter a carácter con el encoder (sin móvil ni webconf).
+   - Aceleración del giro: al girar rápido, los valores avanzan de 5 en 5 (p. ej. lección 1–40).
+   - Modo Echo del Koch: necesita keyer (palas), no el encoder.
+   - El indicativo por placa ya está resuelto: se cambia en webconf y se guarda en `mr_estacion`.
 2. Pantalla Duo para textos largos (cuando haya frases: QSO con keyer).
 3. A futuro: audio I2S, keyer iámbico, decodificador (Goertzel).
 

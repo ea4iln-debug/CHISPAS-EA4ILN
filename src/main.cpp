@@ -2,11 +2,11 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.6k - POTA: linea de spot siempre en 21 caracteres; foco en "ant." o "sig." segun el sentido del cambio de pantalla
+ * @version 0.6m - Cara de robot con boca y mas gestos (risa, ojos apretados, guino, picara, nerviosa); letra nueva Koch al 25 %
  * @date 2026-10-09
  */
 
-#define FW_VERSION "0.6k"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.6m"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -92,6 +92,18 @@ const uint8_t TOTAL_CARACTERES_KOCH = sizeof(TABLA_KOCH);
 // Numero de caracteres de la tabla que entran en una leccion (1..40)
 uint8_t caracteresDeLeccion(uint8_t leccion) {
   return constrain(leccion + 1, 2, TOTAL_CARACTERES_KOCH);
+}
+
+// La letra nueva de la leccion (la ultima que entra) sale al menos este % de las veces.
+// Con reparto uniforme saldria 1 de cada N: en la leccion 40, un 2,4 %
+#define PESO_LETRA_NUEVA_PCT 25
+
+char caracterKochAleatorio(uint8_t leccion) {
+  uint8_t n = caracteresDeLeccion(leccion);
+  // Con pocas letras (4 o menos) el reparto uniforme ya le da ese % o mas
+  if (n * PESO_LETRA_NUEVA_PCT <= 100) return TABLA_KOCH[random(0, n)];
+  if (random(100) < PESO_LETRA_NUEVA_PCT) return TABLA_KOCH[n - 1];
+  return TABLA_KOCH[random(0, n - 1)];  // El resto, repartido entre las demas
 }
 
 struct PatronMorse {
@@ -208,6 +220,9 @@ String estadoLoraStr = "INICIANDO...";
 bool modoRadioRxActivo = false;
 
 bool editandoValor = false;  // Con el encoder: el valor con el foco se cambia girando (sale en video inverso)
+bool caraActiva = false;     // Se esta viendo la cara del robot (salvapantallas de Inicio)
+float ultimoPctKoch = -1;    // Ultimo resultado de leccion Koch (-1 = ninguno); la cara lo celebra
+unsigned long ultimoPctKochMs = 0;
 
 struct StatsLeccion {
   uint16_t vecesCompletada;
@@ -1980,6 +1995,7 @@ void renderizarPantallaConfig() {
 }
 
 void actualizarPantalla() {
+  if (caraActiva) return;  // La cara se dibuja sola (procesarCara)
   display.clearDisplay();
   dibujarEncabezado();
 
@@ -2026,11 +2042,8 @@ void detenerPracticaCW() {
 
 void generarGrupoKoch() {
   grupoActualStr = "";
-  uint8_t maxIdx = caracteresDeLeccion(leccionCW);
-  
   for (int i = 0; i < caracteresCW; i++) {
-    char c = TABLA_KOCH[random(0, maxIdx)];
-    grupoActualStr += c;
+    grupoActualStr += caracterKochAleatorio(leccionCW);
   }
 
   if (textoCompletoLeccion.length() > 0) textoCompletoLeccion += " ";
@@ -2077,6 +2090,327 @@ void procesarMaquinaEstadosCW() {
     default:
       break;
   }
+}
+
+// ============================================================================
+// CARA DEL ROBOT (SALVAPANTALLAS DE INICIO)
+// ============================================================================
+// Diseno propio, dibujado con primitivas (sin imagenes): dos ojos y una boca que cambian
+// de forma con la expresion. Aparece tras CARA_ESPERA_MS sin tocar nada en Inicio y se
+// alterna con la pantalla de Inicio. Cualquier giro o pulsacion la quita sin hacer nada mas.
+#define CARA_ESPERA_MS        15000UL  // Sin tocar nada en Inicio: aparece la cara
+#define CARA_TIEMPO_MS        45000UL  // La cara se queda este tiempo...
+#define CARA_INICIO_MS         8000UL  // ...y vuelve Inicio este tiempo, alternando
+#define CARA_DORMIR_MS       300000UL  // Sin tocar nada 5 min: se duerme y deja de alternar
+#define CARA_FOTOGRAMA_MS          66  // Unos 15 fotogramas/s (cada uno tarda unos 25 ms por I2C)
+#define CARA_FOTOGRAMA_DORMIDA_MS 250
+#define CARA_FELIZ_RECIENTE_MS (15UL * 60 * 1000)  // Leccion >= 90 % hace menos de 15 min: contenta
+
+// Geometria (pantalla de 128x64): ojos arriba y boca debajo
+#define OJO_ANCHO      30
+#define OJO_ALTO       26
+#define OJO_RADIO       7
+#define OJO_SEPARACION 46  // Entre los centros de los dos ojos
+#define OJOS_Y         24  // Centro vertical de los ojos
+#define BOCA_Y         50  // Centro vertical de la boca
+#define MIRADA_MAX_X   14
+#define MIRADA_MAX_Y    4
+
+enum ExpresionCara { EXP_NORMAL, EXP_FELIZ, EXP_RISA, EXP_APRETADOS, EXP_GUINO, EXP_PICARA,
+                     EXP_NERVIOSA, EXP_SORPRESA, EXP_CANSADA, EXP_DORMIDA };
+enum FormaOjo { OJO_ABIERTO, OJO_ARCO, OJO_CHEVRON, OJO_PARPADO, OJO_CAIDO };
+enum FormaBoca { BOCA_SONRISA, BOCA_ABIERTA, BOCA_GATO, BOCA_O, BOCA_RECTA, BOCA_ONDA };
+
+struct EstadoOjos { float dx, dy, ancho, alto; };  // Mirada (desplazamiento) y tamano
+
+unsigned long ultimaActividadMs = 0;  // Ultimo giro o pulsacion
+unsigned long cambioCaraMs = 0;       // Cuando aparecio o se quito la cara
+EstadoOjos ojos = {0, 0, OJO_ANCHO, OJO_ALTO};
+EstadoOjos ojosObjetivo = {0, 0, OJO_ANCHO, OJO_ALTO};  // Los ojos se acercan a esto poco a poco
+ExpresionCara expresionCara = EXP_NORMAL;
+bool guinoIzquierdo = false;            // Ojo que guina
+unsigned long inicioExpresionMs = 0;
+unsigned long duracionExpresionMs = 0;  // 0 = expresion de fondo, sin fin
+unsigned long inicioParpadeoMs = 0;     // 0 = no esta parpadeando
+unsigned long proximoParpadeoMs = 0;
+unsigned long proximaMiradaMs = 0;
+unsigned long proximoGestoMs = 0;
+
+bool momentoLlegado(unsigned long t) {
+  return (long)(millis() - t) >= 0;
+}
+
+bool bateriaBaja() {
+  return bateriaActual.estado == BAT_DESCARGA && bateriaActual.porcentaje < 20;
+}
+
+bool leccionRecienAprobada() {
+  return ultimoPctKoch >= 90 && millis() - ultimoPctKochMs < CARA_FELIZ_RECIENTE_MS;
+}
+
+// Expresion a la que vuelve la cara cuando no esta haciendo ningun gesto
+ExpresionCara expresionDeFondo() {
+  return bateriaBaja() ? EXP_CANSADA : EXP_NORMAL;
+}
+
+void ponerExpresion(ExpresionCara e, unsigned long duracionMs) {
+  expresionCara = e;
+  inicioExpresionMs = millis();
+  duracionExpresionMs = duracionMs;
+  ojosObjetivo.ancho = OJO_ANCHO;
+  ojosObjetivo.alto = OJO_ALTO;
+  switch (e) {
+    case EXP_SORPRESA: ojosObjetivo.ancho = OJO_ANCHO + 4; ojosObjetivo.alto = OJO_ALTO + 6; break;
+    case EXP_NERVIOSA: ojosObjetivo.alto = 12; break;
+    case EXP_CANSADA:  ojosObjetivo.alto = OJO_ALTO - 4; break;
+    case EXP_DORMIDA:  ojosObjetivo.alto = 3; ojosObjetivo.dx = 0; ojosObjetivo.dy = 3; break;
+    case EXP_GUINO:    guinoIzquierdo = random(2); break;
+    default: break;
+  }
+}
+
+/**
+ * Gesto al azar. Tras aprobar una leccion salen mas a menudo los alegres.
+ */
+void hacerGestoAleatorio() {
+  // Pesos: contenta, risa, apretados, guino, picara, nerviosa, sorpresa
+  static const uint8_t PESOS_NORMAL[]  = { 18, 12, 10, 18, 16, 12, 14 };
+  static const uint8_t PESOS_ALEGRE[]  = { 30, 25, 10, 15, 10,  2,  8 };
+  static const ExpresionCara GESTOS[]  = { EXP_FELIZ, EXP_RISA, EXP_APRETADOS, EXP_GUINO,
+                                           EXP_PICARA, EXP_NERVIOSA, EXP_SORPRESA };
+  static const uint16_t DURACION_MS[]  = { 2000, 1800, 1500, 700, 2500, 2000, 1200 };
+  const uint8_t* pesos = leccionRecienAprobada() ? PESOS_ALEGRE : PESOS_NORMAL;
+
+  int total = 0;
+  for (uint8_t i = 0; i < 7; i++) total += pesos[i];
+  int r = random(total);
+  for (uint8_t i = 0; i < 7; i++) {
+    if (r < pesos[i]) { ponerExpresion(GESTOS[i], DURACION_MS[i]); return; }
+    r -= pesos[i];
+  }
+}
+
+void activarCara() {
+  unsigned long ahora = millis();
+  caraActiva = true;
+  cambioCaraMs = ahora;
+  ojos = {0, 0, OJO_ANCHO, 2};  // Aparece abriendo los ojos
+  ojosObjetivo = {0, 0, OJO_ANCHO, OJO_ALTO};
+  if (leccionRecienAprobada()) ponerExpresion(EXP_RISA, 2500);
+  else ponerExpresion(expresionDeFondo(), 0);
+  inicioParpadeoMs = 0;
+  proximoParpadeoMs = ahora + random(2000, 5000);
+  proximaMiradaMs = ahora + random(800, 2000);
+  proximoGestoMs = ahora + random(6000, 14000);
+}
+
+void desactivarCara() {
+  caraActiva = false;
+  cambioCaraMs = millis();
+  actualizarPantalla();
+}
+
+// Arco grueso de circunferencia, de "desde" a "hasta" grados (0 = derecha, 90 = abajo)
+void dibujarArco(int cx, int cy, int r, int grosor, int desde, int hasta) {
+  for (int a = desde; a <= hasta; a += 4) {
+    float rad = a * DEG_TO_RAD;
+    float c = cosf(rad), s = sinf(rad);
+    for (int g = 0; g < grosor; g++) {
+      display.drawPixel(cx + (int)roundf((r - g) * c), cy + (int)roundf((r - g) * s), SSD1306_WHITE);
+    }
+  }
+}
+
+// Linea gruesa: la misma linea repetida hacia abajo
+void dibujarLineaGruesa(int x0, int y0, int x1, int y1, int grosor) {
+  for (int g = 0; g < grosor; g++) display.drawLine(x0, y0 + g, x1, y1 + g, SSD1306_WHITE);
+}
+
+void dibujarOjo(int cx, int cy, int ancho, int alto, FormaOjo forma, bool izquierdo) {
+  ancho = max(ancho, 4);
+  alto = max(alto, 2);
+  int x = cx - ancho / 2;
+  int y = cy - alto / 2;
+
+  switch (forma) {
+    case OJO_ARCO:
+      // "^": ojo cerrado sonriendo
+      dibujarArco(cx, cy + 6, ancho / 2 - 2, 4, 200, 340);
+      break;
+    case OJO_CHEVRON: {
+      // ">" el izquierdo y "<" el derecho: ojos apretados que miran al centro
+      int punta = izquierdo ? cx + ancho / 4 : cx - ancho / 4;
+      int lado = izquierdo ? cx - ancho / 4 : cx + ancho / 4;
+      dibujarLineaGruesa(lado, cy - 9, punta, cy - 1, 4);
+      dibujarLineaGruesa(punta, cy - 1, lado, cy + 7, 4);
+      break;
+    }
+    default:
+      display.fillRoundRect(x, y, ancho, alto, min(OJO_RADIO, min(ancho, alto) / 2), SSD1306_WHITE);
+      if (forma == OJO_PARPADO && alto > 8) {
+        // Parpado recto a media altura: mirada picara
+        display.fillRect(x - 1, y - 1, ancho + 2, alto / 2, SSD1306_BLACK);
+      } else if (forma == OJO_CAIDO && alto > 8) {
+        // Parpado caido hacia el lado de fuera: cansancio
+        int xFuera = izquierdo ? x - 1 : x + ancho;
+        int xDentro = izquierdo ? x + ancho : x - 1;
+        display.fillTriangle(xFuera, y + alto / 2, xFuera, y - 1, xDentro, y - 1, SSD1306_BLACK);
+        display.fillRect(x - 1, y - 1, ancho + 2, alto / 5, SSD1306_BLACK);
+      }
+      break;
+  }
+}
+
+void dibujarBoca(int cx, int cy, FormaBoca forma) {
+  switch (forma) {
+    case BOCA_SONRISA:
+      dibujarArco(cx, cy - 6, 8, 2, 25, 155);
+      break;
+    case BOCA_ABIERTA:
+      // Media luna rellena hacia abajo (risa)
+      for (int i = 0; i <= 9; i++) {
+        int w = (int)sqrtf(81.0f - i * i);
+        display.drawFastHLine(cx - w, cy - 4 + i, 2 * w + 1, SSD1306_WHITE);
+      }
+      break;
+    case BOCA_GATO:
+      // "w"
+      dibujarArco(cx - 4, cy - 3, 4, 2, 0, 180);
+      dibujarArco(cx + 4, cy - 3, 4, 2, 0, 180);
+      break;
+    case BOCA_O:
+      display.drawCircle(cx, cy, 4, SSD1306_WHITE);
+      display.drawCircle(cx, cy, 3, SSD1306_WHITE);
+      break;
+    case BOCA_RECTA:
+      display.fillRect(cx - 6, cy, 13, 2, SSD1306_WHITE);
+      break;
+    case BOCA_ONDA:
+      dibujarLineaGruesa(cx - 9, cy, cx - 5, cy - 3, 2);
+      dibujarLineaGruesa(cx - 5, cy - 3, cx - 1, cy, 2);
+      dibujarLineaGruesa(cx - 1, cy, cx + 3, cy - 3, 2);
+      dibujarLineaGruesa(cx + 3, cy - 3, cx + 7, cy, 2);
+      break;
+  }
+}
+
+// Gota de sudor (expresion nerviosa), junto al ojo derecho
+void dibujarGota(int x, int y) {
+  display.fillCircle(x, y + 5, 3, SSD1306_WHITE);
+  display.fillTriangle(x - 3, y + 5, x + 3, y + 5, x, y - 2, SSD1306_WHITE);
+}
+
+void dibujarCara() {
+  display.clearDisplay();
+
+  FormaOjo ojoIzq = OJO_ABIERTO, ojoDer = OJO_ABIERTO;
+  FormaBoca boca = BOCA_SONRISA;
+  switch (expresionCara) {
+    case EXP_FELIZ:     ojoIzq = ojoDer = OJO_ARCO; break;
+    case EXP_RISA:      ojoIzq = ojoDer = OJO_ARCO; boca = BOCA_ABIERTA; break;
+    case EXP_APRETADOS: ojoIzq = ojoDer = OJO_CHEVRON; boca = BOCA_ABIERTA; break;
+    case EXP_GUINO:     (guinoIzquierdo ? ojoIzq : ojoDer) = OJO_ARCO; break;
+    case EXP_PICARA:    ojoIzq = ojoDer = OJO_PARPADO; boca = BOCA_GATO; break;
+    case EXP_NERVIOSA:  boca = BOCA_ONDA; break;
+    case EXP_SORPRESA:  boca = BOCA_O; break;
+    case EXP_CANSADA:   ojoIzq = ojoDer = OJO_CAIDO; boca = BOCA_RECTA; break;
+    case EXP_DORMIDA:   boca = BOCA_O; break;
+    default: break;
+  }
+
+  // Parpadeo (solo con los ojos abiertos): el alto baja hasta casi cerrar y vuelve en 240 ms
+  float alto = ojos.alto;
+  if (inicioParpadeoMs != 0) {
+    unsigned long t = millis() - inicioParpadeoMs;
+    if (t >= 240) inicioParpadeoMs = 0;
+    else alto = max(2.0f, alto * fabsf((float)t - 120.0f) / 120.0f);
+  }
+
+  int cx = 64 + (int)ojos.dx;
+  int dy = (int)ojos.dy;
+  int xIzq = cx - OJO_SEPARACION / 2;
+  int xDer = cx + OJO_SEPARACION / 2;
+  dibujarOjo(xIzq, OJOS_Y + dy, (int)ojos.ancho, ojoIzq == OJO_ARCO || ojoIzq == OJO_CHEVRON ? (int)ojos.alto : (int)alto, ojoIzq, true);
+  dibujarOjo(xDer, OJOS_Y + dy, (int)ojos.ancho, ojoDer == OJO_ARCO || ojoDer == OJO_CHEVRON ? (int)ojos.alto : (int)alto, ojoDer, false);
+
+  if (expresionCara == EXP_DORMIDA) {
+    // Boca pequena y "z" y "Z" que suben despacio
+    display.drawCircle(cx, BOCA_Y + dy, 2, SSD1306_WHITE);
+    uint8_t paso = (millis() / CARA_FOTOGRAMA_DORMIDA_MS) % 10;
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(100, 22 - paso);
+    display.print('z');
+    display.setTextSize(2);
+    display.setCursor(110, 12 - paso);
+    display.print('Z');
+    display.setTextSize(1);
+  } else {
+    dibujarBoca(cx, BOCA_Y + dy, boca);
+  }
+  if (expresionCara == EXP_NERVIOSA) dibujarGota(xDer + OJO_ANCHO / 2 + 4, OJOS_Y + dy - 12);
+
+  display.display();
+}
+
+/**
+ * En Inicio: saca la cara tras un rato sin tocar nada, la alterna con la pantalla de Inicio
+ * y la anima (parpadeos, miradas y gestos al azar).
+ */
+void procesarCara() {
+  if (pantallaActual != PANTALLA_INICIO) return;
+  unsigned long ahora = millis();
+  bool dormir = ahora - ultimaActividadMs >= CARA_DORMIR_MS;
+
+  if (!caraActiva) {
+    if (ahora - ultimaActividadMs < CARA_ESPERA_MS || ahora - cambioCaraMs < CARA_INICIO_MS) return;
+    activarCara();
+  } else if (!dormir && ahora - cambioCaraMs >= CARA_TIEMPO_MS) {
+    desactivarCara();  // Un rato de Inicio y vuelve
+    return;
+  }
+
+  static unsigned long ultimoFotogramaMs = 0;
+  unsigned long intervalo = (expresionCara == EXP_DORMIDA) ? CARA_FOTOGRAMA_DORMIDA_MS : CARA_FOTOGRAMA_MS;
+  if (ahora - ultimoFotogramaMs < intervalo) return;
+  ultimoFotogramaMs = ahora;
+
+  if (dormir) {
+    if (expresionCara != EXP_DORMIDA) ponerExpresion(EXP_DORMIDA, 0);
+  } else {
+    // Fin de un gesto, o cambio de la expresion de fondo (bateria)
+    bool gestoAcabado = duracionExpresionMs != 0 && ahora - inicioExpresionMs >= duracionExpresionMs;
+    if (gestoAcabado || (duracionExpresionMs == 0 && expresionCara != expresionDeFondo())) {
+      ponerExpresion(expresionDeFondo(), 0);
+    }
+    if (momentoLlegado(proximoParpadeoMs)) {
+      if (duracionExpresionMs == 0) inicioParpadeoMs = ahora;  // No parpadea en mitad de un gesto
+      proximoParpadeoMs = ahora + random(2500, 6000);
+    }
+    if (momentoLlegado(proximaMiradaMs)) {
+      if (random(100) < 35) {
+        ojosObjetivo.dx = 0;
+        ojosObjetivo.dy = 0;
+      } else {
+        ojosObjetivo.dx = random(-MIRADA_MAX_X, MIRADA_MAX_X + 1);
+        ojosObjetivo.dy = random(-MIRADA_MAX_Y, MIRADA_MAX_Y + 1);
+      }
+      proximaMiradaMs = ahora + random(1000, 3500);
+    }
+    if (momentoLlegado(proximoGestoMs)) {
+      hacerGestoAleatorio();
+      proximoGestoMs = ahora + random(6000, 15000);
+    }
+  }
+
+  // Movimiento suave: cada fotograma recorre un tercio de lo que falta
+  const float k = 0.35f;
+  ojos.dx += (ojosObjetivo.dx - ojos.dx) * k;
+  ojos.dy += (ojosObjetivo.dy - ojos.dy) * k;
+  ojos.ancho += (ojosObjetivo.ancho - ojos.ancho) * k;
+  ojos.alto += (ojosObjetivo.alto - ojos.alto) * k;
+
+  dibujarCara();
 }
 
 // ============================================================================
@@ -2234,7 +2568,18 @@ void navegarDesdeBarra() {
 // La larga del PRG queda libre (futuro: dormir la placa).
 void procesarBoton() {
   EventoBoton ev = leerEventoBoton();
-  if (ev == BOTON_NINGUNO || ev == BOTON_LARGA) return;
+  if (ev == BOTON_NINGUNO) return;
+
+  ultimaActividadMs = millis();
+  if (caraActiva) {
+    // Con la cara a la vista, el gesto solo la quita: se descartan los pasos de giro que queden
+    portENTER_CRITICAL(&muxEncoder);
+    encPasos = 0;
+    portEXIT_CRITICAL(&muxEncoder);
+    desactivarCara();
+    return;
+  }
+  if (ev == BOTON_LARGA) return;  // Libre (futuro: dormir la placa)
 
   int8_t giro = (ev == ENC_DERECHA) ? 1 : (ev == ENC_IZQUIERDA) ? -1 : 0;
   bool pulsa = (ev == ENC_PULSA);
@@ -2292,9 +2637,8 @@ void procesarBoton() {
             editandoValor = !editandoValor;  // Pulsar, girar y pulsar
             break;
           case 3: {
-            uint8_t maxIdx = caracteresDeLeccion(leccionCW);
             String nuevoGrupo = "";
-            for (int i = 0; i < caracteresCW; i++) nuevoGrupo += TABLA_KOCH[random(0, maxIdx)];
+            for (int i = 0; i < caracteresCW; i++) nuevoGrupo += caracterKochAleatorio(leccionCW);
             transmitirGrupoDuoLoRa(nuevoGrupo);
             break;
           }
@@ -2391,6 +2735,8 @@ void procesarBoton() {
             float pct = 0.0;
             if (totalCaracteresLeccion > 0) pct = ((float)(totalCaracteresLeccion - numeroErrores) / (float)totalCaracteresLeccion) * 100.0;
             registrarResultadoLeccionNVS(leccionCW, pct);
+            ultimoPctKoch = pct;
+            ultimoPctKochMs = millis();
             estadoCW = CW_PANTALLA_RESUMEN_FINAL;
             opcionResumen = 0;
           } else {
@@ -2607,6 +2953,7 @@ void procesarBateriaYPantalla() {
 
 void loop() {
   procesarBoton();
+  procesarCara();
   procesarMaquinaEstadosCW();
   procesarFinEmisionDuo();
   procesarRecepcionLoRa();
