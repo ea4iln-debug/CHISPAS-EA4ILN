@@ -6,8 +6,8 @@ Dispositivo portátil de CW para radioaficionados (indicativo EA4ILN) sobre una 
 estilo LCWO y práctica en pareja por LoRa. A medio plazo: keyer iámbico, decodificador desde transceptor,
 salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 
-## Estado actual (8 oct 2026)
-- Firmware: `src/main.cpp` **v0.6c** (compila; sin cargar en placa). v0.6b cargada y probada en las dos placas (9 oct 2026). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
+## Estado actual (9 oct 2026)
+- Firmware: `src/main.cpp` **v0.6c**, cargada en las dos placas y subida a GitHub (9 oct 2026). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`,
   `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), librerías RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17 y ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado).
 - Desarrollo con **dos Heltec V3 desnudas**: la salida CW va por el LED (GPIO35) y los menús se manejan
@@ -20,14 +20,13 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
 - Hardware en curso: prototipo en protoboard (sección más abajo). La PCB y `pins.h` siguen aplazados.
 - La entrada está abstraída en `leerEventoBoton()` (BOTON_CORTA / BOTON_LARGA): al montar el rotary y el
   pulsador de función solo habrá que cambiar esa función, no los menús.
-- `SPEAKER_PWM_PIN` está en GPIO7 de forma provisional (el GPIO25 del código antiguo no existe en el S3).
+- `SPEAKER_PWM_PIN` en GPIO7, ya fijado en el mapa del prototipo (el GPIO25 del código antiguo no existe en el S3).
 - Revisión hecha: v0.3b -> v0.3c (temporizador entre caracteres, semilla con `esp_random()`, flag LoRa tras TX,
   `salirModoLoRa()`) -> v0.3d (botón por eventos, sin `delay`).
 - 8 oct 2026, probado en placa: v0.3e cola de recepción LoRa (8 grupos) -> v0.3f estadísticas 3.5 (L40 y ancho),
   `¿` con `write(0xA8)`, foco al volver a P2 -> v0.3g batería en caché cada 30 s fuera de la emisión CW y
   redibujado solo por cambios (sin refresco fijo) -> v0.3h RSSI en Duo y medida de temporización CW por serie
   (`DEBUG_CW`; resultado: retraso máx. 0 ms). RSSI medido: -31 dBm a 2 m.
-- **v0.5e cargada en las dos placas** (8 oct 2026).
 - Las pruebas son con LED, pantalla y monitor serie: no hay audio conectado (no proponer pruebas "a oído").
 - La versión está en `#define FW_VERSION` (al principio de `main.cpp`): se ve en la pantalla 1 y por serie.
   Subirla en cada cambio que se cargue en placa.
@@ -63,6 +62,19 @@ salida key, GPS/locator, POTA/SOTA, propagación y línea gris.
   (corta enseguida con una notificación), `motorCWOcupado()` y `motorCWFinMs`. Solo la tarea llama a `conmutarEmisionMorse()`.
   Koch (`CW_EMITIENDO_GRUPO`) y Duo piden el grupo y esperan a que acabe. Se quitó `motorCWActivo()`: batería y
   redibujado ya se hacen aunque suene CW. `DEBUG_CW` mide desde la tarea.
+
+## Dónde lo dejamos (9 oct 2026) y siguiente sesión
+- Hecho hoy: batería calibrada (v0.5f), motor CW en tarea FreeRTOS (v0.6a/b, probado), lista de la compra revisada,
+  esquema `docs/esquema_protoboard.pdf` y v0.6c (palas 4/5, KEY en GPIO2 en BAJO). Todo con commit y push.
+- Sin confirmar: que GPIO2 mide 0 V con el polímetro tras arrancar y tras RST con la v0.6c.
+- Siguiente, por el orden de montaje de la hoja 6 del esquema:
+  1. Raíles 3V3/GND de la Heltec a la protoboard (comprobar 3,3 V y que no hay cortocircuito).
+  2. Programa de prueba de pines por serie (19, 20, 48 y reserva 38–40) con el encoder conectado: decide si el
+     encoder se queda en 19/20/48 o pasa a 38/39/40.
+  3. Encoder en el firmware: nueva fuente de eventos en `leerEventoBoton()`. Luego desbloquea lo aplazado
+     (estadísticas por carácter, indicativo por placa).
+  4. Después: palas y keyer iámbico (usa el motor CW), tono por buzzer, KEY, decodificador y GPS cuando llegue.
+- Falta comprar: divisor minijack 1→2, 2 pulsadores 6×6 mm (y soldador si no tiene).
 
 ## Pendiente conocido (por prioridad; orden confirmado por el usuario)
 1. Aplazado hasta tener el encoder (decisión del usuario, 8 oct 2026):
