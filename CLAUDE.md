@@ -116,7 +116,10 @@ el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manip
 ## Pendiente
 1. **Por hacer:** cargar la versión actual en la placa 2 (sigue en v0.6n).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas): buzzer, auriculares y volumen (tono en
-   GPIO7 ya programado); salida KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue
+   GPIO7 ya programado). **Buzzer:** el comprado resultó **magnético** (16 Ω, + marcado), no piezo: con R1 de 1 kΩ
+   no se oye nada (probado 10 oct 2026). El usuario ha pedido un **piezo pasivo** (llega el lunes 12 oct); montar
+   entonces la fase 1 (GPIO7 J3-18 → R1 → RV1 pat. 3; pat. 1 a GND; cursor → C1 + → buzzer + → GND) y luego J2. Si el
+   piezo suena flojo a 600 Hz: hacer configurable la frecuencia del tono (700–800 Hz); salida KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue
    (opcionales: enable del GPS y BME280). Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm.
 3. **Ideas aparcadas por el usuario** (para repensar más adelante):
    - **Estadísticas por carácter** (recomendada): marcar fallos al corregir el Koch y recoger los del Echo; guardar
