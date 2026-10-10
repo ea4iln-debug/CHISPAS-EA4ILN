@@ -6,7 +6,7 @@ Envia la orden 'p' al firmware (v0.8c o posterior), lee el buffer de la OLED (12
 y lo guarda ampliado. Abre el puerto con DTR y RTS a False para no reiniciar la placa.
 Cierra antes el monitor serie de PlatformIO: el puerto no se puede compartir.
 
-Uso: python docs/captura_oled.py [--puerto COM16] [--escala 4] [--salida archivo.png]
+Uso: python docs/captura_oled.py [--puerto COM16] [--escala 4] [--salida archivo.png] [--color azul|blanco]
 Solo necesita pyserial (el PNG se escribe sin librerias extra).
 """
 
@@ -19,8 +19,11 @@ import zlib
 import serial
 
 ANCHO, ALTO = 128, 64
-COLOR_ENCENDIDO = (255, 255, 255)
-COLOR_APAGADO = (0, 0, 0)
+# Colores (encendido, apagado): azul como el de la OLED por defecto; blanco para documentos impresos
+COLORES = {
+    "azul": ((80, 180, 255), (4, 8, 16)),
+    "blanco": ((255, 255, 255), (0, 0, 0)),
+}
 
 
 def leer_buffer(puerto, espera_s=3.0):
@@ -56,13 +59,14 @@ def a_pixeles(buf):
     return [[bool(buf[x + (y // 8) * ANCHO] >> (y % 8) & 1) for x in range(ANCHO)] for y in range(ALTO)]
 
 
-def guardar_png(pixeles, ruta, escala):
+def guardar_png(pixeles, ruta, escala, color="azul"):
+    encendido, apagado = (bytes(c) for c in COLORES[color])
     ancho, alto = ANCHO * escala, ALTO * escala
     crudo = bytearray()
     for fila in pixeles:
         linea = bytearray()
         for p in fila:
-            linea += bytes(COLOR_ENCENDIDO if p else COLOR_APAGADO) * escala
+            linea += (encendido if p else apagado) * escala
         for _ in range(escala):
             crudo += b"\x00" + linea  # filtro 0 por fila
 
@@ -81,12 +85,13 @@ def main():
     ap.add_argument("--puerto", default="COM16")
     ap.add_argument("--escala", type=int, default=4)
     ap.add_argument("--salida", default=time.strftime("captura_%Y%m%d_%H%M%S.png"))
+    ap.add_argument("--color", choices=sorted(COLORES), default="azul")
     args = ap.parse_args()
     try:
         buf = leer_buffer(args.puerto)
     except (serial.SerialException, RuntimeError) as e:
         sys.exit(f"Error: {e}")
-    guardar_png(a_pixeles(buf), args.salida, args.escala)
+    guardar_png(a_pixeles(buf), args.salida, args.escala, args.color)
     print(f"Guardada: {args.salida} ({ANCHO * args.escala}x{ALTO * args.escala})")
 
 
