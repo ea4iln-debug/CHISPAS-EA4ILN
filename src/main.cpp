@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.7s - Sin restos del nombre antiguo; Echo espera a "iniciar"; Duo: radio despierta bien; modo sin encoder; brillo y apagado configurable
+ * @version 0.7t - La memoria de la estacion pasa a llamarse "estacion" (indicativo, locator y hora UTC empiezan de cero)
  * @date 2026-10-09
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.7s"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.7t"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -171,7 +171,8 @@ const char* obtenerCodigoMorse(char c) {
 #define MORSE_ESPACIO_PALABRA  0x00
 #define MORSE_NO_VALIDO        0x01  // Centinela sin elementos: caracter sin codigo Morse
 
-// Datos de la estacion: se guardan en NVS (espacio "mr_estacion") y se cambian desde el portal WiFi
+// Datos de la estacion: se guardan en NVS (espacio NVS_ESTACION) y se cambian desde el portal WiFi
+#define NVS_ESTACION "estacion"
 #define INDICATIVO_POR_DEFECTO "EA4ILN"
 #define LOCATOR_POR_DEFECTO    "IN80dk"  // Madrid (generico): cada estacion pone el suyo en webconf
 char indicativoEstacion[TRAMA_LONG_INDICATIVO + 1] = INDICATIVO_POR_DEFECTO;
@@ -880,7 +881,7 @@ void borrarTodasLasEstadisticasNVS() {
 }
 
 void cargarEstacionNVS() {
-  prefs.begin("mr_estacion", true);
+  prefs.begin(NVS_ESTACION, true);
   strlcpy(indicativoEstacion, prefs.getString("call", INDICATIVO_POR_DEFECTO).c_str(), sizeof(indicativoEstacion));
   strlcpy(locatorEstacion, prefs.getString("loc", LOCATOR_POR_DEFECTO).c_str(), sizeof(locatorEstacion));
   horaUtcCabecera = prefs.getBool("utc", false);
@@ -888,7 +889,7 @@ void cargarEstacionNVS() {
 }
 
 void guardarEstacionNVS() {
-  prefs.begin("mr_estacion", false);
+  prefs.begin(NVS_ESTACION, false);
   prefs.putString("call", indicativoEstacion);
   prefs.putString("loc", locatorEstacion);
   prefs.putBool("utc", horaUtcCabecera);
@@ -2601,7 +2602,7 @@ void resetFabrica() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.clear();
   prefs.end();
-  prefs.begin("mr_estacion", false);
+  prefs.begin(NVS_ESTACION, false);
   prefs.clear();
   prefs.end();
   wm.resetSettings();  // Red WiFi guardada
