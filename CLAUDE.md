@@ -16,7 +16,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.9a** en la placa 1 (la placa 2 tiene la v0.8h: le faltan los nombres del menú LoRa, el umbral de palabra a 6 puntos, las opciones centradas y la pantalla TRX). v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.9a** en las dos placas. v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
@@ -222,7 +222,7 @@ el transceptor, GPS/locator.
    llegue (opcionales: enable del GPS y BME280). **Pendiente de comprobar en la pantalla TRX:** GPIO2 con el polímetro
    en OPERAR (~3,3 V con cada elemento, 0 V en reposo), luego con el PC817 y la emisora; decodificador con señal real
    (ajustar RV2 con la barra, `DECOD_MIN_SENAL` y la escala; probar AUTO y tono fijo); que el ADC por DMA arranque
-   y pare sin errores y que la batería se siga leyendo después de usar DECODIFICAR o QSO; cargar la v0.9a en la placa 2. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
+   y pare sin errores y que la batería se siga leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - Repetir más las letras con más errores en Koch y Echo (las estadísticas por carácter ya existen, v0.8g).
    - Editar indicativo y locator en el aparato con el encoder (sin móvil ni webconf).
