@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.7l - La memoria del entrenador pasa a llamarse "chispas" (se empieza de cero y se borra "mr_morse")
+ * @version 0.7m - Ahorro: CPU a 80 MHz sin WiFi, descanso de 1 ms en loop, LoRa dormida fuera de Duo, WiFi apagado en CONF y SOL, OLED tenue con la cara dormida; diagnostico por serie
  * @date 2026-10-09
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.7l"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.7m"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -776,9 +776,13 @@ void procesarTextoKeyer() {
 
 void borrarEspacioAntiguoNVS() {
   // API de ESP-IDF: en solo lectura, nvs_open() no crea el espacio si no existe (ni escribe errores)
+  // Tras borrarlo, el nombre del espacio sigue registrado (vacio): solo se actua si le quedan datos
   nvs_handle_t h;
   if (nvs_open(NVS_ENTRENADOR_ANTIGUO, NVS_READONLY, &h) != ESP_OK) return;
+  size_t entradas = 0;
+  nvs_get_used_entry_count(h, &entradas);
   nvs_close(h);
+  if (entradas == 0) return;
   if (nvs_open(NVS_ENTRENADOR_ANTIGUO, NVS_READWRITE, &h) == ESP_OK) {
     nvs_erase_all(h);
     nvs_commit(h);
@@ -1309,6 +1313,7 @@ void salirModoLoRa() {
   subpantalla4Activa = 0;
   editandoValor = false;
   modoRadioRxActivo = false;
+  radio.sleep();  // Ahorro: fuera de Duo y QSO la radio duerme (sleep templado: conserva la configuracion)
   flagPaqueteRecibido = false;
 
   emitiendoMorseDuo = false;
@@ -1555,6 +1560,8 @@ void dibujarPantallaQr() {
   display.display();
 }
 
+void cpuSegunWifi(bool wifiEncendido);  // Definida justo debajo
+
 void abrirPortalWifi() {
   if (nombrePortal[0] == '\0') {
     uint8_t mac[6];
@@ -1581,6 +1588,7 @@ void abrirPortalWifi() {
   paramHoraUtc.setValue("1", 2);
   paramHoraUtc.marcada = horaUtcCabecera;
 
+  cpuSegunWifi(true);
   WiFi.mode(WIFI_STA);
   wm.setConfigPortalBlocking(false);
   wm.setConfigPortalTimeout(PORTAL_TIMEOUT_S);
@@ -1594,15 +1602,28 @@ void abrirPortalWifi() {
  * Sin red guardada o si no conecta: no se abre el portal solo; la pantalla lo explica y ofrece
  * "abrir webconf" (el usuario decide).
  */
+// Ahorro: la CPU va a 80 MHz con el WiFi apagado y a 240 MHz con el encendido (HTTPS y portal).
+// El motor CW, el keyer (ticks del systimer), el tono, el I2C y el puerto serie (APB a 80 MHz) no
+// dependen de esta frecuencia.
+#define CPU_MHZ_REPOSO 80
+#define CPU_MHZ_WIFI   240
+
+void cpuSegunWifi(bool wifiEncendido) {
+  uint32_t mhz = wifiEncendido ? CPU_MHZ_WIFI : CPU_MHZ_REPOSO;
+  if (getCpuFrequencyMhz() != mhz) setCpuFrequencyMhz(mhz);
+}
+
 void quedarseSinConexion() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
+  cpuSegunWifi(false);
   estadoWifi = WIFI_SIN_CONEXION;
   opcionSinConexion = 0;  // Foco en "abrir webconf"
   pantallaPendiente = true;
 }
 
 void encenderWifi() {
+  cpuSegunWifi(true);
   WiFi.mode(WIFI_STA);
   if (!wm.getWiFiIsSaved()) {
     Serial.println(F("[WIFI] NO HAY RED GUARDADA"));
@@ -1620,6 +1641,7 @@ void apagarWifi() {
   if (estadoWifi == WIFI_PORTAL) wm.stopConfigPortal();
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
+  cpuSegunWifi(false);
   estadoWifi = WIFI_APAGADO;
   Serial.println(F("[WIFI] APAGADO"));
 }
@@ -1749,13 +1771,16 @@ void pedirActualizacionWifi() {
 void procesarWifi() {
   static uint8_t pantallaAnterior = 0;
   // PROP y POTA encienden el WiFi al entrar; SOL tambien, pero solo si aun no hay hora (para
-  // sincronizarla por NTP). Si no conecta, en las tres se abre el portal solo. En CONF solo se usa
-  // si se abre el portal. Al ir a cualquier otra pantalla se apaga.
+  // sincronizarla por NTP). Si no conecta, muestran el aviso con "abrir webconf". En CONF y SOL el WiFi
+  // solo sigue encendido si el portal esta abierto: si se llega con el WiFi conectado (desde PROP o
+  // POTA) se apaga, porque no se usa (eran unos 40 mA de mas, medido).
   if (pantallaActual != pantallaAnterior) {
     struct tm hora;
     bool solSinHora = pantallaActual == PANTALLA_SOL && !horaLocalValida(hora);
     bool enDatos = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS || solSinHora);
-    bool usaWifi = enDatos || pantallaActual == PANTALLA_CONFIG || pantallaActual == PANTALLA_SOL;
+    bool conPortal = estadoWifi == WIFI_PORTAL &&
+                     (pantallaActual == PANTALLA_CONFIG || pantallaActual == PANTALLA_SOL);
+    bool usaWifi = enDatos || conPortal;
     if (enDatos && (estadoWifi == WIFI_APAGADO || estadoWifi == WIFI_SIN_CONEXION)) encenderWifi();
     if (!usaWifi && estadoWifi != WIFI_APAGADO) apagarWifi();
     pantallaAnterior = pantallaActual;
@@ -2814,6 +2839,7 @@ void activarCara() {
 void desactivarCara() {
   caraActiva = false;
   cambioCaraMs = millis();
+  display.dim(false);  // Por si estaba dormida
   actualizarPantalla();
 }
 
@@ -2983,7 +3009,10 @@ void procesarCara() {
   ultimoFotogramaMs = ahora;
 
   if (dormir) {
-    if (expresionCara != EXP_DORMIDA) ponerExpresion(EXP_DORMIDA, 0);
+    if (expresionCara != EXP_DORMIDA) {
+      ponerExpresion(EXP_DORMIDA, 0);
+      display.dim(true);  // Ahorro: OLED al minimo de brillo mientras duerme
+    }
   } else {
     // Fin de un gesto, o cambio de la expresion de fondo (bateria)
     bool gestoAcabado = duracionExpresionMs != 0 && ahora - inicioExpresionMs >= duracionExpresionMs;
@@ -3231,9 +3260,11 @@ void procesarBoton() {
         if (opcionPantalla4 == 0) {
           enPantalla4_Sub = true; subpantalla4Activa = 1;
           modoRadioRxActivo = true; opcionDuo4_1 = 3;
+          radio.startReceive();  // La radio duerme fuera de Duo y QSO
         } else if (opcionPantalla4 == 1) {
           enPantalla4_Sub = true; subpantalla4Activa = 2;
           modoRadioRxActivo = true;
+          radio.startReceive();
         } else {
           navegarDesdeBarra();
         }
@@ -3524,6 +3555,7 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
   Serial.println(F("\n[INIT] Chispas EA4ILN v" FW_VERSION "..."));
+  cpuSegunWifi(false);  // Ahorro: 80 MHz mientras el WiFi este apagado
   
   encenderPerifericos();
   iniciarMotorCW();
@@ -3590,7 +3622,7 @@ void setup() {
     Serial.println(F("[LORA] MODULO OK. VINCULANDO ISR EN DIO1..."));
     
     radio.setPacketReceivedAction(cbInterrupcionLora);
-    radio.startReceive();
+    radio.sleep();  // Ahorro: solo escucha en Duo y QSO (al entrar se llama a startReceive)
   } else {
     estadoLoraStr = "ERR (" + String(state) + ")";
     Serial.print(F("[LORA ERROR] CODE: "));
@@ -3631,6 +3663,26 @@ void procesarBateriaYPantalla() {
   }
 }
 
+/**
+ * Diagnostico por serie cada DIAG_INTERVALO_MS: memoria (libre, minimo historico y mayor bloque, para
+ * vigilar la fragmentacion), pila libre de cada tarea, uso de la NVS y frecuencia de la CPU.
+ */
+#define DIAG_INTERVALO_MS 60000UL
+
+void procesarDiagnostico() {
+  static unsigned long ultimoMs = 0;
+  if (millis() - ultimoMs < DIAG_INTERVALO_MS) return;
+  ultimoMs = millis();
+  nvs_stats_t nvs;
+  bool hayNvs = nvs_get_stats(NULL, &nvs) == ESP_OK;
+  Serial.printf("[DIAG] %lu min | heap libre %u, minimo %u, mayor bloque %u | pila libre: loop %u, motorCW %u, keyer %u | "
+                "NVS %u/%u entradas | CPU %u MHz\n",
+                millis() / 60000, ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(),
+                uxTaskGetStackHighWaterMark(NULL), uxTaskGetStackHighWaterMark(tareaMotorCW),
+                uxTaskGetStackHighWaterMark(tareaKeyer), hayNvs ? nvs.used_entries : 0,
+                hayNvs ? nvs.total_entries : 0, getCpuFrequencyMhz());
+}
+
 void loop() {
   procesarBoton();
   procesarTextoKeyer();
@@ -3642,4 +3694,10 @@ void loop() {
   procesarColaRxDuo();
   procesarWifi();
   procesarBateriaYPantalla();
+  procesarDiagnostico();
+
+  // Ahorro: 1 ms de descanso por vuelta. Sin el, loop() tenia un nucleo al 100 %; con el, la CPU espera
+  // en reposo. Las entradas siguen respondiendo (encoder por interrupcion; pulsadores cada ~1 ms) y el
+  // CW no se ve afectado (motor y keyer van en sus propias tareas)
+  vTaskDelay(1);
 }

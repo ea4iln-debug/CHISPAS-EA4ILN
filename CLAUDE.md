@@ -17,7 +17,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.7l**, cargada en las dos placas (10 oct 2026): placa 1 (protoboard con encoder, palas y
+- Firmware: `src/main.cpp` **v0.7m**, cargada en las dos placas (10 oct 2026): placa 1 (protoboard con encoder, palas y
   batería; COM16) y placa 2 (desnuda; sin encoder solo funciona el PRG como "atrás"). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
   6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
@@ -33,7 +33,15 @@ el transceptor, GPS/locator.
   estadísticas; el reset de fábrica lo borra todo. El locator por defecto es genérico (IN80dk, Madrid): cada placa
   debe poner el suyo en webconf.
 - Recursos (v0.6m): flash 1,12 MB de 3,19 MB (app0); RAM estática 51,8 KB de 320 KB; app1 (OTA) y spiffs (1,5 MB,
-  reservada para el CSV de POTA) sin usar.
+  reservada para el CSV de POTA) sin usar. `[DIAG]` por serie cada minuto (v0.7m): heap libre ~317 KB con el WiFi
+  apagado y mínimo ~181 KB tras usar WiFi + HTTPS; pila libre: loop ~4,3 KB (tras HTTPS), motorCW 3,3 KB de 4, keyer
+  2,3 KB de 3; NVS 168/630 entradas.
+- **Consumo** (medido por USB sin batería, resolución 10 mA): v0.7l: 50 mA sin WiFi, 90 mA con WiFi (y el WiFi se
+  quedaba encendido en CONF y SOL). **v0.7m: 30 mA sin WiFi, 50–60 mA con WiFi** (~100 h con 3000 mAh, estimado).
+  Cambios: CPU a 80 MHz con el WiFi apagado y 240 MHz con el encendido (`cpuSegunWifi()`), `vTaskDelay(1)` al final de
+  `loop()`, LoRa dormida fuera de Duo/QSO (`radio.sleep()`; `startReceive()` al entrar), WiFi apagado en CONF y SOL
+  salvo con el portal abierto o SOL esperando la hora, OLED tenue (`display.dim`) con la cara dormida. Duo con la radio
+  dormida/despierta: **sin probar entre dos placas** (la placa 2 no tiene encoder).
 
 ## Manejo (encoder KY-040; probado)
 - **Todo se hace con el encoder:** girar mueve el foco (`moverFocoAnillo()`), pulsar ejecuta, y pulsar sobre un
@@ -133,12 +141,9 @@ el transceptor, GPS/locator.
      aciertos/fallos por letra en NVS y mostrar las más flojas. Opcional: repetir más las letras flojas.
    - Editar indicativo y locator en el aparato con el encoder (sin móvil ni webconf).
    - Aceleración del giro: al girar rápido, los valores avanzan de 5 en 5.
-   - **Consumo y recursos. Primero medir**: línea por serie cada minuto con heap libre, mínimo histórico, pila libre
-     de cada tarea (`uxTaskGetStackHighWaterMark`) y uso de NVS (`nvs_get_stats`); consumo con polímetro o medidor USB
-     antes y después de cada cambio. Luego, por orden: (1) `loop()` gira sin pausa y tiene el núcleo 1 al 100 %:
-     `delay(1)` por vuelta o bajar la CPU a 80–160 MHz fuera del WiFi; (2) la LoRa está en recepción siempre: dormirla
-     fuera de Duo (~5 mA); (3) bajar el brillo de la OLED con la cara dormida; (4) deep sleep con PRG largo. Vigilar
-     la fragmentación por el uso de `String` con muchas horas encendido.
+   - **Consumo, lo que queda:** (4) deep sleep con PRG largo (despertar con GPIO0; probar OLED, LoRa y Vext al
+     volver); (5) apagado automático tras X min sin uso, salvo en Duo o con el portal abierto; bajar el brillo de la
+     OLED tras un rato sin uso en cualquier pantalla. Vigilar la fragmentación con el `[DIAG]` tras muchas horas.
    - Detectar USB y carga: la V3 no lo permite por software. Propuesta sin decidir: divisor 100k/150k del pin 5V
      (J2-2) a GPIO33 (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.
 4. Pantalla Duo para textos largos y QSO por LoRa con el keyer. A futuro: audio I2S y OTA.
