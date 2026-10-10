@@ -5,12 +5,24 @@
 ![Plataforma](https://img.shields.io/badge/plataforma-ESP32--S3-blue)
 ![Placa](https://img.shields.io/badge/placa-Heltec%20WiFi%20LoRa%2032%20V3-orange)
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2B%20PlatformIO-teal)
-![Versión](https://img.shields.io/badge/firmware-v0.9b-green)
-![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)
+![Versión](https://img.shields.io/badge/firmware-v0.9c-green)
+![Estado](https://img.shields.io/badge/estado-desarrollo%20temprano-orange)
 ![Licencia del software](https://img.shields.io/badge/software-GPL--3.0-blue)
 ![Licencia del hardware](https://img.shields.io/badge/hardware%20y%20docs-CC%20BY--NC--SA%204.0-lightgrey)
 
 > *"Chispas"* era el apodo que se daba al radiotelegrafista de a bordo.
+
+> [!WARNING]
+> **Proyecto en desarrollo temprano.** Chispas es un prototipo en protoboard: el firmware cambia a menudo, hay
+> funciones sin probar con su hardware (salida KEY y decodificador) y los valores del circuito son de partida.
+> Úsalo bajo tu responsabilidad: lee el [descargo de responsabilidad](#descargo-de-responsabilidad).
+
+<p align="center">
+  <img src="docs/img/prototipo.jpg" width="800" alt="Prototipo de Chispas en protoboard: Heltec V3 con encoder, jack de auriculares, buzzer y potenciómetro de volumen, manipulador de palas y una segunda placa con batería">
+  <br>
+  <sub>El prototipo en protoboard (octubre de 2026): Heltec V3 con encoder, buzzer, jack de auriculares, volumen y
+  manipulador de palas. Abajo a la derecha, la segunda placa, con batería, para practicar por LoRa.</sub>
+</p>
 
 Chispas reúne en un aparato de bolsillo lo necesario para aprender y practicar CW: un entrenador por el método Koch,
 un keyer iámbico, un modo de repetición (Echo), práctica en pareja y QSO por radio LoRa, conexión con el transceptor
@@ -37,6 +49,7 @@ línea gris. Todo se maneja con un encoder rotativo y una pantalla OLED.
 - [Detalles técnicos](#detalles-técnicos)
 - [Hoja de ruta](#hoja-de-ruta)
 - [Avisos](#avisos)
+- [Descargo de responsabilidad](#descargo-de-responsabilidad)
 - [Créditos y referencias](#créditos-y-referencias)
 - [Licencia](#licencia)
 - [Autor](#autor)
@@ -303,19 +316,58 @@ con la opción **abrir webconf**.
 - **Salida KEY:** manipular un transceptor de radioaficionado requiere la licencia correspondiente.
 - **SOTA:** no hay cliente de SOTA. Las condiciones de su API exigen aprobación previa para software de terceros
   como este.
-- **APIs externas:** los datos de propagación y de POTA vienen de servicios públicos no oficiales. Chispas los consulta
-  con moderación (cada 30 y 2 minutos).
+- **Servicios externos:** los datos de propagación y de POTA vienen de servicios públicos. hamqsl.com pide no consultar
+  su XML más de una vez por hora y Chispas lo respeta. pota.app no publica condiciones para su API: Chispas la consulta
+  cada 2 minutos, solo con la pantalla POTA abierta.
+
+---
+
+## Descargo de responsabilidad
+
+Chispas es un proyecto personal de radioafición, sin ánimo de lucro, en desarrollo temprano. Se ofrece **tal cual,
+sin garantía de ningún tipo**: ni de que funcione, ni de que sirva para un fin concreto, ni de que esté libre de
+errores (ver las licencias GPL-3.0 y CC BY-NC-SA 4.0).
+
+- **Responsabilidad:** quien monte, modifique o use Chispas lo hace bajo su propia responsabilidad. El autor no
+  responde de daños en personas, en la placa, en el transceptor o en otros equipos, ni de pérdidas de datos o de
+  cualquier otro perjuicio derivado de su uso.
+- **Circuitos:** los esquemas y valores son de un prototipo y en buena parte no se han probado en banco. Revísalos
+  antes de montarlos y comprueba con el polímetro antes de conectar nada.
+- **Transceptor:** conectar Chispas a una emisora (salida KEY y entrada de audio) puede dañar uno u otro equipo si se
+  monta mal. Usa siempre el aislamiento previsto (optoacoplador) y prueba primero sin la emisora. La salida KEY tiene
+  un corte de seguridad por software, pero no sustituye a la vigilancia del operador.
+- **Batería LiPo:** una batería mal conectada, dañada o cargada sin vigilancia puede calentarse o incendiarse.
+  Comprueba la polaridad y no la dejes cargando desatendida.
+- **Normativa:** la emisión por LoRa (868 MHz) y la manipulación de un transceptor de radioaficionado están sujetas a
+  la normativa de cada país y, en el segundo caso, a tener la licencia correspondiente. Cumplirla es cosa de quien
+  opera el equipo.
+- **Servicios externos:** los datos de propagación y de POTA vienen de servicios de terceros que pueden cambiar o
+  dejar de funcionar; no deben usarse para decisiones críticas.
 
 ---
 
 ## Créditos y referencias
 
-- Método Koch y orden de caracteres de [LCWO.net](https://lcwo.net/).
-- [Morserino-32](https://www.morserino.info/), como referencia de diseño.
-- Datos de propagación: [hamqsl.com](https://www.hamqsl.com/) (N0NBH). Spots: [pota.app](https://pota.app/).
-- Librerías: [RadioLib](https://github.com/jgromes/RadioLib), [Adafruit GFX y SSD1306](https://github.com/adafruit),
-  [WiFiManager](https://github.com/tzapu/WiFiManager) (MIT; la traducción de `include/wm_strings_chispas.h` parte de
-  su archivo en español) y [ArduinoJson](https://arduinojson.org/).
+- Método Koch y orden de caracteres de [LCWO.net](https://lcwo.net/) (Fabian Kurz, DJ5CW).
+- [Morserino-32](https://www.morserino.info/), como referencia de diseño (no se ha copiado código).
+- [Meshtastic](https://meshtastic.org/), como referencia de datos de la Heltec V3 (tensión del TCXO, lectura de la
+  batería); no se ha copiado código.
+- Datos de propagación: [HAMQSL.com](https://www.hamqsl.com/), de Paul L. Herrman, N0NBH, y las fuentes que él cita.
+  Spots: [pota.app](https://pota.app/) (Parks on the Air).
+- Cálculo solar con las ecuaciones de la [NOAA](https://gml.noaa.gov/grad/solcalc/calcdetails.html) (dominio
+  público).
+- Librerías:
+
+  | Librería | Licencia |
+  |---|---|
+  | [Arduino-ESP32](https://github.com/espressif/arduino-esp32) (core) | LGPL-2.1 |
+  | [ESP-IDF](https://github.com/espressif/esp-idf), incluido en el core (ADC por DMA, `qrcode`) | Apache-2.0 |
+  | [QR Code generator](https://www.nayuki.io/page/qr-code-generator-library) (Project Nayuki), dentro del `qrcode` de ESP-IDF | MIT |
+  | [RadioLib](https://github.com/jgromes/RadioLib) | MIT |
+  | [Adafruit GFX](https://github.com/adafruit/Adafruit-GFX-Library) y [Adafruit SSD1306](https://github.com/adafruit/Adafruit_SSD1306) | BSD |
+  | [Adafruit BusIO](https://github.com/adafruit/Adafruit_BusIO) | MIT |
+  | [WiFiManager](https://github.com/tzapu/WiFiManager) (la traducción de `include/wm_strings_chispas.h` parte de su archivo en español) | MIT |
+  | [ArduinoJson](https://arduinojson.org/) | MIT |
 
 ---
 
@@ -325,7 +377,7 @@ Chispas tiene dos licencias, según el tipo de contenido:
 
 | Parte | Licencia | Archivo |
 |---|---|---|
-| **Software**: firmware (`src/`), programas de prueba (`pruebas/`), `include/` y scripts (`docs/gen_esquema.py`) | [GNU GPL v3.0 o posterior](https://www.gnu.org/licenses/gpl-3.0.html) | [`LICENSE`](LICENSE) |
+| **Software**: firmware (`src/`), programas de prueba (`pruebas/`), `include/` y scripts (`docs/*.py`) | [GNU GPL v3.0 o posterior](https://www.gnu.org/licenses/gpl-3.0.html) | [`LICENSE`](LICENSE) |
 | **Hardware y documentación**: esquema, lista de componentes, diseño del montaje, README e imágenes | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es) | [`LICENSE-HARDWARE.md`](LICENSE-HARDWARE.md) |
 
 - **Software (GPL-3.0):** es software libre. Puedes usarlo, estudiarlo, modificarlo y redistribuirlo; si distribuyes
@@ -334,7 +386,12 @@ Chispas tiene dos licencias, según el tipo de contenido:
   comerciales** y con la misma licencia. Para un uso comercial, contacta con el autor.
 
 `include/wm_strings_chispas.h` deriva de WiFiManager y conserva su aviso de licencia MIT. Las librerías externas
-mantienen sus propias licencias.
+mantienen sus propias licencias (ver [Créditos y referencias](#créditos-y-referencias)); todas son compatibles con la
+GPL-3.0. El repositorio solo contiene código fuente: PlatformIO descarga las librerías al compilar. Si distribuyes el
+firmware ya compilado (`.bin`), acompáñalo de los avisos de licencia de esas librerías y del código fuente.
+
+Las capturas de `docs/img/` muestran datos de terceros (propagación de HAMQSL.com y spots de pota.app), que siguen
+siendo de sus autores.
 
 ---
 

@@ -16,7 +16,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.9b** en la placa 1 (la placa 2 tiene la v0.9a: solo le faltan las órdenes serie provisionales de las capturas). v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.9c** en git (propagación cada hora), **sin cargar**: la placa 1 tiene la v0.9b y la placa 2 la v0.9a (le faltan las órdenes serie provisionales de las capturas). v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
@@ -126,7 +126,7 @@ el transceptor, GPS/locator.
   Si no hay red guardada o no conecta en 15 s, el portal **no se abre solo**: estado `WIFI_SIN_CONEXION` con aviso fijo
   y opción `> abrir webconf` (foco por defecto; girar lleva a ant./sig.; `opcionSinConexion`); si el portal se cierra
   por tiempo (5 min) en esas pantallas, vuelve el aviso. Al reentrar se reintenta. Hora NTP (CET/CEST) al conectar.
-  HTTPS con `setInsecure()`. PROP: hamqsl.com cada 30 min, dos páginas (índices y condiciones por banda). POTA: spots
+  HTTPS con `setInsecure()`. PROP: hamqsl.com cada 60 min (su autor pide no consultar el XML más de una vez por hora; desde la v0.9c), dos páginas (índices y condiciones por banda). POTA: spots
   solo CW cada 2 min (sin límites publicados: con moderación); línea de spot en 21 caracteres (referencia entera a la
   derecha; la frecuencia pierde el decimal y luego se recorta el indicativo si no cabe).
 - **Webconf** (portal WiFiManager, `Chispas-XXXX`, clave `PORTAL_CLAVE` = `chispas73`, 192.168.4.1; v0.7f–k,

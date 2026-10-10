@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.9b - Navegacion simulada por serie (provisional, para las capturas del README)
+ * @version 0.9c - Propagacion de hamqsl.com cada hora (lo pide su autor); antes, cada 30 min
  * @date 2026-10-10
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.9b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.9c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -2254,7 +2254,9 @@ void salirModoLoRa() {
 #define ZONA_HORARIA             "CET-1CEST,M3.5.0,M10.5.0/3"  // Peninsula
 #define URL_PROPAGACION          "https://www.hamqsl.com/solarxml.php"
 #define URL_POTA                 "https://api.pota.app/spot/activator"
-#define REFRESCO_PROPAGACION_MS  (30UL * 60 * 1000)  // hamqsl actualiza cada pocas horas
+// hamqsl.com (N0NBH) pide expresamente no consultar el XML mas de una vez por hora ("please only select to update
+// every hour", hamqsl.com/solar.html): es lo que tarda en cambiar el flujo solar; el resto, cada 3 horas
+#define REFRESCO_PROPAGACION_MS  (60UL * 60 * 1000)
 #define REFRESCO_POTA_MS         (2UL * 60 * 1000)   // POTA no publica limites: se consulta con moderacion
 #define MAX_SPOTS_POTA           40
 #define SPOTS_POR_PAGINA         4
