@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.8a - OLED: vuelve al arranque de la v0.4e; atenuacion con contraste bajo legible; diagnostico de la OLED por serie (s, a, b, v)
+ * @version 0.8b - OLED: arranque de la v0.4e y atenuacion con display.dim (contraste 0), sin ordenes de diagnostico por serie
  * @date 2026-10-09
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.8a"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.8b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -3616,63 +3616,19 @@ void encenderPerifericos() {
 }
 
 /**
- * Reenvia a la OLED bomba de carga (0x8D 0x14) y encendido (0xAF); con apagarAntes, primero 0xAE.
- * Tras algunos reinicios cortos (RST o el RTS al cargar firmware) la OLED contesta por I2C y dice estar
- * encendida, pero el panel se queda negro, sin ningun error detectable (la bomba de carga no arranca).
- * Al arrancar se envia sin apagar antes, una vez, tras display.begin() (arreglo de la v0.4e).
- * v0.7v (placa 1, probado): con AE antes, la bomba a veces no vuelve a arrancar y deja el panel negro; y
- * repetirlo cada 30 s producia un parpadeo visible. Para investigarlo: ordenes por serie (procesarSerieOled).
+ * Reenvia a la OLED bomba de carga (0x8D 0x14) y encendido (0xAF), una vez, tras display.begin()
+ * (arreglo de la v0.4e). Tras algunos reinicios cortos la OLED contesta por I2C y dice estar encendida,
+ * pero el panel se queda negro. En la placa 1 aun pasa a veces: ver CLAUDE.md (pruebas de las v0.7u-z).
  */
-void reafirmarOled(bool apagarAntes = false) {
-  const uint8_t cmdsOled[][2] = { {0xAE, 0x00}, {0x8D, 0x14}, {0xAF, 0x00} };
-  for (uint8_t i = apagarAntes ? 0 : 1; i < 3; i++) {
+void reafirmarOled() {
+  const uint8_t cmdsOled[][2] = { {0x8D, 0x14}, {0xAF, 0x00} };  // Bomba de carga on, pantalla on
+  for (uint8_t i = 0; i < 2; i++) {
     Wire.beginTransmission(0x3C);
     Wire.write((uint8_t)0x00);  // Byte de control: siguen comandos
     Wire.write(cmdsOled[i][0]);
     if (cmdsOled[i][0] == 0x8D) Wire.write(cmdsOled[i][1]);
     uint8_t err = Wire.endTransmission();
     if (err != 0) Serial.printf("[ERROR] OLED CMD 0x%02X: I2C %u\n", cmdsOled[i][0], err);
-  }
-}
-
-/**
- * Diagnostico de la OLED negra, por el puerto serie (115200). Ordenes de una letra:
- *   s = leer el byte de estado del SSD1306 (bit 6: 1 = pantalla apagada segun el controlador)
- *   a = apagar, bomba de carga y encender (AE, 8D 14, AF)
- *   b = reiniciar el controlador con display.begin() y redibujar
- *   v = cortar Vext (alimentacion de la OLED) 500 ms, pulso de reset, display.begin() y redibujar
- */
-void procesarSerieOled() {
-  if (!Serial.available()) return;
-  char c = Serial.read();
-  if (c == 's') {
-    uint8_t n = Wire.requestFrom((uint8_t)0x3C, (uint8_t)1);
-    if (n == 1) {
-      uint8_t estado = Wire.read();
-      Serial.printf("[OLED] estado 0x%02X: %s\n", estado, (estado & 0x40) ? "APAGADA" : "ENCENDIDA");
-    } else {
-      Serial.println(F("[OLED] sin respuesta al leer el estado"));
-    }
-  } else if (c == 'a') {
-    reafirmarOled(true);
-    Serial.println(F("[OLED] enviado AE, 8D 14, AF"));
-  } else if (c == 'b') {
-    bool ok = display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-    actualizarPantalla();
-    Serial.printf("[OLED] display.begin(): %s\n", ok ? "OK" : "ERROR");
-  } else if (c == 'v') {
-    digitalWrite(VEXT_CTRL, HIGH);  // Vext apagada
-    delay(500);
-    digitalWrite(VEXT_CTRL, LOW);   // Vext encendida
-    delay(100);
-    digitalWrite(OLED_RST, LOW);
-    delay(10);
-    digitalWrite(OLED_RST, HIGH);
-    delay(10);
-    bool ok = display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-    reafirmarOled();
-    actualizarPantalla();
-    Serial.printf("[OLED] Vext cortada 500 ms y reiniciada: %s\n", ok ? "OK" : "ERROR");
   }
 }
 
@@ -3767,9 +3723,9 @@ void setup() {
   // Se comprueba el ACK en I2C tras un pulso de reset y, si no contesta, se corta Vext y se reintenta.
   // Nota (v0.7u-z): en la placa 1, tras algunos reinicios cortos, el panel queda negro aunque el
   // controlador contesta y dice estar encendido. Se probaron reenvios periodicos (parpadeaban), cortar
-  // Vext al arrancar (seguia fallando a veces) y otras variantes; el usuario prefiere esta secuencia (la de
-  // la v0.4e). Si se queda negra: orden "v" por serie (procesarSerieOled). Sospecha: caidas de 3,3 V (la
-  // OLED parpadea al arrancar la LoRa); sin comprobar con otra alimentacion.
+  // Vext al arrancar (seguia fallando a veces) y otras variantes; se mantiene esta secuencia (la de la
+  // v0.4e). Sospecha: caidas de 3,3 V (la OLED parpadea al arrancar la LoRa); sin comprobar con otra
+  // alimentacion. Detalles en CLAUDE.md.
   Wire.begin(OLED_SDA, OLED_SCL);
   bool oledResponde = false;
   pinMode(OLED_RST, OUTPUT);
@@ -3875,14 +3831,11 @@ void procesarDiagnostico() {
 }
 
 /**
- * Ahorro: la OLED baja el brillo tras BRILLO_TENUE_MS sin tocar nada (o con la cara dormida) y vuelve
- * al normal con cualquier giro, pulsacion o manipulacion con las palas. En CW y LoRa (y sus
- * subpantallas) no se atenua: son las que se miran mientras se practica.
- * v0.7v: no se usa display.dim(), que pone el contraste a 0: en la placa 1 la pantalla parecia apagada.
+ * Ahorro: la OLED pasa al minimo de brillo (display.dim: contraste 0) tras BRILLO_TENUE_MS sin tocar
+ * nada (o con la cara dormida) y vuelve al normal con cualquier giro, pulsacion o manipulacion con las
+ * palas. En CW y LoRa (y sus subpantallas) no se atenua: son las que se miran mientras se practica.
  */
-#define BRILLO_TENUE_MS   60000UL
-#define CONTRASTE_NORMAL  0xCF  // El que pone Adafruit_SSD1306 con la bomba de carga interna
-#define CONTRASTE_TENUE   0x10  // Bajo pero legible
+#define BRILLO_TENUE_MS 60000UL
 
 void procesarBrillo() {
   static bool tenue = false;
@@ -3891,8 +3844,7 @@ void procesarBrillo() {
                       (caraActiva && expresionCara == EXP_DORMIDA);
   if (debeSerTenue != tenue) {
     tenue = debeSerTenue;
-    display.ssd1306_command(SSD1306_SETCONTRAST);
-    display.ssd1306_command(tenue ? CONTRASTE_TENUE : CONTRASTE_NORMAL);
+    display.dim(tenue);
   }
 }
 
@@ -3908,7 +3860,6 @@ void loop() {
   procesarWifi();
   procesarBateriaYPantalla();
   procesarDiagnostico();
-  procesarSerieOled();
   procesarBrillo();
   procesarApagadoAuto();
 

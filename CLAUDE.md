@@ -16,7 +16,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.8a** (placa 1; la placa 2 sigue en v0.7s). Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
+- Firmware: `src/main.cpp` **v0.8b** (placa 1; la placa 2 sigue en v0.7s). Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
   (desnuda, sin encoder; entorno `heltec_sin_encoder`). Las dos usan COM16 según cuál esté conectada. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
   6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
@@ -41,10 +41,10 @@ el transceptor, GPS/locator.
   `startReceive()` caduca sin despertarlo: hay que despertarlo con `radio.standby(RADIOLIB_SX126X_STANDBY_RC, true)`
   (baja NSS) antes de `startReceive()`; sin eso la placa que solo escuchaba no recibía. Duo probado entre las dos
   placas en los dos sentidos (v0.7q).
-- **Brillo** (v0.7o, v0.8a): la OLED baja el contraste a `CONTRASTE_TENUE` (0x10; normal 0xCF) tras 1 min sin uso
-  (`BRILLO_TENUE_MS`) o con la cara dormida, salvo en CW y LoRa y sus subpantallas; vuelve con cualquier giro,
-  pulsación o manipulación con las palas (`procesarBrillo()`, la única que toca el brillo). No usar `display.dim()`:
-  pone el contraste a 0 y en la placa 1 la pantalla parecía apagada.
+- **Brillo** (v0.7o): la OLED pasa al mínimo (`display.dim`, contraste 0) tras 1 min sin uso (`BRILLO_TENUE_MS`) o
+  con la cara dormida, salvo en CW y LoRa y sus subpantallas; vuelve con cualquier giro, pulsación o manipulación con
+  las palas (`procesarBrillo()`, la única que toca el brillo). Se probó un contraste bajo legible (0x10, v0.8a) y el
+  usuario prefirió volver al 0 (v0.8b).
 
 ## Manejo (encoder KY-040; probado)
 - **Todo se hace con el encoder:** girar mueve el foco (`moverFocoAnillo()`), pulsar ejecuta, y pulsar sobre un
@@ -137,9 +137,8 @@ el transceptor, GPS/locator.
   funcionaba), `display.begin()` a mano (igual: una de tres lo apagó), corte de Vext 500 ms al arrancar (falla a
   veces) y con I2C y RST configurados antes del corte (1 fallo de ~10). A mano, la orden serie `v` (cortar Vext
   500 ms + reset + begin) la encendió 5 de 5. Al arrancar la LoRa la OLED parpadea: sospecha de caídas de 3,3 V en la
-  placa 1 (alimentada a través del medidor USB); pendiente probar sin medidor y con batería. **Diagnóstico por serie**
-  (`procesarSerieOled()`, 115200, sin reiniciar: pyserial con dtr/rts a False): `s` estado, `a` AE/8D/AF, `b`
-  `display.begin()`, `v` corte de Vext y reinicio. Si se queda negra, `v` la enciende.
+  placa 1 (alimentada a través del medidor USB); pendiente probar sin medidor y con batería. Las órdenes de diagnóstico por serie de la v0.8a (`s`, `a`, `b`, `v`)
+  se quitaron en la v0.8b a petición del usuario (están en el historial de git, commit 2f61d2f, si hacen falta).
 - **Dormir** (v0.7n, probado en la placa 2: tres ciclos): PRG largo, o `apagadoAutoMin` sin tocar nada (v0.7o: se
   elige en CONF → `apagado`: nunca, 5, 10, 15, 30, 60 o 120 min; por defecto 30; NVS `apag`), salvo en CW y LoRa y
   sus subpantallas o con el portal abierto → `dormirChispas()`: aviso 1,5 s, OLED,
