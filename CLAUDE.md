@@ -16,7 +16,8 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.8c** en la placa 1 (la placa 2 sigue en v0.8b). **Captura de pantalla provisional**
+- Firmware: `src/main.cpp` **v0.8d** en la placa 1 (la placa 2 sigue en v0.8b). v0.8d: opción **`tono`** en CONF
+  (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; **sin probar**). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
   Python de PlatformIO: `~\.platformio\penv\Scripts\python.exe`; cerrar antes el monitor serie). Ve la copia en RAM,
   no el panel. Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
@@ -26,7 +27,8 @@ el transceptor, GPS/locator.
   firmware; programas de prueba aparte en `pruebas/` con sus entornos (`prueba_pines`, `prueba_bateria`).
 - La versión está en `#define FW_VERSION` (y en `@version` de la cabecera): se ve en la pantalla 1 y por serie.
   Subirla en cada cambio que se cargue en placa.
-- Pruebas con LED, pantalla y monitor serie; **aún no hay audio** (no proponer pruebas "a oído" hasta montar el buzzer).
+- Pruebas con LED, pantalla, monitor serie y **audio** (desde el 10 oct 2026: tono montado; el buzzer suena muy bajo,
+  mejor probar a oído con auriculares). Ver "Tono" en Funciones.
 - Pantallas (`PANTALLA_*`, recorrido con ant./sig.): 1 Inicio, 2 CW, 3 LoRa (Duo/QSO), 4 PROP (propagación),
   5 POTA, 6 Sol, 7 CONF. Cabecera: hora, nombre corto de la pantalla y batería (`PWR` sin batería).
 - NVS: `chispas` (`NVS_ENTRENADOR`: Koch, keyer, Echo y estadísticas), `estacion` (`NVS_ESTACION`: indicativo, locator, hora UTC; hasta la v0.7s se llamaba de otra forma y se empezó de cero);
@@ -152,16 +154,27 @@ el transceptor, GPS/locator.
 - **Salida KEY** (GPIO2): `KEY_OUT_PIN` en BAJO al principio de `setup()` (v0.6c); aún no se usa. Medido con polímetro:
   0 V en marcha; picos de 0,3–0,5 V al arrancar y con RST (pin al aire hasta `setup()`), por debajo de los ~1,1 V
   que necesita el LED del PC817. **Recomendado: 10 kΩ de GPIO2 a GND**; añadirlo al esquema al montar la salida KEY.
+- **Tono** (montado y probado el 10 oct 2026, placa 1): GPIO7 (PWM, `frecTonoHz`) → R1 1 kΩ → RV1 10 kΩ log (pat. 3;
+  pat. 1 a GND) → cursor → C1 10 µF (+ al cursor) → R2 220 Ω → J2 T y R3 220 Ω → J2 R; J2 TN → BZ1 + (piezo pasivo
+  de 16 mm), BZ1 − y J2 S a GND; RN libre. Auriculares por los dos lados y silencio mecánico del buzzer probados
+  (los fallos fueron malos contactos de R2/R3 en la protoboard). **El piezo suena muy bajo** a 3,3 V, también
+  directo a GPIO7: no se oye con ruido ambiente. Con R1 de 100 Ω sube algo (R1 era la mayor pérdida), pero se dejó
+  en 1 kΩ: se prueba con auriculares. Descartados: transistor con buzzer magnético o altavoz (se pierden RV1 y el
+  silencio del jack) y dos GPIO en contrafase (RV1 deja de regular el buzzer). **Pedidos** (10 oct 2026): módulo
+  **PAM8302A** (U2) y **altavoz de 8 Ω 0,5–1 W** (LS1), en el sitio del piezo: TN → A+ con R9 10 kΩ a GND, A− y GND
+  a GND, VIN a 3V3 (el pin 5V no tiene tensión con batería), salida al altavoz; SD sin conectar (o a GPIO38 para
+  apagarlo fuera de CW/LoRa: ~4 mA en reposo). RV1 sigue de volumen; el PAM8302A tiene mucha ganancia: bajar su
+  trimmer si lo trae, o 47 kΩ en serie con A+. Vigilar picos en el 3V3 (la OLED de la placa 1 es sensible).
+  En `docs/gen_esquema.py` ya están U2, LS1 y R9 (pendiente) y el piezo de 16 mm; **el PDF no se ha regenerado**
+  (decisión del usuario).
 
 ## Pendiente
-1. **Siguiente sesión:** estadísticas por carácter mientras llega el buzzer (lunes 12 oct). OLED negra de la
-   placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor). Locator real ya puesto en webconf (10 oct 2026).
-2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas): buzzer, auriculares y volumen (tono en
-   GPIO7 ya programado). **Buzzer:** el comprado resultó **magnético** (16 Ω, + marcado), no piezo: con R1 de 1 kΩ
-   no se oye nada (probado 10 oct 2026). Pedido un **piezo pasivo** (llega el lunes 12 oct); montar
-   entonces la fase 1 (GPIO7 J3-18 → R1 → RV1 pat. 3; pat. 1 a GND; cursor → C1 + → buzzer + → GND) y luego J2. Si el
-   piezo suena flojo a 600 Hz: hacer configurable la frecuencia del tono (700–800 Hz); salida KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue
-   (opcionales: enable del GPS y BME280). Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm.
+1. **Siguiente sesión:** probar la opción `tono` de la v0.8d con auriculares; luego estadísticas por carácter.
+   OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
+2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack): al llegar el
+   PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la ganancia en banco; luego salida
+   KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue (opcionales: enable del GPS y
+   BME280). Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Estadísticas por carácter** (recomendada): marcar fallos al corregir el Koch y recoger los del Echo; guardar
      aciertos/fallos por letra en NVS y mostrar las más flojas. Opcional: repetir más las letras flojas.

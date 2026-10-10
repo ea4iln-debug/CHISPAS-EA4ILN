@@ -375,7 +375,7 @@ def p_bme():
 # Tono: buzzer, auriculares y volumen
 # ----------------------------------------------------------------------------
 def p_tono():
-    s = S(1050, 380)
+    s = S(1050, 395)
     h = s.heltec(20, 60, 250, [("GPIO7", 100), ("GND", 290)])
     s.res(145, 100, 265, 100, "R1", "1 kΩ")
     s.line([(265, 100), (330, 100)])
@@ -433,8 +433,9 @@ def p_tono():
     notes(s, 20, 342, [
         "C1: el + (patilla larga) hacia el potenciómetro. RV1: patilla 3 a R1, 1 a GND, 2 (cursor) a C1.",
         "Sin clavija, T está unido a TN y suena el buzzer; al meter los auriculares se abre TN y el buzzer calla (sin firmware).",
+        "Pendiente: BZ1 suena muy bajo a 3,3 V. En su sitio irá U2 PAM8302A (TN → A+, R9 10 kΩ a GND; A− a GND) con altavoz LS1 de 8 Ω.",
     ], 10)
-    s.text(530, 375, "RV1 regula a la vez buzzer y auriculares. El buzzer tiene que ser PASIVO: uno activo pita a su propio tono.", 10, "middle", "normal", "#333")
+    s.text(530, 390, "RV1 regula a la vez buzzer y auriculares. El buzzer tiene que ser PASIVO: uno activo pita a su propio tono.", 10, "middle", "normal", "#333")
     return s.svg()
 
 
@@ -606,10 +607,12 @@ BOM = [
     ("RV2", "Trimmer multivuelta 10 kΩ (3296)", "Nivel del decodificador", ""), ("C1", "Electrolítico 10 µF 16 V", "Bloqueo de continua", ""),
     ("C2", "Poliéster / X7R 1 µF 50 V", "Acoplo de la señal", ""), ("D1, D2", "1N4148", "Protección de GPIO6", ""),
     ("U1", "PC817 DIP-4", "Salida KEY aislada", ""), ("J1, J3, J4", "Módulo jack 3,5 mm estéreo", "Palas, audio, KEY", ""),
-    ("J2", "Jack 3,5 mm estéreo conmutado (5 pat.)", "Auriculares", ""), ("BZ1", "Buzzer piezo pasivo 12 mm", "Tono", ""),
+    ("J2", "Jack 3,5 mm estéreo conmutado (5 pat.)", "Auriculares", ""), ("BZ1", "Buzzer piezo pasivo 16 mm", "Tono", ""),
     ("ENC1", "Encoder KY-040", "Menús", ""), ("GPS1", "NEO-6M GY-GPS6MV2", "Posición / hora", "pendiente"),
     ("SW1", "Interruptor SS12D00", "On/off batería", ""), ("BAT1", "LiPo 3,7 V 3000 mAh JST 1,25", "Alimentación", ""),
     ("Q1, R8", "AO3401A + adaptador SOT-23 + 100 kΩ", "Enable del GPS", "opc"), ("BME1", "BME280 GY-BME280-3.3", "Sensor ambiental", "opc"),
+    ("U2", "Módulo amplificador PAM8302A (mono, 2,5 W)", "Altavoz, en el sitio de BZ1 (TN)", "pendiente"),
+    ("LS1", "Altavoz 8 Ω 0,5–1 W, 28–40 mm", "Tono", "pendiente"), ("R9", "Resistencia 10 kΩ", "Pull-down de la entrada de U2", "pendiente"),
 ]
 
 CSS = """
@@ -719,7 +722,7 @@ def main():
 <li><b>1. Raíles</b>: 3V3 y GND de la Heltec a los raíles. Polímetro: 3,3 V entre raíles y ningún cortocircuito.</li>
 <li><b>2. Encoder</b> y programa de prueba de pines (19, 20, 48 y reserva 38–40) por serie.</li>
 <li><b>3. Palas</b>: comprobar por serie DIT/DAH antes del keyer.</li>
-<li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar).</li>
+<li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). <i>Montado y probado: el piezo suena muy bajo a 3,3 V (también directo a GPIO7); pedidos U2 PAM8302A y altavoz LS1 para ponerlos tras TN.</i></li>
 <li><b>5. KEY</b>: primero sin emisora, con el polímetro en continuidad entre punta y malla de J4.</li>
 <li><b>6. Decodificador</b>: RV2 al mínimo y volumen de la emisora bajo; mirar los valores del ADC por serie.</li>
 <li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional.</li>

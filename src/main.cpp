@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.8c - Captura provisional de la pantalla por serie (orden 'p', docs/captura_oled.py)
+ * @version 0.8d - Tono CW configurable en CONF (400-1000 Hz, NVS "tono") con pitido de prueba
  * @date 2026-10-10
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.8c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.8d"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -77,7 +77,11 @@
 #define ENC_SW_PIN      48  // Pulsador del eje, sin pull-up en el modulo: INPUT_PULLUP
 #define SPEAKER_PWM_PIN  7  // Salida PWM provisional (GPIO libre del header). El GPIO25 no existe en el S3
 
-#define FREC_AUDIO_HZ    600// Tono Morse local (600 Hz)
+#define FREC_AUDIO_HZ    600// Tono Morse local por defecto (600 Hz); se elige en CONF -> tono (frecTonoHz)
+#define TONO_MIN_HZ      400
+#define TONO_MAX_HZ      1000
+#define TONO_PASO_HZ     50
+#define TONO_PRUEBA_MS   300 // Pitido de prueba al cambiar el tono en CONF
 #define CANAL_PWM_AUDIO  0  // Canal PWM del ESP32-S3
 #define RES_PWM_AUDIO    8  // Resolucion de 8 bits para el PWM
 
@@ -388,6 +392,27 @@ void conmutarEmisionMorse(bool activar) {
     ledcWrite(CANAL_PWM_AUDIO, 128); 
   } else {
     ledcWrite(CANAL_PWM_AUDIO, 0);
+  }
+}
+
+uint16_t frecTonoHz = FREC_AUDIO_HZ;  // Tono CW (buzzer y auriculares); se elige en CONF y se guarda en NVS
+
+// Pitido de prueba al elegir el tono en CONF (alli no emite el motor CW). Lo apaga procesarTonoPrueba()
+unsigned long tonoPruebaFinMs = 0;  // 0 = sin pitido
+
+void aplicarFrecTono(bool pitidoPrueba) {
+  ledcChangeFrequency(CANAL_PWM_AUDIO, frecTonoHz, RES_PWM_AUDIO);
+  if (pitidoPrueba) {
+    ledcWrite(CANAL_PWM_AUDIO, 128);
+    tonoPruebaFinMs = millis() + TONO_PRUEBA_MS;
+    if (tonoPruebaFinMs == 0) tonoPruebaFinMs = 1;
+  }
+}
+
+void procesarTonoPrueba() {
+  if (tonoPruebaFinMs != 0 && (long)(millis() - tonoPruebaFinMs) >= 0) {
+    ledcWrite(CANAL_PWM_AUDIO, 0);
+    tonoPruebaFinMs = 0;
   }
 }
 
@@ -795,6 +820,7 @@ void cargarDatosNVS() {
   echoLargo = constrain(prefs.getUChar("elargo", 1), 1, 5);
   echoVerObjetivo = prefs.getBool("ever", true);
   apagadoAutoMin = prefs.getUChar("apag", 30);  // ajustarApagado(0) lo lleva a un valor de la lista si no lo es
+  frecTonoHz = constrain(prefs.getUShort("tono", FREC_AUDIO_HZ), TONO_MIN_HZ, TONO_MAX_HZ);
 
   for (int i = 0; i < 40; i++) {
     String kComp = "c_" + String(i);
@@ -821,6 +847,12 @@ void guardarUltimaConfiguracionNVS() {
 void guardarApagadoNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("apag", apagadoAutoMin);
+  prefs.end();
+}
+
+void guardarTonoNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUShort("tono", frecTonoHz);
   prefs.end();
 }
 
@@ -1392,8 +1424,8 @@ uint8_t opcionPantallaProp = OPCION_BARRA_PROP;  // 0 = mas (pagina), 1 = actual
 uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
 
-#define OPCION_BARRA_CONFIG 3
-uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // 0 = webconf (portal), 1 = reset de fabrica, 2 = apagado, 3 = barra
+#define OPCION_BARRA_CONFIG 4
+uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // 0 = webconf (portal), 1 = reset de fabrica, 2 = apagado, 3 = tono, 4 = barra
 
 // Apagado automatico: minutos sin tocar nada antes de dormir (0 = nunca). Se elige en CONF y se guarda en NVS
 const uint8_t OPCIONES_APAGADO_MIN[] = { 0, 5, 10, 15, 30, 60, 120 };
@@ -2647,16 +2679,18 @@ void renderizarPantallaConfig() {
   if (opcionPantallaConfig == OPCION_BARRA_CONFIG) {
     // "« opc »" con los caracteres 0xAE y 0xAF de CP437
     dibujarBarraAvanzarRetroceder(true, String((char)0xAE) + " opc " + String((char)0xAF));
-  } else if (opcionPantallaConfig == 2) {
-    // Apagado automatico: pulsar para editar y girar
+  } else if (opcionPantallaConfig == 2 || opcionPantallaConfig == 3) {
+    // Apagado automatico y tono: pulsar para editar y girar
     display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
-    String txt = "> apagado: ";
+    bool esApagado = (opcionPantallaConfig == 2);
+    String txt = esApagado ? "> apagado: " : "> tono: ";
+    String valor = esApagado ? textoApagado() : String(frecTonoHz) + " Hz";
     int16_t x1, y1;
     uint16_t w, h;
-    display.getTextBounds(txt + textoApagado(), 0, 0, &x1, &y1, &w, &h);
+    display.getTextBounds(txt + valor, 0, 0, &x1, &y1, &w, &h);
     display.setCursor((128 - w) / 2, 55);
     display.print(txt);
-    imprimirValor(true, textoApagado());
+    imprimirValor(true, valor);
   } else {
     String pie = (opcionPantallaConfig == 0 ? "> " : "  ") + String(estadoWifi == WIFI_PORTAL ? "ver qr  " : "webconf  ") +
                  (opcionPantallaConfig == 1 ? "> " : "  ") + String("fabrica");
@@ -3373,7 +3407,7 @@ void procesarBoton() {
   } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
              pantallaActual == PANTALLA_CONFIG) {
     // P4 y P5: [sig.] -> [mas >] -> [act.] -> [ant.]
-    // P7: [sig.] -> [webconf] -> [fabrica] -> [apagado] -> [ant.]
+    // P7: [sig.] -> [webconf] -> [fabrica] -> [apagado] -> [tono] -> [ant.]
     bool esProp = (pantallaActual == PANTALLA_PROPAGACION);
     bool esConfig = (pantallaActual == PANTALLA_CONFIG);
     uint8_t& opcion = esProp ? opcionPantallaProp : (esConfig ? opcionPantallaConfig : opcionPantallaSpots);
@@ -3383,8 +3417,13 @@ void procesarBoton() {
     } else if (esConfig && opcion == 2 && editandoValor && giro != 0) {
       ajustarApagado(giro);
       guardarApagadoNVS();
-    } else if (esConfig && opcion == 2 && pulsa) {
+    } else if (esConfig && opcion == 3 && editandoValor && giro != 0) {
+      ajustarValor(frecTonoHz, giro * TONO_PASO_HZ, TONO_MIN_HZ, TONO_MAX_HZ);
+      aplicarFrecTono(true);  // Pitido de prueba con el tono nuevo
+      guardarTonoNVS();
+    } else if (esConfig && (opcion == 2 || opcion == 3) && pulsa) {
       editandoValor = !editandoValor;  // Pulsar, girar y pulsar
+      if (opcion == 3 && editandoValor) aplicarFrecTono(true);  // Al empezar a editar, se oye el tono actual
     } else if (giro != 0) {
       confirmandoFabrica = false;
       moverFocoAnillo(opcion, barra, giro);
@@ -3755,6 +3794,7 @@ void setup() {
 
   cargarDatosNVS();
   ajustarApagado(0);  // Si lo guardado no es un valor de la lista, lo corrige
+  aplicarFrecTono(false);
   cargarEstacionNVS();
   setenv("TZ", ZONA_HORARIA, 1);  // Para que la hora manual del portal se interprete como local
   tzset();
@@ -3870,6 +3910,7 @@ void procesarCapturaSerie() {
 void loop() {
   procesarCapturaSerie();  // PROVISIONAL
   procesarBoton();
+  procesarTonoPrueba();
   procesarTextoKeyer();
   procesarEcho();
   procesarCara();
