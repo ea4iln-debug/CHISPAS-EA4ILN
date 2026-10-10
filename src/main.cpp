@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.7k - Sin conexion WiFi en PROP, POTA y SOL: mensaje fijo con "abrir webconf" (el portal ya no se abre solo)
+ * @version 0.7l - La memoria del entrenador pasa a llamarse "chispas" (se empieza de cero y se borra "mr_morse")
  * @date 2026-10-09
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.7k"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.7l"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -30,6 +30,7 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include "qrcode.h"  // Componente qrcode de ESP-IDF, incluido en el core (esp_qrcode_generate)
+#include <nvs.h>
 
 // ============================================================================
 // DEFINICION DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
@@ -768,8 +769,26 @@ void procesarTextoKeyer() {
 // ============================================================================
 // MEMORIA PERSISTENTE NVS
 // ============================================================================
+// Entrenador (Koch, keyer, Echo y estadisticas). Hasta la v0.7k se llamaba "mr_morse": al pasar a
+// "chispas" se empieza de cero y el espacio antiguo se borra en el primer arranque.
+#define NVS_ENTRENADOR         "chispas"
+#define NVS_ENTRENADOR_ANTIGUO "mr_morse"
+
+void borrarEspacioAntiguoNVS() {
+  // API de ESP-IDF: en solo lectura, nvs_open() no crea el espacio si no existe (ni escribe errores)
+  nvs_handle_t h;
+  if (nvs_open(NVS_ENTRENADOR_ANTIGUO, NVS_READONLY, &h) != ESP_OK) return;
+  nvs_close(h);
+  if (nvs_open(NVS_ENTRENADOR_ANTIGUO, NVS_READWRITE, &h) == ESP_OK) {
+    nvs_erase_all(h);
+    nvs_commit(h);
+    nvs_close(h);
+    Serial.println(F("[NVS] BORRADO EL ESPACIO ANTIGUO \"" NVS_ENTRENADOR_ANTIGUO "\""));
+  }
+}
+
 void cargarDatosNVS() {
-  prefs.begin("mr_morse", true);
+  prefs.begin(NVS_ENTRENADOR, true);
   wpmCW = prefs.getUChar("wpm", 25);
   espaciadoCW = prefs.getUShort("sp", 200);
   leccionCW = prefs.getUChar("leccion", 4);
@@ -794,7 +813,7 @@ void cargarDatosNVS() {
 }
 
 void guardarUltimaConfiguracionNVS() {
-  prefs.begin("mr_morse", false);
+  prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("wpm", wpmCW);
   prefs.putUShort("sp", espaciadoCW);
   prefs.putUChar("leccion", leccionCW);
@@ -804,7 +823,7 @@ void guardarUltimaConfiguracionNVS() {
 }
 
 void guardarKeyerNVS() {
-  prefs.begin("mr_morse", false);
+  prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("kwpm", keyerWpm);
   prefs.putBool("kmodob", keyerModoB);
   prefs.putBool("kinv", keyerPalasInvertidas);
@@ -824,7 +843,7 @@ void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
     statsKoch[idx].minAcierto = aciertoInt;
   }
 
-  prefs.begin("mr_morse", false);
+  prefs.begin(NVS_ENTRENADOR, false);
   String kComp = "c_" + String(idx);
   String kMax = "mx_" + String(idx);
   String kMin = "mn_" + String(idx);
@@ -844,7 +863,7 @@ void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
 
 // Borra solo las estadisticas Koch; la configuracion del entrenador y los datos de la estacion se conservan
 void borrarTodasLasEstadisticasNVS() {
-  prefs.begin("mr_morse", false);
+  prefs.begin(NVS_ENTRENADOR, false);
   for (int i = 0; i < 40; i++) {
     prefs.remove(("c_" + String(i)).c_str());
     prefs.remove(("mx_" + String(i)).c_str());
@@ -2523,7 +2542,7 @@ void renderizarPantallaSol() {
  */
 void resetFabrica() {
   Serial.println(F("[CONFIG] RESET DE FABRICA"));
-  prefs.begin("mr_morse", false);
+  prefs.begin(NVS_ENTRENADOR, false);
   prefs.clear();
   prefs.end();
   prefs.begin("mr_estacion", false);
@@ -3555,6 +3574,7 @@ void setup() {
   randomSeed(esp_random());  // GPIO0 no es ADC en el S3: la semilla anterior era casi fija
   seqTx = random(256);       // Si la otra placa se reinicia, que no repita el ultimo seq
 
+  borrarEspacioAntiguoNVS();
   cargarDatosNVS();
   cargarEstacionNVS();
   setenv("TZ", ZONA_HORARIA, 1);  // Para que la hora manual del portal se interprete como local

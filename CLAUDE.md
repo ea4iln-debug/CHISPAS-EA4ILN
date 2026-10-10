@@ -17,7 +17,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.7k**, cargada en la placa 1 (protoboard con encoder, palas y batería; COM16). La
+- Firmware: `src/main.cpp` **v0.7l**, cargada en la placa 1 (protoboard con encoder, palas y batería; COM16). La
   placa 2 (desnuda) sigue en v0.6n. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
   6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
@@ -27,9 +27,11 @@ el transceptor, GPS/locator.
 - Pruebas con LED, pantalla y monitor serie; **aún no hay audio** (no proponer pruebas "a oído" hasta montar el buzzer).
 - Pantallas (`PANTALLA_*`, recorrido con ant./sig.): 1 Inicio, 2 CW, 3 LoRa (Duo/QSO), 4 PROP (propagación),
   5 POTA, 6 Sol, 7 CONF. Cabecera: hora, nombre corto de la pantalla y batería (`PWR` sin batería).
-- NVS: `mr_morse` (Koch, keyer, Echo y estadísticas; el nombre se mantiene para no perder lo guardado al renombrar el
-  aparato), `mr_estacion` (indicativo, locator, hora UTC); WiFi en el NVS del ESP32. Borrar estadísticas solo borra
-  estadísticas; el reset de fábrica lo borra todo.
+- NVS: `chispas` (`NVS_ENTRENADOR`: Koch, keyer, Echo y estadísticas), `mr_estacion` (indicativo, locator, hora UTC);
+  WiFi en el NVS del ESP32. Hasta la v0.7k el entrenador usaba `mr_morse`: desde la v0.7l se empieza de cero y
+  `borrarEspacioAntiguoNVS()` lo borra en el primer arranque (probado en la placa 1). Borrar estadísticas solo borra
+  estadísticas; el reset de fábrica lo borra todo. El locator por defecto es genérico (IN80dk, Madrid): cada placa
+  debe poner el suyo en webconf.
 - Recursos (v0.6m): flash 1,12 MB de 3,19 MB (app0); RAM estática 51,8 KB de 320 KB; app1 (OTA) y spiffs (1,5 MB,
   reservada para el CSV de POTA) sin usar.
 
@@ -57,7 +59,7 @@ el transceptor, GPS/locator.
     1 ms; solo activa en su pantalla o en Echo. Memoria de la pala contraria: modo A solo en la pausa entre elementos;
     modo B también durante el elemento. Descodifica lo manipulado (silencio de 2 puntos = fin de carácter, 5 =
     espacio; patrón desconocido = `*`) y lo pasa a `loop()` por una cola; también sale por serie. Opciones: wpm 10–40,
-    MODO A/B, palas NORM/INV, borrar, volver; en `mr_morse` (`kwpm`, `kmodob`, `kinv`). Salida solo por LED (y tono en
+    MODO A/B, palas NORM/INV, borrar, volver; en `chispas` (`kwpm`, `kmodob`, `kinv`). Salida solo por LED (y tono en
     GPIO7 cuando haya buzzer); KEY aún no. El apretón iámbico y el texto largo aún no se han validado.
   - **ECHO** (v0.7b): Chispas emite 1–5 letras de la lección Koch con el motor CW a los wpm del keyer (keyer en pausa
     mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las palas. Se evalúa al llegar a las
