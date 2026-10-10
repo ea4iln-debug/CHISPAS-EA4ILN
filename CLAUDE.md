@@ -1,24 +1,23 @@
 # Chispas EA4ILN — contexto del proyecto
 
 ## Qué es
-**Chispas** (antes "Mr. Morse"; "chispas" era el apodo del radiotelegrafista de a bordo): dispositivo portátil de CW
+**Chispas** ("chispas" era el apodo del radiotelegrafista de a bordo): dispositivo portátil de CW
 para radioaficionados (indicativo EA4ILN) sobre una **Heltec WiFi LoRa 32 V3** (ESP32-S3FN8, SX1262 a 868 MHz,
 OLED 0,96", sin PSRAM, 8 MB de flash). Hoy: entrenador Koch estilo LCWO, keyer iámbico, modo Echo, práctica en pareja
 por LoRa, propagación, spots POTA, sol y línea gris. A medio plazo: tono por buzzer, salida KEY, decodificador desde
 el transceptor, GPS/locator.
 
 ## Repositorio
-- GitHub: `https://github.com/ea4iln-debug/CHISPAS-EA4ILN` (renombrado el 10 oct 2026 desde `Mr.-Morse-EA4ILN`;
-  GitHub redirige la URL antigua). La carpeta local sigue siendo `Mr. Morse EA4ilN` (renombrarla es opcional, con
-  VS Code cerrado). `README.md` para GitHub.
+- GitHub: `https://github.com/ea4iln-debug/CHISPAS-EA4ILN` (GitHub redirige la URL anterior del repositorio).
+  `README.md` para GitHub.
 - **Licencias (decididas 10 oct 2026):** software (firmware, pruebas, `include/`, scripts) con **GPL-3.0-or-later**
   (`LICENSE`, texto oficial de gnu.org; cabecera SPDX en cada archivo de código); hardware y documentación (esquema,
   lista de componentes, diseño, README) con **CC BY-NC-SA 4.0** (`LICENSE-HARDWARE.md`). `include/wm_strings_chispas.h`
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.7n**, cargada en la placa 2 (desnuda; sin encoder solo funciona el PRG); la placa 1
-  (protoboard con encoder, palas y batería) sigue en v0.7m. Las dos usan COM16 según cuál esté conectada. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
+- Firmware: `src/main.cpp` **v0.7s**. Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
+  (desnuda, sin encoder; entorno `heltec_sin_encoder`). Las dos usan COM16 según cuál esté conectada. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
   6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
   firmware; programas de prueba aparte en `pruebas/` con sus entornos (`prueba_pines`, `prueba_bateria`).
@@ -28,9 +27,7 @@ el transceptor, GPS/locator.
 - Pantallas (`PANTALLA_*`, recorrido con ant./sig.): 1 Inicio, 2 CW, 3 LoRa (Duo/QSO), 4 PROP (propagación),
   5 POTA, 6 Sol, 7 CONF. Cabecera: hora, nombre corto de la pantalla y batería (`PWR` sin batería).
 - NVS: `chispas` (`NVS_ENTRENADOR`: Koch, keyer, Echo y estadísticas), `mr_estacion` (indicativo, locator, hora UTC);
-  WiFi en el NVS del ESP32. Hasta la v0.7k el entrenador usaba `mr_morse`: desde la v0.7l se empieza de cero y
-  `borrarEspacioAntiguoNVS()` lo borra en el primer arranque (probado en la placa 1). Borrar estadísticas solo borra
-  estadísticas; el reset de fábrica lo borra todo. El locator por defecto es genérico (IN80dk, Madrid): cada placa
+  WiFi en el NVS del ESP32. Borrar estadísticas solo borra estadísticas; el reset de fábrica lo borra todo. El locator por defecto es genérico (IN80dk, Madrid): cada placa
   debe poner el suyo en webconf.
 - Recursos (v0.6m): flash 1,12 MB de 3,19 MB (app0); RAM estática 51,8 KB de 320 KB; app1 (OTA) y spiffs (1,5 MB,
   reservada para el CSV de POTA) sin usar. `[DIAG]` por serie cada minuto (v0.7m): heap libre ~317 KB con el WiFi
@@ -39,9 +36,14 @@ el transceptor, GPS/locator.
 - **Consumo** (medido por USB sin batería, resolución 10 mA): v0.7l: 50 mA sin WiFi, 90 mA con WiFi (y el WiFi se
   quedaba encendido en CONF y SOL). **v0.7m: 30 mA sin WiFi, 50–60 mA con WiFi** (~100 h con 3000 mAh, estimado).
   Cambios: CPU a 80 MHz con el WiFi apagado y 240 MHz con el encendido (`cpuSegunWifi()`), `vTaskDelay(1)` al final de
-  `loop()`, LoRa dormida fuera de Duo/QSO (`radio.sleep()`; `startReceive()` al entrar), WiFi apagado en CONF y SOL
-  salvo con el portal abierto o SOL esperando la hora, OLED tenue (`display.dim`) con la cara dormida. Duo con la radio
-  dormida/despierta: **sin probar entre dos placas** (la placa 2 no tiene encoder).
+  `loop()`, LoRa dormida fuera de Duo/QSO (`radio.sleep()`; al entrar, `loraEscuchar()`), WiFi apagado en CONF y SOL
+  salvo con el portal abierto o SOL esperando la hora. **Ojo (v0.7q):** con el SX1262 dormido, BUSY está en alto y
+  `startReceive()` caduca sin despertarlo: hay que despertarlo con `radio.standby(RADIOLIB_SX126X_STANDBY_RC, true)`
+  (baja NSS) antes de `startReceive()`; sin eso la placa que solo escuchaba no recibía. Duo probado entre las dos
+  placas en los dos sentidos (v0.7q).
+- **Brillo** (v0.7o): la OLED pasa al mínimo (`display.dim`) tras 1 min sin uso (`BRILLO_TENUE_MS`) o con la cara
+  dormida, salvo en CW y LoRa y sus subpantallas; vuelve con cualquier giro, pulsación o manipulación con las palas
+  (`procesarBrillo()`, la única que toca el brillo).
 
 ## Manejo (encoder KY-040; probado)
 - **Todo se hace con el encoder:** girar mueve el foco (`moverFocoAnillo()`), pulsar ejecuta, y pulsar sobre un
@@ -54,6 +56,10 @@ el transceptor, GPS/locator.
 - Entradas: encoder por interrupción en CLK/DT con tabla de cuadratura (`isrEncoder`, en IRAM, lee `GPIO_IN_REG`);
   PRG y pulsador del eje con `leerPulsador()` (antirrebote: el eje rebota al soltar). Eventos `BOTON_CORTA/LARGA` y
   `ENC_DERECHA/IZQUIERDA/PULSA/LARGA`, todos tratados en `procesarBoton()`.
+- **Sin encoder** (v0.7p, probado en la placa 2): entorno `heltec_sin_encoder` (`-DSIN_ENCODER`, mismo `main.cpp`).
+  `leerEventoBoton()` traduce el PRG: corta = `ENC_DERECHA` (mover), larga = `ENC_PULSA` (ejecutar), muy larga
+  (≥ `TIEMPO_PULSACION_DORMIR`, 2,5 s) = dormir. No hay "atrás" (todas las pantallas tienen volver o ant./sig.).
+  Al editar, los valores dan la vuelta (`ajustarValor`, `ajustarApagado`).
 
 ## Funciones (probadas en placa salvo que se diga)
 - **Pantalla CW** (v0.7d): estilo LoRa, título " ENTRENADOR CW " en negativo y `< KOCH >`, `< KEYER >`, `< ECHO >`
@@ -72,8 +78,9 @@ el transceptor, GPS/locator.
   - **ECHO** (v0.7b): Chispas emite 1–5 letras de la lección Koch con el motor CW a los wpm del keyer (keyer en pausa
     mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las palas. Se evalúa al llegar a las
     letras del reto o con un silencio de palabra. Acierto: "BIEN!" y otro reto a 1,2 s; fallo: "MAL: R  K -.-" y se
-    repite el mismo a 3 s. Opciones: wpm, largo (`elargo`), ver la letra antes (`ever`, SÍ por defecto), repetir (no
-    cuenta) y volver. Marcador de aciertos/intentos. Por serie: `[ECHO] U -> V: MAL (5/8)`.
+    repite el mismo a 3 s. Opciones: wpm, largo (`elargo`), ver la letra antes (`ever`, SÍ por defecto), iniciar
+    (v0.7r: al entrar espera en `ECHO_ESPERA` hasta pulsarla) / repetir (no cuenta) y volver. Marcador de
+    aciertos/intentos. Por serie: `[ECHO] U -> V: MAL (5/8)`.
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso
@@ -123,8 +130,9 @@ el transceptor, GPS/locator.
   Ocupa ~40 % del bucle mientras se ve.
 - **OLED negra tras reset corto** (resuelto en v0.4e): tras `display.begin()` se reenvían bomba de carga
   (`0x8D 0x14`) y encendido (`0xAF`). Se imprime por serie el motivo del reinicio; no hay `for(;;)` si falla la OLED.
-- **Dormir** (v0.7n, probado en la placa 2: tres ciclos): PRG largo o 30 min sin tocar nada (`APAGADO_AUTO_MS`;
-  no si hay práctica Koch en marcha, Duo/QSO, keyer, Echo o portal abierto) → `dormirChispas()`: aviso 1,5 s, OLED,
+- **Dormir** (v0.7n, probado en la placa 2: tres ciclos): PRG largo, o `apagadoAutoMin` sin tocar nada (v0.7o: se
+  elige en CONF → `apagado`: nunca, 5, 10, 15, 30, 60 o 120 min; por defecto 30; NVS `apag`), salvo en CW y LoRa y
+  sus subpantallas o con el portal abierto → `dormirChispas()`: aviso 1,5 s, OLED,
   WiFi, LoRa y LED apagados; KEY en BAJO, Vext apagada y divisor de batería desactivado, retenidos con `gpio_hold_en`
   + `gpio_deep_sleep_hold_en` (se liberan al principio de `setup()`); despierta con ext0 en GPIO0 a nivel bajo.
   Despertar con PRG **no** entra en modo de carga (`boot:0x8`); arranca de nuevo (`esp_reset_reason` 8).
@@ -134,7 +142,7 @@ el transceptor, GPS/locator.
 
 ## Pendiente
 1. **Por hacer:** poner el locator y el indicativo reales en webconf en cada placa (nunca se guardaron: usan los
-   valores por defecto). Cuando las dos placas hayan arrancado con la v0.7l, se puede quitar `borrarEspacioAntiguoNVS()`.
+   valores por defecto).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas): buzzer, auriculares y volumen (tono en
    GPIO7 ya programado). **Buzzer:** el comprado resultó **magnético** (16 Ω, + marcado), no piezo: con R1 de 1 kΩ
    no se oye nada (probado 10 oct 2026). Pedido un **piezo pasivo** (llega el lunes 12 oct); montar
@@ -146,9 +154,8 @@ el transceptor, GPS/locator.
      aciertos/fallos por letra en NVS y mostrar las más flojas. Opcional: repetir más las letras flojas.
    - Editar indicativo y locator en el aparato con el encoder (sin móvil ni webconf).
    - Aceleración del giro: al girar rápido, los valores avanzan de 5 en 5.
-   - **Consumo, lo que queda:** bajar el brillo de la OLED tras un rato sin uso en cualquier pantalla; quizá hacer
-     configurable el tiempo de apagado automático (hoy 30 min fijos). Vigilar la fragmentación con el `[DIAG]` tras
-     muchas horas. El consumo en deep sleep no se ha medido (por USB lo tapan el CP2102 y el cargador; haría falta
+   - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
+     2016 bytes libres de 4096 tras Duo). El consumo en deep sleep no se ha medido (por USB lo tapan el CP2102 y el cargador; haría falta
      medir en el cable de la batería con un polímetro en µA).
    - Detectar USB y carga: la V3 no lo permite por software. Propuesta sin decidir: divisor 100k/150k del pin 5V
      (J2-2) a GPIO33 (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.

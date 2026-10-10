@@ -10,7 +10,7 @@
 ![Licencia del software](https://img.shields.io/badge/software-GPL--3.0-blue)
 ![Licencia del hardware](https://img.shields.io/badge/hardware%20y%20docs-CC%20BY--NC--SA%204.0-lightgrey)
 
-> *"Chispas"* era el apodo que se daba al radiotelegrafista de a bordo. Este proyecto empezó llamándose *Mr. Morse*.
+> *"Chispas"* era el apodo que se daba al radiotelegrafista de a bordo.
 
 Chispas reúne en un aparato de bolsillo lo necesario para aprender y practicar CW: un entrenador por el método Koch,
 un keyer iámbico, un modo de repetición (Echo), práctica en pareja por radio LoRa y utilidades de estación, como la

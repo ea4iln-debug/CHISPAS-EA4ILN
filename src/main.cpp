@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.7n - Deep sleep con PRG largo (despierta con PRG) y apagado automatico tras 30 min sin uso
+ * @version 0.7s - Sin restos del nombre antiguo; Echo espera a "iniciar"; Duo: radio despierta bien; modo sin encoder; brillo y apagado configurable
  * @date 2026-10-09
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.7n"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.7s"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -93,6 +93,7 @@
 #define VBAT_MULTIPLIER 4.9f   // Divisor 390k/100k de la V3. Calibrado con polimetro: 4,10 V reales / 836,7 mV en el pin (2,5 dB)
 #define TIEMPO_PULSACION_LARGA 600 // Umbral en ms para detectar pulsacion larga del boton PRG
 #define TIEMPO_ANTIRREBOTE_MS  30  // Pulsaciones mas cortas se ignoran (rebotes)
+#define TIEMPO_PULSACION_DORMIR 2500  // Solo sin encoder: PRG tan largo = dormir (la larga normal = ejecutar)
 
 // ============================================================================
 // DICCIONARIO MORSE Y TABLA KOCH
@@ -266,9 +267,9 @@ uint8_t opcionKeyer = 0;            // 0 = wpm, 1 = modo, 2 = palas, 3 = borrar,
 String textoKeyer = "";             // Lo descodificado de la manipulacion
 
 // Modo Echo (pantalla CW > ECHO): Chispas emite letras de la leccion Koch y hay que repetirlas con las palas
-enum EstadoEcho { ECHO_REPRODUCIENDO, ECHO_ESCUCHANDO, ECHO_RESULTADO };
+enum EstadoEcho { ECHO_ESPERA, ECHO_REPRODUCIENDO, ECHO_ESCUCHANDO, ECHO_RESULTADO };
 bool enEcho = false;
-uint8_t opcionEcho = 3;          // 0 = wpm, 1 = largo, 2 = ver, 3 = repetir, 4 = volver
+uint8_t opcionEcho = 3;          // 0 = wpm, 1 = largo, 2 = ver, 3 = iniciar/repetir, 4 = volver
 uint8_t echoLargo = 1;           // Letras por reto (1-5)
 bool echoVerObjetivo = true;     // Ensenar la letra antes de manipularla (para aprender)
 EstadoEcho estadoEcho = ECHO_REPRODUCIENDO;
@@ -535,8 +536,9 @@ void motorCWEmitir(const char* texto, uint8_t wpm, uint16_t espaciado, const cha
 #define KEYER_WPM_MAX 40
 #define KEYER_PILA    3072
 
-void guardarKeyerNVS();         // Definida en la seccion NVS
-extern bool pantallaPendiente;  // Definida con la bateria
+void guardarKeyerNVS();                // Definida en la seccion NVS
+extern bool pantallaPendiente;         // Definida con la bateria
+extern unsigned long ultimaActividadMs;  // Definida con la cara (ultimo giro, pulsacion o manipulacion)
 
 TaskHandle_t tareaKeyer = NULL;
 QueueHandle_t colaKeyerTexto = NULL;  // Caracteres descodificados, de la tarea a loop()
@@ -707,7 +709,8 @@ void entrarEnEcho() {
   echoAciertos = 0;
   echoIntentos = 0;
   echoObjetivo = "";
-  echoNuevoReto(false);
+  echoRespuesta = "";
+  estadoEcho = ECHO_ESPERA;  // No emite hasta pulsar "iniciar" (da tiempo a ajustar wpm, largo y ver)
 }
 
 void salirDeEcho() {
@@ -758,6 +761,7 @@ void procesarEcho() {
 void procesarTextoKeyer() {
   char c;
   while (xQueueReceive(colaKeyerTexto, &c, 0) == pdTRUE) {
+    ultimaActividadMs = millis();  // Manipular cuenta como uso (brillo y apagado automatico)
     Serial.print(c);
     if (enEcho) {
       echoRecibirCaracter(c);
@@ -772,27 +776,10 @@ void procesarTextoKeyer() {
 // ============================================================================
 // MEMORIA PERSISTENTE NVS
 // ============================================================================
-// Entrenador (Koch, keyer, Echo y estadisticas). Hasta la v0.7k se llamaba "mr_morse": al pasar a
-// "chispas" se empieza de cero y el espacio antiguo se borra en el primer arranque.
-#define NVS_ENTRENADOR         "chispas"
-#define NVS_ENTRENADOR_ANTIGUO "mr_morse"
+// Entrenador (Koch, keyer, Echo y estadisticas)
+#define NVS_ENTRENADOR "chispas"
 
-void borrarEspacioAntiguoNVS() {
-  // API de ESP-IDF: en solo lectura, nvs_open() no crea el espacio si no existe (ni escribe errores)
-  // Tras borrarlo, el nombre del espacio sigue registrado (vacio): solo se actua si le quedan datos
-  nvs_handle_t h;
-  if (nvs_open(NVS_ENTRENADOR_ANTIGUO, NVS_READONLY, &h) != ESP_OK) return;
-  size_t entradas = 0;
-  nvs_get_used_entry_count(h, &entradas);
-  nvs_close(h);
-  if (entradas == 0) return;
-  if (nvs_open(NVS_ENTRENADOR_ANTIGUO, NVS_READWRITE, &h) == ESP_OK) {
-    nvs_erase_all(h);
-    nvs_commit(h);
-    nvs_close(h);
-    Serial.println(F("[NVS] BORRADO EL ESPACIO ANTIGUO \"" NVS_ENTRENADOR_ANTIGUO "\""));
-  }
-}
+extern uint8_t apagadoAutoMin;  // Minutos del apagado automatico; definida con las opciones de CONF
 
 void cargarDatosNVS() {
   prefs.begin(NVS_ENTRENADOR, true);
@@ -806,6 +793,7 @@ void cargarDatosNVS() {
   keyerPalasInvertidas = prefs.getBool("kinv", false);
   echoLargo = constrain(prefs.getUChar("elargo", 1), 1, 5);
   echoVerObjetivo = prefs.getBool("ever", true);
+  apagadoAutoMin = prefs.getUChar("apag", 30);  // ajustarApagado(0) lo lleva a un valor de la lista si no lo es
 
   for (int i = 0; i < 40; i++) {
     String kComp = "c_" + String(i);
@@ -826,6 +814,12 @@ void guardarUltimaConfiguracionNVS() {
   prefs.putUChar("leccion", leccionCW);
   prefs.putUChar("caract", caracteresCW);
   prefs.putUChar("grupos", gruposCW);
+  prefs.end();
+}
+
+void guardarApagadoNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUChar("apag", apagadoAutoMin);
   prefs.end();
 }
 
@@ -1311,6 +1305,17 @@ void procesarRecepcionLoRa() {
  * que pudiera estar sonando y limpia el estado, para que un paquete que llegue despues
  * no suene encima del entrenador ni de otras pantallas.
  */
+/**
+ * Despierta la radio (duerme fuera de Duo y QSO) y la pone a escuchar. Con el SX1262 dormido, BUSY
+ * esta en alto y startReceive() se queda esperando: hay que despertarlo antes bajando NSS, que es lo
+ * que hace standby(..., true). Sin esto, la placa que solo escuchaba no recibia (probado).
+ */
+void loraEscuchar() {
+  int estado = radio.standby(RADIOLIB_SX126X_STANDBY_RC, true);
+  if (estado == RADIOLIB_ERR_NONE) estado = radio.startReceive();
+  if (estado != RADIOLIB_ERR_NONE) Serial.printf("[LORA] ERROR AL DESPERTAR LA RADIO: %d\n", estado);
+}
+
 void salirModoLoRa() {
   enPantalla4_Sub = false;
   subpantalla4Activa = 0;
@@ -1386,8 +1391,29 @@ uint8_t opcionPantallaProp = OPCION_BARRA_PROP;  // 0 = mas (pagina), 1 = actual
 uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
 
-#define OPCION_BARRA_CONFIG 2
-uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // 0 = webconf (portal), 1 = reset de fabrica, 2 = barra ant./sig.
+#define OPCION_BARRA_CONFIG 3
+uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // 0 = webconf (portal), 1 = reset de fabrica, 2 = apagado, 3 = barra
+
+// Apagado automatico: minutos sin tocar nada antes de dormir (0 = nunca). Se elige en CONF y se guarda en NVS
+const uint8_t OPCIONES_APAGADO_MIN[] = { 0, 5, 10, 15, 30, 60, 120 };
+const uint8_t N_OPCIONES_APAGADO = sizeof(OPCIONES_APAGADO_MIN);
+uint8_t apagadoAutoMin = 30;
+
+String textoApagado() {
+  return apagadoAutoMin == 0 ? String("nunca") : String(apagadoAutoMin) + " min";
+}
+
+// Paso al valor siguiente o anterior de OPCIONES_APAGADO_MIN, sin dar la vuelta
+void ajustarApagado(int8_t paso) {
+  int i = 0;
+  while (i < N_OPCIONES_APAGADO - 1 && OPCIONES_APAGADO_MIN[i] != apagadoAutoMin) i++;
+#ifdef SIN_ENCODER
+  i = (i + N_OPCIONES_APAGADO + paso) % N_OPCIONES_APAGADO;  // Sin encoder: da la vuelta
+#else
+  i = constrain(i + paso, 0, N_OPCIONES_APAGADO - 1);
+#endif
+  apagadoAutoMin = OPCIONES_APAGADO_MIN[i];
+}
 bool confirmandoFabrica = false;
 
 // Pagina "Setup" del portal: datos de la estacion y hora manual (para campo sin internet)
@@ -1981,7 +2007,9 @@ void renderizarPantallaCW() {
 
     // Estado
     display.setCursor(0, 42);
-    if (estadoEcho == ECHO_REPRODUCIENDO) {
+    if (estadoEcho == ECHO_ESPERA) {
+      display.print(F("PULSA INICIAR"));
+    } else if (estadoEcho == ECHO_REPRODUCIENDO) {
       display.print(F("ESCUCHA..."));
     } else if (estadoEcho == ECHO_ESCUCHANDO) {
       display.print(F("TU TURNO: ")); display.print(echoRespuesta); display.print('_');
@@ -1996,7 +2024,7 @@ void renderizarPantallaCW() {
       }
     }
 
-    dibujarPieCentrado((opcionEcho == 3 ? "> " : "  ") + String("repetir   ") +
+    dibujarPieCentrado((opcionEcho == 3 ? "> " : "  ") + String(estadoEcho == ECHO_ESPERA ? "iniciar   " : "repetir   ") +
                        (opcionEcho == 4 ? "> " : "  ") + String("volver"));
 
   } else if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
@@ -2618,6 +2646,16 @@ void renderizarPantallaConfig() {
   if (opcionPantallaConfig == OPCION_BARRA_CONFIG) {
     // "« opc »" con los caracteres 0xAE y 0xAF de CP437
     dibujarBarraAvanzarRetroceder(true, String((char)0xAE) + " opc " + String((char)0xAF));
+  } else if (opcionPantallaConfig == 2) {
+    // Apagado automatico: pulsar para editar y girar
+    display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
+    String txt = "> apagado: ";
+    int16_t x1, y1;
+    uint16_t w, h;
+    display.getTextBounds(txt + textoApagado(), 0, 0, &x1, &y1, &w, &h);
+    display.setCursor((128 - w) / 2, 55);
+    display.print(txt);
+    imprimirValor(true, textoApagado());
   } else {
     String pie = (opcionPantallaConfig == 0 ? "> " : "  ") + String(estadoWifi == WIFI_PORTAL ? "ver qr  " : "webconf  ") +
                  (opcionPantallaConfig == 1 ? "> " : "  ") + String("fabrica");
@@ -2842,7 +2880,6 @@ void activarCara() {
 void desactivarCara() {
   caraActiva = false;
   cambioCaraMs = millis();
-  display.dim(false);  // Por si estaba dormida
   actualizarPantalla();
 }
 
@@ -3012,10 +3049,7 @@ void procesarCara() {
   ultimoFotogramaMs = ahora;
 
   if (dormir) {
-    if (expresionCara != EXP_DORMIDA) {
-      ponerExpresion(EXP_DORMIDA, 0);
-      display.dim(true);  // Ahorro: OLED al minimo de brillo mientras duerme
-    }
+    if (expresionCara != EXP_DORMIDA) ponerExpresion(EXP_DORMIDA, 0);  // procesarBrillo() la atenua
   } else {
     // Fin de un gesto, o cambio de la expresion de fondo (bateria)
     bool gestoAcabado = duracionExpresionMs != 0 && ahora - inicioExpresionMs >= duracionExpresionMs;
@@ -3067,9 +3101,10 @@ struct Pulsador {
   bool ultimoEstado;
   unsigned long inicio;
   bool pulsando;
+  unsigned long ultimaDuracion;  // De la ultima pulsacion (para la muy larga del modo sin encoder)
 };
-Pulsador pulsadorPrg = { BUTTON_PIN, HIGH, 0, false };
-Pulsador pulsadorEje = { ENC_SW_PIN, HIGH, 0, false };
+Pulsador pulsadorPrg = { BUTTON_PIN, HIGH, 0, false, 0 };
+Pulsador pulsadorEje = { ENC_SW_PIN, HIGH, 0, false, 0 };
 
 /**
  * Lee un pulsador sin bloquear y da el evento al SOLTARLO: 1 = corta (mas de
@@ -3089,6 +3124,7 @@ uint8_t leerPulsador(Pulsador& p) {
   if (p.ultimoEstado == LOW && estadoActual == HIGH && p.pulsando) {
     unsigned long duracion = millis() - p.inicio;
     p.pulsando = false;
+    p.ultimaDuracion = duracion;
 
     if (duracion >= TIEMPO_PULSACION_LARGA) ev = 2;
     else if (duracion > TIEMPO_ANTIRREBOTE_MS) ev = 1;
@@ -3140,6 +3176,14 @@ void iniciarEncoder() {
  */
 EventoBoton leerEventoBoton() {
   uint8_t prg = leerPulsador(pulsadorPrg);
+#ifdef SIN_ENCODER
+  // Placa sin encoder (entorno heltec_sin_encoder): el PRG hace de encoder. Corta = girar a la
+  // derecha (mover el foco), larga = pulsar el eje (ejecutar), muy larga = PRG largo (dormir).
+  // No hay atras: todas las pantallas tienen volver o ant./sig.
+  if (prg == 1) return ENC_DERECHA;
+  if (prg == 2) return (pulsadorPrg.ultimaDuracion >= TIEMPO_PULSACION_DORMIR) ? BOTON_LARGA : ENC_PULSA;
+  return BOTON_NINGUNO;
+#endif
   if (prg == 1) return BOTON_CORTA;
   if (prg == 2) return BOTON_LARGA;
 
@@ -3174,7 +3218,13 @@ void moverFocoAnillo(uint8_t& opcion, uint8_t barra, int8_t paso) {
 // Cambia un valor con el encoder, sin dar la vuelta al llegar a los limites
 template <typename T>
 void ajustarValor(T& valor, int paso, int minimo, int maximo) {
+#ifdef SIN_ENCODER
+  // Sin encoder solo se avanza en un sentido: al pasar del maximo se vuelve al minimo
+  int v = (int)valor + paso;
+  valor = (T)(v > maximo ? minimo : (v < minimo ? maximo : v));
+#else
   valor = (T)constrain((int)valor + paso, minimo, maximo);
+#endif
 }
 
 /**
@@ -3268,11 +3318,11 @@ void procesarBoton() {
         if (opcionPantalla4 == 0) {
           enPantalla4_Sub = true; subpantalla4Activa = 1;
           modoRadioRxActivo = true; opcionDuo4_1 = 3;
-          radio.startReceive();  // La radio duerme fuera de Duo y QSO
+          loraEscuchar();  // La radio duerme fuera de Duo y QSO
         } else if (opcionPantalla4 == 1) {
           enPantalla4_Sub = true; subpantalla4Activa = 2;
           modoRadioRxActivo = true;
-          radio.startReceive();
+          loraEscuchar();
         } else {
           navegarDesdeBarra();
         }
@@ -3321,13 +3371,19 @@ void procesarBoton() {
 
   } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
              pantallaActual == PANTALLA_CONFIG) {
-    // P4 y P5: [sig.] -> [mas >] -> [act.] -> [ant.]    P7: [sig.] -> [webconf] -> [fabrica] -> [ant.]
+    // P4 y P5: [sig.] -> [mas >] -> [act.] -> [ant.]
+    // P7: [sig.] -> [webconf] -> [fabrica] -> [apagado] -> [ant.]
     bool esProp = (pantallaActual == PANTALLA_PROPAGACION);
     bool esConfig = (pantallaActual == PANTALLA_CONFIG);
     uint8_t& opcion = esProp ? opcionPantallaProp : (esConfig ? opcionPantallaConfig : opcionPantallaSpots);
     uint8_t barra = esProp ? OPCION_BARRA_PROP : (esConfig ? OPCION_BARRA_CONFIG : OPCION_BARRA_SPOTS);
     if (atras) {
       entrarEnPantalla(PANTALLA_INICIO);
+    } else if (esConfig && opcion == 2 && editandoValor && giro != 0) {
+      ajustarApagado(giro);
+      guardarApagadoNVS();
+    } else if (esConfig && opcion == 2 && pulsa) {
+      editandoValor = !editandoValor;  // Pulsar, girar y pulsar
     } else if (giro != 0) {
       confirmandoFabrica = false;
       moverFocoAnillo(opcion, barra, giro);
@@ -3368,10 +3424,13 @@ void procesarBoton() {
             break;
           case 1:
             editandoValor = !editandoValor;
-            if (!editandoValor) echoNuevoReto(false);  // Nuevo largo: reto nuevo
+            if (!editandoValor && estadoEcho != ECHO_ESPERA) echoNuevoReto(false);  // Nuevo largo: reto nuevo
             break;
           case 2: echoVerObjetivo = !echoVerObjetivo; break;
-          case 3: echoNuevoReto(true); break;  // Volver a oirlo (no cuenta como intento)
+          case 3:
+            // "iniciar" la primera vez; despues, "repetir" (volver a oirlo, no cuenta como intento)
+            echoNuevoReto(estadoEcho != ECHO_ESPERA);
+            break;
           case 4: salirDeEcho(); break;
         }
       }
@@ -3558,10 +3617,9 @@ void encenderPerifericos() {
 // ============================================================================
 // DORMIR (DEEP SLEEP) Y APAGADO AUTOMATICO
 // ============================================================================
-// PRG largo, o APAGADO_AUTO_MS sin tocar nada, pone la placa en deep sleep: OLED, Vext, LoRa, WiFi
+// PRG largo, o apagadoAutoMin minutos sin tocar nada (se elige en CONF), pone la placa en deep sleep: OLED, Vext, LoRa, WiFi
 // y LED apagados. Se despierta pulsando PRG (GPIO0, pin RTC: wakeup ext0 a nivel bajo) y arranca de
 // nuevo como al encenderla (la configuracion esta en NVS).
-#define APAGADO_AUTO_MS (30UL * 60 * 1000)
 
 void dormirChispas(const char* motivo) {
   Serial.printf("[SUENO] %s: a dormir. PRG para despertar\n", motivo);
@@ -3603,13 +3661,14 @@ void dormirChispas(const char* motivo) {
 }
 
 /**
- * Apagado automatico tras APAGADO_AUTO_MS sin tocar nada, salvo si puede estar en uso sin tocarlo:
- * practica Koch en marcha, Duo o QSO, keyer, Echo o portal abierto.
+ * Apagado automatico tras apagadoAutoMin minutos sin tocar nada (0 = nunca), salvo en las pantallas CW y
+ * LoRa (Koch, keyer, Echo, Duo, QSO: se puede estar usando sin tocar nada) o con el portal abierto.
  */
 void procesarApagadoAuto() {
-  if (millis() - ultimaActividadMs < APAGADO_AUTO_MS) return;
-  bool practicando = enPractica3_2 && estadoCW != CW_PAUSADO;
-  if (practicando || enPantalla4_Sub || enKeyer || enEcho || estadoWifi == WIFI_PORTAL) return;
+  if (apagadoAutoMin == 0) return;  // "nunca"
+  if (millis() - ultimaActividadMs < apagadoAutoMin * 60000UL) return;
+  // En CW y LoRa (y sus subpantallas) nunca: son las de practicar. Tampoco con el portal abierto
+  if (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA || estadoWifi == WIFI_PORTAL) return;
   dormirChispas("SIN USO");
 }
 
@@ -3628,6 +3687,9 @@ void setup() {
   delay(1000);
   Serial.println(F("\n[INIT] Chispas EA4ILN v" FW_VERSION "..."));
   cpuSegunWifi(false);  // Ahorro: 80 MHz mientras el WiFi este apagado
+#ifdef SIN_ENCODER
+  Serial.println(F("[INIT] MODO SIN ENCODER: PRG corto = mover, largo = ejecutar, muy largo = dormir"));
+#endif
   
   encenderPerifericos();
   iniciarMotorCW();
@@ -3679,8 +3741,8 @@ void setup() {
   randomSeed(esp_random());  // GPIO0 no es ADC en el S3: la semilla anterior era casi fija
   seqTx = random(256);       // Si la otra placa se reinicia, que no repita el ultimo seq
 
-  borrarEspacioAntiguoNVS();
   cargarDatosNVS();
+  ajustarApagado(0);  // Si lo guardado no es un valor de la lista, lo corrige
   cargarEstacionNVS();
   setenv("TZ", ZONA_HORARIA, 1);  // Para que la hora manual del portal se interprete como local
   tzset();
@@ -3756,6 +3818,24 @@ void procesarDiagnostico() {
                 hayNvs ? nvs.total_entries : 0, getCpuFrequencyMhz());
 }
 
+/**
+ * Ahorro: la OLED pasa al minimo de brillo tras BRILLO_TENUE_MS sin tocar nada (o con la cara dormida)
+ * y vuelve al normal con cualquier giro, pulsacion o manipulacion con las palas. En CW y LoRa (y sus
+ * subpantallas) no se atenua: son las que se miran mientras se practica.
+ */
+#define BRILLO_TENUE_MS 60000UL
+
+void procesarBrillo() {
+  static bool tenue = false;
+  bool pantallaDePractica = (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA);
+  bool debeSerTenue = (!pantallaDePractica && millis() - ultimaActividadMs >= BRILLO_TENUE_MS) ||
+                      (caraActiva && expresionCara == EXP_DORMIDA);
+  if (debeSerTenue != tenue) {
+    tenue = debeSerTenue;
+    display.dim(tenue);
+  }
+}
+
 void loop() {
   procesarBoton();
   procesarTextoKeyer();
@@ -3768,6 +3848,7 @@ void loop() {
   procesarWifi();
   procesarBateriaYPantalla();
   procesarDiagnostico();
+  procesarBrillo();
   procesarApagadoAuto();
 
   // Ahorro: 1 ms de descanso por vuelta. Sin el, loop() tenia un nucleo al 100 %; con el, la CPU espera
