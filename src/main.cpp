@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.8i - LoRa: PRACTICA DUO y QSO LIBRE (QSO con las palas: palabra a palabra, RX con break-in, VER SI/NO)
+ * @version 0.9a - Pantalla TRX: decodificador CW (GPIO6, DMA + Goertzel), OPERAR por KEY (GPIO2), QSO y memorias
  * @date 2026-10-10
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.8i"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.9a"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -34,6 +34,7 @@
 #include <esp_sleep.h>
 #include <driver/gpio.h>
 #include <driver/rtc_io.h>
+#include <driver/adc.h>  // ADC por DMA (decodificador CW de la pantalla TRX)
 
 // ============================================================================
 // DEFINICION DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
@@ -234,12 +235,13 @@ uint8_t pantallaActual = 1;
 // Pantallas principales, en el orden en que se recorren con ant. / sig.
 #define PANTALLA_INICIO      1
 #define PANTALLA_CW          2  // Entrenador Koch
-#define PANTALLA_LORA        3  // Duo / QSO
-#define PANTALLA_PROPAGACION 4
-#define PANTALLA_SPOTS       5
-#define PANTALLA_SOL         6
-#define PANTALLA_CONFIG      7
-const uint8_t TOTAL_PANTALLAS = 7;
+#define PANTALLA_LORA        3  // Practica Duo / QSO libre
+#define PANTALLA_TRX         4  // Conexion con el transceptor: decodificar, operar (KEY), QSO y memorias
+#define PANTALLA_PROPAGACION 5
+#define PANTALLA_SPOTS       6
+#define PANTALLA_SOL         7
+#define PANTALLA_CONFIG      8
+const uint8_t TOTAL_PANTALLAS = 8;
 uint8_t opcionNavegacionP1234 = 1;  // 0 = "ant.", 1 = "sig."
 
 int contadorPulsaciones = 0;
@@ -402,6 +404,43 @@ String qsoTextoTx = "";           // Manipulado
 String qsoPalabraTx = "";         // Palabra en curso, aun sin enviar
 char qsoIndicativoRx[TRAMA_LONG_INDICATIVO + 1] = "";
 #define QSO_TEXTO_MAX 200
+
+// Pantalla TRX (conexion con el transceptor). Menu: DECODIFICAR, OPERAR, QSO y, en el pie, memorias
+#define TRX_OPCION_MEMORIAS 3
+#define TRX_OPCION_BARRA 4
+uint8_t opcionTrx = TRX_OPCION_BARRA;  // 0 decodificar, 1 operar, 2 qso, 3 memorias (pie), 4 barra ant./sig.
+enum SubTrx { TRX_MENU, TRX_DECOD, TRX_OPERAR, TRX_QSO, TRX_MEMORIAS, TRX_LISTA_ENVIO, TRX_EDITOR };
+SubTrx subTrx = TRX_MENU;
+SubTrx subTrxOrigen = TRX_MENU;  // A donde vuelven la lista de envio y el editor
+uint8_t opcionTrxSub = 0;        // Foco dentro de la subpantalla
+uint8_t trxWpm = 20;             // Keyer y memorias por KEY (NVS "twpm")
+uint16_t trxTonoDecodHz = 0;     // Tono del decodificador: 0 = automatico, 400-1000 (NVS "tdec")
+String trxTextoRx = "";          // Descodificado de la emisora
+String trxTextoTx = "";          // Manipulado y memorias enviadas
+char trxSu[TRAMA_LONG_INDICATIVO + 1] = "";  // Indicativo del corresponsal ({SU})
+bool trxEnviandoMemoria = false;
+bool keyCortadaPorSeguridad = false;
+#define KEY_MAX_CONTINUA_MS 10000
+// Memorias: 6 de hasta 40 caracteres, con {MI} (indicativo de la estacion) y {SU} (corresponsal).
+// En NVS "estacion" (m0..m5); sin guardar, las precargadas
+#define TRX_NUM_MEMORIAS 6
+#define TRX_MEMORIA_MAX 40
+char trxMemorias[TRX_NUM_MEMORIAS][TRX_MEMORIA_MAX + 1];
+const char* const TRX_MEMORIAS_PRECARGADAS[TRX_NUM_MEMORIAS] = {
+  "CQ CQ CQ DE {MI} {MI} K",
+  "{SU} DE {MI} {MI} K",
+  "R TNX UR RST 599 599",
+  "HW? {SU} DE {MI} K",
+  "TNX FER QSO 73 GL",
+  "{SU} DE {MI} 73 SK",
+};
+uint8_t trxMemoriaSel = 0;  // Foco en las listas de memorias (TRX_NUM_MEMORIAS = volver)
+// Editor de textos (memorias y {SU}): rueda de caracteres con el encoder, o las palas
+int8_t editorDestino = 0;   // 0..5 = memoria; -1 = indicativo del corresponsal
+String editorTexto = "";
+uint8_t editorMax = TRX_MEMORIA_MAX;
+uint8_t editorSel = 0;      // Posicion en la rueda
+
 int rssiUltimo = 0;
 float snrUltimo = 0.0;
 
@@ -437,13 +476,27 @@ void informarRetrasoCW(const char* origen) {
 // ============================================================================
 // CONTROL DE AUDIO Y LED MORSE
 // ============================================================================
+// Salida KEY a la emisora (GPIO2 -> PC817). Solo se habilita en OPERAR y QSO de la pantalla TRX: el resto
+// (Koch, Echo, TX libre, LoRa) nunca manipula la emisora
+volatile bool keyHabilitada = false;
+volatile bool trxTonoLocal = true;           // Buzzer/auriculares mientras sale por KEY (NVS "ttono")
+volatile unsigned long keyActivaDesdeMs = 0;  // 0 = KEY en reposo (para el corte de seguridad)
+volatile unsigned long keyFinMs = 0;          // Ultima vez que se solto KEY (el decodificador no escucha justo despues)
+
 void conmutarEmisionMorse(bool activar) {
   digitalWrite(LED_PIN, activar ? HIGH : LOW);
-  if (activar) {
-    ledcWrite(CANAL_PWM_AUDIO, 128); 
-  } else {
-    ledcWrite(CANAL_PWM_AUDIO, 0);
+  bool key = activar && keyHabilitada;
+  digitalWrite(KEY_OUT_PIN, key ? HIGH : LOW);
+  if (key) {
+    // Nunca por delante de millis() (con "| 1" podia ir 1 ms adelantada y la resta daba la vuelta)
+    unsigned long ahora = millis();
+    if (keyActivaDesdeMs == 0) keyActivaDesdeMs = (ahora != 0) ? ahora : 1;
+  } else if (keyActivaDesdeMs != 0) {
+    keyActivaDesdeMs = 0;
+    keyFinMs = millis();
   }
+  bool tono = activar && (!keyHabilitada || trxTonoLocal);
+  ledcWrite(CANAL_PWM_AUDIO, tono ? 128 : 0);
 }
 
 uint16_t frecTonoHz = FREC_AUDIO_HZ;  // Tono CW (buzzer y auriculares); se elige en CONF y se guarda en NVS
@@ -616,6 +669,7 @@ void motorCWEmitir(const char* texto, uint8_t wpm, uint16_t espaciado, const cha
 void guardarKeyerNVS();                // Definida en la seccion NVS
 void guardarEchoNVS();                 // Definida en la seccion NVS
 void qsoCaracterManipulado(char c);    // Definida con la radio LoRa
+void trxCaracterManipulado(char c);    // Definida con la pantalla TRX
 extern bool pantallaPendiente;         // Definida con la bateria
 extern unsigned long ultimaActividadMs;  // Definida con la cara (ultimo giro, pulsacion o manipulacion)
 
@@ -659,7 +713,9 @@ void tareaKeyerFn(void* parametro) {
 
     vTaskDelay(1);
     TickType_t ahora = xTaskGetTickCount();
-    TickType_t dit = pdMS_TO_TICKS(1200 / (enEcho ? echoWpm : keyerWpm));  // El Echo tiene su propio wpm
+    // El Echo y la pantalla TRX tienen su propio wpm
+    uint8_t wpm = enEcho ? echoWpm : (pantallaActual == PANTALLA_TRX ? trxWpm : keyerWpm);
+    TickType_t dit = pdMS_TO_TICKS(1200 / wpm);
     bool pDit, pDah;
     leerPalas(pDit, pDah);
     char siguiente = 0;
@@ -920,6 +976,10 @@ void procesarTextoKeyer() {
       qsoCaracterManipulado(c);
       continue;
     }
+    if (pantallaActual == PANTALLA_TRX) {
+      trxCaracterManipulado(c);
+      continue;
+    }
     textoKeyer += c;
     if (textoKeyer.length() > 200) textoKeyer.remove(0, textoKeyer.length() - 200);
     pantallaPendiente = true;
@@ -942,6 +1002,10 @@ void cargarDatosNVS() {
   keyerModoB = prefs.getBool("kmodob", false);
   keyerPalasInvertidas = prefs.getBool("kinv", false);
   qsoVerRx = prefs.getBool("qver", true);
+  trxWpm = constrain(prefs.getUChar("twpm", 20), KEYER_WPM_MIN, KEYER_WPM_MAX);
+  trxTonoLocal = prefs.getBool("ttono", true);
+  trxTonoDecodHz = prefs.getUShort("tdec", 0);
+  if (trxTonoDecodHz != 0) trxTonoDecodHz = constrain(trxTonoDecodHz, TONO_MIN_HZ, TONO_MAX_HZ);
   echoWpm = constrain(prefs.getUChar("ewpm", 20), KEYER_WPM_MIN, KEYER_WPM_MAX);
   echoEspaciado = constrain(prefs.getUShort("esp", 200), 100, 200);
   echoLeccion = constrain(prefs.getUChar("elecc", 4), 1, 40);
@@ -1008,6 +1072,14 @@ void guardarKeyerNVS() {
   prefs.putBool("kmodob", keyerModoB);
   prefs.putBool("kinv", keyerPalasInvertidas);
   prefs.putBool("qver", qsoVerRx);
+  prefs.end();
+}
+
+void guardarTrxNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUChar("twpm", trxWpm);
+  prefs.putBool("ttono", trxTonoLocal);
+  prefs.putUShort("tdec", trxTonoDecodHz);
   prefs.end();
 }
 
@@ -1089,6 +1161,18 @@ void cargarEstacionNVS() {
   strlcpy(indicativoEstacion, prefs.getString("call", INDICATIVO_POR_DEFECTO).c_str(), sizeof(indicativoEstacion));
   strlcpy(locatorEstacion, prefs.getString("loc", LOCATOR_POR_DEFECTO).c_str(), sizeof(locatorEstacion));
   horaUtcCabecera = prefs.getBool("utc", false);
+  // Memorias de la pantalla TRX: sin clave guardada, la precargada (una memoria borrada se guarda vacia)
+  for (uint8_t i = 0; i < TRX_NUM_MEMORIAS; i++) {
+    String clave = "m" + String(i);
+    String m = prefs.isKey(clave.c_str()) ? prefs.getString(clave.c_str(), "") : String(TRX_MEMORIAS_PRECARGADAS[i]);
+    strlcpy(trxMemorias[i], m.c_str(), sizeof(trxMemorias[i]));
+  }
+  prefs.end();
+}
+
+void guardarMemoriaNVS(uint8_t i) {
+  prefs.begin(NVS_ESTACION, false);
+  prefs.putString(("m" + String(i)).c_str(), trxMemorias[i]);
   prefs.end();
 }
 
@@ -1261,6 +1345,7 @@ void dibujarEncabezado() {
     switch (pantallaActual) {
       case PANTALLA_CW:          nombre = "CW";    break;
       case PANTALLA_LORA:        nombre = "LORA";  break;
+      case PANTALLA_TRX:         nombre = "TRX";   break;
       case PANTALLA_PROPAGACION: nombre = "PROP."; break;
       case PANTALLA_SPOTS:       nombre = "POTA";  break;
       case PANTALLA_SOL:         nombre = "SOL";   break;
@@ -1570,6 +1655,489 @@ void procesarQSO() {
   motorCWEmitir(qsoPalabraSonando.c_str(), wpmEmisionDuo, 100, "QSO");
 }
 
+// ============================================================================
+// DECODIFICADOR CW DEL AUDIO DE LA EMISORA (GPIO6, ADC1)
+// ============================================================================
+// Una tarea en el nucleo 0 lee el ADC por DMA a 8 kHz (sin cargar loop()) y, cada bloque de 96 muestras
+// (12 ms), mide con Goertzel la energia del tono. Umbral adaptativo (ruido de fondo y pico) con histeresis;
+// la duracion de las marcas y los silencios, comparada con un punto que se adapta a la velocidad, da puntos,
+// rayas, fin de caracter y espacio. Tono fijo (400-1000 Hz) o automatico: busca el mas fuerte de 400 a
+// 1000 Hz en pasos de 50. Mientras sale por KEY (y 300 ms despues) no escucha, para no descodificar el tono
+// de la propia emisora. Sin probar con senal real (el circuito de entrada aun no esta montado).
+#define DECOD_CANAL_ADC   5     // GPIO6 = ADC1, canal 5
+#define DECOD_FS          8000  // Hz
+#define DECOD_N           96    // Muestras por bloque (12 ms, ancho de banda ~80 Hz)
+#define DECOD_BLOQUE_MS   12
+#define DECOD_NUM_BINS    13    // 400..1000 Hz cada 50 (modo automatico)
+#define DECOD_MIN_SENAL   1500.0f   // Magnitud minima para considerar que hay tono (amplitud ~30 cuentas)
+#define DECOD_ESCALA_MAX  96000.0f  // Magnitud a fondo de escala (amplitud ~2000 cuentas): barra al 100 %
+#define DECOD_SORDO_TRAS_KEY_MS 300
+#define DECOD_PILA        4096
+
+TaskHandle_t tareaDecod = NULL;
+QueueHandle_t colaDecod = NULL;         // Caracteres descodificados -> loop()
+volatile bool decodActivo = false;      // Lo escribe loop()
+volatile bool decodEnUso = false;       // Lo escribe la tarea: esta leyendo el ADC
+volatile uint8_t decodNivelPct = 0;     // Barra de nivel (escala logaritmica)
+volatile uint8_t decodUmbralPct = 0;    // Marca del umbral en la barra
+volatile uint16_t decodFrecHz = 700;    // Tono que se esta usando
+volatile uint8_t decodWpm = 0;          // Velocidad estimada (0 = aun nada)
+volatile bool decodSaturado = false;    // La entrada llega a los topes del ADC: bajar RV2
+volatile bool decodTono = false;        // Hay tono ahora
+
+float goertzel(const float* x, float coef) {
+  float s1 = 0, s2 = 0;
+  for (int i = 0; i < DECOD_N; i++) {
+    float s = x[i] + coef * s1 - s2;
+    s2 = s1;
+    s1 = s;
+  }
+  float p = s1 * s1 + s2 * s2 - coef * s1 * s2;
+  return p > 0 ? sqrtf(p) : 0;
+}
+
+float coefGoertzel(float f) {
+  return 2.0f * cosf(2.0f * PI * f / DECOD_FS);
+}
+
+uint8_t nivelEnBarra(float m) {
+  if (m <= DECOD_MIN_SENAL) return 0;
+  float pct = 100.0f * logf(m / DECOD_MIN_SENAL) / logf(DECOD_ESCALA_MAX / DECOD_MIN_SENAL);
+  return (uint8_t)constrain(pct, 0.0f, 100.0f);
+}
+
+void decodEnviarCaracter(char c) {
+  xQueueSend(colaDecod, &c, 0);
+}
+
+void tareaDecodFn(void* parametro) {
+  static float muestras[DECOD_N];
+  static uint8_t crudo[DECOD_N * SOC_ADC_DIGI_RESULT_BYTES];
+  int n = 0;
+  float energiaBin[DECOD_NUM_BINS] = {0};
+  uint8_t binActual = 6;  // 700 Hz
+  float ruido = DECOD_MIN_SENAL, pico = DECOD_MIN_SENAL;
+  bool tono = false;
+  uint32_t marcaMs = 0, silencioMs = 0;
+  float puntoMs = 60;  // 20 wpm para empezar
+  char patron[9];
+  uint8_t largo = 0;
+  bool espacioPendiente = false;
+  bool saturado = false;
+
+  for (;;) {
+    if (!decodActivo) {
+      decodEnUso = false;
+      n = 0;
+      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+      continue;
+    }
+    decodEnUso = true;
+
+    uint32_t leidos = 0;
+    esp_err_t err = adc_digi_read_bytes(crudo, sizeof(crudo), &leidos, 50);
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) continue;  // Sin datos (o se ha desbordado: se sigue)
+
+    for (uint32_t i = 0; i + SOC_ADC_DIGI_RESULT_BYTES <= leidos; i += SOC_ADC_DIGI_RESULT_BYTES) {
+      adc_digi_output_data_t* d = (adc_digi_output_data_t*)&crudo[i];
+      if (d->type2.unit != 0 || d->type2.channel != DECOD_CANAL_ADC) continue;
+      uint16_t v = d->type2.data;
+      if (v < 40 || v > 4055) saturado = true;
+      muestras[n++] = v;
+      if (n < DECOD_N) continue;
+      n = 0;
+
+      // Bloque completo: se quita la continua (polarizacion a 1,65 V)
+      float media = 0;
+      for (int k = 0; k < DECOD_N; k++) media += muestras[k];
+      media /= DECOD_N;
+      for (int k = 0; k < DECOD_N; k++) muestras[k] -= media;
+
+      float m;
+      if (trxTonoDecodHz == 0) {
+        // Automatico: energia de cada tono, suavizada; se cambia al mas fuerte si destaca de verdad
+        uint8_t mejor = binActual;
+        for (uint8_t b = 0; b < DECOD_NUM_BINS; b++) {
+          float e = goertzel(muestras, coefGoertzel(400 + 50 * b));
+          energiaBin[b] = 0.9f * energiaBin[b] + 0.1f * e;
+          if (energiaBin[b] > energiaBin[mejor]) mejor = b;
+        }
+        if (mejor != binActual && energiaBin[mejor] > 1.5f * energiaBin[binActual] &&
+            energiaBin[mejor] > DECOD_MIN_SENAL) binActual = mejor;
+        decodFrecHz = 400 + 50 * binActual;
+      } else {
+        decodFrecHz = trxTonoDecodHz;
+      }
+      m = goertzel(muestras, coefGoertzel(decodFrecHz));
+
+      // Umbral adaptativo: ruido (lento, solo sin tono) y pico (sube rapido, baja despacio)
+      if (!tono) ruido = 0.95f * ruido + 0.05f * m;
+      if (m > pico) pico = 0.5f * pico + 0.5f * m;
+      else pico = 0.995f * pico;
+      if (pico < ruido * 2) pico = ruido * 2;
+      float alto = ruido + 0.55f * (pico - ruido);
+      float bajo = ruido + 0.40f * (pico - ruido);
+      bool hayTono = tono ? (m > bajo) : (m > alto && m > DECOD_MIN_SENAL && pico > 3 * ruido);
+
+      // Sordo mientras se emite por KEY y justo despues
+      bool sordo = keyActivaDesdeMs != 0 || millis() - keyFinMs < DECOD_SORDO_TRAS_KEY_MS;
+      if (sordo) hayTono = false;
+
+      decodNivelPct = nivelEnBarra(m);
+      decodUmbralPct = nivelEnBarra(alto);
+      decodSaturado = saturado;
+      saturado = false;
+      decodTono = hayTono;
+
+      if (hayTono) {
+        if (!tono) marcaMs = 0;
+        marcaMs += DECOD_BLOQUE_MS;
+      } else {
+        if (tono) {
+          // Fin de una marca: punto o raya segun el punto estimado; las muy cortas son ruido
+          if (marcaMs >= max(13.0f, puntoMs * 0.3f)) {
+            bool raya = marcaMs > 2 * puntoMs;
+            if (largo < 8) patron[largo] = raya ? '-' : '.';
+            if (largo < 8) largo++;
+            float estimado = raya ? marcaMs / 3.0f : marcaMs;
+            puntoMs = constrain(0.7f * puntoMs + 0.3f * estimado, 24.0f, 240.0f);  // 50 a 5 wpm
+            decodWpm = (uint8_t)(1200 / puntoMs);
+            espacioPendiente = false;
+          }
+          silencioMs = 0;
+        }
+        silencioMs += DECOD_BLOQUE_MS;
+        if (largo > 0 && silencioMs >= 2 * puntoMs) {
+          patron[min(largo, (uint8_t)8)] = '\0';
+          decodEnviarCaracter(largo <= 7 ? decodificarPatron(patron) : '*');
+          largo = 0;
+          espacioPendiente = true;
+        } else if (espacioPendiente && silencioMs >= 5 * puntoMs) {
+          decodEnviarCaracter(' ');
+          espacioPendiente = false;
+        }
+      }
+      tono = hayTono;
+    }
+  }
+}
+
+void iniciarDecodificador() {
+  colaDecod = xQueueCreate(64, sizeof(char));
+  xTaskCreatePinnedToCore(tareaDecodFn, "decod", DECOD_PILA, NULL, 2, &tareaDecod, 0);
+}
+
+// Pone en marcha el ADC por DMA en GPIO6 y despierta la tarea. Mientras, la bateria no se lee (mismo ADC1)
+void decodEmpezar() {
+  if (decodActivo) return;
+  adc_digi_init_config_t ini = {};
+  ini.max_store_buf_size = DECOD_N * SOC_ADC_DIGI_RESULT_BYTES * 4;
+  ini.conv_num_each_intr = DECOD_N * SOC_ADC_DIGI_RESULT_BYTES;
+  ini.adc1_chan_mask = BIT(DECOD_CANAL_ADC);
+  ini.adc2_chan_mask = 0;
+  esp_err_t err = adc_digi_initialize(&ini);
+  if (err != ESP_OK) {
+    Serial.printf("[DECOD] ERROR AL INICIAR EL ADC: %d\n", err);
+    return;
+  }
+  adc_digi_pattern_config_t patron = {};
+  patron.atten = ADC_ATTEN_DB_12;
+  patron.channel = DECOD_CANAL_ADC;
+  patron.unit = 0;  // ADC1
+  patron.bit_width = SOC_ADC_DIGI_MAX_BITWIDTH;
+  adc_digi_configuration_t cfg = {};
+  cfg.conv_limit_en = false;
+  cfg.conv_limit_num = 250;
+  cfg.pattern_num = 1;
+  cfg.adc_pattern = &patron;
+  cfg.sample_freq_hz = DECOD_FS;
+  cfg.conv_mode = ADC_CONV_SINGLE_UNIT_1;
+  cfg.format = ADC_DIGI_OUTPUT_FORMAT_TYPE2;
+  err = adc_digi_controller_configure(&cfg);
+  if (err == ESP_OK) err = adc_digi_start();
+  if (err != ESP_OK) {
+    Serial.printf("[DECOD] ERROR AL CONFIGURAR EL ADC: %d\n", err);
+    adc_digi_deinitialize();
+    return;
+  }
+  decodWpm = 0;
+  xQueueReset(colaDecod);
+  decodActivo = true;
+  xTaskNotifyGive(tareaDecod);
+  Serial.println(F("[DECOD] EN MARCHA (GPIO6)"));
+}
+
+void decodParar() {
+  if (!decodActivo) return;
+  decodActivo = false;
+  unsigned long inicio = millis();
+  while (decodEnUso && millis() - inicio < 200) vTaskDelay(1);  // La lectura caduca a los 50 ms
+  adc_digi_stop();
+  adc_digi_deinitialize();
+  decodNivelPct = 0;
+  decodTono = false;
+  Serial.println(F("[DECOD] PARADO"));
+}
+
+// ============================================================================
+// PANTALLA TRX: OPERAR (KEY), QSO, MEMORIAS Y EDITOR
+// ============================================================================
+bool palaPulsada() {
+  return digitalRead(KEYER_PADDLE_DIT) == LOW || digitalRead(KEYER_PADDLE_DAH) == LOW;
+}
+
+// Sustituye {MI} y {SU} (si no hay corresponsal, {SU} se queda en nada). Cabe en el motor CW (64)
+String trxExpandir(const char* memoria) {
+  String t = memoria;
+  t.replace("{MI}", indicativoEstacion);
+  t.replace("{SU}", trxSu);
+  t.trim();
+  if (t.length() > MOTOR_CW_TEXTO_MAX) t = t.substring(0, MOTOR_CW_TEXTO_MAX);
+  return t;
+}
+
+/**
+ * Deja un texto con lo que se puede emitir: mayusculas, caracteres con codigo Morse, espacios y las
+ * variables {MI} y {SU} (si se permiten). Sirve para el portal y para lo que llega de las palas.
+ */
+String trxLimpiarTexto(String t, bool conVariables, uint8_t maximo) {
+  t.toUpperCase();
+  String r = "";
+  for (unsigned int i = 0; i < t.length() && r.length() < maximo; i++) {
+    if (conVariables && (t.startsWith("{MI}", i) || t.startsWith("{SU}", i))) {
+      if (r.length() + 4 > maximo) break;
+      r += t.substring(i, i + 4);
+      i += 3;
+    } else if (t[i] == ' ') {
+      if (r.length() > 0 && !r.endsWith(" ")) r += ' ';
+    } else if (*obtenerCodigoMorse(t[i]) != '\0') {
+      r += t[i];
+    }
+  }
+  r.trim();
+  return r;
+}
+
+// Habilita la salida KEY (OPERAR y QSO) y pone el keyer en marcha
+void trxHabilitarKey() {
+  keyCortadaPorSeguridad = false;
+  keyHabilitada = true;
+  keyerReanudar();
+}
+
+void trxDeshabilitarKey() {
+  motorCWDetener();
+  keyerPausar();
+  keyHabilitada = false;
+  digitalWrite(KEY_OUT_PIN, LOW);
+  keyActivaDesdeMs = 0;
+  trxEnviandoMemoria = false;
+}
+
+void trxEntrarSub(SubTrx sub) {
+  subTrx = sub;
+  editandoValor = false;
+  switch (sub) {
+    case TRX_DECOD:
+      opcionTrxSub = 2;  // salir
+      trxTextoRx = "";
+      decodEmpezar();
+      break;
+    case TRX_OPERAR:
+      opcionTrxSub = 2;  // mem
+      trxTextoTx = "";
+      trxHabilitarKey();
+      break;
+    case TRX_QSO:
+      opcionTrxSub = 0;  // mem
+      trxTextoRx = trxTextoTx = "";
+      decodEmpezar();
+      trxHabilitarKey();
+      break;
+    case TRX_MEMORIAS:
+      trxMemoriaSel = 0;
+      break;
+    default:
+      break;
+  }
+}
+
+// De una subpantalla al menu TRX: todo apagado y ajustes guardados
+void trxSalirAlMenu() {
+  trxDeshabilitarKey();
+  decodParar();
+  guardarTrxNVS();
+  subTrx = TRX_MENU;
+  editandoValor = false;
+}
+
+// Lista de memorias para enviar (desde OPERAR o QSO): la emision por KEY sigue habilitada, el keyer en pausa
+void trxAbrirListaEnvio() {
+  subTrxOrigen = subTrx;
+  subTrx = TRX_LISTA_ENVIO;
+  trxMemoriaSel = 0;
+  keyerPausar();
+}
+
+void trxVolverDeLista() {
+  subTrx = subTrxOrigen;
+  if (!trxEnviandoMemoria) keyerReanudar();
+}
+
+void trxEnviarMemoria(uint8_t i) {
+  String texto = trxExpandir(trxMemorias[i]);
+  if (texto.length() == 0) return;
+  subTrx = subTrxOrigen;
+  keyerPausar();
+  qsoAnadir(trxTextoTx, texto);
+  trxEnviandoMemoria = true;
+  motorCWEmitir(texto.c_str(), trxWpm, 100, "MEM");
+  Serial.printf("[TRX] MEMORIA %u: %s\n", i + 1, texto.c_str());
+}
+
+// Editor: memoria (0..5) o indicativo del corresponsal (-1). Desde OPERAR/QSO la KEY se deshabilita mientras
+void trxAbrirEditor(int8_t destino) {
+  subTrxOrigen = subTrx;
+  if (keyHabilitada) {
+    motorCWDetener();
+    trxEnviandoMemoria = false;
+    keyHabilitada = false;
+  }
+  editorDestino = destino;
+  editorTexto = destino < 0 ? String(trxSu) : String(trxMemorias[destino]);
+  editorMax = destino < 0 ? TRAMA_LONG_INDICATIVO : TRX_MEMORIA_MAX;
+  editorSel = 0;
+  subTrx = TRX_EDITOR;
+  keyerReanudar();  // Tambien se escribe con las palas (sin KEY)
+}
+
+void trxCerrarEditor(bool guardar) {
+  if (guardar) {
+    if (editorDestino < 0) {
+      strlcpy(trxSu, trxLimpiarTexto(editorTexto, false, TRAMA_LONG_INDICATIVO).c_str(), sizeof(trxSu));
+    } else {
+      strlcpy(trxMemorias[editorDestino], trxLimpiarTexto(editorTexto, true, TRX_MEMORIA_MAX).c_str(),
+              sizeof(trxMemorias[editorDestino]));
+      guardarMemoriaNVS(editorDestino);
+    }
+  }
+  subTrx = subTrxOrigen;
+  if (subTrx == TRX_OPERAR || subTrx == TRX_QSO) trxHabilitarKey();
+  else keyerPausar();
+}
+
+// Rueda de caracteres del editor: A-Z, 0-9, signos y acciones
+const char* const EDITOR_ESPECIALES[] = { ".", ",", "?", "/", "=", "ESP", "{MI}", "{SU}", "<-", "CLR", "OK", "ESC" };
+#define EDITOR_NUM_ESPECIALES (sizeof(EDITOR_ESPECIALES) / sizeof(EDITOR_ESPECIALES[0]))
+#define EDITOR_TAM_RUEDA (36 + EDITOR_NUM_ESPECIALES)
+
+String editorElemento(uint8_t i) {
+  if (i < 26) return String((char)('A' + i));
+  if (i < 36) return String((char)('0' + i - 26));
+  return String(EDITOR_ESPECIALES[i - 36]);
+}
+
+void editorAnadir(const String& s) {
+  if (editorTexto.length() + s.length() <= editorMax) editorTexto += s;
+}
+
+void editorAplicar() {
+  String e = editorElemento(editorSel);
+  if (e == "OK") { trxCerrarEditor(true); return; }
+  if (e == "ESC") { trxCerrarEditor(false); return; }
+  if (e == "CLR") { editorTexto = ""; return; }
+  if (e == "<-") {
+    if (editorTexto.endsWith("{MI}") || editorTexto.endsWith("{SU}")) editorTexto.remove(editorTexto.length() - 4);
+    else if (editorTexto.length() > 0) editorTexto.remove(editorTexto.length() - 1);
+    return;
+  }
+  if (e == "ESP") { if (editorTexto.length() > 0 && !editorTexto.endsWith(" ")) editorAnadir(" "); return; }
+  if (e.startsWith("{") && editorDestino < 0) return;  // El indicativo no lleva variables
+  editorAnadir(e);
+}
+
+// Tono del decodificador: AUTO (0) y luego 400..1000 Hz de 50 en 50
+void ajustarTonoDecod(int8_t giro) {
+  int v = trxTonoDecodHz;
+  if (giro > 0) v = (v == 0) ? TONO_MIN_HZ : v + TONO_PASO_HZ;
+  else v = (v <= TONO_MIN_HZ) ? 0 : v - TONO_PASO_HZ;
+#ifdef SIN_ENCODER
+  if (v > TONO_MAX_HZ) v = 0;  // Sin encoder: da la vuelta
+#else
+  if (v > TONO_MAX_HZ) v = TONO_MAX_HZ;
+#endif
+  trxTonoDecodHz = v;
+}
+
+// Lo descodificado por el keyer en la pantalla TRX: al editor, o a lo manipulado en OPERAR/QSO
+void trxCaracterManipulado(char c) {
+  if (subTrx == TRX_EDITOR) {
+    if (c == ' ') { if (editorTexto.length() > 0 && !editorTexto.endsWith(" ")) editorAnadir(" "); }
+    else if (c != '*') editorAnadir(String(c));
+  } else if (subTrx == TRX_OPERAR || subTrx == TRX_QSO) {
+    if (c == ' ') { if (trxTextoTx.length() > 0 && !trxTextoTx.endsWith(" ")) trxTextoTx += ' '; }
+    else trxTextoTx += c;
+    if (trxTextoTx.length() > QSO_TEXTO_MAX) trxTextoTx.remove(0, trxTextoTx.length() - QSO_TEXTO_MAX);
+  }
+  pantallaPendiente = true;
+}
+
+/**
+ * Cada vuelta de loop() en la pantalla TRX: lo descodificado, la barra de nivel, el fin (o el corte con
+ * las palas) de una memoria y el corte de seguridad de KEY.
+ */
+void procesarTrx() {
+  // Corte de seguridad: KEY activa mas de 10 s seguidos (pala atascada, fallo...). Se lee una sola vez:
+  // el keyer y el motor CW (mas prioridad) la cambian en cada elemento y, leida dos veces, podia pasar
+  // a 0 entre las dos lecturas (millis() - 0 = siempre mas de 10 s: cortaba al manipular)
+  unsigned long keyDesde = keyActivaDesdeMs;
+  if (keyDesde != 0 && (long)(millis() - keyDesde) > (long)KEY_MAX_CONTINUA_MS) {  // Con signo, por si acaso
+    motorCWDetener();
+    keyerPausar();
+    keyHabilitada = false;
+    digitalWrite(KEY_OUT_PIN, LOW);
+    keyActivaDesdeMs = 0;
+    trxEnviandoMemoria = false;
+    keyCortadaPorSeguridad = true;
+    Serial.printf("[TRX] KEY CORTADA: MAS DE 10 S ACTIVA (desde %lu, ahora %lu)\n", keyDesde, millis());
+    pantallaPendiente = true;
+  }
+
+  if (pantallaActual != PANTALLA_TRX) return;
+
+  char c;
+  while (colaDecod != NULL && xQueueReceive(colaDecod, &c, 0) == pdTRUE) {
+    Serial.print(c);
+    if (c == ' ') { if (trxTextoRx.length() > 0 && !trxTextoRx.endsWith(" ")) trxTextoRx += ' '; }
+    else trxTextoRx += c;
+    if (trxTextoRx.length() > QSO_TEXTO_MAX) trxTextoRx.remove(0, trxTextoRx.length() - QSO_TEXTO_MAX);
+    pantallaPendiente = true;
+  }
+
+  // La barra de nivel se mueve sola: se redibuja 5 veces por segundo
+  static unsigned long ultimoRefresco = 0;
+  if ((subTrx == TRX_DECOD || subTrx == TRX_QSO) && millis() - ultimoRefresco >= 200) {
+    ultimoRefresco = millis();
+    pantallaPendiente = true;
+  }
+
+  // Diagnostico por serie para ajustar RV2 en banco
+  static unsigned long ultimoDiag = 0;
+  if (decodActivo && millis() - ultimoDiag >= 2000) {
+    ultimoDiag = millis();
+    Serial.printf("[DECOD] %u Hz, nivel %u%%, umbral %u%%, %u wpm%s\n", decodFrecHz, decodNivelPct, decodUmbralPct,
+                  decodWpm, decodSaturado ? ", SATURA" : "");
+  }
+
+  if (trxEnviandoMemoria) {
+    if (motorCWOcupado() && palaPulsada()) motorCWDetener();  // Break-in: las palas cortan la memoria
+    if (!motorCWOcupado()) {
+      trxEnviandoMemoria = false;
+      if (subTrx == TRX_OPERAR || subTrx == TRX_QSO) keyerReanudar();
+    }
+  }
+}
+
 void procesarRecepcionLoRa() {
   if (!flagPaqueteRecibido) return;
   flagPaqueteRecibido = false;
@@ -1787,6 +2355,17 @@ class ParametroCasilla : public WiFiManagerParameter {
 };
 ParametroCasilla paramHoraUtc("utc", "Hora UTC en la cabecera (12:05Z) en vez de la local");
 
+// Memorias de la pantalla TRX (la primera explica las variables)
+WiFiManagerParameter paramMemoria1("m0", "Memoria 1 ({MI} = tu indicativo, {SU} = el del corresponsal)", "", TRX_MEMORIA_MAX);
+WiFiManagerParameter paramMemoria2("m1", "Memoria 2", "", TRX_MEMORIA_MAX);
+WiFiManagerParameter paramMemoria3("m2", "Memoria 3", "", TRX_MEMORIA_MAX);
+WiFiManagerParameter paramMemoria4("m3", "Memoria 4", "", TRX_MEMORIA_MAX);
+WiFiManagerParameter paramMemoria5("m4", "Memoria 5", "", TRX_MEMORIA_MAX);
+WiFiManagerParameter paramMemoria6("m5", "Memoria 6", "", TRX_MEMORIA_MAX);
+WiFiManagerParameter* const paramMemorias[TRX_NUM_MEMORIAS] = {
+  &paramMemoria1, &paramMemoria2, &paramMemoria3, &paramMemoria4, &paramMemoria5, &paramMemoria6
+};
+
 bool locatorALatLon(const char* loc, float& lat, float& lon);  // Definida en la pantalla 7
 
 void guardarParametrosPortal() {
@@ -1815,6 +2394,16 @@ void guardarParametrosPortal() {
   guardarEstacionNVS();
   Serial.printf("[PORTAL] ESTACION: %s %s, hora %s\n", indicativoEstacion, locatorEstacion,
                 horaUtcCabecera ? "UTC" : "local");
+
+  // Memorias: solo lo que se puede emitir (mayusculas, Morse, espacios, {MI} y {SU})
+  for (uint8_t i = 0; i < TRX_NUM_MEMORIAS; i++) {
+    String m = trxLimpiarTexto(paramMemorias[i]->getValue(), true, TRX_MEMORIA_MAX);
+    if (m != trxMemorias[i]) {
+      strlcpy(trxMemorias[i], m.c_str(), sizeof(trxMemorias[i]));
+      guardarMemoriaNVS(i);
+      Serial.printf("[PORTAL] MEMORIA %u: %s\n", i + 1, trxMemorias[i]);
+    }
+  }
 
   // "14:05 10-10-2026" (tambien vale con barras: "14:05 10/10/2026")
   String hora = paramHora.getValue();
@@ -1944,6 +2533,7 @@ void abrirPortalWifi() {
     wm.addParameter(&paramLocator);
     wm.addParameter(&paramHora);
     wm.addParameter(&paramHoraUtc);
+    for (uint8_t i = 0; i < TRX_NUM_MEMORIAS; i++) wm.addParameter(paramMemorias[i]);
     const char* menu[] = { "wifi", "param", "exit" };  // "param" = pagina "Setup"
     wm.setMenu(menu, 3);
     wm.setSaveParamsCallback(guardarParametrosPortal);
@@ -1955,6 +2545,7 @@ void abrirPortalWifi() {
   paramHora.actualizarPista();
   paramHoraUtc.setValue("1", 2);
   paramHoraUtc.marcada = horaUtcCabecera;
+  for (uint8_t i = 0; i < TRX_NUM_MEMORIAS; i++) paramMemorias[i]->setValue(trxMemorias[i], TRX_MEMORIA_MAX);
 
   cpuSegunWifi(true);
   WiFi.mode(WIFI_STA);
@@ -2857,6 +3448,156 @@ void renderizarPantallaLora() {
   }
 }
 
+// Estado del decodificador en una linea: "18WPM 700Hz" y la barra de nivel con la marca del umbral a la derecha
+// (o "SATURA" si la entrada llega a los topes del ADC: bajar RV2). Con fondo negro, para ir sobre una linea
+void dibujarEstadoDecod(int16_t y) {
+  String txt = (decodWpm > 0 ? String(decodWpm) : String("--")) + "WPM " + String(decodFrecHz) + "Hz";
+  if (trxTonoDecodHz == 0) txt += "A";  // Automatico
+  display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+  display.setCursor(0, y);
+  display.print(txt + " ");
+  const int16_t xb = 86, ancho = 42;
+  display.fillRect(xb - 2, y - 1, ancho + 2, 9, SSD1306_BLACK);
+  if (decodSaturado) {
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.setCursor(xb + 3, y);
+    display.print(F("SATURA"));
+  } else {
+    display.drawRect(xb, y, ancho, 7, SSD1306_WHITE);
+    display.fillRect(xb + 1, y + 1, (ancho - 2) * decodNivelPct / 100, 5, SSD1306_WHITE);
+    int16_t xu = xb + 1 + (ancho - 2) * decodUmbralPct / 100;
+    display.drawFastVLine(xu, y - 1, 9, decodTono ? SSD1306_BLACK : SSD1306_WHITE);
+  }
+  display.setTextColor(SSD1306_WHITE);
+}
+
+// Lista de memorias (4 a la vista) y "volver": para editar (MEMORIAS) o para enviar (con {MI}/{SU} sustituidos)
+void dibujarListaMemorias(bool paraEnviar) {
+  dibujarTituloCentrado(paraEnviar ? F("- ENVIAR MEMORIA -") : F("- MEMORIAS -"));
+  uint8_t primera = trxMemoriaSel < TRX_NUM_MEMORIAS ? max(0, (int)trxMemoriaSel - 3) : TRX_NUM_MEMORIAS - 4;
+  for (uint8_t k = 0; k < 4; k++) {
+    uint8_t i = primera + k;
+    String t = paraEnviar ? trxExpandir(trxMemorias[i]) : String(trxMemorias[i]);
+    if (t.length() == 0) t = "(vacia)";
+    display.setCursor(0, 20 + k * 8);
+    display.print(trxMemoriaSel == i ? '>' : ' ');
+    display.print(i + 1);
+    display.print(' ');
+    display.print(t.substring(0, 18));
+  }
+  dibujarPieCentrado(trxMemoriaSel == TRX_NUM_MEMORIAS ? "> volver" : "  volver");
+}
+
+// Editor: titulo, texto con cursor y, en el pie, la rueda de caracteres (el elegido en video inverso)
+void dibujarEditor() {
+  String titulo = editorDestino < 0 ? String("INDICATIVO SU") : "MEMORIA " + String(editorDestino + 1);
+  display.setCursor(0, 11);
+  display.print(titulo);
+  String cuenta = String(editorTexto.length()) + "/" + String(editorMax);
+  display.setCursor(128 - cuenta.length() * 6, 11);
+  display.print(cuenta);
+  dibujarUltimasLineas(editorTexto + "_", 21, 3, 9);
+
+  display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
+  String piezas[5];
+  int ancho = 0;
+  for (int8_t k = -2; k <= 2; k++) {
+    piezas[k + 2] = editorElemento((editorSel + EDITOR_TAM_RUEDA + k) % EDITOR_TAM_RUEDA);
+    ancho += piezas[k + 2].length() * 6 + (k < 2 ? 6 : 0);
+  }
+  display.setCursor((128 - ancho) / 2, 55);
+  for (uint8_t k = 0; k < 5; k++) {
+    if (k == 2) display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.print(piezas[k]);
+    display.setTextColor(SSD1306_WHITE);
+    if (k < 4) display.print(' ');
+  }
+}
+
+void renderizarPantallaTrx() {
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+
+  switch (subTrx) {
+    case TRX_MENU: {
+      // Como CW y LoRa: titulo en negativo, tres opciones y "memorias" en el centro del pie
+      const char* titulo = " TRANSCEPTOR ";
+      int16_t x1, y1;
+      uint16_t w, h;
+      display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
+      int x = (128 - w) / 2;
+      display.fillRect(x - 2, 11, w + 4, h + 4, SSD1306_WHITE);
+      display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+      display.setCursor(x, 13);
+      display.print(titulo);
+      display.setTextColor(SSD1306_WHITE);
+      const char* opciones[] = { "< DECODIFICAR >", "< OPERAR >", "< QSO >" };
+      for (uint8_t i = 0; i < 3; i++) dibujarOpcionCentrada(opcionTrx == i, opciones[i], 24 + i * 9);
+      dibujarBarraAvanzarRetroceder(opcionTrx == TRX_OPCION_BARRA,
+                                    opcionTrx == TRX_OPCION_MEMORIAS ? ">memorias" : " memorias");
+      break;
+    }
+
+    case TRX_DECOD: {
+      dibujarEstadoDecod(11);
+      dibujarUltimasLineas(trxTextoRx, 21, 3, 9);
+      // Pie: ">AUTO >borrar >salir" (el tono se edita girando: AUTO, 400..1000 Hz)
+      display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
+      display.setCursor(1, 55);
+      display.print(opcionTrxSub == 0 ? ">" : " ");
+      imprimirValor(opcionTrxSub == 0, trxTonoDecodHz == 0 ? String("AUTO") : String(trxTonoDecodHz) + "Hz");
+      display.print(opcionTrxSub == 1 ? " >" : "  ");
+      display.print(F("borrar"));
+      display.print(opcionTrxSub == 2 ? " >" : "  ");
+      display.print(F("salir"));
+      break;
+    }
+
+    case TRX_OPERAR: {
+      display.setCursor(0, 11);
+      display.print(opcionTrxSub == 0 ? ">" : " ");
+      imprimirValor(opcionTrxSub == 0, String(trxWpm) + "WPM");
+      display.print(opcionTrxSub == 1 ? " >" : "  ");
+      display.print(trxTonoLocal ? F("TONO SI") : F("TONO NO"));
+      dibujarUltimasLineas(trxTextoTx + "_", 21, 2, 9);
+      display.setCursor(0, 41);
+      if (keyCortadaPorSeguridad) {
+        display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+        display.print(F("KEY CORTADA (>10 s)"));
+        display.setTextColor(SSD1306_WHITE);
+      } else {
+        display.print(F("SU: "));
+        display.print(trxSu[0] ? trxSu : "--");
+      }
+      dibujarPieCentrado((opcionTrxSub == 2 ? "> " : "  ") + String("mem  ") + (opcionTrxSub == 3 ? "> " : "  ") +
+                         String("SU  ") + (opcionTrxSub == 4 ? "> " : "  ") + String("salir"));
+      break;
+    }
+
+    case TRX_QSO: {
+      // Recibido arriba, estado del decodificador en el separador, manipulado abajo
+      dibujarUltimasLineas(trxTextoRx, 11, 2, 8);
+      display.drawFastHLine(0, 31, 128, SSD1306_WHITE);
+      if (keyCortadaPorSeguridad) {
+        display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+        display.setCursor(10, 28);
+        display.print(F(" KEY CORTADA >10s "));
+        display.setTextColor(SSD1306_WHITE);
+      } else {
+        dibujarEstadoDecod(28);
+      }
+      dibujarUltimasLineas(trxTextoTx + "_", 37, 2, 8);
+      dibujarPieCentrado((opcionTrxSub == 0 ? "> " : "  ") + String("mem  ") + (opcionTrxSub == 1 ? "> " : "  ") +
+                         String("SU  ") + (opcionTrxSub == 2 ? "> " : "  ") + String("salir"));
+      break;
+    }
+
+    case TRX_MEMORIAS:    dibujarListaMemorias(false); break;
+    case TRX_LISTA_ENVIO: dibujarListaMemorias(true);  break;
+    case TRX_EDITOR:      dibujarEditor();             break;
+  }
+}
+
 void renderizarPantallaPropagacion() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
@@ -3196,6 +3937,7 @@ void actualizarPantalla() {
     case PANTALLA_INICIO: renderizarPantallaInicio(); break;
     case PANTALLA_CW: renderizarPantallaCW(); break;
     case PANTALLA_LORA: renderizarPantallaLora(); break;
+    case PANTALLA_TRX: renderizarPantallaTrx(); break;
     case PANTALLA_PROPAGACION: renderizarPantallaPropagacion(); break;
     case PANTALLA_SPOTS: renderizarPantallaSpots(); break;
     case PANTALLA_SOL: renderizarPantallaSol(); break;
@@ -3778,6 +4520,7 @@ void entrarEnPantalla(uint8_t pantalla, bool haciaAtras = false) {
   opcionNavegacionP1234 = haciaAtras ? 0 : 1;
   if (pantalla == PANTALLA_CW) opcionPantalla3 = OPCION_BARRA_CW;
   else if (pantalla == PANTALLA_LORA) opcionPantalla4 = 2;
+  else if (pantalla == PANTALLA_TRX) { opcionTrx = TRX_OPCION_BARRA; subTrx = TRX_MENU; }
   else if (pantalla == PANTALLA_PROPAGACION) opcionPantallaProp = OPCION_BARRA_PROP;
   else if (pantalla == PANTALLA_SPOTS) opcionPantallaSpots = OPCION_BARRA_SPOTS;
   else if (pantalla == PANTALLA_CONFIG) { opcionPantallaConfig = OPCION_BARRA_CONFIG; confirmandoFabrica = false; }
@@ -3917,6 +4660,88 @@ void procesarBoton() {
           case 2: salirModoLoRa(); break;
         }
       }
+    }
+
+  } else if (pantallaActual == PANTALLA_TRX) {
+    switch (subTrx) {
+      case TRX_MENU:
+        // Foco: [sig.] -> [DECODIFICAR] -> [OPERAR] -> [QSO] -> [memorias] -> [ant.] -> [sig.] ...
+        if (atras) entrarEnPantalla(PANTALLA_INICIO);
+        else if (giro != 0) moverFocoAnillo(opcionTrx, TRX_OPCION_BARRA, giro);
+        else if (pulsa) {
+          if (opcionTrx == 0) trxEntrarSub(TRX_DECOD);
+          else if (opcionTrx == 1) trxEntrarSub(TRX_OPERAR);
+          else if (opcionTrx == 2) trxEntrarSub(TRX_QSO);
+          else if (opcionTrx == TRX_OPCION_MEMORIAS) trxEntrarSub(TRX_MEMORIAS);
+          else navegarDesdeBarra();
+        }
+        break;
+
+      case TRX_DECOD:
+        // Foco: 0 tono (AUTO o 400-1000 Hz), 1 borrar, 2 salir
+        if (atras || ejeLarga) trxSalirAlMenu();
+        else if (giro != 0) {
+          if (editandoValor) ajustarTonoDecod(giro);
+          else opcionTrxSub = (opcionTrxSub + 3 + giro) % 3;
+        } else if (pulsa) {
+          if (opcionTrxSub == 0) editandoValor = !editandoValor;
+          else if (opcionTrxSub == 1) trxTextoRx = "";
+          else trxSalirAlMenu();
+        }
+        break;
+
+      case TRX_OPERAR:
+        // Foco: 0 wpm, 1 tono local, 2 mem, 3 SU, 4 salir. Las palas manipulan la emisora con cualquier foco
+        if (atras || ejeLarga) trxSalirAlMenu();
+        else if (giro != 0) {
+          if (editandoValor) ajustarValor(trxWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
+          else opcionTrxSub = (opcionTrxSub + 5 + giro) % 5;
+        } else if (pulsa) {
+          switch (opcionTrxSub) {
+            case 0: editandoValor = !editandoValor; break;
+            case 1: trxTonoLocal = !trxTonoLocal; break;
+            case 2: trxAbrirListaEnvio(); break;
+            case 3: trxAbrirEditor(-1); break;
+            case 4: trxSalirAlMenu(); break;
+          }
+        }
+        break;
+
+      case TRX_QSO:
+        // Foco: 0 mem, 1 SU, 2 salir. El wpm y el tono local se eligen en OPERAR
+        if (atras || ejeLarga) trxSalirAlMenu();
+        else if (giro != 0) opcionTrxSub = (opcionTrxSub + 3 + giro) % 3;
+        else if (pulsa) {
+          if (opcionTrxSub == 0) trxAbrirListaEnvio();
+          else if (opcionTrxSub == 1) trxAbrirEditor(-1);
+          else trxSalirAlMenu();
+        }
+        break;
+
+      case TRX_MEMORIAS:
+      case TRX_LISTA_ENVIO: {
+        // Foco: memoria 1..6 o volver. Pulsar: editarla (MEMORIAS) o enviarla por KEY (lista de envio)
+        bool paraEnviar = (subTrx == TRX_LISTA_ENVIO);
+        bool volver = atras || (pulsa && trxMemoriaSel == TRX_NUM_MEMORIAS);
+        if (volver) {
+          if (paraEnviar) trxVolverDeLista();
+          else subTrx = TRX_MENU;
+        } else if (giro != 0) {
+          trxMemoriaSel = (trxMemoriaSel + TRX_NUM_MEMORIAS + 1 + giro) % (TRX_NUM_MEMORIAS + 1);
+        } else if (pulsa) {
+          if (paraEnviar) trxEnviarMemoria(trxMemoriaSel);
+          else trxAbrirEditor(trxMemoriaSel);
+        }
+        break;
+      }
+
+      case TRX_EDITOR:
+        // Girar recorre la rueda; pulsar aplica (letra, ESP, {MI}, {SU}, <-, CLR, OK, ESC). PRG = ESC, larga = OK
+        if (atras) trxCerrarEditor(false);
+        else if (ejeLarga) trxCerrarEditor(true);
+        else if (giro != 0) editorSel = (editorSel + EDITOR_TAM_RUEDA + giro) % EDITOR_TAM_RUEDA;
+        else if (pulsa) editorAplicar();
+        break;
     }
 
   } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
@@ -4288,7 +5113,8 @@ void procesarApagadoAuto() {
   if (apagadoAutoMin == 0) return;  // "nunca"
   if (millis() - ultimaActividadMs < apagadoAutoMin * 60000UL) return;
   // En CW y LoRa (y sus subpantallas) nunca: son las de practicar. Tampoco con el portal abierto
-  if (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA || estadoWifi == WIFI_PORTAL) return;
+  if (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA || pantallaActual == PANTALLA_TRX ||
+      estadoWifi == WIFI_PORTAL) return;
   dormirChispas("SIN USO");
 }
 
@@ -4314,6 +5140,7 @@ void setup() {
   encenderPerifericos();
   iniciarMotorCW();
   iniciarKeyer();
+  iniciarDecodificador();
   iniciarEncoder();
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -4389,7 +5216,8 @@ void setup() {
  */
 void procesarBateriaYPantalla() {
   static unsigned long ultimaLecturaBat = 0;
-  if (millis() - ultimaLecturaBat >= INTERVALO_BATERIA_MS) {
+  // Con el decodificador en marcha el ADC1 es suyo (DMA): la bateria se deja como estaba
+  if (!decodActivo && millis() - ultimaLecturaBat >= INTERVALO_BATERIA_MS) {
     ultimaLecturaBat = millis();
     BateriaInfo nueva = leerBateria();
     bool cambia = nueva.estado != bateriaActual.estado ||
@@ -4442,7 +5270,8 @@ void procesarDiagnostico() {
 
 void procesarBrillo() {
   static bool tenue = false;
-  bool pantallaDePractica = (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA);
+  bool pantallaDePractica = (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA ||
+                             pantallaActual == PANTALLA_TRX);
   bool debeSerTenue = (!pantallaDePractica && millis() - ultimaActividadMs >= BRILLO_TENUE_MS) ||
                       (caraActiva && expresionCara == EXP_DORMIDA);
   if (debeSerTenue != tenue) {
@@ -4482,6 +5311,7 @@ void loop() {
   procesarRecepcionLoRa();
   procesarColaRxDuo();
   procesarQSO();
+  procesarTrx();
   procesarWifi();
   procesarBateriaYPantalla();
   procesarDiagnostico();

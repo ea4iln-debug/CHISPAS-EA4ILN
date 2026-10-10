@@ -68,7 +68,7 @@ const char * const HTTP_PORTAL_MENU[] PROGMEM = {
 "<form action='/wifi'    method='get'><button>Red WiFi</button></form><br/>\n", // MENU_WIFI
 "<form action='/0wifi'   method='get'><button>Red WiFi (sin buscar redes)</button></form><br/>\n", // MENU_WIFINOSCAN
 "<form action='/info'    method='get'><button>Información</button></form><br/>\n", // MENU_INFO
-"<form action='/param'   method='get'><button>Estación y hora</button></form><br/>\n",//MENU_PARAM
+"<form action='/param'   method='get'><button>Estación, hora y memorias</button></form><br/>\n",//MENU_PARAM
 "<form action='/close'   method='get'><button>Cerrar</button></form><br/>\n", // MENU_CLOSE
 "<form action='/restart' method='get'><button>Reiniciar</button></form><br/>\n",// MENU_RESTART
 "<form action='/exit'    method='get'><button>Salir</button></form><br/>\n",  // MENU_EXIT
@@ -152,7 +152,7 @@ const char HTTP_HELP[]             PROGMEM =
  "<tr><td><a href='/wifisave'>/wifisave</a></td>"
  "<td>Guarda la red elegida y se conecta a ella.</td></tr>"
  "<tr><td><a href='/param'>/param</a></td>"
- "<td>Estación y hora</td></tr>"
+ "<td>Estación, hora y memorias</td></tr>"
  "<tr><td><a href='/info'>/info</a></td>"
  "<td>Información</td></tr>"
  "<tr><td><a href='/u'>/u</a></td>"
@@ -256,8 +256,8 @@ const char S_titlewifisaved[]     PROGMEM = "Red guardada";
 const char S_titlewifisettings[]  PROGMEM = "Ajustes guardados";
 const char S_titlewifi[]          PROGMEM = "Red WiFi";
 const char S_titleinfo[]          PROGMEM = "Información";
-const char S_titleparam[]         PROGMEM = "Estación y hora";
-const char S_titleparamsaved[]    PROGMEM = "Estación y hora guardadas";
+const char S_titleparam[]         PROGMEM = "Estación, hora y memorias";
+const char S_titleparamsaved[]    PROGMEM = "Estación, hora y memorias guardadas";
 const char S_titleexit[]          PROGMEM = "Salir";
 const char S_titlereset[]         PROGMEM = "Reiniciar";
 const char S_titleerase[]         PROGMEM = "Borrar";

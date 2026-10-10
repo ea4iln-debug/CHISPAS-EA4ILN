@@ -16,7 +16,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.8i** en la placa 1 (la placa 2 tiene la v0.8h: solo cambian los nombres del menú LoRa). v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.9a** en la placa 1 (la placa 2 tiene la v0.8h: le faltan los nombres del menú LoRa, el umbral de palabra a 6 puntos, las opciones centradas y la pantalla TRX). v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
@@ -30,8 +30,8 @@ el transceptor, GPS/locator.
   Subirla en cada cambio que se cargue en placa.
 - Pruebas con LED, pantalla, monitor serie y **audio** (desde el 10 oct 2026: tono montado; el buzzer suena muy bajo,
   mejor probar a oído con auriculares). Ver "Tono" en Funciones.
-- Pantallas (`PANTALLA_*`, recorrido con ant./sig.): 1 Inicio, 2 CW, 3 LoRa (Duo/QSO), 4 PROP (propagación),
-  5 POTA, 6 Sol, 7 CONF. Cabecera: hora, nombre corto de la pantalla y batería (`PWR` sin batería).
+- Pantallas (`PANTALLA_*`, recorrido con ant./sig.): 1 Inicio, 2 CW, 3 LoRa (Duo/QSO), 4 TRX (transceptor, v0.9a),
+  5 PROP (propagación), 6 POTA, 7 Sol, 8 CONF. Cabecera: hora, nombre corto de la pantalla y batería (`PWR` sin batería).
 - NVS: `chispas` (`NVS_ENTRENADOR`: Koch, keyer, Echo y estadísticas), `estacion` (`NVS_ESTACION`: indicativo, locator, hora UTC; hasta la v0.7s se llamaba de otra forma y se empezó de cero);
   WiFi en el NVS del ESP32. Borrar estadísticas solo borra estadísticas; el reset de fábrica lo borra todo. El locator por defecto es genérico (IN80dk, Madrid): cada placa
   debe poner el suyo en webconf.
@@ -173,7 +173,30 @@ el transceptor, GPS/locator.
   WiFi, LoRa y LED apagados; KEY en BAJO, Vext apagada y divisor de batería desactivado, retenidos con `gpio_hold_en`
   + `gpio_deep_sleep_hold_en` (se liberan al principio de `setup()`); despierta con ext0 en GPIO0 a nivel bajo.
   Despertar con PRG **no** entra en modo de carga (`boot:0x8`); arranca de nuevo (`esp_reset_reason` 8).
-- **Salida KEY** (GPIO2): `KEY_OUT_PIN` en BAJO al principio de `setup()` (v0.6c); aún no se usa. Medido con polímetro:
+- **Pantalla TRX** (v0.9a; conexión con el transceptor; nombre en la cabecera "TRX"): menú con título " TRANSCEPTOR ",
+  `< DECODIFICAR >`, `< OPERAR >`, `< QSO >` y **memorias** en el centro del pie (`opcionTrx`; `subTrx`).
+  **Probado en la placa 1 (10 oct 2026):** menú, memorias, editor, envío de memorias (suenan en el buzzer) y el corte de
+  seguridad de KEY (dos fallos corregidos: lectura doble de `keyActivaDesdeMs` desde `loop()` y marca `millis() | 1`
+  1 ms adelantada, que con la resta sin signo daba la vuelta y cortaba al manipular). **Sin probar:** la salida
+  real en GPIO2 (ni con polímetro), el PC817 y el decodificador con señal (falta el montaje).
+  - **Salida KEY:** `conmutarEmisionMorse()` activa GPIO2 solo con `keyHabilitada` (OPERAR y QSO de TRX; nunca en
+    Koch, Echo, TX LIBRE ni LoRa). `trxTonoLocal` (NVS `ttono`): buzzer/auriculares mientras sale por KEY. Corte de
+    seguridad si KEY sigue activa más de 10 s seguidos (`KEY_MAX_CONTINUA_MS`): "KEY CORTADA (>10 s)" y por serie con
+    las marcas de tiempo.
+  - **OPERAR:** keyer con wpm propio (`trxWpm`, NVS `twpm`), TONO SÍ/NO, mem (lista para enviar), SU (indicativo del
+    corresponsal, editor) y salir. Las palas cortan una memoria que se está enviando.
+  - **DECODIFICAR:** tarea `decod` (núcleo 0, prioridad 2) que lee GPIO6 (ADC1 canal 5) por DMA (`adc_digi_*` del
+    IDF 4.4) a 8 kHz; Goertzel en bloques de 96 muestras (12 ms); tono fijo 400–1000 Hz o AUTO (el más fuerte de
+    13, `trxTonoDecodHz`, NVS `tdec`); umbral adaptativo (ruido/pico, histéresis); punto adaptativo (5–50 wpm);
+    barra de nivel logarítmica con la marca del umbral y "SATURA" si toca los topes (bajar RV2); `[DECOD] ...`
+    por serie cada 2 s. Sordo mientras sale por KEY y 300 ms después. Mientras funciona no se lee la batería (mismo
+    ADC1). Valores de partida sin ajustar: `DECOD_MIN_SENAL` 1500, `DECOD_ESCALA_MAX` 96000.
+  - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, salir.
+  - **Memorias:** 6 de 40 caracteres en NVS `estacion` (`m0`..`m5`), precargadas (CQ, respuesta, RST, HW?, TNX 73,
+    73 SK), con `{MI}` (indicativo) y `{SU}` (corresponsal). Se editan con el encoder (rueda en el pie: A–Z, 0–9,
+    signos, ESP, {MI}, {SU}, <-, CLR, OK, ESC; PRG = ESC, larga = OK), con las palas (dentro del editor) o en webconf
+    (página "Estación, hora y memorias"; `trxLimpiarTexto()` deja solo lo emitible).
+- **Salida KEY** (GPIO2): `KEY_OUT_PIN` en BAJO al principio de `setup()` (v0.6c); la usa la pantalla TRX (v0.9a). Medido con polímetro:
   0 V en marcha; picos de 0,3–0,5 V al arrancar y con RST (pin al aire hasta `setup()`), por debajo de los ~1,1 V
   que necesita el LED del PC817. **Recomendado: 10 kΩ de GPIO2 a GND**; añadirlo al esquema al montar la salida KEY.
 - **Tono** (montado y probado el 10 oct 2026, placa 1): GPIO7 (PWM, `frecTonoHz`) → R1 1 kΩ → RV1 10 kΩ log (pat. 3;
@@ -195,8 +218,11 @@ el transceptor, GPS/locator.
    con más errores). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack): al llegar el
    PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la ganancia en banco; luego salida
-   KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue (opcionales: enable del GPS y
-   BME280). Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
+   KEY con PC817 y pull-down de 10 kΩ y entrada del decodificador en GPIO6 (el firmware ya está, v0.9a); GPS cuando
+   llegue (opcionales: enable del GPS y BME280). **Pendiente de comprobar en la pantalla TRX:** GPIO2 con el polímetro
+   en OPERAR (~3,3 V con cada elemento, 0 V en reposo), luego con el PC817 y la emisora; decodificador con señal real
+   (ajustar RV2 con la barra, `DECOD_MIN_SENAL` y la escala; probar AUTO y tono fijo); que el ADC por DMA arranque
+   y pare sin errores y que la batería se siga leyendo después de usar DECODIFICAR o QSO; cargar la v0.9a en la placa 2. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - Repetir más las letras con más errores en Koch y Echo (las estadísticas por carácter ya existen, v0.8g).
    - Editar indicativo y locator en el aparato con el encoder (sin móvil ni webconf).
