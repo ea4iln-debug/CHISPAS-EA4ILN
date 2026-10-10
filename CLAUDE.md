@@ -16,7 +16,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.8f** en la placa 1 (la placa 2 sigue en v0.8b). v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.8f** en las dos placas. v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
@@ -177,7 +177,7 @@ el transceptor, GPS/locator.
 
 ## Pendiente
 1. **Siguiente sesión:** por decidir (opcional de las estadísticas: que el Koch y el Echo repitan más las letras
-   flojas). Cargar la v0.8f en la placa 2. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
+   flojas). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack): al llegar el
    PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la ganancia en banco; luego salida
    KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue (opcionales: enable del GPS y
