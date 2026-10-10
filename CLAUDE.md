@@ -17,8 +17,8 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.7l**, cargada en la placa 1 (protoboard con encoder, palas y batería; COM16). La
-  placa 2 (desnuda) sigue en v0.6n. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
+- Firmware: `src/main.cpp` **v0.7l**, cargada en las dos placas (10 oct 2026): placa 1 (protoboard con encoder, palas y
+  batería; COM16) y placa 2 (desnuda; sin encoder solo funciona el PRG como "atrás"). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
   6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
   firmware; programas de prueba aparte en `pruebas/` con sus entornos (`prueba_pines`, `prueba_bateria`).
@@ -120,7 +120,8 @@ el transceptor, GPS/locator.
   que necesita el LED del PC817. **Recomendado: 10 kΩ de GPIO2 a GND**; añadirlo al esquema al montar la salida KEY.
 
 ## Pendiente
-1. **Por hacer:** cargar la versión actual en la placa 2 (sigue en v0.6n).
+1. **Por hacer:** poner el locator y el indicativo reales en webconf en cada placa (nunca se guardaron: usan los
+   valores por defecto). Cuando las dos placas hayan arrancado con la v0.7l, se puede quitar `borrarEspacioAntiguoNVS()`.
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas): buzzer, auriculares y volumen (tono en
    GPIO7 ya programado). **Buzzer:** el comprado resultó **magnético** (16 Ω, + marcado), no piezo: con R1 de 1 kΩ
    no se oye nada (probado 10 oct 2026). Pedido un **piezo pasivo** (llega el lunes 12 oct); montar
