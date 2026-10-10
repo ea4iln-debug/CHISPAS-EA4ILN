@@ -5,7 +5,7 @@
 para radioaficionados (indicativo EA4ILN) sobre una **Heltec WiFi LoRa 32 V3** (ESP32-S3FN8, SX1262 a 868 MHz,
 OLED 0,96", sin PSRAM, 8 MB de flash). Hoy: entrenador Koch estilo LCWO, keyer iámbico, modo Echo, práctica en pareja
 por LoRa, propagación, spots POTA, sol y línea gris. A medio plazo: tono por buzzer, salida KEY, decodificador desde
-el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manipular todavía).
+el transceptor, GPS/locator.
 
 ## Repositorio
 - GitHub: `https://github.com/ea4iln-debug/CHISPAS-EA4ILN` (renombrado el 10 oct 2026 desde `Mr.-Morse-EA4ILN`;
@@ -58,7 +58,7 @@ el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manip
     modo B también durante el elemento. Descodifica lo manipulado (silencio de 2 puntos = fin de carácter, 5 =
     espacio; patrón desconocido = `*`) y lo pasa a `loop()` por una cola; también sale por serie. Opciones: wpm 10–40,
     MODO A/B, palas NORM/INV, borrar, volver; en `mr_morse` (`kwpm`, `kmodob`, `kinv`). Salida solo por LED (y tono en
-    GPIO7 cuando haya buzzer); KEY aún no. El apretón iámbico y el texto largo no se han validado (usuario principiante).
+    GPIO7 cuando haya buzzer); KEY aún no. El apretón iámbico y el texto largo aún no se han validado.
   - **ECHO** (v0.7b): Chispas emite 1–5 letras de la lección Koch con el motor CW a los wpm del keyer (keyer en pausa
     mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las palas. Se evalúa al llegar a las
     letras del reto o con un silencio de palabra. Acierto: "BIEN!" y otro reto a 1,2 s; fallo: "MAL: R  K -.-" y se
@@ -95,10 +95,10 @@ el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manip
   (`ParametroCasilla`, que sobrescribe `getCustomHTML()` para el "checked"; en `mr_estacion`, `utc`): la cabecera
   muestra `12:05Z` en vez de la hora local.
 - **Sol** (pantalla 6): salida/puesta, ventanas de línea gris (sol entre -6° y +6°) y altura actual con las ecuaciones
-  de NOAA para el locator de la estación (por defecto IM68mu). Necesita hora: sin ella enciende el WiFi
+  de NOAA para el locator de la estación (por defecto IN80dk, Madrid, genérico). Necesita hora: sin ella enciende el WiFi
   (`CONECTANDO WIFI...`, luego `SINCRONIZANDO HORA...`); con hora no usa el WiFi.
 - **SOTA: no programar el cliente.** Sus condiciones (api-db2.sota.org.uk/docs) exigen unirse al grupo
-  "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Lo decide el usuario.
+  "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Decisión pendiente del autor.
 - **Batería**: divisor activado con GPIO37 **HIGH** en estas placas (Meshtastic declara LOW). Atenuación 2,5 dB,
   factor 4,9 calibrado con polímetro (4,10 V reales / 836,7 mV en el pin; un solo punto), curva Li-ion y suavizado al
   50 %. **Sin batería y con USB** el cargador deja ~4,17 V de media pero oscila (medido con `prueba_bateria`:
@@ -121,11 +121,11 @@ el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manip
 1. **Por hacer:** cargar la versión actual en la placa 2 (sigue en v0.6n).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas): buzzer, auriculares y volumen (tono en
    GPIO7 ya programado). **Buzzer:** el comprado resultó **magnético** (16 Ω, + marcado), no piezo: con R1 de 1 kΩ
-   no se oye nada (probado 10 oct 2026). El usuario ha pedido un **piezo pasivo** (llega el lunes 12 oct); montar
+   no se oye nada (probado 10 oct 2026). Pedido un **piezo pasivo** (llega el lunes 12 oct); montar
    entonces la fase 1 (GPIO7 J3-18 → R1 → RV1 pat. 3; pat. 1 a GND; cursor → C1 + → buzzer + → GND) y luego J2. Si el
    piezo suena flojo a 600 Hz: hacer configurable la frecuencia del tono (700–800 Hz); salida KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue
    (opcionales: enable del GPS y BME280). Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm.
-3. **Ideas aparcadas por el usuario** (para repensar más adelante):
+3. **Ideas aparcadas** (para repensar más adelante):
    - **Estadísticas por carácter** (recomendada): marcar fallos al corregir el Koch y recoger los del Echo; guardar
      aciertos/fallos por letra en NVS y mostrar las más flojas. Opcional: repetir más las letras flojas.
    - Editar indicativo y locator en el aparato con el encoder (sin móvil ni webconf).
@@ -167,7 +167,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 3 (futuro) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido |
 | BME280 (futuro) | I2C 0x76: recomendado Wire1 en GPIO41/42 |
 
-Posición física (fotos del usuario; pin 1 = GND, pad cuadrado, el más cercano al USB):
+Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, el más cercano al USB):
 - J3: 18 GPIO7 tono · 17 GPIO6 decod. · 16 GPIO5 DAH · 15 GPIO4 DIT · 14 GPIO3 GPS en · 13 GPIO2 KEY · 12 GPIO1 (VBAT, no)
   · 11/10/9 GPIO38/39/40 (libres) · 8/7 GPIO41/42 · 6/5 GPIO45/46 (no) · 4 GPIO37 (no) · 3/2 **3V3** · 1 **GND**.
 - J2: 18/17 GPIO19/20 encoder CLK/DT · 16 GPIO21 (OLED_RST) · 15 GPIO26 (flash, no) · 14 GPIO48 encoder SW · 13 GPIO47 GPS RX

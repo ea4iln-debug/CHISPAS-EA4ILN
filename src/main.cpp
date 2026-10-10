@@ -168,7 +168,7 @@ const char* obtenerCodigoMorse(char c) {
 
 // Datos de la estacion: se guardan en NVS (espacio "mr_estacion") y se cambian desde el portal WiFi
 #define INDICATIVO_POR_DEFECTO "EA4ILN"
-#define LOCATOR_POR_DEFECTO    "IM68mu"
+#define LOCATOR_POR_DEFECTO    "IN80dk"  // Madrid (generico): cada estacion pone el suyo en webconf
 char indicativoEstacion[TRAMA_LONG_INDICATIVO + 1] = INDICATIVO_POR_DEFECTO;
 char locatorEstacion[7] = LOCATOR_POR_DEFECTO;
 bool horaUtcCabecera = false;  // Hora de la cabecera en UTC ("12:05Z") en vez de local; se elige en webconf
@@ -1408,7 +1408,7 @@ void guardarParametrosPortal() {
   if (callValido) strlcpy(indicativoEstacion, call.c_str(), sizeof(indicativoEstacion));
   else Serial.printf("[PORTAL] INDICATIVO NO VALIDO: %s\n", call.c_str());
 
-  // "im68MU" -> "IM68mu"
+  // "in80DK" -> "IN80dk"
   String loc = paramLocator.getValue();
   loc.trim();
   for (size_t i = 0; i < loc.length(); i++) loc[i] = (i < 2) ? toupper(loc[i]) : tolower(loc[i]);
