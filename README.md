@@ -7,6 +7,8 @@
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2B%20PlatformIO-teal)
 ![Versión](https://img.shields.io/badge/firmware-v0.7k-green)
 ![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)
+![Licencia del software](https://img.shields.io/badge/software-GPL--3.0-blue)
+![Licencia del hardware](https://img.shields.io/badge/hardware%20y%20docs-CC%20BY--NC--SA%204.0-lightgrey)
 
 > *"Chispas"* era el apodo que se daba al radiotelegrafista de a bordo. Este proyecto empezó llamándose *Mr. Morse*.
 
@@ -201,6 +203,8 @@ con la opción **abrir webconf**.
 │   ├── esquema_protoboard.pdf      Esquema de conexiones del prototipo (6 hojas)
 │   └── gen_esquema.py              Generador del esquema (HTML/SVG → PDF)
 ├── platformio.ini                  Configuración de PlatformIO y dependencias
+├── LICENSE                         Licencia del software (GPL-3.0)
+├── LICENSE-HARDWARE.md             Licencia del hardware y la documentación (CC BY-NC-SA 4.0)
 └── CLAUDE.md                       Notas de desarrollo: estado, decisiones y pendientes
 ```
 
@@ -261,7 +265,20 @@ con la opción **abrir webconf**.
 
 ## Licencia
 
-Pendiente de definir.
+Chispas tiene dos licencias, según el tipo de contenido:
+
+| Parte | Licencia | Archivo |
+|---|---|---|
+| **Software**: firmware (`src/`), programas de prueba (`pruebas/`), `include/` y scripts (`docs/gen_esquema.py`) | [GNU GPL v3.0 o posterior](https://www.gnu.org/licenses/gpl-3.0.html) | [`LICENSE`](LICENSE) |
+| **Hardware y documentación**: esquema, lista de componentes, diseño del montaje, README e imágenes | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es) | [`LICENSE-HARDWARE.md`](LICENSE-HARDWARE.md) |
+
+- **Software (GPL-3.0):** es software libre. Puedes usarlo, estudiarlo, modificarlo y redistribuirlo; si distribuyes
+  el firmware o una versión modificada, debes hacerlo con la misma licencia y entregar el código fuente.
+- **Hardware y documentación (CC BY-NC-SA 4.0):** puedes compartirlos y adaptarlos citando al autor, **sin fines
+  comerciales** y con la misma licencia. Para un uso comercial, contacta con el autor.
+
+`include/wm_strings_chispas.h` deriva de WiFiManager y conserva su aviso de licencia MIT. Las librerías externas
+mantienen sus propias licencias.
 
 ---
 

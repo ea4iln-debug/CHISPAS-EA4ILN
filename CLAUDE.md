@@ -10,7 +10,11 @@ el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manip
 ## Repositorio
 - GitHub: `https://github.com/ea4iln-debug/CHISPAS-EA4ILN` (renombrado el 10 oct 2026 desde `Mr.-Morse-EA4ILN`;
   GitHub redirige la URL antigua). La carpeta local sigue siendo `Mr. Morse EA4ilN` (renombrarla es opcional, con
-  VS Code cerrado). `README.md` para GitHub: licencia aún sin decidir.
+  VS Code cerrado). `README.md` para GitHub.
+- **Licencias (decididas 10 oct 2026):** software (firmware, pruebas, `include/`, scripts) con **GPL-3.0-or-later**
+  (`LICENSE`, texto oficial de gnu.org; cabecera SPDX en cada archivo de código); hardware y documentación (esquema,
+  lista de componentes, diseño, README) con **CC BY-NC-SA 4.0** (`LICENSE-HARDWARE.md`). `include/wm_strings_chispas.h`
+  conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
 - Firmware: `src/main.cpp` **v0.7k**, cargada en la placa 1 (protoboard con encoder, palas y batería; COM16). La

@@ -1,4 +1,8 @@
 # Genera el esquema de conexiones del prototipo en protoboard (HTML con SVG -> PDF con Edge)
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 EA4ILN. Software libre, sin garantia: ver el archivo LICENSE.
+# El esquema que genera (docs/esquema_protoboard.pdf) es documentacion: CC BY-NC-SA 4.0 (ver LICENSE-HARDWARE.md).
 import html, os, sys
 
 OUT = sys.argv[1]

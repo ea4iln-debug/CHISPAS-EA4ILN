@@ -8,6 +8,9 @@
  *   LENTA: 500 lecturas en unos 2 s (oscilaciones de milisegundos a segundos)
  *   RAPIDA: 500 lecturas seguidas, sin pausa (oscilaciones de microsegundos)
  * Se carga con: pio run -e prueba_bateria -t upload   (monitor a 115200)
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 EA4ILN. Software libre, sin garantia: ver el archivo LICENSE.
  */
 #include <Arduino.h>
 

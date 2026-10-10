@@ -4,6 +4,15 @@
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
  * @version 0.7k - Sin conexion WiFi en PROP, POTA y SOL: mensaje fijo con "abrir webconf" (el portal ya no se abre solo)
  * @date 2026-10-09
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 EA4ILN
+ *
+ * Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo los terminos de la
+ * GNU General Public License publicada por la Free Software Foundation, version 3 o (a tu eleccion)
+ * cualquier version posterior. Se distribuye con la esperanza de que sea util, pero SIN NINGUNA
+ * GARANTIA, ni siquiera la implicita de COMERCIABILIDAD o IDONEIDAD PARA UN FIN DETERMINADO.
+ * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
 #define FW_VERSION "0.7k"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version

@@ -5,6 +5,9 @@
  *   B: CLK GPIO38, DT GPIO39, SW GPIO40 (plan B)
  * Un juego sin nada conectado debe leer 1 fijo (pull-up interno) y no cambiar nunca.
  * Se carga con: pio run -e prueba_pines -t upload   (y monitor a 115200)
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 EA4ILN. Software libre, sin garantia: ver el archivo LICENSE.
  */
 #include <Arduino.h>
 
