@@ -2,8 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.8g - Menu CW: KOCH (RX), ECHO (TX), TX LIBRE. Echo con ajustes propios, retos y ESTAD.; estadisticas
- *                 por caracter separadas (Koch y Echo) con "MAS ERRORES" y totales
+ * @version 0.8i - LoRa: PRACTICA DUO y QSO LIBRE (QSO con las palas: palabra a palabra, RX con break-in, VER SI/NO)
  * @date 2026-10-10
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -16,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.8g"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.8i"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -169,6 +168,7 @@ const char* obtenerCodigoMorse(char c) {
 //   0x00 = espacio entre palabras.
 #define TRAMA_VERSION          2
 #define TRAMA_TIPO_GRUPO_DUO   1
+#define TRAMA_TIPO_TEXTO_QSO   2  // Una palabra manipulada con las palas (QSO)
 #define TRAMA_LONG_CABECERA    13
 #define TRAMA_LONG_INDICATIVO  8
 #define TRAMA_MAX_CARACTERES   32
@@ -282,6 +282,7 @@ bool keyerPalasInvertidas = false;  // true = punta de la clavija = raya
 bool enKeyer = false;               // Subpantalla del keyer abierta
 uint8_t opcionKeyer = 0;            // 0 = wpm, 1 = modo, 2 = palas, 3 = borrar, 4 = volver
 String textoKeyer = "";             // Lo descodificado de la manipulacion
+volatile uint32_t keyerUltimoUsoMs = 0;  // Ultima vez que se pulso una pala o sono un elemento (QSO)
 
 // Modo Echo (pantalla CW > ECHO (TX)): Chispas emite letras de su leccion Koch y hay que repetirlas con las
 // palas. Como el Koch: ajustes propios (wpm, espaciado y leccion independientes), practica de echoRetos retos
@@ -362,7 +363,7 @@ unsigned long tiempoCWProximo = 0;
 
 // Variables de estado para Pantalla 4 (Transceptor LoRa)
 bool enPantalla4_Sub = false;  
-uint8_t opcionPantalla4 = 2;   // 0=CW DUO, 1=CW QSO, 2=BARRA INFERIOR (ant/sig)
+uint8_t opcionPantalla4 = 2;   // 0=PRACTICA DUO, 1=QSO LIBRE, 2=BARRA INFERIOR (ant/sig)
 uint8_t subpantalla4Activa = 0;
 
 uint8_t opcionDuo4_1 = 3;      
@@ -388,7 +389,19 @@ uint8_t wpmEmisionDuo = 20;  // Velocidad de lo que esta sonando en Duo (local o
 uint8_t colaRxIni = 0;
 uint8_t colaRxNum = 0;
 
-uint8_t modoKeyer4_2 = 0;
+// QSO por LoRa (subpantalla 2): lo manipulado con las palas se envia palabra a palabra (trama de texto) y lo
+// recibido suena cuando hay un silencio de palabra sin manipular; si se manipula mientras suena, se corta y el
+// resto queda solo como texto. Usa la cola de recepcion del Duo
+#define OPCIONES_QSO 3
+uint8_t opcionQSO = 2;            // 0 wpm (el de TX LIBRE), 1 ver, 2 salir
+bool qsoVerRx = true;             // false: lo recibido sale como "?" mientras suena (NVS "qver")
+bool qsoSonando = false;          // Una palabra recibida esta en el motor CW
+String qsoPalabraSonando = "";
+String qsoTextoRx = "";           // Recibido (lo que ya se muestra)
+String qsoTextoTx = "";           // Manipulado
+String qsoPalabraTx = "";         // Palabra en curso, aun sin enviar
+char qsoIndicativoRx[TRAMA_LONG_INDICATIVO + 1] = "";
+#define QSO_TEXTO_MAX 200
 int rssiUltimo = 0;
 float snrUltimo = 0.0;
 
@@ -602,6 +615,7 @@ void motorCWEmitir(const char* texto, uint8_t wpm, uint16_t espaciado, const cha
 
 void guardarKeyerNVS();                // Definida en la seccion NVS
 void guardarEchoNVS();                 // Definida en la seccion NVS
+void qsoCaracterManipulado(char c);    // Definida con la radio LoRa
 extern bool pantallaPendiente;         // Definida con la bateria
 extern unsigned long ultimaActividadMs;  // Definida con la cara (ultimo giro, pulsacion o manipulacion)
 
@@ -696,6 +710,8 @@ void tareaKeyerFn(void* parametro) {
         }
         break;
     }
+
+    if (pDit || pDah || estado != K_ESPERA || siguiente != 0) keyerUltimoUsoMs = millis();
 
     if (siguiente != 0) {
       elemento = siguiente;
@@ -899,6 +915,10 @@ void procesarTextoKeyer() {
       echoRecibirCaracter(c);
       continue;
     }
+    if (pantallaActual == PANTALLA_LORA && enPantalla4_Sub && subpantalla4Activa == 2) {
+      qsoCaracterManipulado(c);
+      continue;
+    }
     textoKeyer += c;
     if (textoKeyer.length() > 200) textoKeyer.remove(0, textoKeyer.length() - 200);
     pantallaPendiente = true;
@@ -920,6 +940,7 @@ void cargarDatosNVS() {
   keyerWpm = constrain(prefs.getUChar("kwpm", 20), 10, 40);  // KEYER_WPM_MIN/MAX
   keyerModoB = prefs.getBool("kmodob", false);
   keyerPalasInvertidas = prefs.getBool("kinv", false);
+  qsoVerRx = prefs.getBool("qver", true);
   echoWpm = constrain(prefs.getUChar("ewpm", 20), KEYER_WPM_MIN, KEYER_WPM_MAX);
   echoEspaciado = constrain(prefs.getUShort("esp", 200), 100, 200);
   echoLeccion = constrain(prefs.getUChar("elecc", 4), 1, 40);
@@ -985,6 +1006,7 @@ void guardarKeyerNVS() {
   prefs.putUChar("kwpm", keyerWpm);
   prefs.putBool("kmodob", keyerModoB);
   prefs.putBool("kinv", keyerPalasInvertidas);
+  prefs.putBool("qver", qsoVerRx);
   prefs.end();
 }
 
@@ -1344,28 +1366,31 @@ void prepararCanalParaTransmitir() {
   Serial.println(F("[LORA TX] CANAL SIGUE OCUPADO, SE TRANSMITE IGUAL"));
 }
 
-void transmitirGrupoDuoLoRa(String grupo) {
-  grupoDuoTransmitido = grupo;
-  prepararCanalParaTransmitir();
-
+/**
+ * Arma una trama v2 del tipo indicado (grupo de Duo o palabra de QSO) y la transmite.
+ * Devuelve false si el texto no tiene ningun caracter Morse valido (no se transmite nada).
+ */
+bool transmitirTextoLoRa(uint8_t tipo, uint8_t wpm, const String& texto) {
   uint8_t trama[TRAMA_LONG_MAX];
   trama[0] = 'M';
   trama[1] = 'M';
-  trama[2] = (TRAMA_VERSION << 4) | TRAMA_TIPO_GRUPO_DUO;
-  trama[3] = seqTx++;
-  trama[4] = wpmCW;
+  trama[2] = (TRAMA_VERSION << 4) | tipo;
+  trama[4] = wpm;
   memset(&trama[5], 0, TRAMA_LONG_INDICATIVO);
   memcpy(&trama[5], indicativoEstacion, min(strlen(indicativoEstacion), (size_t)TRAMA_LONG_INDICATIVO));
 
   size_t longitud = TRAMA_LONG_CABECERA;
-  for (size_t i = 0; i < grupo.length() && longitud < TRAMA_LONG_MAX; i++) {
-    uint8_t b = codificarCaracterMorse(grupo.charAt(i));
+  for (size_t i = 0; i < texto.length() && longitud < TRAMA_LONG_MAX; i++) {
+    uint8_t b = codificarCaracterMorse(texto.charAt(i));
     if (b != MORSE_NO_VALIDO) trama[longitud++] = b;
   }
-  if (longitud == TRAMA_LONG_CABECERA) return;  // Nada que enviar
+  if (longitud == TRAMA_LONG_CABECERA) return false;  // Nada que enviar
 
-  Serial.printf("[LORA TX] seq %u, %u bytes: ", trama[3], (unsigned)longitud);
-  Serial.println(grupo);
+  prepararCanalParaTransmitir();
+  trama[3] = seqTx++;
+
+  Serial.printf("[LORA TX] tipo %u seq %u, %u bytes: ", tipo, trama[3], (unsigned)longitud);
+  Serial.println(texto);
 
   int estadoTx = radio.transmit(trama, longitud);
   
@@ -1382,7 +1407,12 @@ void transmitirGrupoDuoLoRa(String grupo) {
   // asi que la ISR se dispara al acabar de transmitir. Se descarta ese aviso falso
   // (esto sustituye al antiguo filtro de "eco" por comparacion de texto).
   flagPaqueteRecibido = false;
+  return true;
+}
 
+void transmitirGrupoDuoLoRa(String grupo) {
+  grupoDuoTransmitido = grupo;
+  if (!transmitirTextoLoRa(TRAMA_TIPO_GRUPO_DUO, wpmCW, grupo)) return;
   iniciarEmisionLocalDuo(grupo, wpmCW);
 }
 
@@ -1408,7 +1438,7 @@ void actualizarPantalla();  // Definida mas abajo
  * Si no suena nada y hay grupos en cola, reproduce el siguiente tras el espacio entre palabras.
  */
 void procesarColaRxDuo() {
-  if (emitiendoMorseDuo || colaRxNum == 0) return;
+  if (subpantalla4Activa != 1 || emitiendoMorseDuo || colaRxNum == 0) return;  // En QSO la vacia procesarQSO()
 
   uint32_t tDit = 1200 / wpmEmisionDuo;  // Pausa a la velocidad del grupo que acaba de sonar
   uint32_t tWordGap = (tDit * 7 * espaciadoCW) / 100;
@@ -1424,6 +1454,105 @@ void procesarColaRxDuo() {
   actualizarPantalla();
   pantallaPendiente = false;
   iniciarEmisionLocalDuo(grupoDuoRecibido, wpm);
+}
+
+// ============================================================================
+// QSO POR LORA (PALAS)
+// ============================================================================
+void loraEscuchar();  // Definida mas abajo
+
+bool enQSO() {
+  return pantallaActual == PANTALLA_LORA && enPantalla4_Sub && subpantalla4Activa == 2;
+}
+
+// Anade una palabra al texto (con espacio delante) y recorta por el principio si se pasa del maximo
+void qsoAnadir(String& texto, const String& palabra) {
+  if (palabra.length() == 0) return;
+  if (texto.length() > 0 && !texto.endsWith(" ")) texto += ' ';
+  texto += palabra;
+  if (texto.length() > QSO_TEXTO_MAX) texto.remove(0, texto.length() - QSO_TEXTO_MAX);
+}
+
+void qsoEnviarPalabra() {
+  if (qsoPalabraTx.length() == 0) return;
+  transmitirTextoLoRa(TRAMA_TIPO_TEXTO_QSO, keyerWpm, qsoPalabraTx);
+  qsoPalabraTx = "";
+}
+
+// Un caracter descodificado por el keyer en el QSO: al llegar el espacio entre palabras se envia la palabra
+void qsoCaracterManipulado(char c) {
+  if (c == ' ') {
+    qsoEnviarPalabra();
+    if (qsoTextoTx.length() > 0 && !qsoTextoTx.endsWith(" ")) qsoTextoTx += ' ';
+  } else {
+    qsoPalabraTx += c;
+    qsoTextoTx += c;
+    if (qsoPalabraTx.length() >= TRAMA_MAX_CARACTERES) qsoEnviarPalabra();  // No cabe mas en una trama
+  }
+  if (qsoTextoTx.length() > QSO_TEXTO_MAX) qsoTextoTx.remove(0, qsoTextoTx.length() - QSO_TEXTO_MAX);
+  pantallaPendiente = true;
+}
+
+void entrarEnQSO() {
+  enPantalla4_Sub = true;
+  subpantalla4Activa = 2;
+  modoRadioRxActivo = true;
+  opcionQSO = 2;
+  qsoSonando = false;
+  qsoPalabraSonando = qsoTextoRx = qsoTextoTx = qsoPalabraTx = "";
+  qsoIndicativoRx[0] = '\0';
+  colaRxIni = colaRxNum = 0;
+  loraEscuchar();  // La radio duerme fuera de Duo y QSO
+  keyerReanudar();  // Las palas funcionan con cualquier foco
+}
+
+/**
+ * Reproduce lo recibido en el QSO: una palabra cada vez, cuando se lleva un silencio de palabra sin
+ * manipular (el keyer queda en pausa mientras suena). Si se toca una pala mientras suena, se corta y lo
+ * que quedaba pasa al texto sin sonar.
+ */
+void procesarQSO() {
+  if (!enQSO()) return;
+
+  if (qsoSonando) {
+    bool palaPulsada = digitalRead(KEYER_PADDLE_DIT) == LOW || digitalRead(KEYER_PADDLE_DAH) == LOW;
+    if (motorCWOcupado() && !palaPulsada) return;
+    if (motorCWOcupado()) {
+      motorCWDetener();  // Break-in
+      if (!qsoVerRx) qsoAnadir(qsoTextoRx, qsoPalabraSonando);
+      while (colaRxNum > 0) {
+        qsoAnadir(qsoTextoRx, String(colaRxDuo[colaRxIni]));
+        colaRxIni = (colaRxIni + 1) % COLA_RX_TAM;
+        colaRxNum--;
+      }
+      finEmisionDuo = millis();
+    } else {
+      if (!qsoVerRx) qsoAnadir(qsoTextoRx, qsoPalabraSonando);  // Con VER NO se ve al acabar de sonar
+      finEmisionDuo = motorCWFinMs;
+    }
+    qsoSonando = false;
+    qsoPalabraSonando = "";
+    keyerReanudar();
+    pantallaPendiente = true;
+    return;
+  }
+
+  if (colaRxNum == 0) return;
+  // Silencio de palabra (7 puntos) sin manipular y espacio entre palabras recibidas
+  if (millis() - keyerUltimoUsoMs < 8400UL / keyerWpm) return;
+  if (millis() - finEmisionDuo < 8400UL / wpmEmisionDuo) return;
+
+  qsoPalabraSonando = String(colaRxDuo[colaRxIni]);
+  wpmEmisionDuo = colaRxWpm[colaRxIni];
+  colaRxIni = (colaRxIni + 1) % COLA_RX_TAM;
+  colaRxNum--;
+  if (qsoVerRx) qsoAnadir(qsoTextoRx, qsoPalabraSonando);
+
+  keyerPausar();
+  qsoSonando = true;
+  actualizarPantalla();  // Antes de que suene, como en el Duo
+  pantallaPendiente = false;
+  motorCWEmitir(qsoPalabraSonando.c_str(), wpmEmisionDuo, 100, "QSO");
 }
 
 void procesarRecepcionLoRa() {
@@ -1478,6 +1607,11 @@ void procesarRecepcionLoRa() {
       uint8_t wpmRx = trama[4];
       if (wpmRx < WPM_MIN_DUO || wpmRx > WPM_MAX_DUO) wpmRx = wpmCW;
       encolarGrupoRxDuo(texto.c_str(), wpmRx);
+    } else if (!duplicada && tipo == TRAMA_TIPO_TEXTO_QSO && enQSO() && texto.length() > 0) {
+      uint8_t wpmRx = trama[4];
+      if (wpmRx < WPM_MIN_DUO || wpmRx > WPM_MAX_DUO) wpmRx = keyerWpm;
+      strlcpy(qsoIndicativoRx, indicativo, sizeof(qsoIndicativoRx));
+      encolarGrupoRxDuo(texto.c_str(), wpmRx);
     }
   }
 
@@ -1501,6 +1635,12 @@ void loraEscuchar() {
 }
 
 void salirModoLoRa() {
+  if (subpantalla4Activa == 2) {
+    qsoEnviarPalabra();  // Lo que quedara a medias
+    keyerPausar();
+    guardarKeyerNVS();   // wpm y VER del QSO
+    qsoSonando = false;
+  }
   enPantalla4_Sub = false;
   subpantalla4Activa = 0;
   editandoValor = false;
@@ -2578,6 +2718,22 @@ void renderizarPantallaCW() {
   }
 }
 
+/**
+ * Dibuja las ultimas lineas de un texto (21 caracteres por linea). Al llenarse se quitan lineas enteras por
+ * arriba, para que el texto no se desplace caracter a caracter
+ */
+void dibujarUltimasLineas(String t, int16_t y, uint8_t lineas, uint8_t alto) {
+  const int ANCHO = 21;
+  if (t.length() > (unsigned)(lineas * ANCHO)) {
+    int sobran = t.length() - lineas * ANCHO;
+    t = t.substring(((sobran + ANCHO - 1) / ANCHO) * ANCHO);
+  }
+  for (int linea = 0; linea < lineas && linea * ANCHO < (int)t.length(); linea++) {
+    display.setCursor(0, y + linea * alto);
+    display.print(t.substring(linea * ANCHO, min((int)t.length(), (linea + 1) * ANCHO)));
+  }
+}
+
 void renderizarPantallaLora() {
   display.setTextColor(SSD1306_WHITE);
 
@@ -2601,11 +2757,11 @@ void renderizarPantallaLora() {
 
     display.setCursor(5, 28);
     display.print(opcionPantalla4 == 0 ? "> " : "  ");
-    display.print(F("< CW DUO (LORA) >"));
+    display.print(F("< PRACTICA DUO >"));
 
     display.setCursor(5, 38);
     display.print(opcionPantalla4 == 1 ? "> " : "  ");
-    display.print(F("< CW QSO (KEYER) >"));
+    display.print(F("< QSO LIBRE >"));
 
     dibujarBarraAvanzarRetroceder(opcionPantalla4 == 2);
 
@@ -2659,20 +2815,39 @@ void renderizarPantallaLora() {
     dibujarPieCentrado(txtPie4_1);
 
   } else if (subpantalla4Activa == 2) {
+    // QSO: recibido arriba (2 lineas), separador con el indicativo y el RSSI, manipulado abajo (2 lineas)
     display.setTextSize(1);
-    display.setCursor(0, 12);
-    display.print(F("KEYER: "));
-    if (modoKeyer4_2 == 0) display.print(F("AUTO-PRACTICA"));
-    else if (modoKeyer4_2 == 1) display.print(F("QSO REAL-TIME"));
-    else display.print(F("MODO ECO"));
 
-    display.setCursor(0, 26);
-    display.print(F("PINS: DIT=G4 DAH=G5"));
+    String rx = qsoTextoRx;
+    if (qsoSonando && !qsoVerRx) {
+      String oculto = "";
+      for (uint16_t i = 0; i < qsoPalabraSonando.length(); i++) oculto += '?';
+      qsoAnadir(rx, oculto);
+    }
+    dibujarUltimasLineas(rx, 11, 2, 8);
 
-    display.setCursor(0, 38);
-    display.print(F("RSSI: ")); display.print(rssiUltimo); display.print(F("DBM"));
+    display.drawFastHLine(0, 31, 128, SSD1306_WHITE);
+    String etiqueta = qsoIndicativoRx[0] ? String(qsoIndicativoRx) : String("QSO LORA");
+    if (qsoIndicativoRx[0] && rssiUltimo != 0) etiqueta += " " + String(rssiUltimo) + "dBm";
+    etiqueta = " " + etiqueta + " ";
+    int16_t x1, y1;
+    uint16_t w, h;
+    display.getTextBounds(etiqueta, 0, 0, &x1, &y1, &w, &h);
+    display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);  // El fondo negro tapa la linea
+    display.setCursor((128 - w) / 2, 28);
+    display.print(etiqueta);
 
-    dibujarPieCentrado("girar: modo  > volver");
+    dibujarUltimasLineas(qsoTextoTx + "_", 37, 2, 8);
+
+    // Pie a mano (21 caracteres) para poder editar el wpm en video inverso: ">20WPM >VER SI >salir"
+    display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
+    display.setCursor(1, 55);
+    display.print(opcionQSO == 0 ? ">" : " ");
+    imprimirValor(opcionQSO == 0, String(keyerWpm) + "WPM");
+    display.print(opcionQSO == 1 ? " >" : "  ");
+    display.print(qsoVerRx ? F("VER SI") : F("VER NO"));
+    display.print(opcionQSO == 2 ? " >" : "  ");
+    display.print(F("salir"));
   }
 }
 
@@ -3673,7 +3848,7 @@ void procesarBoton() {
       if (atras) {
         entrarEnPantalla(PANTALLA_INICIO);
       } else if (giro != 0) {
-        // Foco: [sig.] -> [CW DUO] -> [CW QSO] -> [ant.] -> [sig.] ...
+        // Foco: [sig.] -> [PRACTICA DUO] -> [QSO LIBRE] -> [ant.] -> [sig.] ...
         moverFocoAnillo(opcionPantalla4, 2, giro);
       } else if (pulsa) {
         if (opcionPantalla4 == 0) {
@@ -3681,9 +3856,7 @@ void procesarBoton() {
           modoRadioRxActivo = true; opcionDuo4_1 = 3;
           loraEscuchar();  // La radio duerme fuera de Duo y QSO
         } else if (opcionPantalla4 == 1) {
-          enPantalla4_Sub = true; subpantalla4Activa = 2;
-          modoRadioRxActivo = true;
-          loraEscuchar();
+          entrarEnQSO();
         } else {
           navegarDesdeBarra();
         }
@@ -3725,9 +3898,19 @@ void procesarBoton() {
       }
 
     } else if (subpantalla4Activa == 2) {
-      // QSO (por hacer): girar cambia el modo, pulsar vuelve
-      if (giro != 0) modoKeyer4_2 = (modoKeyer4_2 + 3 + giro) % 3;
-      else if (atras || pulsa || ejeLarga) salirModoLoRa();
+      // QSO. Foco: 0 wpm, 1 ver, 2 salir. Las palas funcionan con cualquier foco
+      if (atras || ejeLarga) {
+        salirModoLoRa();
+      } else if (giro != 0) {
+        if (editandoValor) ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
+        else opcionQSO = (opcionQSO + OPCIONES_QSO + giro) % OPCIONES_QSO;
+      } else if (pulsa) {
+        switch (opcionQSO) {
+          case 0: editandoValor = !editandoValor; break;
+          case 1: qsoVerRx = !qsoVerRx; break;
+          case 2: salirModoLoRa(); break;
+        }
+      }
     }
 
   } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
@@ -4292,6 +4475,7 @@ void loop() {
   procesarFinEmisionDuo();
   procesarRecepcionLoRa();
   procesarColaRxDuo();
+  procesarQSO();
   procesarWifi();
   procesarBateriaYPantalla();
   procesarDiagnostico();

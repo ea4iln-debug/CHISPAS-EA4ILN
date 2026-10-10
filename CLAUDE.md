@@ -16,7 +16,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.8g** en las dos placas. v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.8i** en la placa 1 (la placa 2 tiene la v0.8h: solo cambian los nombres del menú LoRa). v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
@@ -103,10 +103,21 @@ el transceptor, GPS/locator.
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso
   desde la tarea (resultado: 0 ms).
-- **LoRa Duo** (pantalla 3): tramas digitales v2; Duo a los wpm del emisor (5–60); cola de recepción de 8 grupos;
-  antes de transmitir se lee la trama pendiente y se escucha el canal (CAD, 3 intentos, espera 100 ms); RSSI en
-  pantalla. Lo que llega *durante* `transmit()` se pierde por ser semidúplex. "ver" en el pie solo si hay un grupo
-  oculto. QSO (subpantalla 2) es aún un marcador sin funcionalidad.
+- **LoRa** (pantalla 3): `< PRACTICA DUO >` y `< QSO LIBRE >` (nombres de la v0.8i). Tramas digitales v2
+  (`transmitirTextoLoRa(tipo, wpm, texto)`; tipo 1 = grupo Duo, tipo 2 = palabra de QSO); antes de transmitir se lee
+  la trama pendiente y se escucha el canal (CAD, 3 intentos, espera 100 ms). Lo que llega *durante* `transmit()` se
+  pierde por ser semidúplex. Cola de recepción de 8 (`colaRxDuo`, compartida).
+  - **PRÁCTICA DUO**: grupos Koch a los wpm del emisor (5–60); RSSI en pantalla; "ver" en el pie solo si hay un
+    grupo oculto.
+  - **QSO LIBRE** (v0.8h, probado en un sentido: placa 1 → placa 2, que no tiene palas): con las palas (keyer activo
+    en cualquier foco, wpm de TX LIBRE); cada palabra se envía sola al detectar el espacio entre palabras
+    (`qsoCaracterManipulado()`; a los 32 caracteres, en el acto; al salir, lo que quede). Lo recibido suena a los wpm
+    del emisor (SP 100 %) cuando se lleva un silencio de 7 puntos sin manipular (`keyerUltimoUsoMs`, lo actualiza la
+    tarea del keyer), con el keyer en pausa; tocar una pala mientras suena lo corta (break-in) y lo pendiente pasa a
+    texto (`procesarQSO()`). Pantalla: recibido arriba (2 líneas), separador con indicativo y RSSI, manipulado abajo
+    (2 líneas); pie `>20WPM >VER SI >salir`. VER NO: la palabra sale como `???` mientras suena (NVS `qver`). Ojo: el
+    keyer cierra la palabra a los 5 puntos de silencio; con pausas largas entre letras se envía letra a letra
+    (propuesto subir a 6, sin decidir).
 - **Radio** (v0.4c, `#define LORA_*`): 868,1 MHz, SF7, 250 kHz, CR 4/7, sync 0x12, 10 dBm, TCXO 1,8 V (DIO2 como RF
   switch lo activa RadioLib 6.6 en `begin()`; SPI 9/11/10). RSSI a 2 m: unos -40/-45 dBm.
 - **WiFi** (v0.5a/b, v0.7k): se enciende al entrar en PROP y POTA, y en SOL solo si no hay hora (para el NTP).
@@ -196,7 +207,7 @@ el transceptor, GPS/locator.
      medir en el cable de la batería con un polímetro en µA).
    - Detectar USB y carga: la V3 no lo permite por software. Propuesta sin decidir: divisor 100k/150k del pin 5V
      (J2-2) a GPIO33 (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.
-4. Pantalla Duo para textos largos y QSO por LoRa con el keyer. A futuro: audio I2S y OTA.
+4. QSO LIBRE: probar en los dos sentidos cuando la placa 2 tenga palas. A futuro: audio I2S y OTA.
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).
