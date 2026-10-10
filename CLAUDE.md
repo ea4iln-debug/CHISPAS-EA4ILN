@@ -16,12 +16,15 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.9a** en las dos placas. v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.9b** en la placa 1 (la placa 2 tiene la v0.9a: solo le faltan las órdenes serie provisionales de las capturas). v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
   Python de PlatformIO: `~\.platformio\penv\Scripts\python.exe`; cerrar antes el monitor serie). Ve la copia en RAM,
-  no el panel. Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
+  no el panel. **v0.9b (provisional):** órdenes serie que simulan el encoder (`d` derecha, `i` izquierda, `k` pulsar,
+  `l` larga, `a` atrás; `eventoSerie` en `procesarBoton()`) y `g` (locator genérico solo en RAM, para capturas
+  publicables; al reiniciar vuelve el guardado). Con ellas se hicieron las 29 capturas de `docs/img/` del README (10 oct
+  2026; SOL y CONF con IN80dk para no publicar el locator real). Quitar todo junto cuando no haga falta. Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
   (desnuda, sin encoder; entorno `heltec_sin_encoder`). Las dos usan COM16 según cuál esté conectada. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
   6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
@@ -198,7 +201,7 @@ el transceptor, GPS/locator.
     (página "Estación, hora y memorias"; `trxLimpiarTexto()` deja solo lo emitible).
 - **Salida KEY** (GPIO2): `KEY_OUT_PIN` en BAJO al principio de `setup()` (v0.6c); la usa la pantalla TRX (v0.9a). Medido con polímetro:
   0 V en marcha; picos de 0,3–0,5 V al arrancar y con RST (pin al aire hasta `setup()`), por debajo de los ~1,1 V
-  que necesita el LED del PC817. **Recomendado: 10 kΩ de GPIO2 a GND**; añadirlo al esquema al montar la salida KEY.
+  que necesita el LED del PC817. **10 kΩ de GPIO2 a GND** (R10, ya en el esquema y en la lista).
 - **Tono** (montado y probado el 10 oct 2026, placa 1): GPIO7 (PWM, `frecTonoHz`) → R1 1 kΩ → RV1 10 kΩ log (pat. 3;
   pat. 1 a GND) → cursor → C1 10 µF (+ al cursor) → R2 220 Ω → J2 T y R3 220 Ω → J2 R; J2 TN → BZ1 + (piezo pasivo
   de 16 mm), BZ1 − y J2 S a GND; RN libre. Auriculares por los dos lados y silencio mecánico del buzzer probados
@@ -210,8 +213,8 @@ el transceptor, GPS/locator.
   a GND, VIN a 3V3 (el pin 5V no tiene tensión con batería), salida al altavoz; SD sin conectar (o a GPIO38 para
   apagarlo fuera de CW/LoRa: ~4 mA en reposo). RV1 sigue de volumen; el PAM8302A tiene mucha ganancia: bajar su
   trimmer si lo trae, o 47 kΩ en serie con A+. Vigilar picos en el 3V3 (la OLED de la placa 1 es sensible).
-  En `docs/gen_esquema.py` ya están U2, LS1 y R9 (pendiente) y el piezo de 16 mm; **el PDF no se ha regenerado**
-  (decisión del usuario).
+  En el esquema (hoja 4) están el piezo montado y, debajo, el montaje con U2, R9 y LS1 marcado PENDIENTE (PDF
+  regenerado el 10 oct 2026).
 
 ## Pendiente
 1. **Siguiente sesión:** por decidir (opcional de las estadísticas: que el Koch y el Echo repitan más las letras
@@ -273,8 +276,10 @@ Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, 
   (razonado, sin probar).
 - Pines libres: 38–42, 33 y 34. No usar: 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46 (arranque).
 
-Esquema de conexiones: `docs/esquema_protoboard.pdf` (6 hojas), generado con `docs/gen_esquema.py` (HTML/SVG; el PDF
-se imprime con Edge sin interfaz). Si cambia algún pin, actualizar el script y regenerar el PDF.
+Esquema de conexiones: `docs/esquema_protoboard.pdf` (7 hojas: vista general, pines, entradas, tono y amplificador,
+KEY y alimentación, decodificador, componentes y montaje), generado con `docs/gen_esquema.py` (HTML/SVG; el PDF se
+imprime con Edge sin interfaz: `msedge --headless --no-pdf-header-footer --print-to-pdf=... archivo.html`). Las hojas
+tienen altura fija y ocultan lo que sobra: tras cambios grandes, revisar el PDF (no basta con el HTML en pantalla). Si cambia algún pin, actualizar el script y regenerar el PDF.
 
 ## KiCad: APLAZADO
 **No trabajar en KiCad, `pins.h`, `pcb_spec.md` ni `gen_kicad.py` por ahora.** (Referencia, sin usar: describen una

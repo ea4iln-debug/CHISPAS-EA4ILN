@@ -188,7 +188,7 @@ def vista_general():
     s.text(530, 71, "ESP32-S3 · SX1262 · OLED", 10, "middle", "normal", "#2e5e2e")
     s.rect(480, 210, 100, 52, "#1b1b1b", "#1b1b1b", 1, None, 3)
     s.text(530, 240, "OLED", 11, "middle", "bold", "#9fd")
-    s.text(530, 290, "PRG = GPIO0 (menú actual)", 9, "middle", "normal", "#555")
+    s.text(530, 290, "PRG = GPIO0 (atrás / dormir)", 9, "middle", "normal", "#555")
     s.text(530, 304, "LED = GPIO35", 9, "middle", "normal", "#555")
 
     L = [("GPIO19", 105, "#1565c0"), ("GPIO20", 130, "#1565c0"), ("GPIO48", 155, "#1565c0"),
@@ -219,9 +219,9 @@ def vista_general():
         dash = "6 4" if c == C_OPT else None
         s.line([(290, y), (414, y)], c, 2, dash)
     # Derecha
-    blk(760, 70, 250, 85, "Tono CW (GPIO7, PWM)", ["R1 → volumen RV1 → C1 → 220 Ω (R2, R3)", "Buzzer BZ1 en el contacto TN de J2", "Clavija en J2 = buzzer en silencio"], "#c2185b")
+    blk(760, 70, 250, 85, "Tono CW (GPIO7, PWM)", ["R1 → volumen RV1 → C1 → 220 Ω (R2, R3)", "TN de J2: buzzer BZ1 (o ampli U2 + LS1)", "Clavija en J2 = buzzer/altavoz en silencio"], "#c2185b")
     blk(760, 165, 250, 70, "Decodificador (GPIO6, ADC1)", ["← altavoz ext. de la emisora (J3)", "RV2 nivel · C2 · 1,65 V · R6 + D1/D2"], "#00838f")
-    blk(760, 250, 250, 70, "Salida KEY (GPIO2)", ["R7 330 Ω → PC817 (U1) → J4", "→ toma KEY de la emisora (aislada)"], C_ISO)
+    blk(760, 250, 250, 70, "Salida KEY (GPIO2)", ["R7 330 Ω → PC817 (U1) → J4 · R10 a GND", "→ toma KEY de la emisora (aislada)"], C_ISO)
     blk(760, 330, 250, 55, "Raíles de la protoboard", ["Rojo = 3V3 · Azul = GND (nada a 5 V)"], "#555")
     blk(760, 410, 250, 60, "Batería LiPo (BAT1)", ["Interruptor SW1 en el cable +", "Comprobar polaridad del JST antes"], "#555")
     for n, y, c in R:
@@ -254,7 +254,7 @@ def p_encoder():
     notes(s, 20, 272, [
         "CLK y DT llevan pull-up de 10 kΩ en el módulo; SW no: INPUT_PULLUP en GPIO48.",
         "Orden físico de los pines del KY-040: CLK, DT, SW, +, GND.",
-        "GPIO19/20 son USB D−/D+ del S3: probar en placa desnuda. Plan B: 38/39/40.",
+        "GPIO19/20 son USB D−/D+ del S3, pero funcionan como entradas (probado en placa).",
     ])
     return s.svg()
 
@@ -433,9 +433,54 @@ def p_tono():
     notes(s, 20, 342, [
         "C1: el + (patilla larga) hacia el potenciómetro. RV1: patilla 3 a R1, 1 a GND, 2 (cursor) a C1.",
         "Sin clavija, T está unido a TN y suena el buzzer; al meter los auriculares se abre TN y el buzzer calla (sin firmware).",
-        "Pendiente: BZ1 suena muy bajo a 3,3 V. En su sitio irá U2 PAM8302A (TN → A+, R9 10 kΩ a GND; A− a GND) con altavoz LS1 de 8 Ω.",
+        "Montado y probado (10 oct 2026). BZ1 suena muy bajo a 3,3 V (también directo a GPIO7): ver debajo el montaje con amplificador.",
     ], 10)
     s.text(530, 390, "RV1 regula a la vez buzzer y auriculares. El buzzer tiene que ser PASIVO: uno activo pita a su propio tono.", 10, "middle", "normal", "#333")
+    return s.svg()
+
+
+# ----------------------------------------------------------------------------
+# Tono con amplificador (pendiente): sustituye a BZ1 en el contacto TN de J2
+# ----------------------------------------------------------------------------
+def p_ampli():
+    s = S(1050, 365)
+    j = s.block(20, 100, 150, 80, "J2 · jack", [("TN", 140)], "right", "#fbeef3", ["contacto del buzzer"])
+    s.text(20, 205, "(R2 y el resto del circuito, como arriba)", 9, "start", "italic", "#555")
+    s.line([j["TN"], (345, 140)])
+    s.dot(280, 140)
+    s.res(280, 140, 280, 240, "R9", "10 kΩ", lab_side=-1)
+    s.gnd(280, 240)
+    # U2: patillas de entrada a la izquierda; alimentacion arriba y abajo; salida a la derecha
+    u = s.block(360, 50, 170, 200, "U2 · PAM8302A", [("SD", 80), ("A+", 140), ("A−", 190)], "left", "#fff",
+                ["amplificador mono 2,5 W"])
+    s.line([u["SD"], (250, 80)], C_OPT, 1.6, "5 4")
+    s.text(245, 84, "sin conectar (opcional: GPIO38 para apagarlo)", 9, "end", "italic", C_OPT)
+    s.line([u["A−"], (315, 190), (315, 205)])
+    s.gnd(315, 205)
+    s.line([(410, 50), (410, 28)], C_3V3, 1.8)
+    s.vcc(410, 28)
+    s.text(416, 45, "VIN", 10, "start", "bold")
+    s.line([(480, 250), (480, 262)])
+    s.gnd(480, 262)
+    s.text(486, 244, "GND", 10, "start", "bold")
+    for y, n in ((120, "OUT+"), (170, "OUT−")):
+        s.text(524, y + 4, n, 10, "end", "bold")
+        s.line([(530, y), (680, y)])
+    # Altavoz LS1
+    s.line([(680, 120), (680, 135), (690, 135)])
+    s.line([(680, 170), (680, 155), (690, 155)])
+    s.rect(690, 125, 18, 40, "#fff", C_W, 1.8, None, 1)
+    s.add('<polygon points="708,125 738,100 738,190 708,165" fill="#fff" stroke="#222" stroke-width="1.8"/>')
+    s.text(750, 140, "LS1", 11, "start", "bold")
+    s.text(750, 154, "altavoz 8 Ω", 9.5, "start")
+    s.text(750, 167, "0,5–1 W, 28–40 mm", 9.5, "start")
+    s.tag(610, 112, "salida en puente", "#c2185b")
+    notes(s, 20, 300, [
+        "U2 va en el sitio de BZ1: TN → A+, R9 de A+ a GND (que la entrada no quede al aire con la clavija metida), A− a GND.",
+        "VIN a 3V3 (el pin 5V no tiene tensión con batería). OUT+/OUT− van en puente: ninguna de las dos a GND.",
+        "RV1 sigue de volumen. Si satura con poco giro: bajar el trimmer de ganancia de U2 (si lo trae) o 47 kΩ en serie con A+.",
+        "Comprobar las patillas del módulo que llegue. Con volumen alto, vigilar que la OLED no parpadee (picos en el 3V3).",
+    ], 9.5, 14)
     return s.svg()
 
 
@@ -443,7 +488,7 @@ def p_tono():
 # Salida KEY
 # ----------------------------------------------------------------------------
 def p_key():
-    s = S(1050, 330)
+    s = S(1050, 345)
     s.rect(380, 30, 650, 225, "#fff3e8", "#fff3e8", 0, None, 6)
     s.text(1020, 48, "LADO DE LA EMISORA: no unir con GND de la Heltec", 10, "end", "bold", C_ISO)
     h = s.heltec(20, 70, 160, [("GPIO2", 110), ("GND", 200)])
@@ -451,6 +496,10 @@ def p_key():
     u = s.block(290, 75, 180, 160, "U1 · PC817", [], "left", "#fff")
     s.line([(265, 110), (290, 110)])
     s.line([h["GND"], (290, 200)])
+    # R10: pull-down de GPIO2 (LED del PC817 apagado mientras el pin esta al aire: arranque, RST)
+    s.dot(160, 110)
+    s.res(160, 110, 160, 200, "R10", "10 kΩ")
+    s.dot(160, 200)
     for t, x, y, a in (("1", 296, 106, "start"), ("2", 296, 196, "start"), ("4", 464, 106, "end"), ("3", 464, 196, "end")):
         s.text(x, y, t, 9, a, "normal", "#666")
     # LED interno
@@ -488,7 +537,8 @@ def p_key():
     notes(s, 20, 280, [
         "GPIO2 en ALTO = LED del PC817 encendido (≈ 6 mA) = emisora manipulando. Debe estar en BAJO desde el arranque.",
         "PC817: 1 = ánodo, 2 = cátodo, 3 = emisor, 4 = colector (punto o muesca junto a la patilla 1).",
-        "Antes de cablearlo, el firmware tiene que dejar de poner pull-up en GPIO2 (hoy lo usa como pala).",
+        "R10 deja el LED apagado mientras GPIO2 está al aire (arranque, RST): sin ella se midieron picos de 0,3–0,5 V.",
+        "El firmware solo activa KEY en la pantalla TRX (OPERAR y QSO) y la corta si sigue activa más de 10 s.",
     ])
     return s.svg()
 
@@ -538,7 +588,7 @@ def p_deco():
     s.vcc(430, 50)
     s.line([(430, 50), (430, 60)], C_3V3, 1.6)
     notes(s, 20, 322, [
-        "RV2: empezar con el cursor cerca de GND y subir hasta que la señal no recorte. Volumen de la emisora moderado.",
+        "RV2: empezar con el cursor cerca de GND y subir. Pantalla TRX → DECODIFICAR: barra de nivel (sin «SATURA») y [DECOD] por serie.",
         "D1: banda (cátodo) a 3V3. D2: banda a GPIO6. C2 sin polaridad. GPIO6 es ADC1: funciona con el WiFi encendido.",
         "J3 une la masa de la emisora a GND. Si hay zumbido (lazo de masa): trafo de aislamiento 600:600 (no comprado).",
         "Al conectar J3 se calla el altavoz de la emisora: para seguir oyéndola hace falta un divisor 1 → 2 (no comprado).",
@@ -586,14 +636,14 @@ def p_alim():
 # Pagina HTML
 # ----------------------------------------------------------------------------
 PINES = [
-    ("2", "Salida KEY", "R7 330 Ω → PC817 (U1)", "Salida, en BAJO desde el arranque", ""),
+    ("2", "Salida KEY", "R7 330 Ω → PC817 (U1); R10 10 kΩ a GND", "Salida, en BAJO desde el arranque; solo la activa la pantalla TRX", ""),
     ("3", "Enable del GPS", "Puerta de Q1 AO3401A + R8 100 kΩ a 3V3", "Salida, BAJO = encendido", "opc"),
     ("4", "Pala DIT", "Punta de J1", "Entrada con pull-up interno", ""),
     ("5", "Pala DAH", "Anillo de J1", "Entrada con pull-up interno", ""),
-    ("6", "Entrada del decodificador", "R6 1 kΩ, D1/D2, polarización 1,65 V", "ADC1 (válido con WiFi)", ""),
-    ("7", "Tono CW", "R1 1 kΩ → RV1 → buzzer / auriculares", "PWM (LEDC) 850 Hz (CONF: 400–1000)", ""),
-    ("19", "Encoder CLK", "KY-040 CLK", "Entrada (pull-up en el módulo)", "probar"),
-    ("20", "Encoder DT", "KY-040 DT", "Entrada (pull-up en el módulo)", "probar"),
+    ("6", "Entrada del decodificador", "R6 1 kΩ, D1/D2, polarización 1,65 V", "ADC1 por DMA a 8 kHz (pantalla TRX)", ""),
+    ("7", "Tono CW", "R1 1 kΩ → RV1 → buzzer (o ampli U2) / auriculares", "PWM (LEDC) 850 Hz (CONF: 400–1000)", ""),
+    ("19", "Encoder CLK", "KY-040 CLK", "Entrada (pull-up en el módulo)", ""),
+    ("20", "Encoder DT", "KY-040 DT", "Entrada (pull-up en el módulo)", ""),
     ("41", "BME280 SDA", "Wire1", "I2C", "opc"),
     ("42", "BME280 SCL", "Wire1", "I2C", "opc"),
     ("47", "RX del GPS", "TX del NEO-6M", "UART1 RX, 9600 bd", ""),
@@ -603,11 +653,12 @@ PINES = [
 BOM = [
     ("R1", "Resistencia 1 kΩ", "Tono, antes de RV1", ""), ("R6", "Resistencia 1 kΩ", "Serie hacia GPIO6", ""),
     ("R2, R3", "Resistencia 220 Ω", "Auriculares T y R", ""), ("R7", "Resistencia 330 Ω", "LED del PC817", ""),
+    ("R10", "Resistencia 10 kΩ", "Pull-down de GPIO2 (KEY)", ""),
     ("R4, R5", "Resistencia 10 kΩ", "Polarización 1,65 V", ""), ("RV1", "Potenciómetro 10 kΩ log (A10K)", "Volumen", ""),
     ("RV2", "Trimmer multivuelta 10 kΩ (3296)", "Nivel del decodificador", ""), ("C1", "Electrolítico 10 µF 16 V", "Bloqueo de continua", ""),
     ("C2", "Poliéster / X7R 1 µF 50 V", "Acoplo de la señal", ""), ("D1, D2", "1N4148", "Protección de GPIO6", ""),
     ("U1", "PC817 DIP-4", "Salida KEY aislada", ""), ("J1, J3, J4", "Módulo jack 3,5 mm estéreo", "Palas, audio, KEY", ""),
-    ("J2", "Jack 3,5 mm estéreo conmutado (5 pat.)", "Auriculares", ""), ("BZ1", "Buzzer piezo pasivo 16 mm", "Tono", ""),
+    ("J2", "Jack 3,5 mm estéreo conmutado (5 pat.)", "Auriculares", ""), ("BZ1", "Buzzer piezo pasivo 16 mm", "Tono (suena bajo)", ""),
     ("ENC1", "Encoder KY-040", "Menús", ""), ("GPS1", "NEO-6M GY-GPS6MV2", "Posición / hora", "pendiente"),
     ("SW1", "Interruptor SS12D00", "On/off batería", ""), ("BAT1", "LiPo 3,7 V 3000 mAh JST 1,25", "Alimentación", ""),
     ("Q1, R8", "AO3401A + adaptador SOT-23 + 100 kΩ", "Enable del GPS", "opc"), ("BME1", "BME280 GY-BME280-3.3", "Sensor ambiental", "opc"),
@@ -645,7 +696,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v0.6b<br>9 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v0.9b<br>10 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
@@ -658,17 +709,17 @@ def fit(svg, h):
 
 
 def main():
-    T = 6
+    T = 7
     pages = []
     pages.append(f'''<div class="page">{header("Esquema de conexiones · vista general", 1, T)}
 <div class="panel">{fit(vista_general(), 128)}</div>
 <div class="legend" style="margin-top:3mm">
 <span><i class="sw" style="border-color:#c62828"></i>3V3</span><span><i class="sw" style="border-color:#222"></i>señal / GND</span>
 <span><i class="sw" style="border-color:#d08700;border-top-style:dashed"></i>opcional</span><span><i class="sw" style="border-color:#e65100;border-top-style:dashed"></i>aislamiento</span>
-<span class="badge b-opc">OPCIONAL</span> no comprado · <span class="badge b-pend">PENDIENTE</span> comprado, sin llegar · <span class="badge b-probar">PROBAR</span> comprobar en placa desnuda</div>
+<span class="badge b-opc">OPCIONAL</span> no comprado · <span class="badge b-pend">PENDIENTE</span> comprado, sin llegar</div>
 <ul>
 <li>Todo a <b>3V3</b>: ningún módulo ni raíl a 5 V (los GPIO del ESP32-S3 no admiten 5 V).</li>
-<li>Los GPIO están por número, no por posición: busca cada uno en la serigrafía de tu placa. Mapa completo en la hoja 2; esquemas por bloques en las hojas 3 a 5.</li>
+<li>Los GPIO están por número, no por posición: busca cada uno en la serigrafía de tu placa. Mapa completo en la hoja 2; esquemas por bloques en las hojas 3 a 6.</li>
 </ul></div>''')
 
     filas = "".join(
@@ -680,10 +731,10 @@ def main():
 <div><h2>Reglas</h2><ul>
 <li><b>No usar</b>: 0 (PRG), 1 (lectura de batería), 8–14 (LoRa), 17/18/21 (OLED), 26–32 (flash), 35 (LED), 36 (Vext), 37 (control de batería), 43/44 (USB serie), 45/46 (arranque).</li>
 <li><b>Libres de reserva</b> (según el pinout publicado de la V3, sin probar en tu placa): 33, 34, 38, 39, 40.</li>
-<li><span class="badge b-probar">PROBAR</span> GPIO19/20 son USB D−/D+ del S3. Comprobar con un programa de prueba antes de fijar el encoder ahí. Plan B: 38/39/40.</li>
+<li><b>GPIO19/20</b> son USB D−/D+ del S3, pero funcionan como entradas del encoder (probado con <code>prueba_pines</code>). Plan B: 38/39/40.</li>
 <li><b>GPIO41/42</b> para el BME280 (Wire1): comprobar que salen al conector. Si la placa saca 17/18, el BME280 puede ir al bus del OLED.</li>
 <li><b>GPIO3</b> es pin de arranque (origen del JTAG) pero solo cuenta con el eFuse grabado: la R8 de 100 kΩ a 3V3 no molesta. <b>GPIO45</b> nunca con pull-up: cambia la tensión de la flash y la placa no arranca.</li>
-<li><b>GPIO2</b> maneja la emisora: tiene que estar en BAJO desde el arranque. El firmware v0.6b aún le pone pull-up (lo usa como pala): <b>cambiar a v0.6c antes de cablear el PC817</b>.</li>
+<li><b>GPIO2</b> maneja la emisora: en BAJO desde el arranque (firmware v0.6c o posterior) y con R10 a GND. El firmware solo la activa en la pantalla TRX (OPERAR y QSO), con corte de seguridad a los 10 s.</li>
 <li>La Heltec V3 tapa casi toda una protoboard: mejor dejarla fuera y unirla con cables Dupont M-H.</li>
 </ul></div></div></div>''')
 
@@ -695,19 +746,26 @@ def main():
 <div class="panel opt"><h2>4 · Sensor BME280 <span class="badge b-opc">OPCIONAL</span></h2>{fit(p_bme(), 72)}</div>
 </div></div>''')
 
-    pages.append(f'''<div class="page">{header("Salidas: tono CW (buzzer, auriculares, volumen) y KEY", 4, T)}
-<div class="panel"><h2>5 · Tono CW: buzzer, auriculares con silencio automático y volumen</h2>{fit(p_tono(), 78)}</div>
-<div class="panel" style="margin-top:3mm"><h2>6 · Salida KEY aislada hacia la emisora</h2>{fit(p_key(), 64)}</div>
+    pages.append(f'''<div class="page">{header("Salida de audio: tono CW (buzzer, auriculares, volumen) y amplificador", 4, T)}
+<div class="panel"><h2>5 · Tono CW: buzzer, auriculares con silencio automático y volumen (montado)</h2>{fit(p_tono(), 80)}</div>
+<div class="panel" style="margin-top:3mm"><h2>5b · Alternativa con amplificador y altavoz en el sitio de BZ1 <span class="badge b-pend">PENDIENTE</span></h2>{fit(p_ampli(), 66)}</div>
 </div>''')
 
-    pages.append(f'''<div class="page">{header("Entrada de audio del decodificador y alimentación", 5, T)}
-<div class="panel"><h2>7 · Entrada de audio desde la emisora (decodificador CW)</h2>{fit(p_deco(), 96)}</div>
+    pages.append(f'''<div class="page">{header("Salida KEY hacia la emisora y alimentación", 5, T)}
+<div class="panel"><h2>6 · Salida KEY aislada hacia la emisora</h2>{fit(p_key(), 82)}</div>
 <div class="panel" style="margin-top:3mm"><h2>8 · Alimentación por batería</h2>{fit(p_alim(), 58)}</div>
 </div>''')
 
+    pages.append(f'''<div class="page">{header("Entrada de audio del decodificador", 6, T)}
+<div class="panel"><h2>7 · Entrada de audio desde la emisora (decodificador CW)</h2>{fit(p_deco(), 118)}</div>
+<ul>
+<li>El firmware (v0.9a o posterior) lo usa en la pantalla <b>TRX</b>: DECODIFICAR y QSO. Tono fijo (400–1000 Hz) o automático.</li>
+<li>Mientras se emite por KEY, el decodificador no escucha (para no descodificar el tono de la propia emisora).</li>
+</ul></div>''')
+
     bom = "".join(f'<tr class="{"opc" if k=="opc" else ""}"><td><b>{esc(r)}</b></td><td>{esc(c)} {badge(k)}</td><td>{esc(p)}</td></tr>'
                   for r, c, p, k in BOM)
-    pages.append(f'''<div class="page">{header("Componentes, montaje y comprobaciones", 6, T)}
+    pages.append(f'''<div class="page">{header("Componentes, montaje y comprobaciones", 7, T)}
 <div class="cols">
 <div><h2>Referencias del esquema → lista de la compra</h2><table><tr><th>Ref.</th><th>Componente</th><th>Para qué</th></tr>{bom}</table>
 <p style="font-size:8.5pt;color:#444;margin:1.5mm 0 0">Además: protoboard de 830 puntos, cables Dupont M-M y M-H, 2 perillas, 2 cables minijack M-M estéreo (emisora → J3 y J4 → KEY).</p></div>
@@ -718,17 +776,17 @@ def main():
 <li>Opcionales sin comprar: C3 10 nF (filtro del ADC), trafo 600:600 (lazo de masa), 1 kΩ + 100 nF (arranque suave de Q1).</li>
 </ul>
 <h2 style="margin-top:3mm">Orden de montaje (un bloque cada vez)</h2><ul>
-<li><b>0. Firmware v0.6c</b> antes de cablear: palas a GPIO4/5 y GPIO2 como salida en BAJO desde el arranque.</li>
-<li><b>1. Raíles</b>: 3V3 y GND de la Heltec a los raíles. Polímetro: 3,3 V entre raíles y ningún cortocircuito.</li>
-<li><b>2. Encoder</b> y programa de prueba de pines (19, 20, 48 y reserva 38–40) por serie.</li>
-<li><b>3. Palas</b>: comprobar por serie DIT/DAH antes del keyer.</li>
-<li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). <i>Montado y probado: el piezo suena muy bajo a 3,3 V (también directo a GPIO7); pedidos U2 PAM8302A y altavoz LS1 para ponerlos tras TN.</i></li>
-<li><b>5. KEY</b>: primero sin emisora, con el polímetro en continuidad entre punta y malla de J4.</li>
-<li><b>6. Decodificador</b>: RV2 al mínimo y volumen de la emisora bajo; mirar los valores del ADC por serie.</li>
+<li><b>0. Firmware v0.6c o posterior</b> antes de cablear: palas a GPIO4/5 y GPIO2 como salida en BAJO desde el arranque. ✔</li>
+<li><b>1. Raíles</b>: 3V3 y GND de la Heltec a los raíles. Polímetro: 3,3 V entre raíles y ningún cortocircuito. ✔</li>
+<li><b>2. Encoder</b> y programa de prueba de pines (19, 20, 48 y reserva 38–40) por serie. ✔</li>
+<li><b>3. Palas</b>: comprobar por serie DIT/DAH antes del keyer. ✔</li>
+<li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). ✔ <i>El piezo suena muy bajo: cuando lleguen U2 y LS1, montarlos en su sitio (hoja 4) y ajustar la ganancia.</i></li>
+<li><b>5. KEY</b> con R10: pantalla TRX → OPERAR. Primero GPIO2 con el polímetro (≈ 3,3 V con cada elemento, 0 V en reposo); luego, sin emisora, continuidad entre punta y malla de J4 al manipular.</li>
+<li><b>6. Decodificador</b>: RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra y <code>[DECOD]</code> por serie.</li>
 <li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional.</li>
 <li><b>9. Batería</b> al final, comprobada la polaridad.</li>
 </ul>
-<p style="font-size:8pt;color:#777;margin-top:2mm">Valores de partida sin probar en banco. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
+<p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas y tono (R1, RV1, C1, R2, R3, J2, BZ1). El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
 </div></div></div>''')
 
     doc = f'<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Chispas · esquema de conexiones</title><style>{CSS}</style></head><body>{"".join(pages)}</body></html>'

@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.9a - Pantalla TRX: decodificador CW (GPIO6, DMA + Goertzel), OPERAR por KEY (GPIO2), QSO y memorias
+ * @version 0.9b - Navegacion simulada por serie (provisional, para las capturas del README)
  * @date 2026-10-10
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.9a"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.9b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -4379,6 +4379,7 @@ void procesarCara() {
 //   pulsacion corta del eje (= corta del PRG) y larga del eje (= larga del PRG, salvo
 //   donde esta solo mueve el foco: ahi no hace nada, o sale de la edicion).
 enum EventoBoton { BOTON_NINGUNO, BOTON_CORTA, BOTON_LARGA, ENC_DERECHA, ENC_IZQUIERDA, ENC_PULSA, ENC_LARGA };
+EventoBoton eventoSerie = BOTON_NINGUNO;  // PROVISIONAL: evento simulado por serie (ver procesarCapturaSerie)
 
 struct Pulsador {
   uint8_t pin;
@@ -4543,7 +4544,8 @@ void navegarDesdeBarra() {
 void dormirChispas(const char* motivo);  // Definida antes de setup()
 
 void procesarBoton() {
-  EventoBoton ev = leerEventoBoton();
+  EventoBoton ev = (eventoSerie != BOTON_NINGUNO) ? eventoSerie : leerEventoBoton();  // PROVISIONAL: serie
+  eventoSerie = BOTON_NINGUNO;
   if (ev == BOTON_NINGUNO) return;
   if (ev == BOTON_LARGA) {
     dormirChispas("PRG LARGO");  // No vuelve: al despertar, la placa arranca de nuevo
@@ -5283,10 +5285,23 @@ void procesarBrillo() {
 // PROVISIONAL: captura de la pantalla por serie. La orden 'p' vuelca el buffer de la OLED (1024 bytes,
 // formato del SSD1306: byte = x + (y / 8) * 128, bit = y % 8) en hexadecimal entre dos marcas.
 // En el PC, docs/captura_oled.py lo convierte en PNG. Es la copia en RAM: no ve si el panel esta negro
-// o atenuado. Para quitarla, borrar esta funcion, su llamada en loop() y el script
+// o atenuado. Para quitarla, borrar esta funcion, su llamada en loop() y el script.
+// Tambien simula el encoder, para hacer capturas de todas las pantallas desde el PC: 'd' derecha,
+// 'i' izquierda, 'k' pulsar, 'l' pulsacion larga del eje y 'a' atras (PRG corto); quitar con eventoSerie
 void procesarCapturaSerie() {
   if (!Serial.available()) return;
   int c = Serial.read();
+  switch (c) {
+    case 'd': eventoSerie = ENC_DERECHA; return;
+    case 'i': eventoSerie = ENC_IZQUIERDA; return;
+    case 'k': eventoSerie = ENC_PULSA; return;
+    case 'l': eventoSerie = ENC_LARGA; return;
+    case 'a': eventoSerie = BOTON_CORTA; return;
+    case 'g':  // Locator generico solo en RAM (no se guarda): para capturas publicables. Al reiniciar vuelve el suyo
+      strlcpy(locatorEstacion, LOCATOR_POR_DEFECTO, sizeof(locatorEstacion));
+      pantallaPendiente = true;
+      return;
+  }
   if (c != 'p') return;
   const uint8_t* buf = display.getBuffer();
   Serial.println(F("[CAPTURA] INICIO"));
