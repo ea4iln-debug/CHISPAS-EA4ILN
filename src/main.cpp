@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.7m - Ahorro: CPU a 80 MHz sin WiFi, descanso de 1 ms en loop, LoRa dormida fuera de Duo, WiFi apagado en CONF y SOL, OLED tenue con la cara dormida; diagnostico por serie
+ * @version 0.7n - Deep sleep con PRG largo (despierta con PRG) y apagado automatico tras 30 min sin uso
  * @date 2026-10-09
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.7m"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.7n"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -31,6 +31,9 @@
 #include <time.h>
 #include "qrcode.h"  // Componente qrcode de ESP-IDF, incluido en el core (esp_qrcode_generate)
 #include <nvs.h>
+#include <esp_sleep.h>
+#include <driver/gpio.h>
+#include <driver/rtc_io.h>
 
 // ============================================================================
 // DEFINICION DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
@@ -3201,10 +3204,16 @@ void navegarDesdeBarra() {
 // Todo se puede hacer solo con el encoder: girar mueve el foco (o cambia el valor que se
 // edita) y pulsar ejecuta. La larga del eje es solo un atajo. El PRG corto es "atras":
 // sale de la edicion, sube un nivel y, en las pantallas principales, lleva a Inicio.
-// La larga del PRG queda libre (futuro: dormir la placa).
+// La larga del PRG duerme la placa (deep sleep; se despierta pulsando PRG).
+void dormirChispas(const char* motivo);  // Definida antes de setup()
+
 void procesarBoton() {
   EventoBoton ev = leerEventoBoton();
   if (ev == BOTON_NINGUNO) return;
+  if (ev == BOTON_LARGA) {
+    dormirChispas("PRG LARGO");  // No vuelve: al despertar, la placa arranca de nuevo
+    return;
+  }
 
   ultimaActividadMs = millis();
   if (caraActiva) {
@@ -3215,7 +3224,6 @@ void procesarBoton() {
     desactivarCara();
     return;
   }
-  if (ev == BOTON_LARGA) return;  // Libre (futuro: dormir la placa)
 
   // Con el QR del portal a la vista, cualquier giro o pulsacion (tambien "atras") vuelve a los datos
   if (viendoQrPortal()) {
@@ -3547,7 +3555,71 @@ void encenderPerifericos() {
   delay(100);
 }
 
+// ============================================================================
+// DORMIR (DEEP SLEEP) Y APAGADO AUTOMATICO
+// ============================================================================
+// PRG largo, o APAGADO_AUTO_MS sin tocar nada, pone la placa en deep sleep: OLED, Vext, LoRa, WiFi
+// y LED apagados. Se despierta pulsando PRG (GPIO0, pin RTC: wakeup ext0 a nivel bajo) y arranca de
+// nuevo como al encenderla (la configuracion esta en NVS).
+#define APAGADO_AUTO_MS (30UL * 60 * 1000)
+
+void dormirChispas(const char* motivo) {
+  Serial.printf("[SUENO] %s: a dormir. PRG para despertar\n", motivo);
+  motorCWDetener();
+  keyerActivo = false;
+  if (estadoWifi != WIFI_APAGADO) apagarWifi();
+  radio.sleep();
+
+  display.dim(false);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(22, 16); display.print(F("CHISPAS DUERME"));
+  display.setCursor(10, 34); display.print(F("PULSA PRG PARA"));
+  display.setCursor(10, 44); display.print(F("DESPERTARLO"));
+  display.display();
+  delay(1500);
+  display.ssd1306_command(SSD1306_DISPLAYOFF);
+
+  // Salidas en reposo y retenidas durante el sueno (si no, quedan al aire): KEY en BAJO, Vext
+  // apagada (ALTO: OLED sin alimentacion) y divisor de bateria desactivado
+  digitalWrite(LED_PIN, LOW);
+  ledcWrite(CANAL_PWM_AUDIO, 0);
+  digitalWrite(KEY_OUT_PIN, LOW);
+  digitalWrite(VEXT_CTRL, HIGH);
+  digitalWrite(ADC_CTRL_PIN, LOW);
+  gpio_hold_en((gpio_num_t)KEY_OUT_PIN);
+  gpio_hold_en((gpio_num_t)VEXT_CTRL);
+  gpio_hold_en((gpio_num_t)ADC_CTRL_PIN);
+  gpio_deep_sleep_hold_en();
+
+  // Despertar con PRG: GPIO0 a nivel bajo, con su pull-up activo durante el sueno
+  rtc_gpio_pullup_en(GPIO_NUM_0);
+  rtc_gpio_pulldown_dis(GPIO_NUM_0);
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0);
+
+  Serial.flush();
+  esp_deep_sleep_start();
+}
+
+/**
+ * Apagado automatico tras APAGADO_AUTO_MS sin tocar nada, salvo si puede estar en uso sin tocarlo:
+ * practica Koch en marcha, Duo o QSO, keyer, Echo o portal abierto.
+ */
+void procesarApagadoAuto() {
+  if (millis() - ultimaActividadMs < APAGADO_AUTO_MS) return;
+  bool practicando = enPractica3_2 && estadoCW != CW_PAUSADO;
+  if (practicando || enPantalla4_Sub || enKeyer || enEcho || estadoWifi == WIFI_PORTAL) return;
+  dormirChispas("SIN USO");
+}
+
 void setup() {
+  // Al despertar del deep sleep siguen retenidos los pines que se fijaron al dormir: se liberan
+  gpio_deep_sleep_hold_dis();
+  gpio_hold_dis((gpio_num_t)KEY_OUT_PIN);
+  gpio_hold_dis((gpio_num_t)VEXT_CTRL);
+  gpio_hold_dis((gpio_num_t)ADC_CTRL_PIN);
+
   // Lo primero: la salida KEY en BAJO, para que la emisora no transmita mientras arranca la placa
   pinMode(KEY_OUT_PIN, OUTPUT);
   digitalWrite(KEY_OUT_PIN, LOW);
@@ -3564,7 +3636,8 @@ void setup() {
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-  Serial.printf("[INIT] MOTIVO DEL REINICIO: %d\n", (int)esp_reset_reason());
+  Serial.printf("[INIT] MOTIVO DEL REINICIO: %d%s\n", (int)esp_reset_reason(),
+                esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0 ? " (despierta con PRG)" : "");
 
   // display.begin() no comprueba que la OLED responda (solo falla si no hay memoria).
   // Se comprueba el ACK en I2C tras un pulso de reset y, si no contesta, se corta Vext y se reintenta.
@@ -3695,6 +3768,7 @@ void loop() {
   procesarWifi();
   procesarBateriaYPantalla();
   procesarDiagnostico();
+  procesarApagadoAuto();
 
   // Ahorro: 1 ms de descanso por vuelta. Sin el, loop() tenia un nucleo al 100 %; con el, la CPU espera
   // en reposo. Las entradas siguen respondiendo (encoder por interrupcion; pulsadores cada ~1 ms) y el

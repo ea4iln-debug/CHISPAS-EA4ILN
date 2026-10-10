@@ -17,8 +17,8 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.7m**, cargada en las dos placas (10 oct 2026): placa 1 (protoboard con encoder, palas y
-  batería; COM16) y placa 2 (desnuda; sin encoder solo funciona el PRG como "atrás"). Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
+- Firmware: `src/main.cpp` **v0.7n**, cargada en la placa 2 (desnuda; sin encoder solo funciona el PRG); la placa 1
+  (protoboard con encoder, palas y batería) sigue en v0.7m. Las dos usan COM16 según cuál esté conectada. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
   6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
   firmware; programas de prueba aparte en `pruebas/` con sus entornos (`prueba_pines`, `prueba_bateria`).
@@ -47,7 +47,7 @@ el transceptor, GPS/locator.
 - **Todo se hace con el encoder:** girar mueve el foco (`moverFocoAnillo()`), pulsar ejecuta, y pulsar sobre un
   valor lo edita girando (`editandoValor`, vídeo inverso, sin dar la vuelta). La larga del eje es solo un atajo.
 - **PRG corto = atrás** (sale de la edición, sube un nivel; en las pantallas principales va a Inicio).
-  **PRG largo libre**: reservado para dormir la placa (deep sleep, despertar con GPIO0; sin probar).
+  **PRG largo = dormir** (deep sleep; despierta pulsando PRG). Ver "Dormir" en Funciones.
 - Al cambiar de pantalla el foco queda en la flecha usada (`entrarEnPantalla(p, haciaAtras)`).
 - Barra inferior: `ant.`/`sig.`; en PROP y POTA, la página ("1/2") en el centro y la opción "mas >"; en CONF,
   `« opc »` (opciones que solo salen al girar). Sin ayudas tipo `- : opc`.
@@ -123,6 +123,11 @@ el transceptor, GPS/locator.
   Ocupa ~40 % del bucle mientras se ve.
 - **OLED negra tras reset corto** (resuelto en v0.4e): tras `display.begin()` se reenvían bomba de carga
   (`0x8D 0x14`) y encendido (`0xAF`). Se imprime por serie el motivo del reinicio; no hay `for(;;)` si falla la OLED.
+- **Dormir** (v0.7n, probado en la placa 2: tres ciclos): PRG largo o 30 min sin tocar nada (`APAGADO_AUTO_MS`;
+  no si hay práctica Koch en marcha, Duo/QSO, keyer, Echo o portal abierto) → `dormirChispas()`: aviso 1,5 s, OLED,
+  WiFi, LoRa y LED apagados; KEY en BAJO, Vext apagada y divisor de batería desactivado, retenidos con `gpio_hold_en`
+  + `gpio_deep_sleep_hold_en` (se liberan al principio de `setup()`); despierta con ext0 en GPIO0 a nivel bajo.
+  Despertar con PRG **no** entra en modo de carga (`boot:0x8`); arranca de nuevo (`esp_reset_reason` 8).
 - **Salida KEY** (GPIO2): `KEY_OUT_PIN` en BAJO al principio de `setup()` (v0.6c); aún no se usa. Medido con polímetro:
   0 V en marcha; picos de 0,3–0,5 V al arrancar y con RST (pin al aire hasta `setup()`), por debajo de los ~1,1 V
   que necesita el LED del PC817. **Recomendado: 10 kΩ de GPIO2 a GND**; añadirlo al esquema al montar la salida KEY.
@@ -141,9 +146,10 @@ el transceptor, GPS/locator.
      aciertos/fallos por letra en NVS y mostrar las más flojas. Opcional: repetir más las letras flojas.
    - Editar indicativo y locator en el aparato con el encoder (sin móvil ni webconf).
    - Aceleración del giro: al girar rápido, los valores avanzan de 5 en 5.
-   - **Consumo, lo que queda:** (4) deep sleep con PRG largo (despertar con GPIO0; probar OLED, LoRa y Vext al
-     volver); (5) apagado automático tras X min sin uso, salvo en Duo o con el portal abierto; bajar el brillo de la
-     OLED tras un rato sin uso en cualquier pantalla. Vigilar la fragmentación con el `[DIAG]` tras muchas horas.
+   - **Consumo, lo que queda:** bajar el brillo de la OLED tras un rato sin uso en cualquier pantalla; quizá hacer
+     configurable el tiempo de apagado automático (hoy 30 min fijos). Vigilar la fragmentación con el `[DIAG]` tras
+     muchas horas. El consumo en deep sleep no se ha medido (por USB lo tapan el CP2102 y el cargador; haría falta
+     medir en el cable de la batería con un polímetro en µA).
    - Detectar USB y carga: la V3 no lo permite por software. Propuesta sin decidir: divisor 100k/150k del pin 5V
      (J2-2) a GPIO33 (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.
 4. Pantalla Duo para textos largos y QSO por LoRa con el keyer. A futuro: audio I2S y OTA.
