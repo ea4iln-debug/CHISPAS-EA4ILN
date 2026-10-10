@@ -2,7 +2,8 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.8f - Estadisticas por caracter: fallos marcados al corregir el Koch y del Echo; letras flojas en ESTAD.
+ * @version 0.8g - Menu CW: KOCH (RX), ECHO (TX), TX LIBRE. Echo con ajustes propios, retos y ESTAD.; estadisticas
+ *                 por caracter separadas (Koch y Echo) con "MAS ERRORES" y totales
  * @date 2026-10-10
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +16,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.8f"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.8g"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -257,23 +258,24 @@ struct StatsLeccion {
 };
 StatsLeccion statsKoch[40];
 
-// Estadisticas por caracter: aciertos y fallos de cada caracter de TABLA_KOCH, del Koch (marcando los fallos
-// al corregir) y del Echo. Se guardan juntas en NVS como un bloque ("car")
+// Estadisticas por caracter: aciertos y fallos de cada caracter de TABLA_KOCH, por separado para el Koch
+// (marcando los fallos al corregir) y para el Echo. En NVS, un bloque cada una ("carK" y "carE")
 struct StatsCaracter {
   uint16_t aciertos;
   uint16_t fallos;
 };
-StatsCaracter statsCaracter[TOTAL_CARACTERES_KOCH];
-#define MIN_INTENTOS_LETRA 5     // Intentos minimos para salir en "letras flojas"
-#define LINEAS_LETRAS_FLOJAS 4
+StatsCaracter statsCarKoch[TOTAL_CARACTERES_KOCH];
+StatsCaracter statsCarEcho[TOTAL_CARACTERES_KOCH];
+#define MIN_INTENTOS_LETRA 5     // Intentos minimos para salir en "mas errores"
+#define LINEAS_MAS_ERRORES 4
 
 bool enSubpantallaCW = false;
 bool enPractica3_2 = false;
 bool enEstadisticas3_5 = false;
 #define OPCION_BARRA_CW 3
-uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=KOCH, 1=KEYER, 2=ECHO, 3=BARRA INFERIOR (ant/sig)
+uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=KOCH (RX), 1=ECHO (TX), 2=TX LIBRE, 3=BARRA INFERIOR (ant/sig)
 
-// Keyer iambico (pantalla CW > KEYER). La configuracion se guarda en NVS al salir
+// Keyer iambico (pantalla CW > TX LIBRE). La configuracion se guarda en NVS al salir
 uint8_t keyerWpm = 20;
 bool keyerModoB = false;            // false = modo A
 bool keyerPalasInvertidas = false;  // true = punta de la clavija = raya
@@ -281,18 +283,33 @@ bool enKeyer = false;               // Subpantalla del keyer abierta
 uint8_t opcionKeyer = 0;            // 0 = wpm, 1 = modo, 2 = palas, 3 = borrar, 4 = volver
 String textoKeyer = "";             // Lo descodificado de la manipulacion
 
-// Modo Echo (pantalla CW > ECHO): Chispas emite letras de la leccion Koch y hay que repetirlas con las palas
-enum EstadoEcho { ECHO_ESPERA, ECHO_REPRODUCIENDO, ECHO_ESCUCHANDO, ECHO_RESULTADO };
-bool enEcho = false;
-uint8_t opcionEcho = 3;          // 0 = wpm, 1 = largo, 2 = ver, 3 = iniciar/repetir, 4 = volver
-uint8_t echoLargo = 1;           // Letras por reto (1-5)
-bool echoVerObjetivo = true;     // Ensenar la letra antes de manipularla (para aprender)
-EstadoEcho estadoEcho = ECHO_REPRODUCIENDO;
+// Modo Echo (pantalla CW > ECHO (TX)): Chispas emite letras de su leccion Koch y hay que repetirlas con las
+// palas. Como el Koch: ajustes propios (wpm, espaciado y leccion independientes), practica de echoRetos retos
+// y resultado. ECHO_ESPERA = ajustes (sin practica)
+enum EstadoEcho { ECHO_ESPERA, ECHO_REPRODUCIENDO, ECHO_ESCUCHANDO, ECHO_RESULTADO, ECHO_FIN };
+bool enEcho = false;              // Echo abierto (ajustes, practica o estadisticas)
+bool echoPracticando = false;
+bool enEstadisticasEcho = false;
+#define OPCION_ECHO_INICIAR 7
+uint8_t opcionEcho = OPCION_ECHO_INICIAR;  // Ajustes: 0 wpm, 1 sp, 2 leccion, 3 letras, 4 ver, 5 retos, 6 estad., 7 iniciar, 8 volver
+#define N_OPCIONES_ECHO 9
+uint8_t opcionPracticaEcho = 0;   // Practica: 0 repetir, 1 salir. Resultado: 0 volver, 1 rep.
+uint8_t echoWpm = 20;
+uint16_t echoEspaciado = 200;
+uint8_t echoLeccion = 4;
+uint8_t echoLargo = 1;            // Letras por reto (1-5)
+bool echoVerObjetivo = true;      // Ensenar la letra antes de manipularla (para aprender)
+uint8_t echoRetos = 20;           // Retos por practica (10-50); cada intento cuenta, tambien al repetir tras un fallo
+EstadoEcho estadoEcho = ECHO_ESPERA;
 String echoObjetivo = "";
 String echoRespuesta = "";
 bool echoAcierto = false;
 uint16_t echoAciertos = 0, echoIntentos = 0;
 unsigned long echoFinResultadoMs = 0;
+uint32_t echoTotalIntentos = 0, echoTotalAciertos = 0;  // Historico (ESTAD. del Echo)
+uint16_t echoSesiones = 0;                               // Practicas terminadas
+uint8_t paginaStatsEcho = 0;      // 0 mas errores, 1 totales, 2 borrado
+#define TOTAL_PAGINAS_STATS_ECHO 3
 
 uint8_t wpmCW = 25;
 uint16_t espaciadoCW = 200;
@@ -334,10 +351,11 @@ uint8_t opcionPractica = 0;  // Practica en marcha: 0 = pausa/seguir, 1 = salir
 uint8_t opcionResumen = 0;   // Resultado: 0 = volver, 1 = repetir
 
 uint8_t paginaStats3_5 = 0;
-// Paginas de ESTAD.: 0 = letras flojas; 1-14 = lecciones (40 / 3 por pagina); 15 = borrado
+// Paginas de ESTAD. del Koch: 0 = mas errores; 1 = totales; 2-15 = lecciones (40 / 3 por pagina); 16 = borrado
 #define PAGINAS_STATS_3_5 14
-#define PAG_STATS_BORRADO (PAGINAS_STATS_3_5 + 1)
-#define TOTAL_PAGINAS_STATS (PAGINAS_STATS_3_5 + 2)
+#define PAG_STATS_PRIMERA_LECCION 2
+#define PAG_STATS_BORRADO (PAG_STATS_PRIMERA_LECCION + PAGINAS_STATS_3_5)
+#define TOTAL_PAGINAS_STATS (PAG_STATS_BORRADO + 1)
 bool confirmandoBorrado = false;
 
 unsigned long tiempoCWProximo = 0;
@@ -583,6 +601,7 @@ void motorCWEmitir(const char* texto, uint8_t wpm, uint16_t espaciado, const cha
 #define KEYER_PILA    3072
 
 void guardarKeyerNVS();                // Definida en la seccion NVS
+void guardarEchoNVS();                 // Definida en la seccion NVS
 extern bool pantallaPendiente;         // Definida con la bateria
 extern unsigned long ultimaActividadMs;  // Definida con la cara (ultimo giro, pulsacion o manipulacion)
 
@@ -626,7 +645,7 @@ void tareaKeyerFn(void* parametro) {
 
     vTaskDelay(1);
     TickType_t ahora = xTaskGetTickCount();
-    TickType_t dit = pdMS_TO_TICKS(1200 / keyerWpm);
+    TickType_t dit = pdMS_TO_TICKS(1200 / (enEcho ? echoWpm : keyerWpm));  // El Echo tiene su propio wpm
     bool pDit, pDah;
     leerPalas(pDit, pDah);
     char siguiente = 0;
@@ -738,16 +757,25 @@ int indiceKoch(char c) {
   return -1;
 }
 
-void registrarCaracter(char c, bool acierto) {
+void registrarCaracter(StatsCaracter* tabla, char c, bool acierto) {
   int i = indiceKoch(c);
   if (i < 0) return;
-  uint16_t& cuenta = acierto ? statsCaracter[i].aciertos : statsCaracter[i].fallos;
+  uint16_t& cuenta = acierto ? tabla[i].aciertos : tabla[i].fallos;
   if (cuenta < UINT16_MAX) cuenta++;
 }
 
-void guardarStatsCaracterNVS() {
+void guardarStatsKochNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
-  prefs.putBytes("car", statsCaracter, sizeof(statsCaracter));
+  prefs.putBytes("carK", statsCarKoch, sizeof(statsCarKoch));
+  prefs.end();
+}
+
+void guardarStatsEchoNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putBytes("carE", statsCarEcho, sizeof(statsCarEcho));
+  prefs.putUInt("eint", echoTotalIntentos);
+  prefs.putUInt("eok", echoTotalAciertos);
+  prefs.putUShort("eses", echoSesiones);
   prefs.end();
 }
 
@@ -759,48 +787,66 @@ void guardarStatsCaracterNVS() {
 
 /**
  * Emite un reto. Con repetirMismo vuelve a emitir el actual (tras un fallo o con "repetir").
- * Las letras salen de la leccion Koch, con la letra nueva al 25 %.
+ * Las letras salen de la leccion del Echo, con la letra nueva al 25 %.
  */
 void echoNuevoReto(bool repetirMismo) {
   if (!repetirMismo || echoObjetivo.length() == 0) {
     echoObjetivo = "";
-    for (uint8_t i = 0; i < echoLargo; i++) echoObjetivo += caracterKochAleatorio(leccionCW);
+    for (uint8_t i = 0; i < echoLargo; i++) echoObjetivo += caracterKochAleatorio(echoLeccion);
   }
   echoRespuesta = "";
   keyerPausar();
-  motorCWEmitir(echoObjetivo.c_str(), keyerWpm, espaciadoCW, "ECHO");
+  motorCWEmitir(echoObjetivo.c_str(), echoWpm, echoEspaciado, "ECHO");
   estadoEcho = ECHO_REPRODUCIENDO;
   pantallaPendiente = true;
 }
 
+// Abre los ajustes del Echo (la practica empieza con "iniciar")
 void entrarEnEcho() {
   motorCWDetener();
   enEcho = true;
-  opcionEcho = 3;
+  echoPracticando = false;
+  enEstadisticasEcho = false;
+  opcionEcho = OPCION_ECHO_INICIAR;
+  estadoEcho = ECHO_ESPERA;
+}
+
+void iniciarPracticaEcho() {
+  guardarEchoNVS();
+  echoPracticando = true;
+  opcionPracticaEcho = 0;
   echoAciertos = 0;
   echoIntentos = 0;
   echoObjetivo = "";
-  echoRespuesta = "";
-  estadoEcho = ECHO_ESPERA;  // No emite hasta pulsar "iniciar" (da tiempo a ajustar wpm, largo y ver)
+  echoNuevoReto(false);
+}
+
+// De la practica (o del resultado) a los ajustes
+void salirPracticaEcho() {
+  keyerPausar();
+  motorCWDetener();
+  echoPracticando = false;
+  estadoEcho = ECHO_ESPERA;
 }
 
 void salirDeEcho() {
-  keyerPausar();
-  motorCWDetener();
+  salirPracticaEcho();
   enEcho = false;
   editandoValor = false;
-  guardarKeyerNVS();
+  guardarEchoNVS();
 }
 
 void echoEvaluar() {
   echoIntentos++;
   echoAcierto = (echoRespuesta == echoObjetivo);
   if (echoAcierto) echoAciertos++;
+  echoTotalIntentos++;
+  if (echoAcierto) echoTotalAciertos++;
   // Por caracter, posicion a posicion (lo que falte en una respuesta corta cuenta como fallo)
   for (uint8_t i = 0; i < echoObjetivo.length(); i++) {
-    registrarCaracter(echoObjetivo[i], i < echoRespuesta.length() && echoRespuesta[i] == echoObjetivo[i]);
+    registrarCaracter(statsCarEcho, echoObjetivo[i], i < echoRespuesta.length() && echoRespuesta[i] == echoObjetivo[i]);
   }
-  guardarStatsCaracterNVS();
+  guardarStatsEchoNVS();
   Serial.printf("\n[ECHO] %s -> %s: %s (%u/%u)\n", echoObjetivo.c_str(), echoRespuesta.c_str(),
                 echoAcierto ? "BIEN" : "MAL", echoAciertos, echoIntentos);
   keyerPausar();
@@ -823,13 +869,23 @@ void echoRecibirCaracter(char c) {
 }
 
 void procesarEcho() {
-  if (!enEcho) return;
+  if (!enEcho || !echoPracticando) return;
   if (estadoEcho == ECHO_REPRODUCIENDO && !motorCWOcupado()) {
     keyerReanudar();  // Turno del usuario
     estadoEcho = ECHO_ESCUCHANDO;
     pantallaPendiente = true;
   } else if (estadoEcho == ECHO_RESULTADO && (long)(millis() - echoFinResultadoMs) >= 0) {
-    echoNuevoReto(!echoAcierto);  // Tras un fallo se repite el mismo
+    if (echoIntentos >= echoRetos) {
+      // Fin de la practica: resultado como en el Koch
+      estadoEcho = ECHO_FIN;
+      opcionPracticaEcho = 0;
+      echoSesiones++;
+      guardarStatsEchoNVS();
+      Serial.printf("[ECHO] FIN: %u/%u\n", echoAciertos, echoIntentos);
+      pantallaPendiente = true;
+    } else {
+      echoNuevoReto(!echoAcierto);  // Tras un fallo se repite el mismo
+    }
   }
 }
 
@@ -864,8 +920,15 @@ void cargarDatosNVS() {
   keyerWpm = constrain(prefs.getUChar("kwpm", 20), 10, 40);  // KEYER_WPM_MIN/MAX
   keyerModoB = prefs.getBool("kmodob", false);
   keyerPalasInvertidas = prefs.getBool("kinv", false);
+  echoWpm = constrain(prefs.getUChar("ewpm", 20), KEYER_WPM_MIN, KEYER_WPM_MAX);
+  echoEspaciado = constrain(prefs.getUShort("esp", 200), 100, 200);
+  echoLeccion = constrain(prefs.getUChar("elecc", 4), 1, 40);
   echoLargo = constrain(prefs.getUChar("elargo", 1), 1, 5);
   echoVerObjetivo = prefs.getBool("ever", true);
+  echoRetos = constrain(prefs.getUChar("eretos", 20), 10, 50);
+  echoTotalIntentos = prefs.getUInt("eint", 0);
+  echoTotalAciertos = prefs.getUInt("eok", 0);
+  echoSesiones = prefs.getUShort("eses", 0);
   apagadoAutoMin = prefs.getUChar("apag", 30);  // ajustarApagado(0) lo lleva a un valor de la lista si no lo es
   frecTonoHz = constrain(prefs.getUShort("tono", FREC_AUDIO_HZ), TONO_MIN_HZ, TONO_MAX_HZ);
 
@@ -878,11 +941,21 @@ void cargarDatosNVS() {
     statsKoch[i].maxAcierto = prefs.getUChar(kMax.c_str(), 0);
     statsKoch[i].minAcierto = prefs.getUChar(kMin.c_str(), 100);
   }
-  memset(statsCaracter, 0, sizeof(statsCaracter));
-  if (prefs.isKey("car") && prefs.getBytesLength("car") == sizeof(statsCaracter)) {
-    prefs.getBytes("car", statsCaracter, sizeof(statsCaracter));
+  memset(statsCarKoch, 0, sizeof(statsCarKoch));
+  memset(statsCarEcho, 0, sizeof(statsCarEcho));
+  if (prefs.isKey("carK") && prefs.getBytesLength("carK") == sizeof(statsCarKoch)) {
+    prefs.getBytes("carK", statsCarKoch, sizeof(statsCarKoch));
   }
+  if (prefs.isKey("carE") && prefs.getBytesLength("carE") == sizeof(statsCarEcho)) {
+    prefs.getBytes("carE", statsCarEcho, sizeof(statsCarEcho));
+  }
+  bool hayBloqueAntiguo = prefs.isKey("car");  // v0.8f: Koch y Echo juntos; se descarta (se empieza de cero)
   prefs.end();
+  if (hayBloqueAntiguo) {
+    prefs.begin(NVS_ENTRENADOR, false);
+    prefs.remove("car");
+    prefs.end();
+  }
 }
 
 void guardarUltimaConfiguracionNVS() {
@@ -912,8 +985,17 @@ void guardarKeyerNVS() {
   prefs.putUChar("kwpm", keyerWpm);
   prefs.putBool("kmodob", keyerModoB);
   prefs.putBool("kinv", keyerPalasInvertidas);
+  prefs.end();
+}
+
+void guardarEchoNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUChar("ewpm", echoWpm);
+  prefs.putUShort("esp", echoEspaciado);
+  prefs.putUChar("elecc", echoLeccion);
   prefs.putUChar("elargo", echoLargo);
   prefs.putBool("ever", echoVerObjetivo);
+  prefs.putUChar("eretos", echoRetos);
   prefs.end();
 }
 
@@ -946,24 +1028,37 @@ void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
   prefs.end();
 }
 
-// Borra solo las estadisticas (lecciones Koch y por caracter); la configuracion del entrenador y los datos de
-// la estacion se conservan
-void borrarTodasLasEstadisticasNVS() {
+// Borra solo las estadisticas del Koch (lecciones y por caracter); las del Echo, la configuracion del
+// entrenador y los datos de la estacion se conservan
+void borrarEstadisticasKochNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   for (int i = 0; i < 40; i++) {
     prefs.remove(("c_" + String(i)).c_str());
     prefs.remove(("mx_" + String(i)).c_str());
     prefs.remove(("mn_" + String(i)).c_str());
   }
-  prefs.remove("car");
+  prefs.remove("carK");
   prefs.end();
-  memset(statsCaracter, 0, sizeof(statsCaracter));
+  memset(statsCarKoch, 0, sizeof(statsCarKoch));
 
   for (int i = 0; i < 40; i++) {
     statsKoch[i].vecesCompletada = 0;
     statsKoch[i].maxAcierto = 0;
     statsKoch[i].minAcierto = 100;
   }
+}
+
+// Borra solo las estadisticas del Echo (por caracter y totales)
+void borrarEstadisticasEchoNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.remove("carE");
+  prefs.remove("eint");
+  prefs.remove("eok");
+  prefs.remove("eses");
+  prefs.end();
+  memset(statsCarEcho, 0, sizeof(statsCarEcho));
+  echoTotalIntentos = echoTotalAciertos = 0;
+  echoSesiones = 0;
 }
 
 void cargarEstacionNVS() {
@@ -1097,11 +1192,13 @@ void dibujarEncabezado() {
     display.setCursor(128 - w, 0);
     display.print(txtRight);
 
-  } else if ((pantallaActual == PANTALLA_CW && enPractica3_2) || (pantallaActual == PANTALLA_LORA && subpantalla4Activa == 1)) {
+  } else if ((pantallaActual == PANTALLA_CW && (enPractica3_2 || (enEcho && echoPracticando))) ||
+             (pantallaActual == PANTALLA_LORA && subpantalla4Activa == 1)) {
+    bool deEcho = pantallaActual == PANTALLA_CW && enEcho;
     display.setCursor(0, 0);
-    display.print(wpmCW);
+    display.print(deEcho ? echoWpm : wpmCW);
     display.print(F("WPM SP:"));
-    display.print(espaciadoCW);
+    display.print(deEcho ? echoEspaciado : espaciadoCW);
     display.print(F("%"));
 
     String txtRight = "BAT:" + strBat;
@@ -2031,24 +2128,37 @@ void renderizarPantallaInicio() {
   dibujarBarraAvanzarRetroceder(true);
 }
 
+void dibujarTituloCentrado(const String& titulo, int16_t y = 11) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((128 - w) / 2, y);
+  display.print(titulo);
+}
+
+// Porcentaje con un decimal ("82.5%"); "--" sin datos
+String textoPorcentaje(uint32_t aciertos, uint32_t total) {
+  if (total == 0) return String("--");
+  return String(aciertos * 100.0f / total, 1) + "%";
+}
+
 /**
- * Primera pagina de ESTAD.: los caracteres con peor % de acierto (Koch y Echo juntos), con al menos
+ * Pagina "MAS ERRORES" de ESTAD. (Koch o Echo): los caracteres con peor % de acierto, con al menos
  * MIN_INTENTOS_LETRA intentos. A igual %, primero el que tiene mas intentos
  */
-void dibujarLetrasFlojas() {
-  display.setCursor(10, 11);
-  display.print(F("- LETRAS FLOJAS -"));
+void dibujarMasErrores(const StatsCaracter* tabla) {
+  dibujarTituloCentrado(F("- MAS ERRORES -"));
 
-  int8_t lista[LINEAS_LETRAS_FLOJAS];
+  int8_t lista[LINEAS_MAS_ERRORES];
   uint8_t n = 0;
   bool usado[TOTAL_CARACTERES_KOCH] = {false};
-  for (uint8_t linea = 0; linea < LINEAS_LETRAS_FLOJAS; linea++) {
+  for (uint8_t linea = 0; linea < LINEAS_MAS_ERRORES; linea++) {
     int8_t peor = -1;
     uint32_t peorPct = 0, peorTotal = 0;
     for (uint8_t i = 0; i < TOTAL_CARACTERES_KOCH; i++) {
-      uint32_t total = (uint32_t)statsCaracter[i].aciertos + statsCaracter[i].fallos;
+      uint32_t total = (uint32_t)tabla[i].aciertos + tabla[i].fallos;
       if (usado[i] || total < MIN_INTENTOS_LETRA) continue;
-      uint32_t pct = statsCaracter[i].aciertos * 1000UL / total;
+      uint32_t pct = tabla[i].aciertos * 1000UL / total;
       if (peor < 0 || pct < peorPct || (pct == peorPct && total > peorTotal)) {
         peor = i; peorPct = pct; peorTotal = total;
       }
@@ -2069,13 +2179,57 @@ void dibujarLetrasFlojas() {
   }
   char linea[24];
   for (uint8_t k = 0; k < n; k++) {
-    const StatsCaracter& s = statsCaracter[lista[k]];
+    const StatsCaracter& s = tabla[lista[k]];
     uint32_t total = (uint32_t)s.aciertos + s.fallos;
     snprintf(linea, sizeof(linea), "%c %3lu%%  %u/%lu", TABLA_KOCH[lista[k]],
              (unsigned long)(s.aciertos * 100UL / total), s.aciertos, (unsigned long)total);
     display.setCursor(0, 21 + k * 8);
     display.print(linea);
   }
+}
+
+// Suma de aciertos y de intentos de todos los caracteres de una tabla
+void sumarStatsCaracter(const StatsCaracter* tabla, uint32_t& aciertos, uint32_t& total) {
+  aciertos = total = 0;
+  for (uint8_t i = 0; i < TOTAL_CARACTERES_KOCH; i++) {
+    aciertos += tabla[i].aciertos;
+    total += (uint32_t)tabla[i].aciertos + tabla[i].fallos;
+  }
+}
+
+void dibujarTotalesKoch() {
+  dibujarTituloCentrado(F("- TOTALES KOCH -"));
+  uint32_t lecciones = 0;
+  for (uint8_t i = 0; i < 40; i++) lecciones += statsKoch[i].vecesCompletada;
+  uint32_t aciertos, total;
+  sumarStatsCaracter(statsCarKoch, aciertos, total);
+  display.setCursor(0, 22); display.print(F("LECCIONES:  ")); display.print(lecciones);
+  display.setCursor(0, 32); display.print(F("CARACTERES: ")); display.print(total);
+  display.setCursor(0, 42); display.print(F("ACIERTO:    ")); display.print(textoPorcentaje(aciertos, total));
+}
+
+void dibujarTotalesEcho() {
+  dibujarTituloCentrado(F("- TOTALES ECHO -"));
+  display.setCursor(0, 22); display.print(F("PRACTICAS: ")); display.print(echoSesiones);
+  display.setCursor(0, 32); display.print(F("RETOS: ")); display.print(echoTotalIntentos);
+  display.print(F(" BIEN: ")); display.print(echoTotalAciertos);
+  display.setCursor(0, 42); display.print(F("ACIERTO:   ")); display.print(textoPorcentaje(echoTotalAciertos, echoTotalIntentos));
+}
+
+// Ultima pagina de ESTAD.: borrar las estadisticas de ese apartado (pide confirmacion)
+void dibujarPaginaBorrado(const __FlashStringHelper* que) {
+  dibujarTituloCentrado(F("- MEMORIA NVS -"), 16);
+  display.setCursor(0, 32);
+  if (confirmandoBorrado) {
+    // La fuente por defecto no es UTF-8: el signo de apertura es el 0xA8 de CP437
+    display.print(F(" "));
+    display.write(0xA8);
+    display.print(F("CONFIRMAR BORRADO?"));
+  } else {
+    display.print(F(" BORRAR ESTAD. "));
+    display.print(que);
+  }
+  dibujarPieCentrado(confirmandoBorrado ? "> confirmar" : "> borrar");
 }
 
 void renderizarPantallaCW() {
@@ -2109,17 +2263,67 @@ void renderizarPantallaCW() {
     dibujarPieCentrado((opcionKeyer == 3 ? "> " : "  ") + String("borrar   ") +
                        (opcionKeyer == 4 ? "> " : "  ") + String("volver"));
 
-  } else if (enEcho) {
+  } else if (enEcho && enEstadisticasEcho) {
+    display.setTextSize(1);
+    if (paginaStatsEcho == 0) dibujarMasErrores(statsCarEcho);
+    else if (paginaStatsEcho == 1) dibujarTotalesEcho();
+    else dibujarPaginaBorrado(F("ECHO"));
+    if (paginaStatsEcho < TOTAL_PAGINAS_STATS_ECHO - 1) {
+      dibujarPieCentrado("pag " + String(paginaStatsEcho + 1) + "/" + String(TOTAL_PAGINAS_STATS_ECHO) + "   > volver");
+    }
+
+  } else if (enEcho && !echoPracticando) {
+    // Ajustes del Echo, con la disposicion de los del Koch
     display.setTextSize(1);
 
-    // Opciones: ">15WPM >1LET >VER SI" (20 caracteres)
     display.setCursor(0, 12);
     display.print(opcionEcho == 0 ? ">" : " ");
-    imprimirValor(opcionEcho == 0, String(keyerWpm) + "WPM");
-    display.print(opcionEcho == 1 ? " >" : "  ");
-    imprimirValor(opcionEcho == 1, String(echoLargo) + "LET");
-    display.print(opcionEcho == 2 ? " >" : "  ");
+    display.print(F("WPM: ")); imprimirValor(opcionEcho == 0, String(echoWpm));
+
+    display.setCursor(64, 12);
+    display.print(opcionEcho == 1 ? ">" : " ");
+    display.print(F("SP: ")); imprimirValor(opcionEcho == 1, String(echoEspaciado) + "%");
+
+    display.setCursor(0, 22);
+    display.print(opcionEcho == 2 ? ">" : " ");
+    display.print(F("LECCION: ")); imprimirValor(opcionEcho == 2, String(echoLeccion));
+
+    display.setCursor(0, 32);
+    display.print(opcionEcho == 3 ? ">" : " ");
+    display.print(F("LETRAS: ")); imprimirValor(opcionEcho == 3, String(echoLargo));
+
+    display.setCursor(82, 32);
+    display.print(opcionEcho == 4 ? ">" : " ");
     display.print(echoVerObjetivo ? F("VER SI") : F("VER NO"));
+
+    display.setCursor(0, 42);
+    display.print(opcionEcho == 5 ? ">" : " ");
+    display.print(F("RETOS: ")); imprimirValor(opcionEcho == 5, String(echoRetos));
+
+    display.setCursor(82, 42);
+    display.print(opcionEcho == 6 ? ">" : " ");
+    display.print(F("ESTAD."));
+
+    dibujarPieCentrado((opcionEcho == 7 ? "> " : "  ") + String("iniciar  ") +
+                       (opcionEcho == 8 ? "> " : "  ") + String("volver"));
+
+  } else if (enEcho && estadoEcho == ECHO_FIN) {
+    display.setTextSize(1);
+    dibujarTituloCentrado(F("- RESULTADO ECHO -"), 12);
+    display.setCursor(0, 26);
+    display.print(F("ACIERTOS: ")); display.print(textoPorcentaje(echoAciertos, echoIntentos));
+    display.setCursor(0, 38);
+    display.print(F("BIEN: ")); display.print(echoAciertos);
+    display.print(F(" DE ")); display.print(echoIntentos);
+    dibujarPieCentrado((opcionPracticaEcho == 0 ? "> " : "  ") + String("volver  ") +
+                       (opcionPracticaEcho == 1 ? "> " : "  ") + String("rep."));
+
+  } else if (enEcho) {
+    // Practica: reto n de echoRetos y aciertos
+    display.setTextSize(1);
+    uint16_t numReto = min((uint16_t)(echoIntentos + (estadoEcho == ECHO_RESULTADO ? 0 : 1)), (uint16_t)echoRetos);
+    display.setCursor(0, 12);
+    display.print(F("RETO ")); display.print(numReto); display.print('/'); display.print(echoRetos);
 
     // El reto en grande (con "VER NO", "?" hasta el resultado)
     bool mostrar = echoVerObjetivo || estadoEcho == ECHO_RESULTADO;
@@ -2133,17 +2337,15 @@ void renderizarPantallaCW() {
     display.print(reto);
     display.setTextSize(1);
 
-    // Aciertos / intentos, a la derecha
-    String marcador = String(echoAciertos) + "/" + String(echoIntentos);
+    // Aciertos, a la derecha de "RETO n/N"
+    String marcador = "BIEN " + String(echoAciertos);
     display.getTextBounds(marcador, 0, 0, &x1, &y1, &w, &h);
-    display.setCursor(128 - w, 27);
+    display.setCursor(128 - w, 12);
     display.print(marcador);
 
     // Estado
     display.setCursor(0, 42);
-    if (estadoEcho == ECHO_ESPERA) {
-      display.print(F("PULSA INICIAR"));
-    } else if (estadoEcho == ECHO_REPRODUCIENDO) {
+    if (estadoEcho == ECHO_REPRODUCIENDO) {
       display.print(F("ESCUCHA..."));
     } else if (estadoEcho == ECHO_ESCUCHANDO) {
       display.print(F("TU TURNO: ")); display.print(echoRespuesta); display.print('_');
@@ -2158,8 +2360,9 @@ void renderizarPantallaCW() {
       }
     }
 
-    dibujarPieCentrado((opcionEcho == 3 ? "> " : "  ") + String(estadoEcho == ECHO_ESPERA ? "iniciar   " : "repetir   ") +
-                       (opcionEcho == 4 ? "> " : "  ") + String("volver"));
+    // "repetir" vuelve a emitir el reto y no cuenta como intento
+    dibujarPieCentrado((opcionPracticaEcho == 0 ? "> " : "  ") + String("repetir   ") +
+                       (opcionPracticaEcho == 1 ? "> " : "  ") + String("salir"));
 
   } else if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
     // Mismo estilo que la pantalla LoRa: titulo en negativo y tres opciones
@@ -2177,7 +2380,7 @@ void renderizarPantallaCW() {
     display.print(titulo);
     display.setTextColor(SSD1306_WHITE);
 
-    const char* opciones[] = { "< KOCH >", "< KEYER >", "< ECHO >" };
+    const char* opciones[] = { "< KOCH (RX) >", "< ECHO (TX) >", "< TX LIBRE >" };
     for (uint8_t i = 0; i < 3; i++) {
       display.setCursor(15, 24 + i * 9);
       display.print(opcionPantalla3 == i ? "> " : "  ");
@@ -2221,12 +2424,13 @@ void renderizarPantallaCW() {
   } else if (enEstadisticas3_5) {
     display.setTextSize(1);
 
-    if (paginaStats3_5 == 0) {
-      dibujarLetrasFlojas();
-      dibujarPieCentrado("pag 1/" + String(TOTAL_PAGINAS_STATS) + "   > volver");
+    if (paginaStats3_5 < PAG_STATS_PRIMERA_LECCION) {
+      if (paginaStats3_5 == 0) dibujarMasErrores(statsCarKoch);
+      else dibujarTotalesKoch();
+      dibujarPieCentrado("pag " + String(paginaStats3_5 + 1) + "/" + String(TOTAL_PAGINAS_STATS) + "   > volver");
 
     } else if (paginaStats3_5 < PAG_STATS_BORRADO) {
-      uint8_t leccInicio = ((paginaStats3_5 - 1) * 3) + 1;
+      uint8_t leccInicio = ((paginaStats3_5 - PAG_STATS_PRIMERA_LECCION) * 3) + 1;
 
       for (uint8_t i = 0; i < 3; i++) {
         uint8_t lNum = leccInicio + i;
@@ -2265,20 +2469,7 @@ void renderizarPantallaCW() {
       dibujarPieCentrado("pag " + String(paginaStats3_5 + 1) + "/" + String(TOTAL_PAGINAS_STATS) + "   > volver");
 
     } else {
-      display.setCursor(10, 16);
-      display.println(F("- MEMORIA NVS -"));
-
-      display.setCursor(0, 32);
-      if (confirmandoBorrado) {
-        // La fuente por defecto no es UTF-8: el signo de apertura es el 0xA8 de CP437
-        display.print(F(" "));
-        display.write(0xA8);
-        display.println(F("CONFIRMAR BORRADO?"));
-      } else {
-        display.println(F(" BORRAR ESTADISTICAS"));  // Solo estadisticas: el resto, en P8 (fabrica)
-      }
-
-      dibujarPieCentrado(confirmandoBorrado ? "> confirmar" : "> borrar");
+      dibujarPaginaBorrado(F("KOCH"));  // Solo estadisticas del Koch: el resto, en CONF (fabrica)
     }
 
   } else if (enPractica3_2) {
@@ -2881,11 +3072,11 @@ void enviarResultadoKoch() {
   for (uint16_t i = 0; i < textoCompletoLeccion.length(); i++) {
     char c = textoCompletoLeccion[i];
     if (c == ' ') continue;
-    registrarCaracter(c, !marcasFallo[i]);
+    registrarCaracter(statsCarKoch, c, !marcasFallo[i]);
     if (marcasFallo[i]) { Serial.print(' '); Serial.print(c); }
   }
   Serial.printf(" (%u/%u)\n", numeroErrores, totalCaracteresLeccion);
-  guardarStatsCaracterNVS();
+  guardarStatsKochNVS();
 
   ultimoPctKoch = pct;
   ultimoPctKochMs = millis();
@@ -3584,30 +3775,72 @@ void procesarBoton() {
     }
 
   } else if (pantallaActual == PANTALLA_CW) {
-    if (enEcho) {
-      // Foco: 0 wpm, 1 largo, 2 ver, 3 repetir, 4 volver. Las palas funcionan con cualquier foco
+    if (enEcho && enEstadisticasEcho) {
+      // Como ESTAD. del Koch: girar pasa pagina (la ultima es la de borrado); pulsar vuelve o borra
       if (atras || ejeLarga) {
+        enEstadisticasEcho = false; confirmandoBorrado = false;
+      } else if (giro != 0) {
+        confirmandoBorrado = false;
+        paginaStatsEcho = (paginaStatsEcho + TOTAL_PAGINAS_STATS_ECHO + giro) % TOTAL_PAGINAS_STATS_ECHO;
+      } else if (pulsa) {
+        if (paginaStatsEcho != TOTAL_PAGINAS_STATS_ECHO - 1) {
+          enEstadisticasEcho = false;
+        } else if (!confirmandoBorrado) {
+          confirmandoBorrado = true;
+        } else {
+          borrarEstadisticasEchoNVS(); confirmandoBorrado = false; paginaStatsEcho = 0;
+        }
+      }
+
+    } else if (enEcho && !echoPracticando) {
+      // Ajustes. Foco: 0 wpm, 1 sp, 2 leccion, 3 letras, 4 ver, 5 retos, 6 estad., 7 iniciar, 8 volver
+      if (atras) {
         salirDeEcho();
       } else if (giro != 0) {
-        if (editandoValor && opcionEcho == 0) ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
-        else if (editandoValor && opcionEcho == 1) ajustarValor(echoLargo, giro, 1, 5);
-        else opcionEcho = (opcionEcho + 5 + giro) % 5;
+        if (editandoValor) {
+          switch (opcionEcho) {
+            case 0: ajustarValor(echoWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
+            case 1: ajustarValor(echoEspaciado, giro * 10, 100, 200); break;
+            case 2: ajustarValor(echoLeccion, giro, 1, 40); break;
+            case 3: ajustarValor(echoLargo, giro, 1, 5); break;
+            case 5: ajustarValor(echoRetos, giro * 10, 10, 50); break;
+          }
+        } else {
+          opcionEcho = (opcionEcho + N_OPCIONES_ECHO + giro) % N_OPCIONES_ECHO;
+        }
       } else if (pulsa) {
         switch (opcionEcho) {
-          case 0:
-            editandoValor = !editandoValor;
+          case 4: echoVerObjetivo = !echoVerObjetivo; break;
+          case 6:
+            enEstadisticasEcho = true;  // Al salir se vuelve aqui
+            paginaStatsEcho = 0;
+            confirmandoBorrado = false;
             break;
-          case 1:
-            editandoValor = !editandoValor;
-            if (!editandoValor && estadoEcho != ECHO_ESPERA) echoNuevoReto(false);  // Nuevo largo: reto nuevo
-            break;
-          case 2: echoVerObjetivo = !echoVerObjetivo; break;
-          case 3:
-            // "iniciar" la primera vez; despues, "repetir" (volver a oirlo, no cuenta como intento)
-            echoNuevoReto(estadoEcho != ECHO_ESPERA);
-            break;
-          case 4: salirDeEcho(); break;
+          case 7: iniciarPracticaEcho(); break;
+          case 8: salirDeEcho(); break;
+          default: editandoValor = !editandoValor; break;  // 0, 1, 2, 3 y 5
         }
+      }
+
+    } else if (enEcho && estadoEcho == ECHO_FIN) {
+      // Resultado. Foco: 0 volver (a los ajustes), 1 repetir. La larga del eje es atajo de repetir
+      if (atras) salirPracticaEcho();
+      else if (ejeLarga) iniciarPracticaEcho();
+      else if (giro != 0) opcionPracticaEcho = (opcionPracticaEcho + 1) % 2;
+      else if (pulsa) {
+        if (opcionPracticaEcho == 0) salirPracticaEcho();
+        else iniciarPracticaEcho();
+      }
+
+    } else if (enEcho) {
+      // Practica. Foco: 0 repetir (no cuenta como intento), 1 salir. Las palas funcionan con cualquier foco
+      if (atras || ejeLarga) {
+        salirPracticaEcho();
+      } else if (giro != 0) {
+        opcionPracticaEcho = (opcionPracticaEcho + 1) % 2;
+      } else if (pulsa) {
+        if (opcionPracticaEcho == 1) salirPracticaEcho();
+        else if (estadoEcho != ECHO_RESULTADO) echoNuevoReto(true);  // Con el resultado a la vista, sigue solo
       }
 
     } else if (enKeyer) {
@@ -3640,7 +3873,7 @@ void procesarBoton() {
         } else if (!confirmandoBorrado) {
           confirmandoBorrado = true;
         } else {
-          borrarTodasLasEstadisticasNVS(); confirmandoBorrado = false; paginaStats3_5 = 0;
+          borrarEstadisticasKochNVS(); confirmandoBorrado = false; paginaStats3_5 = 0;
         }
       }
 
@@ -3750,16 +3983,16 @@ void procesarBoton() {
       if (atras) {
         entrarEnPantalla(PANTALLA_INICIO);
       } else if (giro != 0) {
-        // Foco: [sig.] -> [KOCH] -> [KEYER] -> [ECHO] -> [ant.] -> [sig.] ...
+        // Foco: [sig.] -> [KOCH (RX)] -> [ECHO (TX)] -> [TX LIBRE] -> [ant.] -> [sig.] ...
         moverFocoAnillo(opcionPantalla3, OPCION_BARRA_CW, giro);
       } else if (pulsa) {
         if (opcionPantalla3 == 0) {
           enSubpantallaCW = true;
           opcionSubpantalla = 5;
         } else if (opcionPantalla3 == 1) {
-          entrarEnKeyer();
-        } else if (opcionPantalla3 == 2) {
           entrarEnEcho();
+        } else if (opcionPantalla3 == 2) {
+          entrarEnKeyer();
         } else {
           navegarDesdeBarra();
         }

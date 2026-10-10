@@ -16,7 +16,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.8f** en las dos placas. v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.8g** en las dos placas. v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
@@ -69,31 +69,36 @@ el transceptor, GPS/locator.
   Al editar, los valores dan la vuelta (`ajustarValor`, `ajustarApagado`).
 
 ## Funciones (probadas en placa salvo que se diga)
-- **Pantalla CW** (v0.7d): estilo LoRa, título " ENTRENADOR CW " en negativo y `< KOCH >`, `< KEYER >`, `< ECHO >`
-  (no caben 4 opciones con 9 px por línea).
-  - **KOCH**: configuración (wpm, espaciado, lección, caracteres, grupos, `>ESTAD.` como última opción a la derecha de
-    GRUPOS, iniciar, volver; foco 7 = estadísticas). Práctica: pausa/seguir y salir; corrección de errores girando;
-    resultado: volver y rep. Al salir de estadísticas se vuelve a la configuración.
-    **Corrección por carácter** (v0.8f, probada): en "corregir" se marcan los fallos en el listado (cursor
-    subrayado, `focoCorregir`; pulsar marca/desmarca en vídeo inverso, `marcasFallo[]`; anillo caracteres → rep. →
-    ok); `numeroErrores` sale de las marcas. "ok" (`enviarResultadoKoch()`) guarda el % de la lección y los
-    aciertos/fallos de cada carácter. El Echo también los registra, posición a posición. `statsCaracter[]` (41,
-    orden de `TABLA_KOCH`) en NVS `chispas` como bloque `car`. ESTAD.: página 1 = **letras flojas** (las 4 de
-    peor %, con ≥ `MIN_INTENTOS_LETRA` = 5 intentos), 2–15 lecciones, 16 borrado (también borra `car`). La letra nueva de la lección sale
-    el 25 % de las veces (`PESO_LETRA_NUEVA_PCT`, `caracterKochAleatorio()`, también en Duo y Echo); con 4 caracteres
-    o menos, reparto uniforme. Tabla Koch de LCWO (v0.3i).
-  - **KEYER** (v0.7a): tarea FreeRTOS `keyer` (núcleo 1, prioridad del motor CW) que lee las palas (GPIO4/5) cada
-    1 ms; solo activa en su pantalla o en Echo. Memoria de la pala contraria: modo A solo en la pausa entre elementos;
-    modo B también durante el elemento. Descodifica lo manipulado (silencio de 2 puntos = fin de carácter, 5 =
-    espacio; patrón desconocido = `*`) y lo pasa a `loop()` por una cola; también sale por serie. Opciones: wpm 10–40,
-    MODO A/B, palas NORM/INV, borrar, volver; en `chispas` (`kwpm`, `kmodob`, `kinv`). Salida solo por LED (y tono en
-    GPIO7 cuando haya buzzer); KEY aún no. El apretón iámbico y el texto largo aún no se han validado.
-  - **ECHO** (v0.7b): Chispas emite 1–5 letras de la lección Koch con el motor CW a los wpm del keyer (keyer en pausa
-    mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las palas. Se evalúa al llegar a las
-    letras del reto o con un silencio de palabra. Acierto: "BIEN!" y otro reto a 1,2 s; fallo: "MAL: R  K -.-" y se
-    repite el mismo a 3 s. Opciones: wpm, largo (`elargo`), ver la letra antes (`ever`, SÍ por defecto), iniciar
-    (v0.7r: al entrar espera en `ECHO_ESPERA` hasta pulsarla) / repetir (no cuenta) y volver. Marcador de
-    aciertos/intentos. Por serie: `[ECHO] U -> V: MAL (5/8)`.
+- **Pantalla CW** (v0.7d; nombres y orden de la v0.8g): estilo LoRa, título " ENTRENADOR CW " en negativo y
+  `< KOCH (RX) >`, `< ECHO (TX) >`, `< TX LIBRE >` (`opcionPantalla3` 0/1/2; no caben 4 opciones con 9 px por línea).
+  - **KOCH (RX)**: configuración (wpm, espaciado, lección, caracteres, grupos, `>ESTAD.` como última opción a la
+    derecha de GRUPOS, iniciar, volver; foco 7 = estadísticas). Práctica: pausa/seguir y salir; resultado: volver y
+    rep. Al salir de estadísticas se vuelve a la configuración. **Corrección por carácter** (v0.8f, probada): en
+    "corregir" se marcan los fallos en el listado (cursor subrayado, `focoCorregir`; pulsar marca/desmarca en vídeo
+    inverso, `marcasFallo[]`; anillo caracteres → rep. → ok); `numeroErrores` sale de las marcas. "ok"
+    (`enviarResultadoKoch()`) guarda el % de la lección y los aciertos/fallos de cada carácter en `statsCarKoch[]`
+    (41, orden de `TABLA_KOCH`; NVS `carK`). ESTAD. (v0.8g, 17 páginas): 1 **MÁS ERRORES** (`dibujarMasErrores()`:
+    las 4 de peor %, con ≥ `MIN_INTENTOS_LETRA` = 5 intentos), 2 **TOTALES KOCH** (lecciones, caracteres, %),
+    3–16 lecciones, 17 borrado (solo lo del Koch). La letra nueva de la lección sale el 25 % de las veces
+    (`PESO_LETRA_NUEVA_PCT`, `caracterKochAleatorio()`, también en Duo y Echo); con 4 caracteres o menos, reparto
+    uniforme. Tabla Koch de LCWO (v0.3i).
+  - **ECHO (TX)** (v0.7b; reestructurado en la v0.8g, probado): Chispas emite 1–5 letras de la lección del Echo con
+    el motor CW (keyer en pausa mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las
+    palas; durante el Echo el keyer descodifica con `echoWpm`. Como el Koch: **ajustes** propios (WPM 10–40, SP
+    100–200 %, LECCIÓN 1–40, LETRAS 1–5, VER, RETOS 10–50, ESTAD., iniciar, volver; NVS `ewpm`, `esp`, `elecc`,
+    `elargo`, `ever`, `eretos`; independientes del Koch y de TX LIBRE), **práctica** (`echoPracticando`: `RETO n/N`
+    y `BIEN n`; repetir —no cuenta— y salir; se evalúa al llegar a las letras del reto o con un silencio de palabra;
+    acierto: "BIEN!" y otro reto a 1,2 s; fallo: "MAL: R  K -.-" y se repite el mismo a 3 s; cada intento cuenta como
+    reto) y **resultado** (`ECHO_FIN`: %, volver y rep.). Estadísticas en `statsCarEcho[]` (NVS `carE`) y totales
+    (`eint`, `eok`, `eses`); ESTAD. del Echo: MÁS ERRORES, TOTALES ECHO, borrado (solo lo del Echo). Por serie:
+    `[ECHO] U -> V: MAL (5/8)` y `[ECHO] FIN: 8/10`. El bloque `car` de la v0.8f (Koch y Echo juntos) se borra al
+    arrancar.
+  - **TX LIBRE** (antes KEYER; v0.7a): tarea FreeRTOS `keyer` (núcleo 1, prioridad del motor CW) que lee las palas
+    (GPIO4/5) cada 1 ms; solo activa en su pantalla o en la práctica del Echo. Memoria de la pala contraria: modo A
+    solo en la pausa entre elementos; modo B también durante el elemento. Descodifica lo manipulado (silencio de 2
+    puntos = fin de carácter, 5 = espacio; patrón desconocido = `*`) y lo pasa a `loop()` por una cola; también sale
+    por serie. Opciones: wpm 10–40, MODO A/B, palas NORM/INV, borrar, volver; en `chispas` (`kwpm`, `kmodob`,
+    `kinv`). Salida por LED y tono en GPIO7; KEY aún no. El apretón iámbico y el texto largo aún no se han validado.
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso
@@ -177,13 +182,13 @@ el transceptor, GPS/locator.
 
 ## Pendiente
 1. **Siguiente sesión:** por decidir (opcional de las estadísticas: que el Koch y el Echo repitan más las letras
-   flojas). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
+   con más errores). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack): al llegar el
    PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la ganancia en banco; luego salida
    KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue (opcionales: enable del GPS y
    BME280). Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
-   - Repetir más las letras flojas en Koch y Echo (las estadísticas por carácter ya existen, v0.8f).
+   - Repetir más las letras con más errores en Koch y Echo (las estadísticas por carácter ya existen, v0.8g).
    - Editar indicativo y locator en el aparato con el encoder (sin móvil ni webconf).
    - Aceleración del giro: al girar rápido, los valores avanzan de 5 en 5.
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
