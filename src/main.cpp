@@ -2,8 +2,8 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.8b - OLED: arranque de la v0.4e y atenuacion con display.dim (contraste 0), sin ordenes de diagnostico por serie
- * @date 2026-10-09
+ * @version 0.8c - Captura provisional de la pantalla por serie (orden 'p', docs/captura_oled.py)
+ * @date 2026-10-10
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * Copyright (C) 2026 EA4ILN
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.8b"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.8c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -3848,7 +3848,27 @@ void procesarBrillo() {
   }
 }
 
+// PROVISIONAL: captura de la pantalla por serie. La orden 'p' vuelca el buffer de la OLED (1024 bytes,
+// formato del SSD1306: byte = x + (y / 8) * 128, bit = y % 8) en hexadecimal entre dos marcas.
+// En el PC, docs/captura_oled.py lo convierte en PNG. Es la copia en RAM: no ve si el panel esta negro
+// o atenuado. Para quitarla, borrar esta funcion, su llamada en loop() y el script
+void procesarCapturaSerie() {
+  if (!Serial.available()) return;
+  int c = Serial.read();
+  if (c != 'p') return;
+  const uint8_t* buf = display.getBuffer();
+  Serial.println(F("[CAPTURA] INICIO"));
+  char hex[3];
+  for (int i = 0; i < 1024; i++) {
+    snprintf(hex, sizeof(hex), "%02X", buf[i]);
+    Serial.print(hex);
+    if ((i & 63) == 63) Serial.println();
+  }
+  Serial.println(F("[CAPTURA] FIN"));
+}
+
 void loop() {
+  procesarCapturaSerie();  // PROVISIONAL
   procesarBoton();
   procesarTextoKeyer();
   procesarEcho();
