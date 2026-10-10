@@ -694,7 +694,8 @@ void tareaKeyerFn(void* parametro) {
         if (pDit || pDah) {
           siguiente = (pDit && pDah) ? (elemento == '.' ? '-' : '.') : (pDit ? '.' : '-');
         } else {
-          // Silencio desde el ultimo elemento: 2 puntos cierran el caracter y 5, la palabra
+          // Silencio desde el ultimo elemento: 2 puntos cierran el caracter y 6, la palabra (con 5, una pausa
+          // algo larga entre letras partia la palabra; en QSO se enviaba letra a letra)
           TickType_t silencio = ahora - finUltimoElemento;
           if (largo > 0 && silencio >= 2 * dit) {
             patron[min(largo, (uint8_t)8)] = '\0';
@@ -702,7 +703,7 @@ void tareaKeyerFn(void* parametro) {
             xQueueSend(colaKeyerTexto, &c, 0);
             largo = 0;
             espacioPendiente = true;
-          } else if (espacioPendiente && silencio >= 5 * dit) {
+          } else if (espacioPendiente && silencio >= 6 * dit) {
             char c = ' ';
             xQueueSend(colaKeyerTexto, &c, 0);
             espacioPendiente = false;
@@ -1278,6 +1279,20 @@ void imprimirValor(bool foco, const String& valor) {
   if (foco && editandoValor) display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
   display.print(valor);
   display.setTextColor(SSD1306_WHITE);
+}
+
+// Opcion de un menu principal ("< KOCH (RX) >") centrada; el ">" del foco va a su izquierda, fuera del centrado
+void dibujarOpcionCentrada(bool foco, const char* texto, int16_t y) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(texto, 0, 0, &x1, &y1, &w, &h);
+  int16_t x = (128 - w) / 2;
+  if (foco) {
+    display.setCursor(x - 12, y);
+    display.print('>');
+  }
+  display.setCursor(x, y);
+  display.print(texto);
 }
 
 void dibujarPieCentrado(const String& txt) {
@@ -2521,11 +2536,7 @@ void renderizarPantallaCW() {
     display.setTextColor(SSD1306_WHITE);
 
     const char* opciones[] = { "< KOCH (RX) >", "< ECHO (TX) >", "< TX LIBRE >" };
-    for (uint8_t i = 0; i < 3; i++) {
-      display.setCursor(15, 24 + i * 9);
-      display.print(opcionPantalla3 == i ? "> " : "  ");
-      display.print(opciones[i]);
-    }
+    for (uint8_t i = 0; i < 3; i++) dibujarOpcionCentrada(opcionPantalla3 == i, opciones[i], 24 + i * 9);
 
     dibujarBarraAvanzarRetroceder(opcionPantalla3 == OPCION_BARRA_CW);
 
@@ -2755,13 +2766,8 @@ void renderizarPantallaLora() {
 
     display.setTextColor(SSD1306_WHITE);
 
-    display.setCursor(5, 28);
-    display.print(opcionPantalla4 == 0 ? "> " : "  ");
-    display.print(F("< PRACTICA DUO >"));
-
-    display.setCursor(5, 38);
-    display.print(opcionPantalla4 == 1 ? "> " : "  ");
-    display.print(F("< QSO LIBRE >"));
+    dibujarOpcionCentrada(opcionPantalla4 == 0, "< PRACTICA DUO >", 28);
+    dibujarOpcionCentrada(opcionPantalla4 == 1, "< QSO LIBRE >", 38);
 
     dibujarBarraAvanzarRetroceder(opcionPantalla4 == 2);
 

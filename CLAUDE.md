@@ -70,7 +70,7 @@ el transceptor, GPS/locator.
 
 ## Funciones (probadas en placa salvo que se diga)
 - **Pantalla CW** (v0.7d; nombres y orden de la v0.8g): estilo LoRa, título " ENTRENADOR CW " en negativo y
-  `< KOCH (RX) >`, `< ECHO (TX) >`, `< TX LIBRE >` (`opcionPantalla3` 0/1/2; no caben 4 opciones con 9 px por línea).
+  `< KOCH (RX) >`, `< ECHO (TX) >`, `< TX LIBRE >`, centradas con `dibujarOpcionCentrada()` como las de LoRa (`opcionPantalla3` 0/1/2; no caben 4 opciones con 9 px por línea).
   - **KOCH (RX)**: configuración (wpm, espaciado, lección, caracteres, grupos, `>ESTAD.` como última opción a la
     derecha de GRUPOS, iniciar, volver; foco 7 = estadísticas). Práctica: pausa/seguir y salir; resultado: volver y
     rep. Al salir de estadísticas se vuelve a la configuración. **Corrección por carácter** (v0.8f, probada): en
@@ -96,7 +96,7 @@ el transceptor, GPS/locator.
   - **TX LIBRE** (antes KEYER; v0.7a): tarea FreeRTOS `keyer` (núcleo 1, prioridad del motor CW) que lee las palas
     (GPIO4/5) cada 1 ms; solo activa en su pantalla o en la práctica del Echo. Memoria de la pala contraria: modo A
     solo en la pausa entre elementos; modo B también durante el elemento. Descodifica lo manipulado (silencio de 2
-    puntos = fin de carácter, 5 = espacio; patrón desconocido = `*`) y lo pasa a `loop()` por una cola; también sale
+    puntos = fin de carácter, 6 = espacio (5 hasta la v0.8i: partía palabras); patrón desconocido = `*`) y lo pasa a `loop()` por una cola; también sale
     por serie. Opciones: wpm 10–40, MODO A/B, palas NORM/INV, borrar, volver; en `chispas` (`kwpm`, `kmodob`,
     `kinv`). Salida por LED y tono en GPIO7; KEY aún no. El apretón iámbico y el texto largo aún no se han validado.
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
@@ -115,9 +115,8 @@ el transceptor, GPS/locator.
     del emisor (SP 100 %) cuando se lleva un silencio de 7 puntos sin manipular (`keyerUltimoUsoMs`, lo actualiza la
     tarea del keyer), con el keyer en pausa; tocar una pala mientras suena lo corta (break-in) y lo pendiente pasa a
     texto (`procesarQSO()`). Pantalla: recibido arriba (2 líneas), separador con indicativo y RSSI, manipulado abajo
-    (2 líneas); pie `>20WPM >VER SI >salir`. VER NO: la palabra sale como `???` mientras suena (NVS `qver`). Ojo: el
-    keyer cierra la palabra a los 5 puntos de silencio; con pausas largas entre letras se envía letra a letra
-    (propuesto subir a 6, sin decidir).
+    (2 líneas); pie `>20WPM >VER SI >salir`. VER NO: la palabra sale como `???` mientras suena (NVS `qver`). El keyer
+    cierra la palabra a los 6 puntos de silencio (con 5 se enviaba letra a letra).
 - **Radio** (v0.4c, `#define LORA_*`): 868,1 MHz, SF7, 250 kHz, CR 4/7, sync 0x12, 10 dBm, TCXO 1,8 V (DIO2 como RF
   switch lo activa RadioLib 6.6 en `begin()`; SPI 9/11/10). RSSI a 2 m: unos -40/-45 dBm.
 - **WiFi** (v0.5a/b, v0.7k): se enciende al entrar en PROP y POTA, y en SOL solo si no hay hora (para el NTP).
