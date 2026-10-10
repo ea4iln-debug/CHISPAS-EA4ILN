@@ -137,7 +137,8 @@ el transceptor, GPS/locator.
   funcionaba), `display.begin()` a mano (igual: una de tres lo apagó), corte de Vext 500 ms al arrancar (falla a
   veces) y con I2C y RST configurados antes del corte (1 fallo de ~10). A mano, la orden serie `v` (cortar Vext
   500 ms + reset + begin) la encendió 5 de 5. Al arrancar la LoRa la OLED parpadea: sospecha de caídas de 3,3 V en la
-  placa 1 (alimentada a través del medidor USB); pendiente probar sin medidor y con batería. Las órdenes de diagnóstico por serie de la v0.8a (`s`, `a`, `b`, `v`)
+  placa 1 (alimentada a través del medidor USB); probado sin medidor y con batería (10 oct 2026):
+  encendió 8 de 10 veces, así que el medidor no es la causa. Aparcado por decisión del usuario. Las órdenes de diagnóstico por serie de la v0.8a (`s`, `a`, `b`, `v`)
   se quitaron en la v0.8b a petición del usuario (están en el historial de git, commit 2f61d2f, si hacen falta).
 - **Dormir** (v0.7n, probado en la placa 2: tres ciclos): PRG largo, o `apagadoAutoMin` sin tocar nada (v0.7o: se
   elige en CONF → `apagado`: nunca, 5, 10, 15, 30, 60 o 120 min; por defecto 30; NVS `apag`), salvo en CW y LoRa y
@@ -150,8 +151,8 @@ el transceptor, GPS/locator.
   que necesita el LED del PC817. **Recomendado: 10 kΩ de GPIO2 a GND**; añadirlo al esquema al montar la salida KEY.
 
 ## Pendiente
-1. **Siguiente sesión:** probar la OLED negra de la placa 1 sin el medidor USB y con batería; estadísticas por
-   carácter mientras llega el buzzer (lunes 12 oct). Locator real ya puesto en webconf (10 oct 2026).
+1. **Siguiente sesión:** estadísticas por carácter mientras llega el buzzer (lunes 12 oct). OLED negra de la
+   placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor). Locator real ya puesto en webconf (10 oct 2026).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas): buzzer, auriculares y volumen (tono en
    GPIO7 ya programado). **Buzzer:** el comprado resultó **magnético** (16 Ω, + marcado), no piezo: con R1 de 1 kΩ
    no se oye nada (probado 10 oct 2026). Pedido un **piezo pasivo** (llega el lunes 12 oct); montar
