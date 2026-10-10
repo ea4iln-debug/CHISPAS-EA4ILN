@@ -7,10 +7,10 @@ OLED 0,96", sin PSRAM, 8 MB de flash). Hoy: entrenador Koch estilo LCWO, keyer i
 por LoRa, propagación, spots POTA, sol y línea gris. A medio plazo: tono por buzzer, salida KEY, decodificador desde
 el transceptor, GPS/locator. El usuario aún está aprendiendo CW (no sabe manipular todavía).
 
-## Recordar al usuario al empezar la sesión
-- Renombrar el repositorio en GitHub (Settings → Repository name, p. ej. `Chispas-EA4ILN`; hoy sigue siendo
-  `ea4iln-debug/Mr.-Morse-EA4ILN`). Después: `git remote set-url origin <url nueva>`, quitar este aviso y, si quiere,
-  renombrar la carpeta local con VS Code cerrado.
+## Repositorio
+- GitHub: `https://github.com/ea4iln-debug/CHISPAS-EA4ILN` (renombrado el 10 oct 2026 desde `Mr.-Morse-EA4ILN`;
+  GitHub redirige la URL antigua). La carpeta local sigue siendo `Mr. Morse EA4ilN` (renombrarla es opcional, con
+  VS Code cerrado). `README.md` para GitHub: licencia aún sin decidir.
 
 ## Estado actual (10 oct 2026)
 - Firmware: `src/main.cpp` **v0.7k**, cargada en la placa 1 (protoboard con encoder, palas y batería; COM16). La
