@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.8e - Tono CW por defecto a 850 Hz (configurable en CONF, 400-1000 Hz, NVS "tono")
+ * @version 0.8f - Estadisticas por caracter: fallos marcados al corregir el Koch y del Echo; letras flojas en ESTAD.
  * @date 2026-10-10
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.8e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.8f"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -257,6 +257,16 @@ struct StatsLeccion {
 };
 StatsLeccion statsKoch[40];
 
+// Estadisticas por caracter: aciertos y fallos de cada caracter de TABLA_KOCH, del Koch (marcando los fallos
+// al corregir) y del Echo. Se guardan juntas en NVS como un bloque ("car")
+struct StatsCaracter {
+  uint16_t aciertos;
+  uint16_t fallos;
+};
+StatsCaracter statsCaracter[TOTAL_CARACTERES_KOCH];
+#define MIN_INTENTOS_LETRA 5     // Intentos minimos para salir en "letras flojas"
+#define LINEAS_LETRAS_FLOJAS 4
+
 bool enSubpantallaCW = false;
 bool enPractica3_2 = false;
 bool enEstadisticas3_5 = false;
@@ -310,14 +320,24 @@ bool mostrarTextoGrupo = false;
 
 uint16_t totalCaracteresLeccion = 0;
 uint16_t numeroErrores = 0;
-uint8_t paginaListado3_3 = 0;    
-uint8_t opcionFinListado3_3 = 0; 
-uint8_t opcionPantallaCorregir = 0; 
+uint8_t paginaListado3_3 = 0;
+uint8_t opcionFinListado3_3 = 0;
+
+// Correccion del Koch: se marcan los caracteres fallados en el listado. Foco: 0..largo-1 = un caracter,
+// largo = "rep.", largo+1 = "ok" (largo = textoCompletoLeccion.length(); hasta 50 grupos de 5 con espacios)
+#define MAX_TEXTO_LECCION 300
+#define CARACTERES_POR_PAGINA_LISTADO 63  // 3 lineas de 21
+bool marcasFallo[MAX_TEXTO_LECCION];
+uint16_t focoCorregir = 0;
+uint8_t paginaCorregir = 0;
 uint8_t opcionPractica = 0;  // Practica en marcha: 0 = pausa/seguir, 1 = salir
 uint8_t opcionResumen = 0;   // Resultado: 0 = volver, 1 = repetir
 
 uint8_t paginaStats3_5 = 0;
-#define PAGINAS_STATS_3_5 14    // 40 lecciones / 3 por pagina = 14 paginas; la 15 (indice 14) es la de borrado
+// Paginas de ESTAD.: 0 = letras flojas; 1-14 = lecciones (40 / 3 por pagina); 15 = borrado
+#define PAGINAS_STATS_3_5 14
+#define PAG_STATS_BORRADO (PAGINAS_STATS_3_5 + 1)
+#define TOTAL_PAGINAS_STATS (PAGINAS_STATS_3_5 + 2)
 bool confirmandoBorrado = false;
 
 unsigned long tiempoCWProximo = 0;
@@ -707,6 +727,31 @@ void keyerReanudar() {
 }
 
 // ============================================================================
+// ESTADISTICAS POR CARACTER (KOCH Y ECHO)
+// ============================================================================
+#define NVS_ENTRENADOR "chispas"  // Entrenador (Koch, keyer, Echo y estadisticas)
+
+int indiceKoch(char c) {
+  for (uint8_t i = 0; i < TOTAL_CARACTERES_KOCH; i++) {
+    if (TABLA_KOCH[i] == c) return i;
+  }
+  return -1;
+}
+
+void registrarCaracter(char c, bool acierto) {
+  int i = indiceKoch(c);
+  if (i < 0) return;
+  uint16_t& cuenta = acierto ? statsCaracter[i].aciertos : statsCaracter[i].fallos;
+  if (cuenta < UINT16_MAX) cuenta++;
+}
+
+void guardarStatsCaracterNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putBytes("car", statsCaracter, sizeof(statsCaracter));
+  prefs.end();
+}
+
+// ============================================================================
 // MODO ECHO: CHISPAS EMITE Y HAY QUE REPETIRLO CON LAS PALAS
 // ============================================================================
 #define ECHO_PAUSA_ACIERTO_MS 1200
@@ -751,6 +796,11 @@ void echoEvaluar() {
   echoIntentos++;
   echoAcierto = (echoRespuesta == echoObjetivo);
   if (echoAcierto) echoAciertos++;
+  // Por caracter, posicion a posicion (lo que falte en una respuesta corta cuenta como fallo)
+  for (uint8_t i = 0; i < echoObjetivo.length(); i++) {
+    registrarCaracter(echoObjetivo[i], i < echoRespuesta.length() && echoRespuesta[i] == echoObjetivo[i]);
+  }
+  guardarStatsCaracterNVS();
   Serial.printf("\n[ECHO] %s -> %s: %s (%u/%u)\n", echoObjetivo.c_str(), echoRespuesta.c_str(),
                 echoAcierto ? "BIEN" : "MAL", echoAciertos, echoIntentos);
   keyerPausar();
@@ -802,9 +852,6 @@ void procesarTextoKeyer() {
 // ============================================================================
 // MEMORIA PERSISTENTE NVS
 // ============================================================================
-// Entrenador (Koch, keyer, Echo y estadisticas)
-#define NVS_ENTRENADOR "chispas"
-
 extern uint8_t apagadoAutoMin;  // Minutos del apagado automatico; definida con las opciones de CONF
 
 void cargarDatosNVS() {
@@ -830,6 +877,10 @@ void cargarDatosNVS() {
     statsKoch[i].vecesCompletada = prefs.getUShort(kComp.c_str(), 0);
     statsKoch[i].maxAcierto = prefs.getUChar(kMax.c_str(), 0);
     statsKoch[i].minAcierto = prefs.getUChar(kMin.c_str(), 100);
+  }
+  memset(statsCaracter, 0, sizeof(statsCaracter));
+  if (prefs.isKey("car") && prefs.getBytesLength("car") == sizeof(statsCaracter)) {
+    prefs.getBytes("car", statsCaracter, sizeof(statsCaracter));
   }
   prefs.end();
 }
@@ -895,7 +946,8 @@ void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
   prefs.end();
 }
 
-// Borra solo las estadisticas Koch; la configuracion del entrenador y los datos de la estacion se conservan
+// Borra solo las estadisticas (lecciones Koch y por caracter); la configuracion del entrenador y los datos de
+// la estacion se conservan
 void borrarTodasLasEstadisticasNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   for (int i = 0; i < 40; i++) {
@@ -903,7 +955,9 @@ void borrarTodasLasEstadisticasNVS() {
     prefs.remove(("mx_" + String(i)).c_str());
     prefs.remove(("mn_" + String(i)).c_str());
   }
+  prefs.remove("car");
   prefs.end();
+  memset(statsCaracter, 0, sizeof(statsCaracter));
 
   for (int i = 0; i < 40; i++) {
     statsKoch[i].vecesCompletada = 0;
@@ -1977,6 +2031,53 @@ void renderizarPantallaInicio() {
   dibujarBarraAvanzarRetroceder(true);
 }
 
+/**
+ * Primera pagina de ESTAD.: los caracteres con peor % de acierto (Koch y Echo juntos), con al menos
+ * MIN_INTENTOS_LETRA intentos. A igual %, primero el que tiene mas intentos
+ */
+void dibujarLetrasFlojas() {
+  display.setCursor(10, 11);
+  display.print(F("- LETRAS FLOJAS -"));
+
+  int8_t lista[LINEAS_LETRAS_FLOJAS];
+  uint8_t n = 0;
+  bool usado[TOTAL_CARACTERES_KOCH] = {false};
+  for (uint8_t linea = 0; linea < LINEAS_LETRAS_FLOJAS; linea++) {
+    int8_t peor = -1;
+    uint32_t peorPct = 0, peorTotal = 0;
+    for (uint8_t i = 0; i < TOTAL_CARACTERES_KOCH; i++) {
+      uint32_t total = (uint32_t)statsCaracter[i].aciertos + statsCaracter[i].fallos;
+      if (usado[i] || total < MIN_INTENTOS_LETRA) continue;
+      uint32_t pct = statsCaracter[i].aciertos * 1000UL / total;
+      if (peor < 0 || pct < peorPct || (pct == peorPct && total > peorTotal)) {
+        peor = i; peorPct = pct; peorTotal = total;
+      }
+    }
+    if (peor < 0) break;
+    usado[peor] = true;
+    lista[n++] = peor;
+  }
+
+  if (n == 0) {
+    display.setCursor(0, 24);
+    display.print(F("AUN SIN DATOS"));
+    display.setCursor(0, 34);
+    display.print(F("(min. " ));
+    display.print(MIN_INTENTOS_LETRA);
+    display.print(F(" por letra)"));
+    return;
+  }
+  char linea[24];
+  for (uint8_t k = 0; k < n; k++) {
+    const StatsCaracter& s = statsCaracter[lista[k]];
+    uint32_t total = (uint32_t)s.aciertos + s.fallos;
+    snprintf(linea, sizeof(linea), "%c %3lu%%  %u/%lu", TABLA_KOCH[lista[k]],
+             (unsigned long)(s.aciertos * 100UL / total), s.aciertos, (unsigned long)total);
+    display.setCursor(0, 21 + k * 8);
+    display.print(linea);
+  }
+}
+
 void renderizarPantallaCW() {
   display.setTextColor(SSD1306_WHITE);
 
@@ -2120,8 +2221,12 @@ void renderizarPantallaCW() {
   } else if (enEstadisticas3_5) {
     display.setTextSize(1);
 
-    if (paginaStats3_5 < PAGINAS_STATS_3_5) {
-      uint8_t leccInicio = (paginaStats3_5 * 3) + 1;
+    if (paginaStats3_5 == 0) {
+      dibujarLetrasFlojas();
+      dibujarPieCentrado("pag 1/" + String(TOTAL_PAGINAS_STATS) + "   > volver");
+
+    } else if (paginaStats3_5 < PAG_STATS_BORRADO) {
+      uint8_t leccInicio = ((paginaStats3_5 - 1) * 3) + 1;
 
       for (uint8_t i = 0; i < 3; i++) {
         uint8_t lNum = leccInicio + i;
@@ -2157,7 +2262,7 @@ void renderizarPantallaCW() {
         display.print(F("%"));
       }
 
-      dibujarPieCentrado("pag " + String(paginaStats3_5 + 1) + "/" + String(PAGINAS_STATS_3_5 + 1) + "   > volver");
+      dibujarPieCentrado("pag " + String(paginaStats3_5 + 1) + "/" + String(TOTAL_PAGINAS_STATS) + "   > volver");
 
     } else {
       display.setCursor(10, 16);
@@ -2206,22 +2311,30 @@ void renderizarPantallaCW() {
       }
 
     } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
-      display.setCursor(10, 12);
-      display.println(F("- REVISAR LECCION -"));
+      // Listado con los fallos marcados en video inverso y el cursor subrayado. Lineas cada 9 px
+      // para que el subrayado quepa entre ellas
+      uint16_t largo = textoCompletoLeccion.length();
+      String titulo = "FALLOS: " + String(numeroErrores) + "/" + String(totalCaracteresLeccion);
+      int16_t x1, y1;
+      uint16_t w, h;
+      display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
+      display.setCursor((128 - w) / 2, 11);
+      display.print(titulo);
 
-      display.setCursor(0, 26);
-      display.print(opcionPantallaCorregir == 0 ? "> " : "  ");
-      display.print(F("ERRORES: "));
-      imprimirValor(opcionPantallaCorregir == 0, String(numeroErrores));
-      display.print(F(" / "));
-      display.print(totalCaracteresLeccion);
+      for (uint8_t k = 0; k < CARACTERES_POR_PAGINA_LISTADO; k++) {
+        uint16_t i = paginaCorregir * CARACTERES_POR_PAGINA_LISTADO + k;
+        if (i >= largo) break;
+        int16_t x = (k % 21) * 6;
+        int16_t y = 21 + (k / 21) * 9;
+        display.setCursor(x, y);
+        if (marcasFallo[i]) display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+        display.print(textoCompletoLeccion[i]);
+        display.setTextColor(SSD1306_WHITE);
+        if (i == focoCorregir) display.drawFastHLine(x, y + 8, 5, SSD1306_WHITE);
+      }
 
-      display.setCursor(0, 42);
-      display.print(opcionPantallaCorregir == 1 ? "> " : "  ");
-      display.print(F("ENVIAR  "));
-      display.print(opcionPantallaCorregir == 2 ? "> " : "  ");
-      display.print(F("REP."));
-
+      dibujarPieCentrado((focoCorregir == largo ? "> " : "  ") + String("rep.   ") +
+                         (focoCorregir == largo + 1 ? "> " : "  ") + String("ok"));
 
     } else if (estadoCW == CW_PANTALLA_RESUMEN_FINAL) {
       float pctAciertos = 0.0;
@@ -2730,7 +2843,7 @@ void iniciarPracticaCW() {
   numeroErrores = 0;
   paginaListado3_3 = 0;
   opcionFinListado3_3 = 0;
-  opcionPantallaCorregir = 0;
+  memset(marcasFallo, 0, sizeof(marcasFallo));
   opcionPractica = 0;
   totalCaracteresLeccion = gruposCW * caracteresCW;
 
@@ -2756,6 +2869,28 @@ void generarGrupoKoch() {
 
   if (textoCompletoLeccion.length() > 0) textoCompletoLeccion += " ";
   textoCompletoLeccion += grupoActualStr;
+}
+
+// "ok" de la correccion: guarda el % de la leccion y los aciertos y fallos de cada caracter marcado
+void enviarResultadoKoch() {
+  float pct = 0.0;
+  if (totalCaracteresLeccion > 0) pct = ((float)(totalCaracteresLeccion - numeroErrores) / (float)totalCaracteresLeccion) * 100.0;
+  registrarResultadoLeccionNVS(leccionCW, pct);
+
+  Serial.print(F("[KOCH] FALLOS:"));
+  for (uint16_t i = 0; i < textoCompletoLeccion.length(); i++) {
+    char c = textoCompletoLeccion[i];
+    if (c == ' ') continue;
+    registrarCaracter(c, !marcasFallo[i]);
+    if (marcasFallo[i]) { Serial.print(' '); Serial.print(c); }
+  }
+  Serial.printf(" (%u/%u)\n", numeroErrores, totalCaracteresLeccion);
+  guardarStatsCaracterNVS();
+
+  ultimoPctKoch = pct;
+  ultimoPctKochMs = millis();
+  estadoCW = CW_PANTALLA_RESUMEN_FINAL;
+  opcionResumen = 0;
 }
 
 void procesarMaquinaEstadosCW() {
@@ -3498,9 +3633,9 @@ void procesarBoton() {
         enEstadisticas3_5 = false; confirmandoBorrado = false;
       } else if (giro != 0) {
         confirmandoBorrado = false;
-        paginaStats3_5 = (paginaStats3_5 + PAGINAS_STATS_3_5 + 1 + giro) % (PAGINAS_STATS_3_5 + 1);
+        paginaStats3_5 = (paginaStats3_5 + TOTAL_PAGINAS_STATS + giro) % TOTAL_PAGINAS_STATS;
       } else if (pulsa) {
-        if (paginaStats3_5 < PAGINAS_STATS_3_5) {
+        if (paginaStats3_5 != PAG_STATS_BORRADO) {
           enEstadisticas3_5 = false;
         } else if (!confirmandoBorrado) {
           confirmandoBorrado = true;
@@ -3524,29 +3659,35 @@ void procesarBoton() {
           else if (paginaListado3_3 > 0) paginaListado3_3--;
         } else if (pulsa) {
           if (hayMasPaginas) paginaListado3_3++;
-          else if (opcionFinListado3_3 == 0) { estadoCW = CW_PANTALLA_CORREGIR_ERRORES; opcionPantallaCorregir = 0; }
+          else if (opcionFinListado3_3 == 0) {
+            estadoCW = CW_PANTALLA_CORREGIR_ERRORES;  // Las marcas se conservan si se vuelve al listado
+            focoCorregir = 0;
+            paginaCorregir = 0;
+          }
           else iniciarPracticaCW();
         }
 
       } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
+        // Foco en anillo: caracteres (sin los espacios) -> rep. -> ok -> primer caracter
+        uint16_t largo = textoCompletoLeccion.length();
         if (atras) {
           estadoCW = CW_PANTALLA_3_3_LISTADO;
         } else if (giro != 0) {
-          if (editandoValor) ajustarValor(numeroErrores, giro, 0, totalCaracteresLeccion);
-          else opcionPantallaCorregir = (opcionPantallaCorregir + 3 + giro) % 3;
+          int8_t paso = giro > 0 ? 1 : -1;
+          for (int8_t n = abs(giro); n > 0; n--) {
+            do {
+              focoCorregir = (focoCorregir + largo + 2 + paso) % (largo + 2);
+            } while (focoCorregir < largo && textoCompletoLeccion[focoCorregir] == ' ');
+          }
+          if (focoCorregir < largo) paginaCorregir = focoCorregir / CARACTERES_POR_PAGINA_LISTADO;
         } else if (pulsa) {
-          if (opcionPantallaCorregir == 0) {
-            editandoValor = !editandoValor;
-          } else if (opcionPantallaCorregir == 1) {
-            float pct = 0.0;
-            if (totalCaracteresLeccion > 0) pct = ((float)(totalCaracteresLeccion - numeroErrores) / (float)totalCaracteresLeccion) * 100.0;
-            registrarResultadoLeccionNVS(leccionCW, pct);
-            ultimoPctKoch = pct;
-            ultimoPctKochMs = millis();
-            estadoCW = CW_PANTALLA_RESUMEN_FINAL;
-            opcionResumen = 0;
-          } else {
+          if (focoCorregir < largo) {
+            marcasFallo[focoCorregir] = !marcasFallo[focoCorregir];
+            numeroErrores += marcasFallo[focoCorregir] ? 1 : -1;
+          } else if (focoCorregir == largo) {
             iniciarPracticaCW();
+          } else {
+            enviarResultadoKoch();
           }
         }
 

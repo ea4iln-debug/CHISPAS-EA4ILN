@@ -16,7 +16,7 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.8e** en la placa 1 (la placa 2 sigue en v0.8b). v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.8f** en la placa 1 (la placa 2 sigue en v0.8b). v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
@@ -73,7 +73,13 @@ el transceptor, GPS/locator.
   (no caben 4 opciones con 9 px por línea).
   - **KOCH**: configuración (wpm, espaciado, lección, caracteres, grupos, `>ESTAD.` como última opción a la derecha de
     GRUPOS, iniciar, volver; foco 7 = estadísticas). Práctica: pausa/seguir y salir; corrección de errores girando;
-    resultado: volver y rep. Al salir de estadísticas se vuelve a la configuración. La letra nueva de la lección sale
+    resultado: volver y rep. Al salir de estadísticas se vuelve a la configuración.
+    **Corrección por carácter** (v0.8f, probada): en "corregir" se marcan los fallos en el listado (cursor
+    subrayado, `focoCorregir`; pulsar marca/desmarca en vídeo inverso, `marcasFallo[]`; anillo caracteres → rep. →
+    ok); `numeroErrores` sale de las marcas. "ok" (`enviarResultadoKoch()`) guarda el % de la lección y los
+    aciertos/fallos de cada carácter. El Echo también los registra, posición a posición. `statsCaracter[]` (41,
+    orden de `TABLA_KOCH`) en NVS `chispas` como bloque `car`. ESTAD.: página 1 = **letras flojas** (las 4 de
+    peor %, con ≥ `MIN_INTENTOS_LETRA` = 5 intentos), 2–15 lecciones, 16 borrado (también borra `car`). La letra nueva de la lección sale
     el 25 % de las veces (`PESO_LETRA_NUEVA_PCT`, `caracterKochAleatorio()`, también en Duo y Echo); con 4 caracteres
     o menos, reparto uniforme. Tabla Koch de LCWO (v0.3i).
   - **KEYER** (v0.7a): tarea FreeRTOS `keyer` (núcleo 1, prioridad del motor CW) que lee las palas (GPIO4/5) cada
@@ -170,15 +176,14 @@ el transceptor, GPS/locator.
   (decisión del usuario).
 
 ## Pendiente
-1. **Siguiente sesión:** estadísticas por carácter.
-   OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
+1. **Siguiente sesión:** por decidir (opcional de las estadísticas: que el Koch y el Echo repitan más las letras
+   flojas). Cargar la v0.8f en la placa 2. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack): al llegar el
    PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la ganancia en banco; luego salida
    KEY con PC817 y pull-down de 10 kΩ; decodificador CW (Goertzel); GPS cuando llegue (opcionales: enable del GPS y
    BME280). Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
-   - **Estadísticas por carácter** (recomendada): marcar fallos al corregir el Koch y recoger los del Echo; guardar
-     aciertos/fallos por letra en NVS y mostrar las más flojas. Opcional: repetir más las letras flojas.
+   - Repetir más las letras flojas en Koch y Echo (las estadísticas por carácter ya existen, v0.8f).
    - Editar indicativo y locator en el aparato con el encoder (sin móvil ni webconf).
    - Aceleración del giro: al girar rápido, los valores avanzan de 5 en 5.
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
