@@ -428,7 +428,7 @@ def p_tono():
     s.rect(783, 298, 12, 18, "#c2185b", "#c2185b", 1, None, 3)
     s.rect(835, 298, 12, 18, "#c2185b", "#c2185b", 1, None, 3)
     s.text(815, 334, "auriculares", 9, "middle", "italic", "#c2185b")
-    s.tag(205, 70, "PWM 600 Hz", "#c2185b")
+    s.tag(205, 70, "PWM 850 Hz", "#c2185b")
     s.text(560, 192, "AUD", 9, "middle", "bold", "#c2185b")
     notes(s, 20, 342, [
         "C1: el + (patilla larga) hacia el potenciómetro. RV1: patilla 3 a R1, 1 a GND, 2 (cursor) a C1.",
@@ -591,7 +591,7 @@ PINES = [
     ("4", "Pala DIT", "Punta de J1", "Entrada con pull-up interno", ""),
     ("5", "Pala DAH", "Anillo de J1", "Entrada con pull-up interno", ""),
     ("6", "Entrada del decodificador", "R6 1 kΩ, D1/D2, polarización 1,65 V", "ADC1 (válido con WiFi)", ""),
-    ("7", "Tono CW", "R1 1 kΩ → RV1 → buzzer / auriculares", "PWM (LEDC) 600 Hz", ""),
+    ("7", "Tono CW", "R1 1 kΩ → RV1 → buzzer / auriculares", "PWM (LEDC) 850 Hz (CONF: 400–1000)", ""),
     ("19", "Encoder CLK", "KY-040 CLK", "Entrada (pull-up en el módulo)", "probar"),
     ("20", "Encoder DT", "KY-040 DT", "Entrada (pull-up en el módulo)", "probar"),
     ("41", "BME280 SDA", "Wire1", "I2C", "opc"),

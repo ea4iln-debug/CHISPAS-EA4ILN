@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.8d - Tono CW configurable en CONF (400-1000 Hz, NVS "tono") con pitido de prueba
+ * @version 0.8e - Tono CW por defecto a 850 Hz (configurable en CONF, 400-1000 Hz, NVS "tono")
  * @date 2026-10-10
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.8d"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.8e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -77,7 +77,7 @@
 #define ENC_SW_PIN      48  // Pulsador del eje, sin pull-up en el modulo: INPUT_PULLUP
 #define SPEAKER_PWM_PIN  7  // Salida PWM provisional (GPIO libre del header). El GPIO25 no existe en el S3
 
-#define FREC_AUDIO_HZ    600// Tono Morse local por defecto (600 Hz); se elige en CONF -> tono (frecTonoHz)
+#define FREC_AUDIO_HZ    850// Tono Morse local por defecto (850 Hz); se elige en CONF -> tono (frecTonoHz)
 #define TONO_MIN_HZ      400
 #define TONO_MAX_HZ      1000
 #define TONO_PASO_HZ     50

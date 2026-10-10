@@ -16,9 +16,9 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.8d** en la placa 1 (la placa 2 sigue en v0.8b). v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.8e** en la placa 1 (la placa 2 sigue en v0.8b). v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
-  auriculares el 10 oct 2026; el usuario la dejó en 850 Hz en la placa 1; por defecto sigue en 600 Hz). **Captura de pantalla provisional**
+  auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
   Python de PlatformIO: `~\.platformio\penv\Scripts\python.exe`; cerrar antes el monitor serie). Ve la copia en RAM,
   no el panel. Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
