@@ -150,8 +150,8 @@ el transceptor, GPS/locator.
   que necesita el LED del PC817. **Recomendado: 10 kΩ de GPIO2 a GND**; añadirlo al esquema al montar la salida KEY.
 
 ## Pendiente
-1. **Por hacer:** poner el locator y el indicativo reales en webconf en cada placa (nunca se guardaron: usan los
-   valores por defecto).
+1. **Siguiente sesión:** probar la OLED negra de la placa 1 sin el medidor USB y con batería; estadísticas por
+   carácter mientras llega el buzzer (lunes 12 oct). Locator real ya puesto en webconf (10 oct 2026).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas): buzzer, auriculares y volumen (tono en
    GPIO7 ya programado). **Buzzer:** el comprado resultó **magnético** (16 Ω, + marcado), no piezo: con R1 de 1 kΩ
    no se oye nada (probado 10 oct 2026). Pedido un **piezo pasivo** (llega el lunes 12 oct); montar
