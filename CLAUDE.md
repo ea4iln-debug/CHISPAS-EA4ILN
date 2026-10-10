@@ -17,7 +17,8 @@ el transceptor, GPS/locator.
 
 ## Estado actual (10 oct 2026)
 - Firmware: `src/main.cpp` **v0.8d** en la placa 1 (la placa 2 sigue en v0.8b). v0.8d: opción **`tono`** en CONF
-  (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; **sin probar**). **Captura de pantalla provisional**
+  (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
+  auriculares el 10 oct 2026; el usuario la dejó en 850 Hz en la placa 1; por defecto sigue en 600 Hz). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
   Python de PlatformIO: `~\.platformio\penv\Scripts\python.exe`; cerrar antes el monitor serie). Ve la copia en RAM,
   no el panel. Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
@@ -169,7 +170,7 @@ el transceptor, GPS/locator.
   (decisión del usuario).
 
 ## Pendiente
-1. **Siguiente sesión:** probar la opción `tono` de la v0.8d con auriculares; luego estadísticas por carácter.
+1. **Siguiente sesión:** estadísticas por carácter.
    OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack): al llegar el
    PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la ganancia en banco; luego salida
