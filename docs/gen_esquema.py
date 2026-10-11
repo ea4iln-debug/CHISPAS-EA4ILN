@@ -214,7 +214,7 @@ def vista_general():
     blk(40, 75, 250, 100, "Encoder KY-040 (ENC1)", ["Menús: girar + pulsar", "CLK→19 · DT→20 · SW→48", "+ a 3V3 (nunca a 5 V)"], "#1565c0")
     blk(40, 195, 250, 70, "Palas (J1, jack estéreo)", ["Punta → DIT (4) · Anillo → DAH (5)", "Malla → GND · pull-up interno"], "#6a1b9a")
     blk(40, 285, 250, 70, "GPS NEO-6M (GPS1)", ["TX del GPS → GPIO47 (pendiente de llegar)", "Enable con P-MOSFET en GPIO3: opcional"], "#2e7d32")
-    blk(40, 385, 250, 70, "BME280 (OPCIONAL)", ["I2C: SDA→41 · SCL→42 (Wire1)", "o bus del OLED si 17/18 salen al conector"], C_OPT, "6 4")
+    blk(40, 385, 250, 70, "BME280 (BME1, opcional)", ["I2C: SDA→41 · SCL→42 (Wire1), 0x76", "Montado y probado (v1.03b)"], C_OPT)
     for n, y, c in L:
         dash = "6 4" if c == C_OPT else None
         s.line([(290, y), (414, y)], c, 2, dash)
@@ -364,9 +364,9 @@ def p_bme():
     s.tag(250, 120, "SDA", C_OPT)
     s.tag(250, 165, "SCL", C_OPT)
     notes(s, 25, 280, [
-        "Segundo bus I2C (Wire1) en 41/42: comprobar antes que salen al conector.",
-        "Si la placa saca GPIO17/18 (bus del OLED, 0x3C), puede ir ahí: no choca (0x76).",
-        "Pull-ups ya en el módulo. Comprobar que es BME280 (ID 0x60) y no BMP280 (0x58).",
+        "Segundo bus I2C (Wire1) en 41/42 (J3-8/7). Montado y probado (12 oct 2026, v1.03b).",
+        "Pull-ups ya en el módulo. El firmware distingue BME280 (0x60) de BMP280 (sin humedad).",
+        "No usar el bus del OLED (pads 17/18): depende de Vext y la OLED de la placa 1 es delicada.",
     ])
     return s.svg()
 
@@ -659,8 +659,8 @@ PINES = [
     ("19", "Encoder CLK", "KY-040 CLK", "Entrada (pull-up en el módulo)", ""),
     ("20", "Encoder DT", "KY-040 DT", "Entrada (pull-up en el módulo)", ""),
     ("38", "Apagado del amplificador", "SD de U2 (PAM8302A)", "Salida, BAJO = apagado (fuera de CW/LoRa/TRX y al dormir)", "pendiente"),
-    ("41", "BME280 SDA", "Wire1", "I2C", "opc"),
-    ("42", "BME280 SCL", "Wire1", "I2C", "opc"),
+    ("41", "BME280 SDA", "Wire1", "I2C, 0x76 (opcional; montado)", ""),
+    ("42", "BME280 SCL", "Wire1", "I2C (opcional; montado)", ""),
     ("47", "RX del GPS", "TX del NEO-6M", "UART1 RX, 9600 bd", ""),
     ("48", "Pulsador del encoder", "KY-040 SW", "Entrada con pull-up interno", ""),
 ]
@@ -676,7 +676,7 @@ BOM = [
     ("J2", "Jack 3,5 mm estéreo conmutado (5 pat.)", "Auriculares", ""), ("BZ1", "Buzzer piezo pasivo 16 mm", "Tono (suena bajo)", ""),
     ("ENC1", "Encoder KY-040", "Menús", ""), ("GPS1", "NEO-6M GY-GPS6MV2", "Posición / hora", "pendiente"),
     ("SW1", "Interruptor SS12D00", "On/off batería", ""), ("BAT1", "LiPo 3,7 V 3000 mAh JST 1,25", "Alimentación", ""),
-    ("Q1, R8", "AO3401A + adaptador SOT-23 + 100 kΩ", "Enable del GPS", "opc"), ("BME1", "BME280 GY-BME280-3.3", "Sensor ambiental", "opc"),
+    ("Q1, R8", "AO3401A + adaptador SOT-23 + 100 kΩ", "Enable del GPS", "opc"), ("BME1", "BME280 GY-BME280-3.3 (opcional)", "Sensor ambiental", ""),
     ("U2", "Módulo amplificador PAM8302A (mono, 2,5 W)", "Altavoz, en el sitio de BZ1 (TN)", "pendiente"),
     ("LS1", "Altavoz 8 Ω 0,5–1 W, 28–40 mm", "Tono", "pendiente"), ("R9", "Resistencia 10 kΩ", "Pull-down de la entrada de U2", "pendiente"),
 ]
@@ -711,7 +711,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v1.02b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v1.03b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
@@ -747,7 +747,7 @@ def main():
 <li><b>No usar</b>: 0 (PRG), 1 (lectura de batería), 8–14 (LoRa), 17/18/21 (OLED), 26–32 (flash), 35 (LED), 36 (Vext), 37 (control de batería), 43/44 (USB serie), 45/46 (arranque).</li>
 <li><b>Libres de reserva</b> (según el pinout publicado de la V3, sin probar en tu placa): 33, 34, 39, 40 (38 queda para el SD del amplificador).</li>
 <li><b>GPIO19/20</b> son USB D−/D+ del S3, pero funcionan como entradas del encoder (probado con <code>prueba_pines</code>). Plan B: 39/40 o 33/34.</li>
-<li><b>GPIO41/42</b> para el BME280 (Wire1): comprobar que salen al conector. Si la placa saca 17/18, el BME280 puede ir al bus del OLED.</li>
+<li><b>GPIO41/42</b> para el BME280 (Wire1, J3-8/7). No usar el bus del OLED (17/18).</li>
 <li><b>GPIO3</b> es pin de arranque (origen del JTAG) pero solo cuenta con el eFuse grabado: la R8 de 100 kΩ a 3V3 no molesta. <b>GPIO45</b> nunca con pull-up: cambia la tensión de la flash y la placa no arranca.</li>
 <li><b>GPIO2</b> maneja la emisora: en BAJO desde el arranque y con R10 a GND. El firmware solo la activa en la pantalla TRX (OPERAR y QSO), con corte de seguridad a los 10 s.</li>
 <li>La Heltec V3 tapa casi toda una protoboard: mejor dejarla fuera y unirla con cables Dupont M-H.</li>
@@ -758,7 +758,7 @@ def main():
 <div class="panel"><h2>1 · Encoder KY-040</h2>{fit(p_encoder(), 72)}</div>
 <div class="panel"><h2>2 · Entrada del manipulador (palas)</h2>{fit(p_palas(), 72)}</div>
 <div class="panel"><h2>3 · GPS NEO-6M <span class="badge b-pend">PENDIENTE</span> + enable <span class="badge b-opc">OPCIONAL</span></h2>{fit(p_gps(), 72)}</div>
-<div class="panel opt"><h2>4 · Sensor BME280 <span class="badge b-opc">OPCIONAL</span></h2>{fit(p_bme(), 72)}</div>
+<div class="panel"><h2>4 · Sensor BME280 <span class="badge b-opc">OPCIONAL</span> (montado)</h2>{fit(p_bme(), 72)}</div>
 </div></div>''')
 
     pages.append(f'''<div class="page">{header("Salida de audio: tono CW (buzzer, auriculares, volumen) y amplificador", 4, T)}
@@ -798,10 +798,10 @@ def main():
 <li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). ✔ <i>El piezo suena muy bajo: cuando lleguen U2 y LS1, montarlos en su sitio (hoja 4) y ajustar la ganancia.</i></li>
 <li><b>5. KEY</b> con R10: pantalla TRX → OPERAR. Primero GPIO2 con el polímetro (≈ 3,3 V con cada elemento, 0 V en reposo); luego, sin emisora, continuidad entre punta y malla de J4 al manipular. ✔ <i>Con la uSDR: puente R-T en J4 (manipula por el anillo).</i></li>
 <li><b>6. Decodificador</b> (hoja 6): sin emisora, polímetro en GPIO6 ≈ 1,65 V. Luego RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra (y <code>[DECOD]</code> por serie con CONF → CONFIG → DEPURACION → DECOD en SÍ). ✔ <i>RV2 queda casi al máximo con 0,1–0,5 V de la emisora.</i></li>
-<li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional.</li>
+<li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional. ✔</li>
 <li><b>9. Batería</b> al final, comprobada la polaridad.</li>
 </ul>
-<p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas, tono (R1, RV1, C1, R2, R3, J2, BZ1) KEY (R7, R10, U1, J4) con la uSDR y decodificador (C2, R4–R6, RV2, D1, D2) con audio Morse real. El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
+<p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas, tono (R1, RV1, C1, R2, R3, J2, BZ1), KEY (R7, R10, U1, J4) con la uSDR, BME280 (BME1) y decodificador (C2, R4–R6, RV2, D1, D2) con audio Morse real. El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
 </div></div></div>''')
 
     doc = f'<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Chispas · esquema de conexiones</title><style>{CSS}</style></head><body>{"".join(pages)}</body></html>'

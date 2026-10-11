@@ -5,7 +5,7 @@
 ![Plataforma](https://img.shields.io/badge/plataforma-ESP32--S3-blue)
 ![Placa](https://img.shields.io/badge/placa-Heltec%20WiFi%20LoRa%2032%20V3-orange)
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2B%20PlatformIO-teal)
-![Versión](https://img.shields.io/badge/firmware-v1.02b-green)
+![Versión](https://img.shields.io/badge/firmware-v1.03b-green)
 ![Estado](https://img.shields.io/badge/estado-beta-yellow)
 ![Licencia del software](https://img.shields.io/badge/software-GPL--3.0-blue)
 ![Licencia del hardware](https://img.shields.io/badge/hardware%20y%20docs-CC%20BY--NC--SA%204.0-lightgrey)
@@ -67,11 +67,12 @@ GitHub.
 | **TX libre (keyer iámbico)** | Modos A y B, 10–40 wpm, palas normales o invertidas. Descodifica en pantalla lo que se manipula. | ✅ |
 | **Práctica Duo por LoRa** | Práctica en pareja entre dos Chispas: uno envía grupos y el otro los recibe y los copia. Tramas digitales a 868 MHz, sin audio. | ✅ |
 | **QSO libre por LoRa** | QSO con las palas entre dos Chispas: cada palabra se envía al terminarla y lo recibido suena cuando dejas de manipular (si manipulas mientras suena, se corta). | ✅ |
-| **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez. | ✅ |
+| **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`, `{WX}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez. | ✅ |
 | **Propagación** | Índices solares y condiciones por banda de [hamqsl.com](https://www.hamqsl.com/). | ✅ |
 | **Spots POTA** | Activaciones en CW publicadas en [pota.app](https://pota.app/). | ✅ |
 | **Sol y línea gris** | Salida y puesta del sol y ventanas de línea gris de hoy y de mañana, y altura actual del sol, para el locator de la estación. Funciona sin conexión. | ✅ |
-| **Configuración en el aparato** | Indicativo, locator, aceleración del encoder, apagado automático, tono y reset de fábrica, con el encoder. Página STATUS con estación, sistema, WiFi, memoria y arranque. | ✅ |
+| **Sensor ambiental (BME280)** | Temperatura, humedad y presión; tendencia de la presión en 3 h con **aviso de tormenta**; altitud barométrica calibrable (útil en SOTA); la temperatura en las memorias con `{WX}`. Opcional: sin sensor, Chispas funciona igual. | ✅ |
+| **Configuración en el aparato** | Indicativo, locator, altitud, aceleración del encoder, apagado automático, tono y reset de fábrica, con el encoder. Página STATUS con estación, sistema, WiFi, memoria, arranque y sensor. | ✅ |
 | **Configuración por WiFi** | Portal web en castellano, con QR para unirse desde el móvil: red, estación, hora y memorias. | ✅ |
 | **Actualización OTA** | Busca la última release en GitHub, avisa si hay versión nueva y la instala por WiFi (TLS validado). | ✅ |
 | **Batería** | Tensión y porcentaje. Detecta cuando no hay batería conectada. | ✅ |
@@ -121,7 +122,7 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 | 48 | J2-14 | Pulsador del encoder | ✅ |
 | 47 | J2-13 | RX desde el TX del GPS | 🚧 |
 | 3 | J3-14 | Enable del GPS (opcional) | 🚧 |
-| 41 / 42 | J3-8 / J3-7 | I2C para un sensor BME280 (opcional) | 🚧 |
+| 41 / 42 | J3-8 / J3-7 | I2C (Wire1) del sensor BME280 (opcional) | ✅ |
 
 Notas:
 - El pin 1 de cada conector es el de pad cuadrado, el más cercano al USB, y es GND. La alimentación de 3,3 V está en J3-2/3.
@@ -253,7 +254,7 @@ muy larga (2,5 s) = dormir.
 | 4 | **TRX** | Transceptor: `DECODIFICAR`, `OPERAR` (por KEY, con tune), `QSO` y `memorias` |
 | 5 | **PROP.** | Propagación: índices solares y condiciones por banda |
 | 6 | **POTA** | Spots de activaciones en CW |
-| 7 | **SOL** | Sol y línea gris: hoy, ahora y mañana |
+| 7 | **SOL** | Sol y línea gris: hoy, ahora y mañana; con el BME280, también AMBIENTE |
 | 8 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización, depuración y fábrica) y `STATUS` |
 
 La cabecera muestra la hora (local o UTC, a elegir), el nombre de la pantalla y la batería (`PWR` si no hay batería).
@@ -314,6 +315,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 |---|---|
 | **ID** | Tu indicativo (3 a 8 letras, cifras y `/`), con la rueda de caracteres del editor |
 | **LOCATOR** | Locator Maidenhead de 4 o 6 caracteres (para SOL); se comprueba al guardar |
+| **ALTITUD** | Con el BME280: altitud barométrica (con `?` si no está calibrada). Pulsar, girar hasta la altitud real y pulsar calibra el QNH |
 | **ACELERACION** | Salto de los valores al girar rápido: `NO` o x2 a x5 |
 | **APAGADO** | Minutos sin uso antes de dormir: nunca, 5, 10, 15, 30, 60 o 120 |
 | **TONO** | Frecuencia del tono CW (400–1000 Hz), con un pitido de prueba |
@@ -322,9 +324,9 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | **DEPURACION** | Mensajes y órdenes por serie para pruebas: órdenes serie, diagnóstico, decodificador y retraso CW (todo en `NO` por defecto) |
 | **FABRICA** | Borra todo (pide confirmar) y reinicia |
 
-**CONF. > STATUS** muestra, en cinco páginas, la estación (ID, locator, hora y versión), el sistema (batería, LoRa,
-apagado, tono y aceleración), el WiFi (red guardada, estado, IP y nombre del portal), la memoria y el arranque
-(tiempo encendido y motivo del último reinicio).
+**CONF. > STATUS** muestra, en seis páginas, la estación (ID, locator, hora y versión), el sistema (batería, LoRa,
+apagado, tono y aceleración), el WiFi (red guardada, estado, IP y nombre del portal), la memoria, el arranque
+(tiempo encendido y motivo del último reinicio) y el sensor ambiental (chip, QNH e historial).
 
 ### Por WiFi (webconf)
 Chispas solo enciende el WiFi cuando lo necesita: en PROP. y POTA, en SOL si aún no tiene hora, para el portal y
@@ -336,7 +338,7 @@ para actualizar. La red WiFi, la hora y las memorias se configuran desde el móv
 3. Si la página no se abre sola, entra en **http://192.168.4.1**.
 4. En **Red WiFi** eliges tu red y en **Estación, hora y memorias** pones el indicativo, el locator, la hora (formato
    `HH:MM DD-MM-AAAA`), si quieres la hora UTC en la cabecera y las 6 memorias de la pantalla TRX (`{MI}` = tu
-   indicativo, `{SU}` = el del corresponsal).
+   indicativo, `{SU}` = el del corresponsal, `{WX}` = la temperatura, p. ej. `WX 18C`, si hay BME280).
 
 Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el portal por su cuenta: su menú ofrece
 **ABRIR WEBCONF** y **REINTENTAR**.

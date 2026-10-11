@@ -52,10 +52,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.02b** (refuerzo de las letras con más errores; silenciador y fin de palabra del
-  decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
+- Firmware: `src/main.cpp` **v1.03b** (sensor BME280; sin publicar). v1.02b (refuerzo de las letras con más errores;
+  silenciador y fin de palabra del decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
-  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.02b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.02b
+  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; BME280; v1.03b desde el 12 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.02b
   desde el 12 oct 2026, por OTA; antes la v1.01b, también por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
   de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
@@ -233,6 +233,21 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - **Sol** (pantalla 6): salida/puesta, ventanas de línea gris (sol entre -6° y +6°) y altura actual con las ecuaciones
   de NOAA para el locator de la estación (por defecto IN80dk, Madrid, genérico). Necesita hora: sin ella enciende el WiFi
   (`CONECTANDO WIFI...`, luego `SINCRONIZANDO HORA...`); con hora no usa el WiFi.
+- **Sensor ambiental BME280** (v1.03b; **probado en la placa 1 el 12 oct 2026**: BME280 auténtico en 0x76, lecturas,
+  AMBIENTE, calibración de altitud, STATUS y {WX}). Opcional: sin sensor, todo sigue igual. Controlador propio
+  (sección "SENSOR AMBIENTAL" de `main.cpp`; fórmulas en coma flotante de la hoja de datos de Bosch) en Wire1
+  (SDA 41, SCL 42, 100 kHz); `iniciarBME()` busca 0x76/0x77 y distingue BME280 (0x60) de BMP280 (0x56–0x58, sin
+  humedad); sin sensor, `Wire1.end()`. Modo forzado (T x1, P x4, H x1; `bmeMedir()` bloquea ~16 ms). `procesarBME()`:
+  lectura cada minuto (cada 2 s con AMBIENTE a la vista) y una muestra de presión cada 10 min en `bmeHist[19]` (3 h).
+  `bmeTendencia3h()`: cambio escalado a 3 h, desde 60 min de historial; ±1 hPa = BAJANDO/SUBIENDO; ≤ -3 hPa =
+  `avisoTormenta` (la cabecera pone "TORM!" en vez del nombre; `[BME] AVISO DE TORMENTA` por serie). Ojo: al
+  cambiar de altitud (subir a un monte) la presión baja y puede dar un falso aviso; con el GPS, reiniciar el historial.
+  Página **AMBIENTE** (4/4 de SOL, solo con sensor, `paginasSol()`; no necesita hora ni locator). **CONFIG > ALTITUD**
+  (`OC_ALTITUD`): muestra la altitud ("?" sin calibrar); pulsar, girar hasta la altitud real y pulsar calcula el QNH
+  (`qnhParaAltitud()`, NVS `qnh` en `estacion`; sin él, 1013,25). STATUS página 6 **SENSOR**. Macro **{WX}**
+  (`textoWx()`): "WX 18C", "WX MINUS 3C" bajo cero (el guion no está en la tabla Morse), vacío sin sensor; en la
+  rueda del editor, en el portal y en `trxLimpiarTexto()`. Por serie cada 10 min: `[BME] T ... P ... TEND ...`.
+  La temperatura sale alta por el calor de la placa (en la primera lectura, 25,8 °C dentro de casa).
 - **SOTA: no programar el cliente.** Sus condiciones (api-db2.sota.org.uk/docs) exigen unirse al grupo
   "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Decisión pendiente del autor.
 - **Batería**: divisor activado con GPIO37 **HIGH** en estas placas (Meshtastic declara LOW). Atenuación 2,5 dB,
@@ -345,7 +360,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
-   ganancia en banco; amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (opcional: enable del GPS); BME280 ya en mano, uso en estudio. Entrada del decodificador en GPIO6:
+   ganancia en banco; amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (opcional: enable del GPS); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
    **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; queda comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
@@ -382,7 +397,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
 | 3 (futuro) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido |
-| 41 / 42 | BME280 (en mano, sin montar; decidido el 12 oct 2026): I2C 0x76 en Wire1, SDA 41 (J3-8), SCL 42 (J3-7). Uso: página AMBIENTE en SOL, tendencia y aviso de tormenta, altitud barométrica y macro {WX}; controlador propio (ver `ROADMAP.md`) |
+| 41 / 42 | BME280: I2C 0x76 en Wire1, SDA 41 (J3-8), SCL 42 (J3-7). **Montado y probado** (12 oct 2026, v1.03b) |
 
 Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, el más cercano al USB):
 - J3: 18 GPIO7 tono · 17 GPIO6 decod. · 16 GPIO5 DAH · 15 GPIO4 DIT · 14 GPIO3 GPS en · 13 GPIO2 KEY · 12 GPIO1 (VBAT, no)

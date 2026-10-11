@@ -1,6 +1,6 @@
 # Hoja de ruta de Chispas
 
-Estado a 12 de octubre de 2026, con el firmware **v1.02b** (beta). Lo marcado ✅ está hecho y probado en placa.
+Estado a 12 de octubre de 2026, con el firmware **v1.03b** (beta, sin publicar). Lo marcado ✅ está hecho y probado en placa.
 
 ## 1. Pruebas pendientes
 
@@ -30,10 +30,6 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 ### Por comprar
 - Divisor de minijack 1 → 2, para seguir oyendo la emisora con el decodificador conectado.
 
-### En mano, sin montar
-- **BME280** (GY-BME280-3.3): I2C en Wire1, SDA a GPIO41 (J3-8), SCL a GPIO42 (J3-7), VCC a 3V3. Estudiado y
-  aprobado (12 oct 2026): viable, consumo despreciable también dormido.
-
 ### Opcional
 - **Trafo de aislamiento 600:600**, solo si aparece zumbido por lazo de masa con la emisora.
 - **C3 (10–100 nF) de GPIO6 a GND**, solo si el decodificador da ruido o letras falsas (por ejemplo, al transmitir
@@ -51,14 +47,11 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
   cuando hace falta el tono.
 - **GPS:** locator y hora automáticos (UART por la matriz GPIO, NMEA a 9600 bd); el locator alimenta SOL y la hora
   sustituye al NTP cuando no hay WiFi.
-- **BME280** (decidido el 12 oct 2026), con controlador propio (fórmulas de compensación de Bosch, sin librerías):
-  - Lecturas de temperatura, humedad y presión en una página nueva **AMBIENTE** de la pantalla SOL.
-  - Tendencia de la presión (últimas 3 h) y **aviso de tormenta** si baja deprisa.
-  - **Altitud barométrica** para SOTA, calibrable con una altitud conocida o con el GPS.
-  - Macro **{WX}** en las memorias de TRX (por ejemplo `WX 18C`).
-  - Detectar si el chip es en realidad un BMP280 (sin humedad) y decirlo en STATUS.
-  - La temperatura sale alta dentro de la caja (calor del ESP32, la radio y el amplificador): solo orientativa.
-  - Por decidir tras probarlo: mantener el historial de presión con Chispas dormido (despertar cada 15 min).
+- **BME280, lo que queda** (lo básico está hecho en la v1.03b):
+  - Comprobar la tendencia y el aviso de tormenta con datos de varias horas.
+  - Con el GPS: calibrar la altitud con la del GPS y reiniciar el historial de presión al cambiar de altitud
+    (subiendo a un monte la presión baja y puede dar un falso aviso de tormenta).
+  - Por decidir: mantener el historial de presión con Chispas dormido (despertar cada 15 min).
 
 ### Ideas decididas
 - **POTA sin conexión:** lista de parques en un CSV guardado en la placa (partición de 1,5 MB reservada, LittleFS);
@@ -98,5 +91,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - ✅ Decodificador CW del audio de la emisora (probado con audio Morse real).
 - ✅ Propagación, spots POTA, sol y línea gris.
 - ✅ Configuración en el aparato, página de estado y depuración desde el menú.
+- ✅ Sensor ambiental BME280 (v1.03b): página AMBIENTE en SOL, tendencia y aviso de tormenta, altitud barométrica
+  calibrable y macro {WX}.
 - ✅ Actualización por WiFi desde las releases de GitHub.
 - ✅ Consumo en reposo despreciable.
