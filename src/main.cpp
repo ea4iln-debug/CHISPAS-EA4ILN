@@ -2,7 +2,7 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.9e - TUNE en OPERAR y QSO de TRX: portadora por KEY de 1-10 s
+ * @version 0.9g - CONF con CONFIG (ID, locator, aceleracion...) y STATUS; Echo por leccion
  * @date 2026-10-11
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.9e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.9g"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -259,6 +259,7 @@ struct StatsLeccion {
   uint8_t minAcierto;
 };
 StatsLeccion statsKoch[40];
+StatsLeccion statsEchoLecc[40];  // Practicas del Echo por leccion (% de retos bien); NVS "eLec" (un bloque)
 
 // Estadisticas por caracter: aciertos y fallos de cada caracter de TABLA_KOCH, por separado para el Koch
 // (marcando los fallos al corregir) y para el Echo. En NVS, un bloque cada una ("carK" y "carE")
@@ -268,6 +269,9 @@ struct StatsCaracter {
 };
 StatsCaracter statsCarKoch[TOTAL_CARACTERES_KOCH];
 StatsCaracter statsCarEcho[TOTAL_CARACTERES_KOCH];
+// Lecciones del Koch corregidas con el total de fallos (sin saber que letras): solo suman en TOTALES KOCH.
+// En NVS "ktcar" y "ktok"
+uint32_t kochTotCaracteres = 0, kochTotAciertos = 0;
 #define MIN_INTENTOS_LETRA 5     // Intentos minimos para salir en "mas errores"
 #define LINEAS_MAS_ERRORES 4
 
@@ -311,8 +315,8 @@ uint16_t echoAciertos = 0, echoIntentos = 0;
 unsigned long echoFinResultadoMs = 0;
 uint32_t echoTotalIntentos = 0, echoTotalAciertos = 0;  // Historico (ESTAD. del Echo)
 uint16_t echoSesiones = 0;                               // Practicas terminadas
-uint8_t paginaStatsEcho = 0;      // 0 mas errores, 1 totales, 2 borrado
-#define TOTAL_PAGINAS_STATS_ECHO 3
+uint8_t paginaStatsEcho = 0;      // 0 mas errores, 1 totales, 2-15 lecciones, 16 borrado (como el Koch)
+#define TOTAL_PAGINAS_STATS_ECHO 17
 
 uint8_t wpmCW = 25;
 uint16_t espaciadoCW = 200;
@@ -328,8 +332,9 @@ enum EstadoCW {
   CW_PAUSA_ENTRE_GRUPOS, 
   CW_PAUSADO, 
   CW_PANTALLA_3_3_LISTADO,      
-  CW_PANTALLA_CORREGIR_ERRORES, 
-  CW_PANTALLA_RESUMEN_FINAL     
+  CW_PANTALLA_CORREGIR_ERRORES,  // Correccion "x letra": se marca cada fallo
+  CW_PANTALLA_FALLOS_TOTALES,    // Correccion "total": solo el numero de fallos
+  CW_PANTALLA_RESUMEN_FINAL
 };
 EstadoCW estadoCW = CW_IDLE;
 
@@ -341,7 +346,10 @@ bool mostrarTextoGrupo = false;
 uint16_t totalCaracteresLeccion = 0;
 uint16_t numeroErrores = 0;
 uint8_t paginaListado3_3 = 0;
-uint8_t opcionFinListado3_3 = 0;
+uint8_t opcionFinListado3_3 = 0;  // Ultima pagina del listado: 0 = x letra, 1 = total, 2 = rep.
+// Correccion "total": numero de fallos (0..totalCaracteresLeccion). Foco: 0 = numero, 1 = rep., 2 = ok
+uint16_t fallosTotales = 0;
+uint8_t focoFallosTotales = 0;
 
 // Correccion del Koch: se marcan los caracteres fallados en el listado. Foco: 0..largo-1 = un caracter,
 // largo = "rep.", largo+1 = "ok" (largo = textoCompletoLeccion.length(); hasta 50 grupos de 5 con espacios)
@@ -443,7 +451,10 @@ const char* const TRX_MEMORIAS_PRECARGADAS[TRX_NUM_MEMORIAS] = {
 };
 uint8_t trxMemoriaSel = 0;  // Foco en las listas de memorias (TRX_NUM_MEMORIAS = volver)
 // Editor de textos (memorias y {SU}): rueda de caracteres con el encoder, o las palas
-int8_t editorDestino = 0;   // 0..5 = memoria; -1 = indicativo del corresponsal
+int8_t editorDestino = 0;   // 0..5 = memoria; -1 = indicativo del corresponsal; -2 = ID y -3 = locator (CONF)
+#define EDITOR_ID_ESTACION -2
+#define EDITOR_LOCATOR     -3
+bool editorError = false;   // OK con un ID o locator no valido: se avisa y se sigue editando
 String editorTexto = "";
 uint8_t editorMax = TRX_MEMORIA_MAX;
 uint8_t editorSel = 0;      // Posicion en la rueda
@@ -873,12 +884,36 @@ void guardarStatsKochNVS() {
   prefs.end();
 }
 
+void guardarTotalesKochNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUInt("ktcar", kochTotCaracteres);
+  prefs.putUInt("ktok", kochTotAciertos);
+  prefs.end();
+}
+
 void guardarStatsEchoNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putBytes("carE", statsCarEcho, sizeof(statsCarEcho));
   prefs.putUInt("eint", echoTotalIntentos);
   prefs.putUInt("eok", echoTotalAciertos);
   prefs.putUShort("eses", echoSesiones);
+  prefs.end();
+}
+
+// Anota un resultado en las estadisticas de una leccion (veces, % maximo y minimo)
+void anotarResultadoLeccion(StatsLeccion& s, float pct) {
+  uint8_t aciertoInt = (uint8_t)constrain(pct, 0, 100);
+  s.vecesCompletada++;
+  if (aciertoInt > s.maxAcierto) s.maxAcierto = aciertoInt;
+  if (aciertoInt < s.minAcierto || s.vecesCompletada == 1) s.minAcierto = aciertoInt;
+}
+
+// Fin de una practica del Echo: el % de retos bien cuenta para su leccion
+void registrarLeccionEchoNVS(uint8_t lecc, float pct) {
+  if (lecc < 1 || lecc > 40) return;
+  anotarResultadoLeccion(statsEchoLecc[lecc - 1], pct);
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putBytes("eLec", statsEchoLecc, sizeof(statsEchoLecc));
   prefs.end();
 }
 
@@ -984,6 +1019,7 @@ void procesarEcho() {
       opcionPracticaEcho = 0;
       echoSesiones++;
       guardarStatsEchoNVS();
+      registrarLeccionEchoNVS(echoLeccion, echoIntentos > 0 ? echoAciertos * 100.0f / echoIntentos : 0);
       Serial.printf("[ECHO] FIN: %u/%u\n", echoAciertos, echoIntentos);
       pantallaPendiente = true;
     } else {
@@ -1020,6 +1056,7 @@ void procesarTextoKeyer() {
 // MEMORIA PERSISTENTE NVS
 // ============================================================================
 extern uint8_t apagadoAutoMin;  // Minutos del apagado automatico; definida con las opciones de CONF
+extern uint8_t aceleracionGiro;  // Aceleracion del encoder; definida con las opciones de CONF
 
 void cargarDatosNVS() {
   prefs.begin(NVS_ENTRENADOR, true);
@@ -1047,6 +1084,8 @@ void cargarDatosNVS() {
   echoTotalAciertos = prefs.getUInt("eok", 0);
   echoSesiones = prefs.getUShort("eses", 0);
   apagadoAutoMin = prefs.getUChar("apag", 30);  // ajustarApagado(0) lo lleva a un valor de la lista si no lo es
+  aceleracionGiro = prefs.getUChar("acel", 5);   // ACELERACION_MAX
+  if (aceleracionGiro == 1 || aceleracionGiro > 5) aceleracionGiro = 5;
   frecTonoHz = constrain(prefs.getUShort("tono", FREC_AUDIO_HZ), TONO_MIN_HZ, TONO_MAX_HZ);
 
   for (int i = 0; i < 40; i++) {
@@ -1065,6 +1104,12 @@ void cargarDatosNVS() {
   }
   if (prefs.isKey("carE") && prefs.getBytesLength("carE") == sizeof(statsCarEcho)) {
     prefs.getBytes("carE", statsCarEcho, sizeof(statsCarEcho));
+  }
+  kochTotCaracteres = prefs.getUInt("ktcar", 0);
+  kochTotAciertos = prefs.getUInt("ktok", 0);
+  for (int i = 0; i < 40; i++) statsEchoLecc[i] = { 0, 0, 100 };
+  if (prefs.isKey("eLec") && prefs.getBytesLength("eLec") == sizeof(statsEchoLecc)) {
+    prefs.getBytes("eLec", statsEchoLecc, sizeof(statsEchoLecc));
   }
   bool hayBloqueAntiguo = prefs.isKey("car");  // v0.8f: Koch y Echo juntos; se descarta (se empieza de cero)
   prefs.end();
@@ -1088,6 +1133,12 @@ void guardarUltimaConfiguracionNVS() {
 void guardarApagadoNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("apag", apagadoAutoMin);
+  prefs.end();
+}
+
+void guardarAceleracionNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUChar("acel", aceleracionGiro);
   prefs.end();
 }
 
@@ -1129,13 +1180,7 @@ void guardarEchoNVS() {
 void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
   if (lecc < 1 || lecc > 40) return;
   uint8_t idx = lecc - 1;
-  uint8_t aciertoInt = (uint8_t)constrain(pct, 0, 100);
-
-  statsKoch[idx].vecesCompletada++;
-  if (aciertoInt > statsKoch[idx].maxAcierto) statsKoch[idx].maxAcierto = aciertoInt;
-  if (aciertoInt < statsKoch[idx].minAcierto || statsKoch[idx].vecesCompletada == 1) {
-    statsKoch[idx].minAcierto = aciertoInt;
-  }
+  anotarResultadoLeccion(statsKoch[idx], pct);
 
   prefs.begin(NVS_ENTRENADOR, false);
   String kComp = "c_" + String(idx);
@@ -1165,8 +1210,11 @@ void borrarEstadisticasKochNVS() {
     prefs.remove(("mn_" + String(i)).c_str());
   }
   prefs.remove("carK");
+  prefs.remove("ktcar");
+  prefs.remove("ktok");
   prefs.end();
   memset(statsCarKoch, 0, sizeof(statsCarKoch));
+  kochTotCaracteres = kochTotAciertos = 0;
 
   for (int i = 0; i < 40; i++) {
     statsKoch[i].vecesCompletada = 0;
@@ -1182,8 +1230,10 @@ void borrarEstadisticasEchoNVS() {
   prefs.remove("eint");
   prefs.remove("eok");
   prefs.remove("eses");
+  prefs.remove("eLec");
   prefs.end();
   memset(statsCarEcho, 0, sizeof(statsCarEcho));
+  for (int i = 0; i < 40; i++) statsEchoLecc[i] = { 0, 0, 100 };
   echoTotalIntentos = echoTotalAciertos = 0;
   echoSesiones = 0;
 }
@@ -2090,11 +2140,24 @@ void editorAnadir(const String& s) {
   if (editorTexto.length() + s.length() <= editorMax) editorTexto += s;
 }
 
+void confCerrarEditor(bool guardar);  // Definida con la pantalla CONF
+
+// El editor sirve a TRX (memorias y SU) y a CONF (ID y locator de la estacion)
+void editorCerrar(bool guardar) {
+  if (editorDestino <= EDITOR_ID_ESTACION) confCerrarEditor(guardar);
+  else trxCerrarEditor(guardar);
+}
+
 void editorAplicar() {
   String e = editorElemento(editorSel);
-  if (e == "OK") { trxCerrarEditor(true); return; }
-  if (e == "ESC") { trxCerrarEditor(false); return; }
+  editorError = false;
+  if (e == "OK") { editorCerrar(true); return; }
+  if (e == "ESC") { editorCerrar(false); return; }
   if (e == "CLR") { editorTexto = ""; return; }
+  // ID y locator: solo letras y cifras (y "/" en el ID); sin espacios ni signos
+  if (editorDestino <= EDITOR_ID_ESTACION && e.length() == 1 && !isalnum(e[0]) &&
+      !(e == "/" && editorDestino == EDITOR_ID_ESTACION)) return;
+  if (editorDestino <= EDITOR_ID_ESTACION && e == "ESP") return;
   if (e == "<-") {
     if (editorTexto.endsWith("{MI}") || editorTexto.endsWith("{SU}")) editorTexto.remove(editorTexto.length() - 4);
     else if (editorTexto.length() > 0) editorTexto.remove(editorTexto.length() - 1);
@@ -2355,13 +2418,44 @@ uint8_t opcionPantallaProp = OPCION_BARRA_PROP;  // 0 = mas (pagina), 1 = actual
 uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
 
-#define OPCION_BARRA_CONFIG 4
-uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // 0 = webconf (portal), 1 = reset de fabrica, 2 = apagado, 3 = tono, 4 = barra
+// CONF: menu con CONFIG (opciones) y STATUS (informacion, en paginas)
+#define OPCION_BARRA_CONFIG 2
+uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // Menu: 0 = CONFIG, 1 = STATUS, 2 = barra ant./sig.
+enum SubConf { CONF_MENU, CONF_CONFIG, CONF_STATUS, CONF_PORTAL, CONF_EDITOR };
+SubConf subConf = CONF_MENU;
+// Lista de CONFIG (4 a la vista; "volver" en el pie)
+enum OpcionConf { OC_ID, OC_LOCATOR, OC_ACELERACION, OC_APAGADO, OC_TONO, OC_WEBCONF, OC_FABRICA, OC_VOLVER };
+#define N_OPCIONES_CONF 8
+uint8_t focoConf = 0;
+uint8_t focoPortalConf = 0;  // Vista del portal: 0 = ver qr, 1 = volver
+uint8_t paginaStatus = 0;
+#define N_PAGINAS_STATUS 5
 
 // Apagado automatico: minutos sin tocar nada antes de dormir (0 = nunca). Se elige en CONF y se guarda en NVS
 const uint8_t OPCIONES_APAGADO_MIN[] = { 0, 5, 10, 15, 30, 60, 120 };
 const uint8_t N_OPCIONES_APAGADO = sizeof(OPCIONES_APAGADO_MIN);
 uint8_t apagadoAutoMin = 30;
+
+// Aceleracion del encoder al girar rapido: 0 = no; 2-5 = el valor avanza x2..x5 (NVS "acel")
+#define ACELERACION_MAX 5
+uint8_t aceleracionGiro = ACELERACION_MAX;
+
+String textoAceleracion() {
+  return aceleracionGiro == 0 ? String("NO") : "x" + String(aceleracionGiro);
+}
+
+// 0, 2, 3, 4, 5 (el 1 seria igual que no acelerar)
+void ajustarAceleracion(int8_t paso) {
+  int v = aceleracionGiro + paso;
+  if (aceleracionGiro == 0 && paso > 0) v = 2;
+  else if (v < 2) v = 0;
+#ifdef SIN_ENCODER
+  if (v > ACELERACION_MAX) v = 0;  // Sin encoder: da la vuelta
+#else
+  if (v > ACELERACION_MAX) v = ACELERACION_MAX;
+#endif
+  aceleracionGiro = v;
+}
 
 String textoApagado() {
   return apagadoAutoMin == 0 ? String("nunca") : String(apagadoAutoMin) + " min";
@@ -2425,24 +2519,35 @@ WiFiManagerParameter* const paramMemorias[TRX_NUM_MEMORIAS] = {
 
 bool locatorALatLon(const char* loc, float& lat, float& lon);  // Definida en la pantalla 7
 
-void guardarParametrosPortal() {
-  String call = paramIndicativo.getValue();
+// Indicativo de 3 a 8 caracteres (letras, cifras y "/"). Si vale, pasa a ser el de la estacion (sin guardar)
+bool aplicarIndicativo(String call) {
   call.trim();
   call.toUpperCase();
-  bool callValido = call.length() >= 3 && call.length() <= TRAMA_LONG_INDICATIVO;
+  bool valido = call.length() >= 3 && call.length() <= TRAMA_LONG_INDICATIVO;
   for (size_t i = 0; i < call.length(); i++) {
-    if (!isalnum(call[i]) && call[i] != '/') callValido = false;
+    if (!isalnum(call[i]) && call[i] != '/') valido = false;
   }
-  if (callValido) strlcpy(indicativoEstacion, call.c_str(), sizeof(indicativoEstacion));
-  else Serial.printf("[PORTAL] INDICATIVO NO VALIDO: %s\n", call.c_str());
+  if (valido) strlcpy(indicativoEstacion, call.c_str(), sizeof(indicativoEstacion));
+  return valido;
+}
 
-  // "in80DK" -> "IN80dk"
-  String loc = paramLocator.getValue();
+// Locator de 4 o 6 caracteres: "in80DK" -> "IN80dk". Si vale, pasa a ser el de la estacion (sin guardar)
+bool aplicarLocator(String loc) {
   loc.trim();
   for (size_t i = 0; i < loc.length(); i++) loc[i] = (i < 2) ? toupper(loc[i]) : tolower(loc[i]);
   float lat, lon;
-  if (locatorALatLon(loc.c_str(), lat, lon)) strlcpy(locatorEstacion, loc.c_str(), sizeof(locatorEstacion));
-  else Serial.printf("[PORTAL] LOCATOR NO VALIDO: %s\n", loc.c_str());
+  bool valido = locatorALatLon(loc.c_str(), lat, lon);
+  if (valido) strlcpy(locatorEstacion, loc.c_str(), sizeof(locatorEstacion));
+  return valido;
+}
+
+void guardarParametrosPortal() {
+  if (!aplicarIndicativo(paramIndicativo.getValue())) {
+    Serial.printf("[PORTAL] INDICATIVO NO VALIDO: %s\n", paramIndicativo.getValue());
+  }
+  if (!aplicarLocator(paramLocator.getValue())) {
+    Serial.printf("[PORTAL] LOCATOR NO VALIDO: %s\n", paramLocator.getValue());
+  }
 
   horaUtcCabecera = strlen(paramHoraUtc.getValue()) > 0;
   paramHoraUtc.marcada = horaUtcCabecera;
@@ -3006,6 +3111,8 @@ void dibujarTotalesKoch() {
   for (uint8_t i = 0; i < 40; i++) lecciones += statsKoch[i].vecesCompletada;
   uint32_t aciertos, total;
   sumarStatsCaracter(statsCarKoch, aciertos, total);
+  aciertos += kochTotAciertos;  // Lecciones corregidas con el total de fallos
+  total += kochTotCaracteres;
   display.setCursor(0, 22); display.print(F("LECCIONES:  ")); display.print(lecciones);
   display.setCursor(0, 32); display.print(F("CARACTERES: ")); display.print(total);
   display.setCursor(0, 42); display.print(F("ACIERTO:    ")); display.print(textoPorcentaje(aciertos, total));
@@ -3017,6 +3124,38 @@ void dibujarTotalesEcho() {
   display.setCursor(0, 32); display.print(F("RETOS: ")); display.print(echoTotalIntentos);
   display.print(F(" BIEN: ")); display.print(echoTotalAciertos);
   display.setCursor(0, 42); display.print(F("ACIERTO:   ")); display.print(textoPorcentaje(echoTotalAciertos, echoTotalIntentos));
+}
+
+// Pagina de lecciones de ESTAD. (Koch o Echo): 3 lecciones por pagina (pagina 0 = L01-L03), con las veces
+// completadas y una barra con el % maximo. La linea "L01:99x[========]100%" ocupa 21 caracteres = 126 px
+void dibujarPaginaLecciones(const StatsLeccion* tabla, uint8_t pagina) {
+  uint8_t leccInicio = pagina * 3 + 1;
+  for (uint8_t i = 0; i < 3; i++) {
+    uint8_t lNum = leccInicio + i;
+    if (lNum > 40) break;
+    const StatsLeccion& s = tabla[lNum - 1];
+
+    display.setCursor(0, 12 + (i * 13));
+    display.print(F("L"));
+    if (lNum < 10) display.print(F("0"));
+    display.print(lNum);
+    display.print(F(":"));
+
+    // Veces completadas con 2 cifras (a partir de 99 se muestra 99)
+    uint16_t veces = min(s.vecesCompletada, (uint16_t)99);
+    if (veces < 10) display.print(F(" "));
+    display.print(veces);
+    display.print(F("x["));
+
+    uint8_t bloques = (s.maxAcierto * 8) / 100;
+    for (uint8_t b = 0; b < 8; b++) display.print(b < bloques ? "=" : ".");
+    display.print(F("]"));
+
+    if (s.maxAcierto < 100) display.print(F(" "));
+    if (s.maxAcierto < 10) display.print(F(" "));
+    display.print(s.maxAcierto);
+    display.print(F("%"));
+  }
 }
 
 // Ultima pagina de ESTAD.: borrar las estadisticas de ese apartado (pide confirmacion)
@@ -3070,6 +3209,7 @@ void renderizarPantallaCW() {
     display.setTextSize(1);
     if (paginaStatsEcho == 0) dibujarMasErrores(statsCarEcho);
     else if (paginaStatsEcho == 1) dibujarTotalesEcho();
+    else if (paginaStatsEcho < TOTAL_PAGINAS_STATS_ECHO - 1) dibujarPaginaLecciones(statsEchoLecc, paginaStatsEcho - 2);
     else dibujarPaginaBorrado(F("ECHO"));
     if (paginaStatsEcho < TOTAL_PAGINAS_STATS_ECHO - 1) {
       dibujarPieCentrado("pag " + String(paginaStatsEcho + 1) + "/" + String(TOTAL_PAGINAS_STATS_ECHO) + "   > volver");
@@ -3229,42 +3369,7 @@ void renderizarPantallaCW() {
       dibujarPieCentrado("pag " + String(paginaStats3_5 + 1) + "/" + String(TOTAL_PAGINAS_STATS) + "   > volver");
 
     } else if (paginaStats3_5 < PAG_STATS_BORRADO) {
-      uint8_t leccInicio = ((paginaStats3_5 - PAG_STATS_PRIMERA_LECCION) * 3) + 1;
-
-      for (uint8_t i = 0; i < 3; i++) {
-        uint8_t lNum = leccInicio + i;
-        if (lNum > 40) break;
-        uint8_t idx = lNum - 1;
-
-        int yPos = 12 + (i * 13);
-        display.setCursor(0, yPos);
-        display.print(F("L"));
-        if (lNum < 10) display.print(F("0"));
-        display.print(lNum);
-        display.print(F(":"));
-
-        // Alineacion limpia de veces completadas (2 cifras; a partir de 99 se muestra 99)
-        // La linea completa "L01:99x[========]100%" ocupa 21 caracteres = 126 px
-        uint16_t veces = min(statsKoch[idx].vecesCompletada, (uint16_t)99);
-        if (veces < 10) display.print(F(" "));
-        display.print(veces);
-        display.print(F("x["));
-
-        // DIBUJO DE BARRA VISUAL OPCION 4 (8 BLOQUES)
-        uint8_t maxPct = statsKoch[idx].maxAcierto;
-        uint8_t bloques = (maxPct * 8) / 100;
-        for (uint8_t b = 0; b < 8; b++) {
-          display.print(b < bloques ? "=" : ".");
-        }
-        display.print(F("]"));
-
-        // Alineacion fija del porcentaje final sin saltos de linea
-        if (maxPct < 100) display.print(F(" "));
-        if (maxPct < 10) display.print(F(" "));
-        display.print(maxPct);
-        display.print(F("%"));
-      }
-
+      dibujarPaginaLecciones(statsKoch, paginaStats3_5 - PAG_STATS_PRIMERA_LECCION);
       dibujarPieCentrado("pag " + String(paginaStats3_5 + 1) + "/" + String(TOTAL_PAGINAS_STATS) + "   > volver");
 
     } else {
@@ -3295,10 +3400,26 @@ void renderizarPantallaCW() {
         int paginas = (totalChars + charPorPagina - 1) / charPorPagina;
         dibujarPieCentrado("pag " + String(paginaListado3_3 + 1) + "/" + String(paginas) + "   > mas");
       } else {
-        String txtPie = (opcionFinListado3_3 == 0 ? "> " : "  ") + String("corregir  ") + 
-                        (opcionFinListado3_3 == 1 ? "> " : "  ") + String("rep.");
+        // Corregir marcando cada fallo (x letra) o solo con el numero de fallos (total)
+        String txtPie = (opcionFinListado3_3 == 0 ? ">" : " ") + String("x letra ") +
+                        (opcionFinListado3_3 == 1 ? ">" : " ") + String("total ") +
+                        (opcionFinListado3_3 == 2 ? ">" : " ") + String("rep.");
         dibujarPieCentrado(txtPie);
       }
+
+    } else if (estadoCW == CW_PANTALLA_FALLOS_TOTALES) {
+      dibujarTituloCentrado(F("- FALLOS TOTALES -"));
+      display.setCursor(0, 25);
+      display.print(focoFallosTotales == 0 ? ">" : " ");
+      display.print(F("FALLOS: "));
+      imprimirValor(focoFallosTotales == 0, String(fallosTotales));
+      display.print(F(" / "));
+      display.print(totalCaracteresLeccion);
+      display.setCursor(0, 38);
+      display.print(F(" ACIERTO: "));
+      display.print(textoPorcentaje(totalCaracteresLeccion - fallosTotales, totalCaracteresLeccion));
+      dibujarPieCentrado((focoFallosTotales == 1 ? "> " : "  ") + String("rep.   ") +
+                         (focoFallosTotales == 2 ? "> " : "  ") + String("ok"));
 
     } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
       // Listado con los fallos marcados en video inverso y el cursor subrayado. Lineas cada 9 px
@@ -3547,7 +3668,10 @@ void dibujarListaMemorias(bool paraEnviar) {
 
 // Editor: titulo, texto con cursor y, en el pie, la rueda de caracteres (el elegido en video inverso)
 void dibujarEditor() {
-  String titulo = editorDestino < 0 ? String("INDICATIVO SU") : "MEMORIA " + String(editorDestino + 1);
+  String titulo = editorDestino == EDITOR_ID_ESTACION ? String("TU ID") :
+                  editorDestino == EDITOR_LOCATOR ? String("LOCATOR") :
+                  editorDestino < 0 ? String("INDICATIVO SU") : "MEMORIA " + String(editorDestino + 1);
+  if (editorError) titulo += " NO VALIDO";
   display.setCursor(0, 11);
   display.print(titulo);
   String cuenta = String(editorTexto.length()) + "/" + String(editorMax);
@@ -3948,54 +4072,263 @@ void resetFabrica() {
   ESP.restart();
 }
 
+// SSID de la red guardada, leido de la NVS del WiFi sin encender la radio (esp_wifi_get_config necesita el
+// WiFi iniciado). El bloque "sta.ssid" lleva la longitud delante (4 bytes en el IDF 4.4; 1 en otras
+// versiones). Vacio si no hay red guardada
+String ssidGuardada() {
+  Preferences p;
+  if (!p.begin("nvs.net80211", true)) return String();
+  uint8_t buf[40] = {0};
+  size_t n = p.getBytesLength("sta.ssid");
+  if (n == 0 || n > sizeof(buf)) { p.end(); return String(); }
+  p.getBytes("sta.ssid", buf, n);
+  p.end();
+  uint8_t cab = (n >= 36) ? 4 : 1;
+  uint32_t largo = (cab == 4) ? (buf[0] | (buf[1] << 8) | (buf[2] << 16) | ((uint32_t)buf[3] << 24)) : buf[0];
+  if (largo > 32 || largo > n - cab) return String();
+  char ssid[33];
+  memcpy(ssid, buf + cab, largo);
+  ssid[largo] = '\0';
+  return String(ssid);
+}
+
+// Motivo del ultimo arranque, en 11 caracteres como mucho
+String textoMotivoReinicio() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON:   return "ENCENDIDO";
+    case ESP_RST_EXT:       return "PIN RST";
+    case ESP_RST_SW:        return "SOFTWARE";
+    case ESP_RST_PANIC:     return "ERROR";
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT:       return "WATCHDOG";
+    case ESP_RST_DEEPSLEEP: return "DESPERTAR";
+    case ESP_RST_BROWNOUT:  return "BAJA TENS.";
+    default:                return "OTRO (" + String((int)esp_reset_reason()) + ")";
+  }
+}
+
+// Tiempo desde el arranque: "03:15:07" o "2d 03:15:07"
+String textoTiempoEncendido() {
+  uint32_t s = millis() / 1000;
+  char t[16];
+  if (s >= 86400) snprintf(t, sizeof(t), "%lud %02lu:%02lu:%02lu", (unsigned long)(s / 86400),
+                           (unsigned long)(s / 3600 % 24), (unsigned long)(s / 60 % 60), (unsigned long)(s % 60));
+  else snprintf(t, sizeof(t), "%02lu:%02lu:%02lu", (unsigned long)(s / 3600), (unsigned long)(s / 60 % 60),
+                (unsigned long)(s % 60));
+  return String(t);
+}
+
+String textoEstadoWifi() {
+  switch (estadoWifi) {
+    case WIFI_CONECTANDO:   return "CONECTANDO";
+    case WIFI_PORTAL:       return "PORTAL ABIERTO";
+    case WIFI_CONECTADO:    return "CONECTADO";
+    case WIFI_SIN_CONEXION: return "SIN CONEXION";
+    default:                return "APAGADO";
+  }
+}
+
+const char* const NOMBRES_PAGINAS_STATUS[N_PAGINAS_STATUS] = { "ESTACION", "SISTEMA", "WIFI", "MEMORIA", "ARRANQUE" };
+
+// STATUS: cuatro lineas por pagina (21 caracteres) y, en el pie, la pagina y "volver"
+void dibujarPaginaStatus() {
+  char l[4][24];
+  for (uint8_t i = 0; i < 4; i++) l[i][0] = '\0';
+  switch (paginaStatus) {
+    case 0: {  // Estacion
+      snprintf(l[0], sizeof(l[0]), "ID      %s", indicativoEstacion);
+      snprintf(l[1], sizeof(l[1]), "LOCATOR %s", locatorEstacion);
+      struct tm t;
+      if (!horaLocalValida(t)) {
+        snprintf(l[2], sizeof(l[2]), "HORA    SIN HORA");
+      } else {
+        if (horaUtcCabecera) {
+          time_t ahora = time(nullptr);
+          gmtime_r(&ahora, &t);
+        }
+        snprintf(l[2], sizeof(l[2]), "HORA %02d:%02d%s %02d/%02d/%02d", t.tm_hour, t.tm_min, horaUtcCabecera ? "Z" : "",
+                 t.tm_mday, t.tm_mon + 1, t.tm_year % 100);
+      }
+      snprintf(l[3], sizeof(l[3]), "FW      v%s", FW_VERSION);
+      break;
+    }
+    case 1:  // Sistema
+      if (bateriaActual.estado == SOLO_USB) snprintf(l[0], sizeof(l[0]), "BAT  SIN BATERIA");
+      else snprintf(l[0], sizeof(l[0]), "BAT  %.2fV  %d%%", bateriaActual.voltaje, bateriaActual.porcentaje);
+      snprintf(l[1], sizeof(l[1]), "LORA %s", estadoLoraStr.c_str());
+      snprintf(l[2], sizeof(l[2]), "APAGADO %s", textoApagado().c_str());
+      snprintf(l[3], sizeof(l[3]), "TONO %uHz  ACEL %s", frecTonoHz, textoAceleracion().c_str());
+      break;
+    case 2: {  // WiFi
+      String red = ssidGuardada();
+      if (red.length() == 0) red = "(ninguna)";
+      snprintf(l[0], sizeof(l[0]), "RED  %.16s", red.c_str());
+      snprintf(l[1], sizeof(l[1]), "WIFI %s", textoEstadoWifi().c_str());
+      if (estadoWifi == WIFI_CONECTADO) snprintf(l[2], sizeof(l[2]), "IP   %s", WiFi.localIP().toString().c_str());
+      else if (estadoWifi == WIFI_PORTAL) snprintf(l[2], sizeof(l[2]), "IP   192.168.4.1");
+      else snprintf(l[2], sizeof(l[2]), "IP   --");
+      uint8_t mac[6];
+      esp_read_mac(mac, ESP_MAC_WIFI_STA);  // La misma MAC que da el nombre del portal
+      snprintf(l[3], sizeof(l[3]), "AP   Chispas-%02X%02X", mac[4], mac[5]);
+      break;
+    }
+    case 3: {  // Memoria
+      nvs_stats_t nvs;
+      bool hayNvs = nvs_get_stats(NULL, &nvs) == ESP_OK;
+      snprintf(l[0], sizeof(l[0]), "HEAP LIBRE %u KB", ESP.getFreeHeap() / 1024);
+      snprintf(l[1], sizeof(l[1]), "HEAP MINIMO %u KB", ESP.getMinFreeHeap() / 1024);
+      snprintf(l[2], sizeof(l[2]), "MAYOR BLOQUE %u KB", ESP.getMaxAllocHeap() / 1024);
+      snprintf(l[3], sizeof(l[3]), "NVS %u/%u", hayNvs ? nvs.used_entries : 0, hayNvs ? nvs.total_entries : 0);
+      break;
+    }
+    default:  // Arranque
+      snprintf(l[0], sizeof(l[0]), "ENCENDIDO %s", textoTiempoEncendido().c_str());
+      snprintf(l[1], sizeof(l[1]), "REINICIO  %s", textoMotivoReinicio().c_str());
+      snprintf(l[2], sizeof(l[2]), "CPU       %u MHz", getCpuFrequencyMhz());
+      break;
+  }
+  for (uint8_t i = 0; i < 4; i++) {
+    display.setCursor(0, 12 + i * 10);
+    display.print(l[i]);
+  }
+  dibujarPieCentrado(String(paginaStatus + 1) + "/" + String(N_PAGINAS_STATUS) + " " +
+                     NOMBRES_PAGINAS_STATUS[paginaStatus] + "  >volver");
+}
+
+// Valor de cada opcion de CONFIG (a la derecha de la linea)
+String valorOpcionConf(uint8_t i) {
+  switch (i) {
+    case OC_ID:          return String(indicativoEstacion);
+    case OC_LOCATOR:     return String(locatorEstacion);
+    case OC_ACELERACION: return textoAceleracion();
+    case OC_APAGADO:     return textoApagado();
+    case OC_TONO:        return String(frecTonoHz) + " Hz";
+    case OC_WEBCONF:     return estadoWifi == WIFI_PORTAL ? String("ABIERTO") : String("");
+    case OC_FABRICA:     return confirmandoFabrica ? String("OTRA VEZ") : String("");
+    default:             return String("");
+  }
+}
+
+const char* const NOMBRES_OPCIONES_CONF[N_OPCIONES_CONF - 1] = {
+  "ID", "LOCATOR", "ACELERACION", "APAGADO", "TONO", "WEBCONF", "FABRICA"
+};
+
+// CONFIG: lista de opciones (4 a la vista, con el valor a la derecha) y "volver" en el pie
+void dibujarListaConf() {
+  const uint8_t n = N_OPCIONES_CONF - 1;  // Sin "volver"
+  uint8_t primera = focoConf < n ? max(0, (int)focoConf - 3) : n - 4;
+  for (uint8_t k = 0; k < 4; k++) {
+    uint8_t i = primera + k;
+    int16_t y = 12 + k * 10;
+    display.setCursor(0, y);
+    display.print(focoConf == i ? '>' : ' ');
+    display.print(NOMBRES_OPCIONES_CONF[i]);
+    // El valor acaba en x = 123 para dejar sitio a la barra de desplazamiento
+    String v = valorOpcionConf(i);
+    display.setCursor(124 - v.length() * 6, y);
+    bool editable = (i == OC_ACELERACION || i == OC_APAGADO || i == OC_TONO);
+    if (editable) imprimirValor(focoConf == i, v);
+    else display.print(v);
+  }
+  // Barra de desplazamiento: 2 px a la derecha, con el tramo de lista que se ve
+  const int16_t yBarra = 12, altoBarra = 38;
+  int16_t altoTramo = altoBarra * 4 / n;
+  int16_t yTramo = yBarra + (altoBarra - altoTramo) * primera / (n - 4);
+  display.drawFastVLine(127, yBarra, altoBarra, SSD1306_WHITE);
+  display.fillRect(125, yTramo, 3, altoTramo, SSD1306_WHITE);
+  dibujarPieCentrado(focoConf == OC_VOLVER ? "> volver" : "  volver");
+}
+
 void renderizarPantallaConfig() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
 
-  if (estadoWifi == WIFI_PORTAL || estadoWifi == WIFI_CONECTANDO) {
-    dibujarEstadoWifi();
-  } else {
-    char linea[24];
-    snprintf(linea, sizeof(linea), "%-9s %s", indicativoEstacion, locatorEstacion);
-    display.setCursor(0, 12);
-    display.print(linea);
-
-    display.setCursor(0, 22);
-    display.print(F("LORA ")); display.print(estadoLoraStr);
-
-    display.setCursor(0, 32);
-    if (bateriaActual.estado == SOLO_USB) {
-      display.print(F("BAT  SIN BATERIA"));
-    } else {
-      snprintf(linea, sizeof(linea), "BAT  %.2fV  %d%%", bateriaActual.voltaje, bateriaActual.porcentaje);
-      display.print(linea);
+  switch (subConf) {
+    case CONF_MENU: {
+      // Como CW, LoRa y TRX: titulo en negativo y dos opciones
+      const char* titulo = " CONFIGURACION ";
+      int16_t x1, y1;
+      uint16_t w, h;
+      display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
+      int x = (128 - w) / 2;
+      display.fillRect(x - 2, 11, w + 4, h + 4, SSD1306_WHITE);
+      display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+      display.setCursor(x, 13);
+      display.print(titulo);
+      display.setTextColor(SSD1306_WHITE);
+      dibujarOpcionCentrada(opcionPantallaConfig == 0, "< CONFIG >", 27);
+      dibujarOpcionCentrada(opcionPantallaConfig == 1, "< STATUS >", 37);
+      dibujarBarraAvanzarRetroceder(opcionPantallaConfig == OPCION_BARRA_CONFIG);
+      break;
     }
 
-    display.setCursor(0, 42);
-    if (confirmandoFabrica) display.print(F("OTRA VEZ: BORRA TODO"));
-    else display.print(F("FW   v" FW_VERSION));
-  }
+    case CONF_CONFIG:
+      dibujarListaConf();
+      break;
 
-  if (opcionPantallaConfig == OPCION_BARRA_CONFIG) {
-    // "« opc »" con los caracteres 0xAE y 0xAF de CP437
-    dibujarBarraAvanzarRetroceder(true, String((char)0xAE) + " opc " + String((char)0xAF));
-  } else if (opcionPantallaConfig == 2 || opcionPantallaConfig == 3) {
-    // Apagado automatico y tono: pulsar para editar y girar
-    display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
-    bool esApagado = (opcionPantallaConfig == 2);
-    String txt = esApagado ? "> apagado: " : "> tono: ";
-    String valor = esApagado ? textoApagado() : String(frecTonoHz) + " Hz";
-    int16_t x1, y1;
-    uint16_t w, h;
-    display.getTextBounds(txt + valor, 0, 0, &x1, &y1, &w, &h);
-    display.setCursor((128 - w) / 2, 55);
-    display.print(txt);
-    imprimirValor(true, valor);
-  } else {
-    String pie = (opcionPantallaConfig == 0 ? "> " : "  ") + String(estadoWifi == WIFI_PORTAL ? "ver qr  " : "webconf  ") +
-                 (opcionPantallaConfig == 1 ? "> " : "  ") + String("fabrica");
-    dibujarPieCentrado(pie);
+    case CONF_STATUS:
+      dibujarPaginaStatus();
+      break;
+
+    case CONF_PORTAL:
+      // Datos del portal (red, clave, web); "ver qr" para unir el movil con la camara
+      if (estadoWifi == WIFI_PORTAL || estadoWifi == WIFI_CONECTANDO) {
+        dibujarEstadoWifi();
+      } else {
+        display.setCursor(0, 22);
+        display.print(F("PORTAL CERRADO"));
+        display.setCursor(0, 32);
+        display.print(F("WIFI ")); display.print(textoEstadoWifi());
+      }
+      if (estadoWifi == WIFI_PORTAL) {
+        dibujarPieCentrado((focoPortalConf == 0 ? "> " : "  ") + String("ver qr   ") +
+                           (focoPortalConf == 1 ? "> " : "  ") + String("volver"));
+      } else {
+        dibujarPieCentrado("> volver");
+      }
+      break;
+
+    case CONF_EDITOR:
+      dibujarEditor();
+      break;
   }
+}
+
+// Editor de CONF: ID (indicativo de la estacion) o locator, con la rueda de las memorias
+void confAbrirEditor(int8_t destino) {
+  editorDestino = destino;
+  editorTexto = destino == EDITOR_ID_ESTACION ? String(indicativoEstacion) : String(locatorEstacion);
+  editorTexto.toUpperCase();
+  editorMax = destino == EDITOR_ID_ESTACION ? TRAMA_LONG_INDICATIVO : 6;
+  editorSel = 0;
+  editorError = false;
+  subConf = CONF_EDITOR;
+}
+
+// OK: si no es valido se avisa ("NO VALIDO") y se sigue editando. ESC: sale sin cambiar nada
+void confCerrarEditor(bool guardar) {
+  if (guardar) {
+    bool esId = (editorDestino == EDITOR_ID_ESTACION);
+    bool valido = esId ? aplicarIndicativo(editorTexto) : aplicarLocator(editorTexto);
+    if (!valido) {
+      editorError = true;
+      return;
+    }
+    guardarEstacionNVS();
+    Serial.printf("[CONFIG] %s: %s\n", esId ? "ID" : "LOCATOR", esId ? indicativoEstacion : locatorEstacion);
+  }
+  editorError = false;
+  subConf = CONF_CONFIG;
+}
+
+// STATUS se redibuja cada segundo (hora, tiempo encendido, memoria)
+void procesarStatus() {
+  static unsigned long ultimo = 0;
+  if (pantallaActual != PANTALLA_CONFIG || subConf != CONF_STATUS) return;
+  if (millis() - ultimo < 1000) return;
+  ultimo = millis();
+  pantallaPendiente = true;
 }
 
 void actualizarPantalla() {
@@ -4059,21 +4392,30 @@ void generarGrupoKoch() {
   textoCompletoLeccion += grupoActualStr;
 }
 
-// "ok" de la correccion: guarda el % de la leccion y los aciertos y fallos de cada caracter marcado
-void enviarResultadoKoch() {
+// "ok" de la correccion: guarda el % de la leccion y, segun el modo, los aciertos y fallos de cada caracter
+// marcado (x letra) o solo los totales (total: no se sabe que letras fallaron)
+void enviarResultadoKoch(bool porLetra) {
+  if (!porLetra) numeroErrores = fallosTotales;
   float pct = 0.0;
   if (totalCaracteresLeccion > 0) pct = ((float)(totalCaracteresLeccion - numeroErrores) / (float)totalCaracteresLeccion) * 100.0;
   registrarResultadoLeccionNVS(leccionCW, pct);
 
-  Serial.print(F("[KOCH] FALLOS:"));
-  for (uint16_t i = 0; i < textoCompletoLeccion.length(); i++) {
-    char c = textoCompletoLeccion[i];
-    if (c == ' ') continue;
-    registrarCaracter(statsCarKoch, c, !marcasFallo[i]);
-    if (marcasFallo[i]) { Serial.print(' '); Serial.print(c); }
+  if (porLetra) {
+    Serial.print(F("[KOCH] FALLOS:"));
+    for (uint16_t i = 0; i < textoCompletoLeccion.length(); i++) {
+      char c = textoCompletoLeccion[i];
+      if (c == ' ') continue;
+      registrarCaracter(statsCarKoch, c, !marcasFallo[i]);
+      if (marcasFallo[i]) { Serial.print(' '); Serial.print(c); }
+    }
+    Serial.printf(" (%u/%u)\n", numeroErrores, totalCaracteresLeccion);
+    guardarStatsKochNVS();
+  } else {
+    kochTotCaracteres += totalCaracteresLeccion;
+    kochTotAciertos += totalCaracteresLeccion - numeroErrores;
+    Serial.printf("[KOCH] FALLOS TOTALES: %u/%u\n", numeroErrores, totalCaracteresLeccion);
+    guardarTotalesKochNVS();
   }
-  Serial.printf(" (%u/%u)\n", numeroErrores, totalCaracteresLeccion);
-  guardarStatsKochNVS();
 
   ultimoPctKoch = pct;
   ultimoPctKochMs = millis();
@@ -4083,8 +4425,8 @@ void enviarResultadoKoch() {
 
 void procesarMaquinaEstadosCW() {
   if (!enPractica3_2 || estadoCW == CW_PAUSADO || estadoCW == CW_IDLE || 
-      estadoCW == CW_PANTALLA_3_3_LISTADO || estadoCW == CW_PANTALLA_CORREGIR_ERRORES || 
-      estadoCW == CW_PANTALLA_RESUMEN_FINAL) return;
+      estadoCW == CW_PANTALLA_3_3_LISTADO || estadoCW == CW_PANTALLA_CORREGIR_ERRORES ||
+      estadoCW == CW_PANTALLA_FALLOS_TOTALES || estadoCW == CW_PANTALLA_RESUMEN_FINAL) return;
 
   if (millis() < tiempoCWProximo) return;
 
@@ -4501,6 +4843,14 @@ DRAM_ATTR const int8_t TABLA_CUADRATURA[16] = { 0, -1, 1, 0, 1, 0, 0, -1, -1, 0,
 volatile uint8_t encEstado = 3;
 volatile int8_t encAcumulado = 0;
 volatile int16_t encPasos = 0;  // Pasos pendientes de procesar (+ horario, - antihorario)
+// Aceleracion: la ISR mide el tiempo entre pasos. Menos de ENC_RAPIDO_MS = giro rapido: ajustarValor()
+// avanza aceleracionGiro veces mas en los valores con muchos pasos (no en la cola de eventos: se mide
+// en el encoder, asi que un loop() ocupado no lo dispara). aceleracionGiro se elige en CONF > CONFIG
+#define ENC_RAPIDO_MS 40
+#define ENC_MIN_PASOS_ACELERAR 20  // Valores con menos pasos de minimo a maximo, sin aceleracion
+volatile TickType_t encUltimoPasoTick = 0;
+volatile TickType_t encIntervaloTicks = portMAX_DELAY;
+bool giroRapido = false;  // El paso que se esta procesando llego rapido (lo pone leerEventoBoton)
 portMUX_TYPE muxEncoder = portMUX_INITIALIZER_UNLOCKED;
 
 // Solo registros y datos en RAM: puede ejecutarse mientras se escribe la flash (NVS)
@@ -4512,8 +4862,13 @@ void IRAM_ATTR isrEncoder() {
     encAcumulado += TABLA_CUADRATURA[(encEstado << 2) | nuevo];
     encEstado = nuevo;
     if (nuevo == 3) {
-      if (encAcumulado >= 2) encPasos++;
-      else if (encAcumulado <= -2) encPasos--;
+      if (encAcumulado >= 2 || encAcumulado <= -2) {
+        if (encAcumulado >= 2) encPasos++;
+        else encPasos--;
+        TickType_t ahora = xTaskGetTickCountFromISR();
+        encIntervaloTicks = ahora - encUltimoPasoTick;
+        encUltimoPasoTick = ahora;
+      }
       encAcumulado = 0;
     }
   }
@@ -4551,11 +4906,14 @@ EventoBoton leerEventoBoton() {
   if (eje == 2) return ENC_LARGA;
 
   int16_t pasos;
+  TickType_t intervalo;
   portENTER_CRITICAL(&muxEncoder);
   pasos = encPasos;
   if (pasos > 0) encPasos--;
   else if (pasos < 0) encPasos++;
+  intervalo = encIntervaloTicks;
   portEXIT_CRITICAL(&muxEncoder);
+  giroRapido = (pasos != 0) && intervalo < pdMS_TO_TICKS(ENC_RAPIDO_MS);
   if (pasos > 0) return ENC_DERECHA;
   if (pasos < 0) return ENC_IZQUIERDA;
   return BOTON_NINGUNO;
@@ -4574,7 +4932,8 @@ void moverFocoAnillo(uint8_t& opcion, uint8_t barra, int8_t paso) {
   else opcion = pos - 1;
 }
 
-// Cambia un valor con el encoder, sin dar la vuelta al llegar a los limites
+// Cambia un valor con el encoder, sin dar la vuelta al llegar a los limites. Al girar rapido, los valores
+// con muchos pasos (fallos, wpm, leccion...) avanzan de ENC_FACTOR_RAPIDO en ENC_FACTOR_RAPIDO
 template <typename T>
 void ajustarValor(T& valor, int paso, int minimo, int maximo) {
 #ifdef SIN_ENCODER
@@ -4582,6 +4941,9 @@ void ajustarValor(T& valor, int paso, int minimo, int maximo) {
   int v = (int)valor + paso;
   valor = (T)(v > maximo ? minimo : (v < minimo ? maximo : v));
 #else
+  if (giroRapido && aceleracionGiro > 1 && paso != 0 && (maximo - minimo) / abs(paso) >= ENC_MIN_PASOS_ACELERAR) {
+    paso *= aceleracionGiro;
+  }
   valor = (T)constrain((int)valor + paso, minimo, maximo);
 #endif
 }
@@ -4598,7 +4960,11 @@ void entrarEnPantalla(uint8_t pantalla, bool haciaAtras = false) {
   else if (pantalla == PANTALLA_TRX) { opcionTrx = TRX_OPCION_BARRA; subTrx = TRX_MENU; }
   else if (pantalla == PANTALLA_PROPAGACION) opcionPantallaProp = OPCION_BARRA_PROP;
   else if (pantalla == PANTALLA_SPOTS) opcionPantallaSpots = OPCION_BARRA_SPOTS;
-  else if (pantalla == PANTALLA_CONFIG) { opcionPantallaConfig = OPCION_BARRA_CONFIG; confirmandoFabrica = false; }
+  else if (pantalla == PANTALLA_CONFIG) {
+    opcionPantallaConfig = OPCION_BARRA_CONFIG;
+    subConf = CONF_MENU;
+    confirmandoFabrica = false;
+  }
 }
 
 // "ant." o "sig." desde la barra inferior
@@ -4619,6 +4985,7 @@ void dormirChispas(const char* motivo);  // Definida antes de setup()
 
 void procesarBoton() {
   EventoBoton ev = (eventoSerie != BOTON_NINGUNO) ? eventoSerie : leerEventoBoton();  // PROVISIONAL: serie
+  if (eventoSerie != BOTON_NINGUNO) giroRapido = false;
   eventoSerie = BOTON_NINGUNO;
   if (ev == BOTON_NINGUNO) return;
   if (ev == BOTON_LARGA) {
@@ -4825,46 +5192,112 @@ void procesarBoton() {
         break;
     }
 
-  } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
-             pantallaActual == PANTALLA_CONFIG) {
+  } else if (pantallaActual == PANTALLA_CONFIG) {
+    switch (subConf) {
+      case CONF_MENU:
+        // Foco: [sig.] -> [CONFIG] -> [STATUS] -> [ant.]
+        if (atras) entrarEnPantalla(PANTALLA_INICIO);
+        else if (giro != 0) moverFocoAnillo(opcionPantallaConfig, OPCION_BARRA_CONFIG, giro);
+        else if (pulsa) {
+          if (opcionPantallaConfig == 0) { subConf = CONF_CONFIG; focoConf = 0; confirmandoFabrica = false; }
+          else if (opcionPantallaConfig == 1) { subConf = CONF_STATUS; paginaStatus = 0; }
+          else navegarDesdeBarra();
+        }
+        break;
+
+      case CONF_CONFIG:
+        // Lista: ID, LOCATOR, ACELERACION, APAGADO, TONO, WEBCONF, FABRICA y volver (en el pie)
+        if (atras) {
+          subConf = CONF_MENU;
+          confirmandoFabrica = false;
+        } else if (giro != 0) {
+          if (editandoValor && focoConf == OC_ACELERACION) {
+            ajustarAceleracion(giro);
+            guardarAceleracionNVS();
+          } else if (editandoValor && focoConf == OC_APAGADO) {
+            ajustarApagado(giro);
+            guardarApagadoNVS();
+          } else if (editandoValor && focoConf == OC_TONO) {
+            ajustarValor(frecTonoHz, giro * TONO_PASO_HZ, TONO_MIN_HZ, TONO_MAX_HZ);
+            aplicarFrecTono(true);  // Pitido de prueba con el tono nuevo
+            guardarTonoNVS();
+          } else {
+            confirmandoFabrica = false;
+            focoConf = (focoConf + N_OPCIONES_CONF + giro) % N_OPCIONES_CONF;
+          }
+        } else if (pulsa) {
+          switch (focoConf) {
+            case OC_ID:      confAbrirEditor(EDITOR_ID_ESTACION); break;
+            case OC_LOCATOR: confAbrirEditor(EDITOR_LOCATOR); break;
+            case OC_ACELERACION:
+            case OC_APAGADO:
+              editandoValor = !editandoValor;  // Pulsar, girar y pulsar
+              break;
+            case OC_TONO:
+              editandoValor = !editandoValor;
+              if (editandoValor) aplicarFrecTono(true);  // Al empezar a editar, se oye el tono actual
+              break;
+            case OC_WEBCONF:
+              if (estadoWifi != WIFI_PORTAL) abrirPortalWifi();
+              subConf = CONF_PORTAL;
+              focoPortalConf = 0;
+              break;
+            case OC_FABRICA:
+              if (!confirmandoFabrica) confirmandoFabrica = true;
+              else resetFabrica();
+              break;
+            default:
+              subConf = CONF_MENU;
+              break;
+          }
+        }
+        break;
+
+      case CONF_PORTAL:
+        // Foco: 0 ver qr, 1 volver (sin portal abierto, solo volver). El portal sigue abierto al volver
+        if (atras) subConf = CONF_CONFIG;
+        else if (giro != 0 && estadoWifi == WIFI_PORTAL) focoPortalConf = (focoPortalConf + 1) % 2;
+        else if (pulsa) {
+          if (focoPortalConf == 0 && estadoWifi == WIFI_PORTAL) vistaPortal = VISTA_QR_RED;
+          else subConf = CONF_CONFIG;
+        }
+        break;
+
+      case CONF_STATUS:
+        // Girar pasa pagina; pulsar (o atras) vuelve al menu
+        if (atras || pulsa || ejeLarga) subConf = CONF_MENU;
+        else if (giro != 0) paginaStatus = (paginaStatus + N_PAGINAS_STATUS + giro) % N_PAGINAS_STATUS;
+        break;
+
+      case CONF_EDITOR:
+        // Como el de las memorias: girar recorre la rueda; pulsar aplica. PRG = ESC, larga = OK
+        if (atras) confCerrarEditor(false);
+        else if (ejeLarga) confCerrarEditor(true);
+        else if (giro != 0) { editorError = false; editorSel = (editorSel + EDITOR_TAM_RUEDA + giro) % EDITOR_TAM_RUEDA; }
+        else if (pulsa) editorAplicar();
+        break;
+    }
+
+  } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS) {
     // P4 y P5: [sig.] -> [mas >] -> [act.] -> [ant.]
-    // P7: [sig.] -> [webconf] -> [fabrica] -> [apagado] -> [tono] -> [ant.]
     bool esProp = (pantallaActual == PANTALLA_PROPAGACION);
-    bool esConfig = (pantallaActual == PANTALLA_CONFIG);
-    uint8_t& opcion = esProp ? opcionPantallaProp : (esConfig ? opcionPantallaConfig : opcionPantallaSpots);
-    uint8_t barra = esProp ? OPCION_BARRA_PROP : (esConfig ? OPCION_BARRA_CONFIG : OPCION_BARRA_SPOTS);
+    uint8_t& opcion = esProp ? opcionPantallaProp : opcionPantallaSpots;
+    uint8_t barra = esProp ? OPCION_BARRA_PROP : OPCION_BARRA_SPOTS;
     if (atras) {
       entrarEnPantalla(PANTALLA_INICIO);
-    } else if (esConfig && opcion == 2 && editandoValor && giro != 0) {
-      ajustarApagado(giro);
-      guardarApagadoNVS();
-    } else if (esConfig && opcion == 3 && editandoValor && giro != 0) {
-      ajustarValor(frecTonoHz, giro * TONO_PASO_HZ, TONO_MIN_HZ, TONO_MAX_HZ);
-      aplicarFrecTono(true);  // Pitido de prueba con el tono nuevo
-      guardarTonoNVS();
-    } else if (esConfig && (opcion == 2 || opcion == 3) && pulsa) {
-      editandoValor = !editandoValor;  // Pulsar, girar y pulsar
-      if (opcion == 3 && editandoValor) aplicarFrecTono(true);  // Al empezar a editar, se oye el tono actual
     } else if (giro != 0) {
-      confirmandoFabrica = false;
       moverFocoAnillo(opcion, barra, giro);
     } else if (pulsa) {
       if (opcion == barra) {
         navegarDesdeBarra();
-      } else if (esConfig && opcion == 0) {
-        if (estadoWifi == WIFI_PORTAL) vistaPortal = VISTA_QR_RED;  // "ver qr": el portal ya esta abierto
-        else abrirPortalWifi();
-      } else if (esConfig && opcion == 1) {
-        if (!confirmandoFabrica) confirmandoFabrica = true;
-        else resetFabrica();
       } else if (esProp && opcion == 0) {
         paginaPropagacion = (paginaPropagacion + 1) % 2;
       } else if (esProp && opcion == 1) {
         pedirActualizacionWifi();
-      } else if (!esProp && !esConfig && opcion == 0) {
+      } else if (!esProp && opcion == 0) {
         uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
         paginaSpots = (paginaSpots + 1) % paginas;
-      } else if (!esProp && !esConfig && opcion == 1) {
+      } else if (!esProp && opcion == 1) {
         pedirActualizacionWifi();
       }
     }
@@ -4979,11 +5412,11 @@ void procesarBoton() {
         if (atras) {
           if (paginaListado3_3 > 0) { paginaListado3_3--; opcionFinListado3_3 = 0; }
         } else if (giro > 0) {
-          // Derecha: pagina siguiente y, en la ultima, alterna entre "corregir" y "rep."
+          // Derecha: pagina siguiente y, en la ultima, recorre "x letra", "total" y "rep."
           if (hayMasPaginas) paginaListado3_3++;
-          else opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 2;
+          else opcionFinListado3_3 = (opcionFinListado3_3 + 1) % 3;
         } else if (giro < 0) {
-          if (!hayMasPaginas && opcionFinListado3_3 == 1) opcionFinListado3_3 = 0;
+          if (!hayMasPaginas && opcionFinListado3_3 > 0) opcionFinListado3_3--;
           else if (paginaListado3_3 > 0) paginaListado3_3--;
         } else if (pulsa) {
           if (hayMasPaginas) paginaListado3_3++;
@@ -4991,8 +5424,27 @@ void procesarBoton() {
             estadoCW = CW_PANTALLA_CORREGIR_ERRORES;  // Las marcas se conservan si se vuelve al listado
             focoCorregir = 0;
             paginaCorregir = 0;
+          } else if (opcionFinListado3_3 == 1) {
+            // Empieza en lo marcado en "x letra" (0 si no se ha marcado nada) y ya editando
+            estadoCW = CW_PANTALLA_FALLOS_TOTALES;
+            fallosTotales = numeroErrores;
+            focoFallosTotales = 0;
+            editandoValor = true;
           }
           else iniciarPracticaCW();
+        }
+
+      } else if (estadoCW == CW_PANTALLA_FALLOS_TOTALES) {
+        // Foco: 0 numero de fallos (pulsar lo edita; al girar rapido va de 5 en 5), 1 rep., 2 ok
+        if (atras) {
+          estadoCW = CW_PANTALLA_3_3_LISTADO;  // Si se estaba editando, "atras" ya ha salido de la edicion arriba
+        } else if (giro != 0) {
+          if (editandoValor) ajustarValor(fallosTotales, giro, 0, totalCaracteresLeccion);
+          else focoFallosTotales = (focoFallosTotales + 3 + giro) % 3;
+        } else if (pulsa) {
+          if (focoFallosTotales == 0) editandoValor = !editandoValor;
+          else if (focoFallosTotales == 1) { editandoValor = false; iniciarPracticaCW(); }
+          else { editandoValor = false; enviarResultadoKoch(false); }
         }
 
       } else if (estadoCW == CW_PANTALLA_CORREGIR_ERRORES) {
@@ -5015,7 +5467,7 @@ void procesarBoton() {
           } else if (focoCorregir == largo) {
             iniciarPracticaCW();
           } else {
-            enviarResultadoKoch();
+            enviarResultadoKoch(true);
           }
         }
 
@@ -5405,6 +5857,7 @@ void loop() {
   procesarWifi();
   procesarBateriaYPantalla();
   procesarDiagnostico();
+  procesarStatus();
   procesarBrillo();
   procesarApagadoAuto();
 

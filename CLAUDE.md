@@ -16,7 +16,8 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.9e** (TUNE en TRX) en la placa 1; v0.9d (limpieza de depuración); v0.9c (propagación cada hora) en las dos placas. v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.9g** (CONF con CONFIG y STATUS; Echo por lección) en la placa 1; v0.9f (Koch: corregir
+  por letra o total; aceleración del giro); v0.9e (TUNE en TRX); v0.9d (limpieza de depuración); v0.9c (propagación cada hora) en las dos placas. v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
@@ -61,8 +62,8 @@ el transceptor, GPS/locator.
 - **PRG corto = atrás** (sale de la edición, sube un nivel; en las pantallas principales va a Inicio).
   **PRG largo = dormir** (deep sleep; despierta pulsando PRG). Ver "Dormir" en Funciones.
 - Al cambiar de pantalla el foco queda en la flecha usada (`entrarEnPantalla(p, haciaAtras)`).
-- Barra inferior: `ant.`/`sig.`; en PROP y POTA, la página ("1/2") en el centro y la opción "mas >"; en CONF,
-  `« opc »` (opciones que solo salen al girar). Sin ayudas tipo `- : opc`.
+- Barra inferior: `ant.`/`sig.`; en PROP y POTA, la página ("1/2") en el centro y la opción "mas >" (el `« opc »` de CONF
+  desapareció en la v0.9g, con el menú CONFIG/STATUS). Sin ayudas tipo `- : opc`.
 - Entradas: encoder por interrupción en CLK/DT con tabla de cuadratura (`isrEncoder`, en IRAM, lee `GPIO_IN_REG`);
   PRG y pulsador del eje con `leerPulsador()` (antirrebote: el eje rebota al soltar). Eventos `BOTON_CORTA/LARGA` y
   `ENC_DERECHA/IZQUIERDA/PULSA/LARGA`, todos tratados en `procesarBoton()`.
@@ -70,6 +71,25 @@ el transceptor, GPS/locator.
   `leerEventoBoton()` traduce el PRG: corta = `ENC_DERECHA` (mover), larga = `ENC_PULSA` (ejecutar), muy larga
   (≥ `TIEMPO_PULSACION_DORMIR`, 2,5 s) = dormir. No hay "atrás" (todas las pantallas tienen volver o ant./sig.).
   Al editar, los valores dan la vuelta (`ajustarValor`, `ajustarApagado`).
+- **Aceleración del giro** (v0.9f): la ISR del encoder mide el tiempo entre pasos (`encIntervaloTicks`); si es
+  menor de 40 ms (`ENC_RAPIDO_MS`), `ajustarValor()` avanza ×`aceleracionGiro` en los valores con 20 o más pasos de
+  mínimo a máximo (`ENC_MIN_PASOS_ACELERAR`: fallos, wpm, lección; no en rangos cortos como 1–5 ni en el tono). Se
+  elige en CONF > CONFIG > ACELERACION (v0.9g): NO, x2–x5 (NVS `acel`, por defecto x5). Solo con encoder. La
+  edición en CONF está probada por serie; el salto al girar rápido, sin probar a mano.
+- **CONF** (v0.9g, reestructurada; probado por serie con capturas en la placa 1): menú con título
+  " CONFIGURACION ", `< CONFIG >` y `< STATUS >` (`subConf`: `CONF_MENU/CONFIG/STATUS/PORTAL/EDITOR`).
+  - **CONFIG:** lista con 4 a la vista, valor a la derecha y barra de desplazamiento; "volver" en el pie
+    (`OpcionConf`: ID, LOCATOR, ACELERACION, APAGADO, TONO, WEBCONF, FABRICA). ID y LOCATOR con el editor de las
+    memorias (`confAbrirEditor()`; destinos `EDITOR_ID_ESTACION` -2 y `EDITOR_LOCATOR` -3; solo letras y cifras, y
+    `/` en el ID); OK valida con `aplicarIndicativo()`/`aplicarLocator()` (las mismas que el portal) y, si no vale,
+    "NO VALIDO" y se sigue editando; guarda en `estacion`. WEBCONF abre el portal y una vista con sus datos
+    (`CONF_PORTAL`: `ver qr` y `volver`; el portal sigue abierto al volver, y la opción muestra "ABIERTO").
+    FABRICA pide confirmación ("OTRA VEZ").
+  - **STATUS:** 5 páginas (girar), pulsar o atrás vuelve; se redibuja cada segundo (`procesarStatus()`):
+    ESTACION (ID, locator, hora, FW), SISTEMA (batería, LoRa, apagado, tono y aceleración), WIFI (red guardada
+    leída de la NVS `nvs.net80211`/`sta.ssid` sin encender el WiFi, `ssidGuardada()`; estado, IP y nombre del
+    portal), MEMORIA (heap libre, mínimo, mayor bloque, NVS) y ARRANQUE (tiempo encendido, motivo del reinicio,
+    CPU).
 
 ## Funciones (probadas en placa salvo que se diga)
 - **Pantalla CW** (v0.7d; nombres y orden de la v0.8g): estilo LoRa, título " ENTRENADOR CW " en negativo y
@@ -80,7 +100,12 @@ el transceptor, GPS/locator.
     "corregir" se marcan los fallos en el listado (cursor subrayado, `focoCorregir`; pulsar marca/desmarca en vídeo
     inverso, `marcasFallo[]`; anillo caracteres → rep. → ok); `numeroErrores` sale de las marcas. "ok"
     (`enviarResultadoKoch()`) guarda el % de la lección y los aciertos/fallos de cada carácter en `statsCarKoch[]`
-    (41, orden de `TABLA_KOCH`; NVS `carK`). ESTAD. (v0.8g, 17 páginas): 1 **MÁS ERRORES** (`dibujarMasErrores()`:
+    (41, orden de `TABLA_KOCH`; NVS `carK`). **Dos modos de corregir** (v0.9f, sin probar): la última página del
+    listado ofrece `>x letra >total >rep.`; "x letra" es lo de antes y "total" (`CW_PANTALLA_FALLOS_TOTALES`) solo
+    pide el número de fallos (0..caracteres, `fallosTotales`, ya editando al entrar y partiendo de lo marcado en
+    x letra; % en vivo; rep. y ok). En modo total se guarda el % de la lección y se suma a `kochTotCaracteres` y
+    `kochTotAciertos` (NVS `ktcar`, `ktok`), que entran en TOTALES KOCH; no toca `statsCarKoch` (MÁS ERRORES solo
+    ve lo corregido x letra). El borrado del Koch también los borra. Por serie: `[KOCH] FALLOS TOTALES: 12/250`. ESTAD. (v0.8g, 17 páginas): 1 **MÁS ERRORES** (`dibujarMasErrores()`:
     las 4 de peor %, con ≥ `MIN_INTENTOS_LETRA` = 5 intentos), 2 **TOTALES KOCH** (lecciones, caracteres, %),
     3–16 lecciones, 17 borrado (solo lo del Koch). La letra nueva de la lección sale el 25 % de las veces
     (`PESO_LETRA_NUEVA_PCT`, `caracterKochAleatorio()`, también en Duo y Echo); con 4 caracteres o menos, reparto
@@ -89,7 +114,10 @@ el transceptor, GPS/locator.
     el motor CW (keyer en pausa mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las
     palas; durante el Echo el keyer descodifica con `echoWpm`. Como el Koch: **ajustes** propios (WPM 10–40, SP
     100–200 %, LECCIÓN 1–40, LETRAS 1–5, VER, RETOS 10–50, ESTAD., iniciar, volver; NVS `ewpm`, `esp`, `elecc`,
-    `elargo`, `ever`, `eretos`; independientes del Koch y de TX LIBRE), **práctica** (`echoPracticando`: `RETO n/N`
+    `elargo`, `ever`, `eretos`; independientes del Koch y de TX LIBRE). **Por lección** (v0.9g, sin probar): al
+    acabar una práctica, su % de retos bien cuenta para la lección del Echo (`statsEchoLecc[40]`, veces y % máx./mín.,
+    NVS `eLec` en un solo bloque); ESTAD. del Echo con 17 páginas como el Koch (más errores, totales, 14 de
+    lecciones con `dibujarPaginaLecciones()`, compartida, y borrado, que también borra `eLec`), **práctica** (`echoPracticando`: `RETO n/N`
     y `BIEN n`; repetir —no cuenta— y salir; se evalúa al llegar a las letras del reto o con un silencio de palabra;
     acierto: "BIEN!" y otro reto a 1,2 s; fallo: "MAL: R  K -.-" y se repite el mismo a 3 s; cada intento cuenta como
     reto) y **resultado** (`ECHO_FIN`: %, volver y rep.). Estadísticas en `statsCarEcho[]` (NVS `carE`) y totales
@@ -130,8 +158,8 @@ el transceptor, GPS/locator.
   solo CW cada 2 min (sin límites publicados: con moderación); línea de spot en 21 caracteres (referencia entera a la
   derecha; la frecuencia pierde el decimal y luego se recorta el indicativo si no cabe).
 - **Webconf** (portal WiFiManager, `Chispas-XXXX`, clave `PORTAL_CLAVE` = `chispas73`, 192.168.4.1; v0.7f–k,
-  probado): se abre con la opción **webconf** de CONF o desde el aviso de sin conexión, y muestra los datos (red,
-  clave, web). Con el portal abierto, en CONF la opción pasa a **`ver qr`**: QR de WiFi a pantalla completa
+  probado): se abre con **WEBCONF** en CONF > CONFIG o desde el aviso de sin conexión, y muestra los datos (red,
+  clave, web). Con el portal abierto, en esa vista está **`ver qr`**: QR de WiFi a pantalla completa
   (`WIFI:T:WPA;S:...;P:...;;`, versión 3, 29×29, a 2 px por módulo), generado con el componente `qrcode` de ESP-IDF
   que trae el core (`esp_qrcode_generate`, sin librerías extra); cualquier giro o pulsación vuelve a los datos. El QR
   une el móvil a la red, pero la página del portal se abre sola o no según el móvil (no depende de Chispas; se probó
@@ -242,8 +270,6 @@ el transceptor, GPS/locator.
    y pare sin errores y que la batería se siga leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - Repetir más las letras con más errores en Koch y Echo (las estadísticas por carácter ya existen, v0.8g).
-   - Editar indicativo y locator en el aparato con el encoder (sin móvil ni webconf).
-   - Aceleración del giro: al girar rápido, los valores avanzan de 5 en 5.
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
      2016 bytes libres de 4096 tras Duo). El consumo en deep sleep no se ha medido (por USB lo tapan el CP2102 y el cargador; haría falta
      medir en el cable de la batería con un polímetro en µA).
