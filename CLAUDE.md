@@ -52,9 +52,10 @@ montaje del decodificador, GPS.
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.02b** (refuerzo de las letras con más errores; compilada, sin cargar ni publicar);
+- Firmware: `src/main.cpp` **v1.02b** (refuerzo de las letras con más errores; en la placa 1, **sin release**: el
+  usuario decide cuándo se sube la versión y cuándo se publica);
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
-  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.01b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.01b
+  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.02b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.01b
   desde el 11 oct 2026, por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
   de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
@@ -150,7 +151,8 @@ montaje del decodificador, GPS.
     3–16 lecciones, 17 borrado (solo lo del Koch). La letra nueva de la lección sale el 25 % de las veces
     (`PESO_LETRA_NUEVA_PCT`, `caracterKochAleatorio()`, también en Duo y Echo); con 4 caracteres o menos, reparto
     uniforme. Tabla Koch de LCWO (v0.3i).
-    **REFUERZO** (v1.02b, sin probar en placa; decidido el 11 oct 2026): opción NO / SUAVE / FUERTE en los ajustes
+    **REFUERZO** (v1.02b; probado en la placa 1 el 11 oct 2026: la opción cambia NO/SUAVE/FUERTE en Koch y Echo y por
+    serie salen los pesos, p. ej. `[KOCH] REFUERZO FUERTE: K x1.4 M x1.4`, con datos del Echo): opción NO / SUAVE / FUERTE en los ajustes
     del Koch (`refuerzoKoch`, NVS `kref`) y del Echo (`echoRefuerzo`, NVS `eref`), por defecto SUAVE. El sorteo
     (`caracterKochAleatorio(leccion, refuerzo)`) mantiene la letra nueva al 25 % y reparte el resto por pesos:
     `pesoRefuerzo()` = 1 + tope × (fallos + 1) / (intentos + 2), con tope ×2 (suave) o ×3 (fuerte), usando la
