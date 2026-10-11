@@ -181,8 +181,12 @@ el transceptor, GPS/locator.
   **Probado en la placa 1 (10 oct 2026):** menú, memorias, editor, envío de memorias (suenan en el buzzer) y el corte de
   seguridad de KEY (dos fallos corregidos: lectura doble de `keyActivaDesdeMs` desde `loop()` y marca `millis() | 1`
   1 ms adelantada, que con la resta sin signo daba la vuelta y cortaba al manipular). GPIO2 medido con
-  polímetro con el TUNE (11 oct 2026, v0.9e): ~3,3 V activa, 0 V en reposo. **Sin probar:** el PC817 y el
-  decodificador con señal (falta el montaje).
+  polímetro con el TUNE (11 oct 2026, v0.9e): ~3,3 V activa, 0 V en reposo. PC817 y minijack de KEY montados y
+  comprobados con el polímetro en el jack (11 oct 2026: abierto en reposo, conduce con el TUNE). **Probado con la emisora**
+  (uSDR, HF QRP SDR, 11 oct 2026): manipula por el **anillo**, no por la punta (con el jack a medias funcionaba y a
+  fondo no), así que J4 lleva un **puente R-T** (esquema, hoja 5) y vale para emisoras de punta o de anillo; la
+  emisora, en llave recta. Xiegu X6200: sin probar (debería valer con el puente, en llave recta;
+  si sale punto-raya alternado, está en modo iámbico). **Sin probar:** el decodificador con señal.
   - **Salida KEY:** `conmutarEmisionMorse()` activa GPIO2 solo con `keyHabilitada` (OPERAR y QSO de TRX; nunca en
     Koch, Echo, TX LIBRE ni LoRa). `trxTonoLocal` (NVS `ttono`): buzzer/auriculares mientras sale por KEY. Corte de
     seguridad si KEY sigue activa más de 10 s seguidos (`KEY_MAX_CONTINUA_MS`): "KEY CORTADA (>10 s)" y por serie con
@@ -229,11 +233,11 @@ el transceptor, GPS/locator.
 ## Pendiente
 1. **Siguiente sesión:** por decidir (opcional de las estadísticas: que el Koch y el Echo repitan más las letras
    con más errores). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
-2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack): al llegar el
-   PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la ganancia en banco; luego salida
-   KEY con PC817 y pull-down de 10 kΩ y entrada del decodificador en GPIO6 (el firmware ya está, v0.9a); GPS cuando
-   llegue (opcionales: enable del GPS y BME280). **Pendiente de comprobar en la pantalla TRX** (GPIO2 ya medido con el
-   TUNE): la KEY con el PC817 y la emisora; decodificador con señal real
+2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
+   PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
+   ganancia en banco; luego entrada del decodificador en GPIO6 (el firmware ya está, v0.9a); GPS cuando
+   llegue (opcionales: enable del GPS y BME280). **Pendiente de comprobar en la pantalla TRX** (la KEY ya funciona con la
+   uSDR): decodificador con señal real
    (ajustar RV2 con la barra, `DECOD_MIN_SENAL` y la escala; probar AUTO y tono fijo); que el ADC por DMA arranque
    y pare sin errores y que la batería se siga leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
@@ -265,7 +269,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 
 | GPIO | Uso |
 |---|---|
-| 2 | Salida KEY (PC817, 330 Ω; añadir 10 kΩ a GND). `KEY_OUT_PIN` |
+| 2 | Salida KEY (PC817, 330 Ω, 10 kΩ a GND, minijack J4 con puente R-T). `KEY_OUT_PIN`. **Montado y probado con la uSDR** (X6200 sin probar) |
 | 4 / 5 | Pala DIT / DAH (pull-up interno; `KEYER_PADDLE_DIT/DAH`). **Montado y probado** |
 | 6 | Entrada del decodificador (ADC1): acoplo 1 µF, polarización 2×10 kΩ, trimmer, 1 kΩ y 2×1N4148 |
 | 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, buzzer piezo pasivo en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R |
@@ -288,7 +292,8 @@ Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, 
 
 Esquema de conexiones: `docs/esquema_protoboard.pdf` (7 hojas: vista general, pines, entradas, tono y amplificador,
 KEY y alimentación, decodificador, componentes y montaje), generado con `docs/gen_esquema.py` (HTML/SVG; el PDF se
-imprime con Edge sin interfaz: `msedge --headless --no-pdf-header-footer --print-to-pdf=... archivo.html`). Las hojas
+imprime con Edge sin interfaz: `msedge --headless --no-pdf-header-footer --print-to-pdf=... archivo.html`; en el segundo equipo no hay Edge: lo mismo
+con `C:\Program Files\Google\Chrome\Application\chrome.exe`). El script recibe la ruta del HTML como argumento. Las hojas
 tienen altura fija y ocultan lo que sobra: tras cambios grandes, revisar el PDF (no basta con el HTML en pantalla). Si cambia algún pin, actualizar el script y regenerar el PDF.
 
 ## KiCad: APLAZADO
