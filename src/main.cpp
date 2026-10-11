@@ -2,8 +2,8 @@
  * @file main.cpp
  * @author Chispas EA4ILN Project
  * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.9c - Propagacion de hamqsl.com cada hora (lo pide su autor); antes, cada 30 min
- * @date 2026-10-10
+ * @version 0.9e - TUNE en OPERAR y QSO de TRX: portadora por KEY de 1-10 s
+ * @date 2026-10-11
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * Copyright (C) 2026 EA4ILN
@@ -15,7 +15,7 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.9c"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+#define FW_VERSION "0.9e"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -76,7 +76,7 @@
 #define ENC_CLK_PIN     19  // Pull-up de 10 kOhm en el modulo
 #define ENC_DT_PIN      20  // Pull-up de 10 kOhm en el modulo
 #define ENC_SW_PIN      48  // Pulsador del eje, sin pull-up en el modulo: INPUT_PULLUP
-#define SPEAKER_PWM_PIN  7  // Salida PWM provisional (GPIO libre del header). El GPIO25 no existe en el S3
+#define SPEAKER_PWM_PIN  7  // Tono CW por PWM (J3-18): volumen, auriculares y buzzer (ver esquema, hoja 4)
 
 #define FREC_AUDIO_HZ    850// Tono Morse local por defecto (850 Hz); se elige en CONF -> tono (frecTonoHz)
 #define TONO_MIN_HZ      400
@@ -419,6 +419,13 @@ String trxTextoRx = "";          // Descodificado de la emisora
 String trxTextoTx = "";          // Manipulado y memorias enviadas
 char trxSu[TRAMA_LONG_INDICATIVO + 1] = "";  // Indicativo del corresponsal ({SU})
 bool trxEnviandoMemoria = false;
+// Tune: portadora continua por KEY para ajustar el acoplador o la potencia (OPERAR y QSO). La duracion se
+// elige en OPERAR (NVS "ttune"); mientras dura, el corte de seguridad deja ese tiempo mas un margen
+#define TRX_TUNE_MIN_S 1
+#define TRX_TUNE_MAX_S 10
+#define TRX_TUNE_MARGEN_MS 2000
+uint8_t trxTuneSeg = 5;
+bool trxSintonizando = false;
 bool keyCortadaPorSeguridad = false;
 #define KEY_MAX_CONTINUA_MS 10000
 // Memorias: 6 de hasta 40 caracteres, con {MI} (indicativo de la estacion) y {SU} (corresponsal).
@@ -450,7 +457,7 @@ float snrUltimo = 0.0;
 // Mide cuanto llega tarde cada transicion (encender/apagar) respecto a lo programado.
 // Ese retraso alarga el elemento o la pausa anterior. Se informa por serie al final
 // de cada grupo. Poner a 0 para quitarlo del firmware. Solo lo usa la tarea del motor CW.
-#define DEBUG_CW 1
+#define DEBUG_CW 0
 
 #if DEBUG_CW
 uint32_t medidaCWNum = 0;
@@ -537,6 +544,7 @@ struct PeticionCW {
   char texto[MOTOR_CW_TEXTO_MAX + 1];
   uint8_t wpm;
   uint16_t espaciado;  // % sobre el espacio entre caracteres y entre palabras
+  uint16_t portadoraMs;  // Distinto de 0: portadora continua (tune) en vez del texto
   const char* origen;  // Para la depuracion por serie
 };
 
@@ -575,6 +583,11 @@ bool esperarMotorCW(TickType_t objetivo, uint32_t id) {
  * Los espacios marcan el espacio entre palabras; los caracteres sin codigo Morse se saltan.
  */
 void emitirTextoMotorCW(const PeticionCW& p) {
+  if (p.portadoraMs != 0) {  // Tune: tareaEmisionCW apaga al volver, tambien si se cancela
+    conmutarEmisionMorse(true);
+    esperarMotorCW(xTaskGetTickCount() + pdMS_TO_TICKS(p.portadoraMs), p.id);
+    return;
+  }
   uint32_t tDit = 1200 / p.wpm;
   uint32_t tCharGap = (tDit * 3 * p.espaciado) / 100;
   uint32_t tWordGap = (tDit * 7 * p.espaciado) / 100;
@@ -650,6 +663,23 @@ void motorCWEmitir(const char* texto, uint8_t wpm, uint16_t espaciado, const cha
   p.texto[MOTOR_CW_TEXTO_MAX] = '\0';
   p.wpm = max(wpm, (uint8_t)1);
   p.espaciado = espaciado;
+  p.portadoraMs = 0;
+  p.origen = origen;
+  if (xQueueSend(colaMotorCW, &p, 0) == pdTRUE) motorCWPedidas = p.id;
+}
+
+/**
+ * Portadora continua de ms milisegundos (tune), cortable con motorCWDetener(). Vuelve enseguida.
+ */
+void motorCWPortadora(uint16_t ms, const char* origen) {
+  motorCWDetener();
+
+  PeticionCW p;
+  p.id = motorCWPedidas + 1;
+  p.texto[0] = '\0';
+  p.wpm = 1;
+  p.espaciado = 100;
+  p.portadoraMs = ms;
   p.origen = origen;
   if (xQueueSend(colaMotorCW, &p, 0) == pdTRUE) motorCWPedidas = p.id;
 }
@@ -1004,6 +1034,7 @@ void cargarDatosNVS() {
   qsoVerRx = prefs.getBool("qver", true);
   trxWpm = constrain(prefs.getUChar("twpm", 20), KEYER_WPM_MIN, KEYER_WPM_MAX);
   trxTonoLocal = prefs.getBool("ttono", true);
+  trxTuneSeg = constrain(prefs.getUChar("ttune", 5), TRX_TUNE_MIN_S, TRX_TUNE_MAX_S);
   trxTonoDecodHz = prefs.getUShort("tdec", 0);
   if (trxTonoDecodHz != 0) trxTonoDecodHz = constrain(trxTonoDecodHz, TONO_MIN_HZ, TONO_MAX_HZ);
   echoWpm = constrain(prefs.getUChar("ewpm", 20), KEYER_WPM_MIN, KEYER_WPM_MAX);
@@ -1079,6 +1110,7 @@ void guardarTrxNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("twpm", trxWpm);
   prefs.putBool("ttono", trxTonoLocal);
+  prefs.putUChar("ttune", trxTuneSeg);
   prefs.putUShort("tdec", trxTonoDecodHz);
   prefs.end();
 }
@@ -1932,6 +1964,21 @@ void trxDeshabilitarKey() {
   digitalWrite(KEY_OUT_PIN, LOW);
   keyActivaDesdeMs = 0;
   trxEnviandoMemoria = false;
+  trxSintonizando = false;
+}
+
+// Tune: portadora de trxTuneSeg segundos por KEY. Pulsar otra vez o tocar una pala la corta
+void trxTune() {
+  if (trxSintonizando) {
+    motorCWDetener();  // procesarTrx() lo da por acabado y reanuda el keyer
+    return;
+  }
+  if (!keyHabilitada) return;  // Tras un corte de seguridad, no
+  keyerPausar();
+  trxEnviandoMemoria = false;
+  trxSintonizando = true;
+  motorCWPortadora(trxTuneSeg * 1000, "TUNE");
+  Serial.printf("[TRX] TUNE %u s\n", trxTuneSeg);
 }
 
 void trxEntrarSub(SubTrx sub) {
@@ -1944,7 +1991,7 @@ void trxEntrarSub(SubTrx sub) {
       decodEmpezar();
       break;
     case TRX_OPERAR:
-      opcionTrxSub = 2;  // mem
+      opcionTrxSub = 3;  // mem
       trxTextoTx = "";
       trxHabilitarKey();
       break;
@@ -1990,6 +2037,7 @@ void trxEnviarMemoria(uint8_t i) {
   subTrx = subTrxOrigen;
   keyerPausar();
   qsoAnadir(trxTextoTx, texto);
+  trxSintonizando = false;
   trxEnviandoMemoria = true;
   motorCWEmitir(texto.c_str(), trxWpm, 100, "MEM");
   Serial.printf("[TRX] MEMORIA %u: %s\n", i + 1, texto.c_str());
@@ -2001,6 +2049,7 @@ void trxAbrirEditor(int8_t destino) {
   if (keyHabilitada) {
     motorCWDetener();
     trxEnviandoMemoria = false;
+    trxSintonizando = false;
     keyHabilitada = false;
   }
   editorDestino = destino;
@@ -2090,16 +2139,19 @@ void procesarTrx() {
   // Corte de seguridad: KEY activa mas de 10 s seguidos (pala atascada, fallo...). Se lee una sola vez:
   // el keyer y el motor CW (mas prioridad) la cambian en cada elemento y, leida dos veces, podia pasar
   // a 0 entre las dos lecturas (millis() - 0 = siempre mas de 10 s: cortaba al manipular)
+  // Con el tune, el limite es su duracion mas un margen (la portadora la apaga el motor CW a su hora)
   unsigned long keyDesde = keyActivaDesdeMs;
-  if (keyDesde != 0 && (long)(millis() - keyDesde) > (long)KEY_MAX_CONTINUA_MS) {  // Con signo, por si acaso
+  long limiteKey = trxSintonizando ? (long)trxTuneSeg * 1000 + TRX_TUNE_MARGEN_MS : (long)KEY_MAX_CONTINUA_MS;
+  if (keyDesde != 0 && (long)(millis() - keyDesde) > limiteKey) {  // Con signo, por si acaso
     motorCWDetener();
     keyerPausar();
     keyHabilitada = false;
     digitalWrite(KEY_OUT_PIN, LOW);
     keyActivaDesdeMs = 0;
     trxEnviandoMemoria = false;
+    trxSintonizando = false;
     keyCortadaPorSeguridad = true;
-    Serial.printf("[TRX] KEY CORTADA: MAS DE 10 S ACTIVA (desde %lu, ahora %lu)\n", keyDesde, millis());
+    Serial.printf("[TRX] KEY CORTADA: MAS DE %ld MS ACTIVA (desde %lu, ahora %lu)\n", limiteKey, keyDesde, millis());
     pantallaPendiente = true;
   }
 
@@ -2129,10 +2181,13 @@ void procesarTrx() {
                   decodWpm, decodSaturado ? ", SATURA" : "");
   }
 
-  if (trxEnviandoMemoria) {
-    if (motorCWOcupado() && palaPulsada()) motorCWDetener();  // Break-in: las palas cortan la memoria
+  if (trxEnviandoMemoria || trxSintonizando) {
+    if (motorCWOcupado() && palaPulsada()) motorCWDetener();  // Break-in: las palas cortan la memoria o el tune
     if (!motorCWOcupado()) {
+      if (trxSintonizando) Serial.println(F("[TRX] TUNE FIN"));
       trxEnviandoMemoria = false;
+      trxSintonizando = false;
+      pantallaPendiente = true;
       if (subTrx == TRX_OPERAR || subTrx == TRX_QSO) keyerReanudar();
     }
   }
@@ -3516,6 +3571,20 @@ void dibujarEditor() {
   }
 }
 
+// Pie de OPERAR y QSO: ">mem >SU >tune >salir" (21 caracteres); foco 0..3. "tune" en negativo mientras emite
+void dibujarPieTrx(uint8_t foco) {
+  display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
+  const char* opciones[] = { "mem", "SU", "tune", "salir" };
+  display.setCursor(1, 55);
+  for (uint8_t i = 0; i < 4; i++) {
+    if (i > 0) display.print(' ');
+    display.print(foco == i ? '>' : ' ');
+    if (i == 2 && trxSintonizando) display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.print(opciones[i]);
+    display.setTextColor(SSD1306_WHITE);
+  }
+}
+
 void renderizarPantallaTrx() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
@@ -3565,14 +3634,18 @@ void renderizarPantallaTrx() {
       display.setCursor(0, 41);
       if (keyCortadaPorSeguridad) {
         display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-        display.print(F("KEY CORTADA (>10 s)"));
+        display.print(F("KEY CORTADA"));
         display.setTextColor(SSD1306_WHITE);
       } else {
         display.print(F("SU: "));
         display.print(trxSu[0] ? trxSu : "--");
       }
-      dibujarPieCentrado((opcionTrxSub == 2 ? "> " : "  ") + String("mem  ") + (opcionTrxSub == 3 ? "> " : "  ") +
-                         String("SU  ") + (opcionTrxSub == 4 ? "> " : "  ") + String("salir"));
+      // Duracion del tune, a la derecha (">TUNE 10s" cabe detras de "SU: " y 8 caracteres)
+      display.setCursor(74, 41);
+      display.print(opcionTrxSub == 2 ? ">" : " ");
+      display.print(F("TUNE "));
+      imprimirValor(opcionTrxSub == 2, String(trxTuneSeg) + "s");
+      dibujarPieTrx(opcionTrxSub >= 3 ? opcionTrxSub - 3 : 255);
       break;
     }
 
@@ -3589,8 +3662,7 @@ void renderizarPantallaTrx() {
         dibujarEstadoDecod(28);
       }
       dibujarUltimasLineas(trxTextoTx + "_", 37, 2, 8);
-      dibujarPieCentrado((opcionTrxSub == 0 ? "> " : "  ") + String("mem  ") + (opcionTrxSub == 1 ? "> " : "  ") +
-                         String("SU  ") + (opcionTrxSub == 2 ? "> " : "  ") + String("salir"));
+      dibujarPieTrx(opcionTrxSub);
       break;
     }
 
@@ -4695,29 +4767,34 @@ void procesarBoton() {
         break;
 
       case TRX_OPERAR:
-        // Foco: 0 wpm, 1 tono local, 2 mem, 3 SU, 4 salir. Las palas manipulan la emisora con cualquier foco
+        // Foco: 0 wpm, 1 tono local, 2 duracion del tune, 3 mem, 4 SU, 5 tune, 6 salir. Las palas manipulan
+        // la emisora con cualquier foco
         if (atras || ejeLarga) trxSalirAlMenu();
         else if (giro != 0) {
-          if (editandoValor) ajustarValor(trxWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
-          else opcionTrxSub = (opcionTrxSub + 5 + giro) % 5;
+          if (editandoValor && opcionTrxSub == 0) ajustarValor(trxWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
+          else if (editandoValor) ajustarValor(trxTuneSeg, giro, TRX_TUNE_MIN_S, TRX_TUNE_MAX_S);
+          else opcionTrxSub = (opcionTrxSub + 7 + giro) % 7;
         } else if (pulsa) {
           switch (opcionTrxSub) {
             case 0: editandoValor = !editandoValor; break;
             case 1: trxTonoLocal = !trxTonoLocal; break;
-            case 2: trxAbrirListaEnvio(); break;
-            case 3: trxAbrirEditor(-1); break;
-            case 4: trxSalirAlMenu(); break;
+            case 2: editandoValor = !editandoValor; break;
+            case 3: trxAbrirListaEnvio(); break;
+            case 4: trxAbrirEditor(-1); break;
+            case 5: trxTune(); break;
+            case 6: trxSalirAlMenu(); break;
           }
         }
         break;
 
       case TRX_QSO:
-        // Foco: 0 mem, 1 SU, 2 salir. El wpm y el tono local se eligen en OPERAR
+        // Foco: 0 mem, 1 SU, 2 tune, 3 salir. El wpm, el tono local y la duracion del tune se eligen en OPERAR
         if (atras || ejeLarga) trxSalirAlMenu();
-        else if (giro != 0) opcionTrxSub = (opcionTrxSub + 3 + giro) % 3;
+        else if (giro != 0) opcionTrxSub = (opcionTrxSub + 4 + giro) % 4;
         else if (pulsa) {
           if (opcionTrxSub == 0) trxAbrirListaEnvio();
           else if (opcionTrxSub == 1) trxAbrirEditor(-1);
+          else if (opcionTrxSub == 2) trxTune();
           else trxSalirAlMenu();
         }
         break;
@@ -5299,10 +5376,6 @@ void procesarCapturaSerie() {
     case 'k': eventoSerie = ENC_PULSA; return;
     case 'l': eventoSerie = ENC_LARGA; return;
     case 'a': eventoSerie = BOTON_CORTA; return;
-    case 'g':  // Locator generico solo en RAM (no se guarda): para capturas publicables. Al reiniciar vuelve el suyo
-      strlcpy(locatorEstacion, LOCATOR_POR_DEFECTO, sizeof(locatorEstacion));
-      pantallaPendiente = true;
-      return;
   }
   if (c != 'p') return;
   const uint8_t* buf = display.getBuffer();

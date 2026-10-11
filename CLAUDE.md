@@ -16,16 +16,16 @@ el transceptor, GPS/locator.
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
 
 ## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.9c** (propagación cada hora) en las dos placas. v0.8d: opción **`tono`** en CONF
+- Firmware: `src/main.cpp` **v0.9e** (TUNE en TRX) en la placa 1; v0.9d (limpieza de depuración); v0.9c (propagación cada hora) en las dos placas. v0.8d: opción **`tono`** en CONF
   (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
   auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
   (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
   Python de PlatformIO: `~\.platformio\penv\Scripts\python.exe`; cerrar antes el monitor serie). Ve la copia en RAM,
   no el panel. **v0.9b (provisional):** órdenes serie que simulan el encoder (`d` derecha, `i` izquierda, `k` pulsar,
-  `l` larga, `a` atrás; `eventoSerie` en `procesarBoton()`) y `g` (locator genérico solo en RAM, para capturas
-  publicables; al reiniciar vuelve el guardado). Con ellas se hicieron las 29 capturas de `docs/img/` del README (10 oct
-  2026; SOL y CONF con IN80dk para no publicar el locator real). Quitar todo junto cuando no haga falta. Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
-  (desnuda, sin encoder; entorno `heltec_sin_encoder`). Las dos usan COM16 según cuál esté conectada. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
+  `l` larga, `a` atrás; `eventoSerie` en `procesarBoton()`). Con ellas se hicieron las 29 capturas de `docs/img/` del
+  README (10 oct 2026; SOL y CONF con IN80dk, puesto con la orden `g`, que se quitó en la v0.9d: para otra captura
+  publicable, poner el locator genérico en webconf). Quitar captura y simulación juntas antes de una release.  **v0.9d:** `DEBUG_CW` a 0 (la medida dio 0 ms). `[DIAG]` y `[DECOD]` se quedan hasta acabar sus pruebas. Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
+  (desnuda, sin encoder; entorno `heltec_sin_encoder`). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
   6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
   firmware; programas de prueba aparte en `pruebas/` con sus entornos (`prueba_pines`, `prueba_bateria`).
@@ -180,21 +180,31 @@ el transceptor, GPS/locator.
   `< DECODIFICAR >`, `< OPERAR >`, `< QSO >` y **memorias** en el centro del pie (`opcionTrx`; `subTrx`).
   **Probado en la placa 1 (10 oct 2026):** menú, memorias, editor, envío de memorias (suenan en el buzzer) y el corte de
   seguridad de KEY (dos fallos corregidos: lectura doble de `keyActivaDesdeMs` desde `loop()` y marca `millis() | 1`
-  1 ms adelantada, que con la resta sin signo daba la vuelta y cortaba al manipular). **Sin probar:** la salida
-  real en GPIO2 (ni con polímetro), el PC817 y el decodificador con señal (falta el montaje).
+  1 ms adelantada, que con la resta sin signo daba la vuelta y cortaba al manipular). GPIO2 medido con
+  polímetro con el TUNE (11 oct 2026, v0.9e): ~3,3 V activa, 0 V en reposo. **Sin probar:** el PC817 y el
+  decodificador con señal (falta el montaje).
   - **Salida KEY:** `conmutarEmisionMorse()` activa GPIO2 solo con `keyHabilitada` (OPERAR y QSO de TRX; nunca en
     Koch, Echo, TX LIBRE ni LoRa). `trxTonoLocal` (NVS `ttono`): buzzer/auriculares mientras sale por KEY. Corte de
     seguridad si KEY sigue activa más de 10 s seguidos (`KEY_MAX_CONTINUA_MS`): "KEY CORTADA (>10 s)" y por serie con
     las marcas de tiempo.
-  - **OPERAR:** keyer con wpm propio (`trxWpm`, NVS `twpm`), TONO SÍ/NO, mem (lista para enviar), SU (indicativo del
-    corresponsal, editor) y salir. Las palas cortan una memoria que se está enviando.
+  - **OPERAR:** keyer con wpm propio (`trxWpm`, NVS `twpm`), TONO SÍ/NO, duración del TUNE, mem (lista para enviar),
+    SU (indicativo del corresponsal, editor), tune y salir. Las palas cortan una memoria que se está enviando.
   - **DECODIFICAR:** tarea `decod` (núcleo 0, prioridad 2) que lee GPIO6 (ADC1 canal 5) por DMA (`adc_digi_*` del
     IDF 4.4) a 8 kHz; Goertzel en bloques de 96 muestras (12 ms); tono fijo 400–1000 Hz o AUTO (el más fuerte de
     13, `trxTonoDecodHz`, NVS `tdec`); umbral adaptativo (ruido/pico, histéresis); punto adaptativo (5–50 wpm);
     barra de nivel logarítmica con la marca del umbral y "SATURA" si toca los topes (bajar RV2); `[DECOD] ...`
     por serie cada 2 s. Sordo mientras sale por KEY y 300 ms después. Mientras funciona no se lee la batería (mismo
     ADC1). Valores de partida sin ajustar: `DECOD_MIN_SENAL` 1500, `DECOD_ESCALA_MAX` 96000.
-  - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, salir.
+  - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
+  - **TUNE** (v0.9e): portadora continua por KEY de 1–10 s (`trxTuneSeg`, NVS
+    `ttune`, por defecto 5) para ajustar acoplador o potencia. La duración se elige en OPERAR (`TUNE 5s`, a la derecha
+    de la línea de SU) y vale también en QSO; "tune" en el pie de las dos (`>mem >SU >tune >salir`, `dibujarPieTrx()`,
+    en negativo mientras emite). La emite el motor CW (`motorCWPortadora()`, campo `portadoraMs` de `PeticionCW`);
+    pulsar otra vez o tocar una pala la corta. Mientras dura, el corte de seguridad deja la duración + 2 s
+    (`TRX_TUNE_MARGEN_MS`). Tono local según `TONO SI/NO`. Por serie: `[TRX] TUNE 5 s` y `[TRX] TUNE FIN`.
+    **Probado en la placa 1 (11 oct 2026)**, en OPERAR y QSO: GPIO2 a ~3,3 V con el polímetro durante el TUNE y 0 V
+    en reposo; 10 s sin "KEY CORTADA"; se corta pulsando otra vez y con las palas. (Un primer "0 V siempre" fue por
+    medir en otra patilla.)
   - **Memorias:** 6 de 40 caracteres en NVS `estacion` (`m0`..`m5`), precargadas (CQ, respuesta, RST, HW?, TNX 73,
     73 SK), con `{MI}` (indicativo) y `{SU}` (corresponsal). Se editan con el encoder (rueda en el pie: A–Z, 0–9,
     signos, ESP, {MI}, {SU}, <-, CLR, OK, ESC; PRG = ESC, larga = OK), con las palas (dentro del editor) o en webconf
@@ -222,8 +232,8 @@ el transceptor, GPS/locator.
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack): al llegar el
    PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la ganancia en banco; luego salida
    KEY con PC817 y pull-down de 10 kΩ y entrada del decodificador en GPIO6 (el firmware ya está, v0.9a); GPS cuando
-   llegue (opcionales: enable del GPS y BME280). **Pendiente de comprobar en la pantalla TRX:** GPIO2 con el polímetro
-   en OPERAR (~3,3 V con cada elemento, 0 V en reposo), luego con el PC817 y la emisora; decodificador con señal real
+   llegue (opcionales: enable del GPS y BME280). **Pendiente de comprobar en la pantalla TRX** (GPIO2 ya medido con el
+   TUNE): la KEY con el PC817 y la emisora; decodificador con señal real
    (ajustar RV2 con la barra, `DECOD_MIN_SENAL` y la escala; probar AUTO y tono fijo); que el ADC por DMA arranque
    y pare sin errores y que la batería se siga leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
@@ -294,3 +304,5 @@ PCB portadora rev. A.2; la fuente de verdad del circuito era `gen_kicad.py`.)
 - Grabar el puerto serie sin reiniciar la placa: pyserial con `dtr = False` y `rts = False` antes de `open()`.
 - Ojo con los heredocs de Bash: la herramienta reduce las barras invertidas dobles a una (un `'\0'` acabó como
   byte nulo en el archivo). Para código con barras invertidas, editar con la herramienta Edit o Write.
+- No reescribir `main.cpp` con `Get-Content`/`Set-Content` de PowerShell 5.1: lee el UTF-8 sin BOM como ANSI y
+  rompe las tildes (y añade BOM). Usar Edit, o Python con `encoding="utf-8"`.
