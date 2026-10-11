@@ -21,11 +21,11 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 ## 2. Hardware
 
 ### En camino
-- **Amplificador PAM8302A (U2) y altavoz de 8 Ω (LS1)** (llegan el 13 oct): en el sitio del piezo (hoja 4 del esquema), con R9 de 10 kΩ.
+- **Amplificador PAM8302A (U2) y altavoz de 8 Ω (LS1)** (llegan el 12 oct): en el sitio del piezo (hoja 4 del esquema), con R9 de 10 kΩ.
   Ajustar la ganancia en banco y vigilar los picos en el 3V3 (la OLED de la placa 1 es sensible).
   **SD a GPIO38** (J3-11), para que el firmware lo apague cuando no se usa: el 3V3 sigue encendido en deep sleep y,
   sin SD, el amplificador gastaría unos 4 mA también dormido.
-- **GPS NEO-6M** (llega el 14 oct): TX del GPS a GPIO47 (J2-13). Opcional: alimentación conmutada con AO3401A (Q1) y R8 en GPIO3.
+- **GPS NEO-6M** (llega el 13 oct): TX del GPS a GPIO47 (J2-13). Opcional: alimentación conmutada con AO3401A (Q1) y R8 en GPIO3.
 
 ### Por comprar
 - Divisor de minijack 1 → 2, para seguir oyendo la emisora con el decodificador conectado.
