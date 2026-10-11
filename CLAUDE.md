@@ -53,8 +53,8 @@ montaje del decodificador, GPS.
 
 ## Estado actual (11 oct 2026)
 - Firmware: `src/main.cpp` **v1.01b** (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
-  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.01b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.00b
-  desde el 11 oct 2026, cargada por USB con PlatformIO para conservar su NVS). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
+  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.01b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.01b
+  desde el 11 oct 2026, por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
   de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
   Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
@@ -105,15 +105,15 @@ montaje del decodificador, GPS.
 - Entradas: encoder por interrupción en CLK/DT con tabla de cuadratura (`isrEncoder`, en IRAM, lee `GPIO_IN_REG`);
   PRG y pulsador del eje con `leerPulsador()` (antirrebote: el eje rebota al soltar). Eventos `BOTON_CORTA/LARGA` y
   `ENC_DERECHA/IZQUIERDA/PULSA/LARGA`, todos tratados en `procesarBoton()`.
-- **Sin encoder** (v0.7p, probado en la placa 2): entorno `heltec_sin_encoder` (`-DSIN_ENCODER`, mismo `main.cpp`).
+- **Sin encoder** (v0.7p; con las pantallas de la v0.9h, probado a mano en la placa 2 el 11 oct 2026): entorno `heltec_sin_encoder` (`-DSIN_ENCODER`, mismo `main.cpp`).
   `leerEventoBoton()` traduce el PRG: corta = `ENC_DERECHA` (mover), larga = `ENC_PULSA` (ejecutar), muy larga
   (≥ `TIEMPO_PULSACION_DORMIR`, 2,5 s) = dormir. No hay "atrás" (todas las pantallas tienen volver o ant./sig.).
   Al editar, los valores dan la vuelta (`ajustarValor`, `ajustarApagado`).
 - **Aceleración del giro** (v0.9f): la ISR del encoder mide el tiempo entre pasos (`encIntervaloTicks`); si es
   menor de 40 ms (`ENC_RAPIDO_MS`), `ajustarValor()` avanza ×`aceleracionGiro` en los valores con 20 o más pasos de
   mínimo a máximo (`ENC_MIN_PASOS_ACELERAR`: fallos, wpm, lección; no en rangos cortos como 1–5 ni en el tono). Se
-  elige en CONF > CONFIG > ACELERACION (v0.9g): NO, x2–x5 (NVS `acel`, por defecto x5). Solo con encoder. La
-  edición en CONF está probada por serie; el salto al girar rápido, sin probar a mano.
+  elige en CONF > CONFIG > ACELERACION (v0.9g): NO, x2–x5 (NVS `acel`, por defecto x5). Solo con encoder.
+  **Probada a mano en la placa 1 (11 oct 2026):** despacio de 1 en 1, rápido a saltos y con NO siempre de 1 en 1.
 - **CONF** (v0.9g, reestructurada; probado por serie con capturas en la placa 1): menú con título
   " CONFIGURACION ", `< CONFIG >` y `< STATUS >` (`subConf`: `CONF_MENU/CONFIG/STATUS/PORTAL/EDITOR`).
   - **CONFIG:** lista con 4 a la vista, valor a la derecha y barra de desplazamiento; "volver" en el pie
@@ -139,7 +139,7 @@ montaje del decodificador, GPS.
     "corregir" se marcan los fallos en el listado (cursor subrayado, `focoCorregir`; pulsar marca/desmarca en vídeo
     inverso, `marcasFallo[]`; anillo caracteres → rep. → ok); `numeroErrores` sale de las marcas. "ok"
     (`enviarResultadoKoch()`) guarda el % de la lección y los aciertos/fallos de cada carácter en `statsCarKoch[]`
-    (41, orden de `TABLA_KOCH`; NVS `carK`). **Dos modos de corregir** (v0.9f, sin probar): la última página del
+    (41, orden de `TABLA_KOCH`; NVS `carK`). **Dos modos de corregir** (v0.9f, probado a mano en la placa 1 el 11 oct 2026): la última página del
     listado ofrece `>x letra >total >rep.`; "x letra" es lo de antes y "total" (`CW_PANTALLA_FALLOS_TOTALES`) solo
     pide el número de fallos (0..caracteres, `fallosTotales`, ya editando al entrar y partiendo de lo marcado en
     x letra; % en vivo; rep. y ok). En modo total se guarda el % de la lección y se suma a `kochTotCaracteres` y
@@ -153,7 +153,7 @@ montaje del decodificador, GPS.
     el motor CW (keyer en pausa mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las
     palas; durante el Echo el keyer descodifica con `echoWpm`. Como el Koch: **ajustes** propios (WPM 10–40, SP
     100–200 %, LECCIÓN 1–40, LETRAS 1–5, VER, RETOS 10–50, ESTAD., iniciar, volver; NVS `ewpm`, `esp`, `elecc`,
-    `elargo`, `ever`, `eretos`; independientes del Koch y de TX LIBRE). **Por lección** (v0.9g, sin probar): al
+    `elargo`, `ever`, `eretos`; independientes del Koch y de TX LIBRE). **Por lección** (v0.9g, probado a mano en la placa 1 el 11 oct 2026): al
     acabar una práctica, su % de retos bien cuenta para la lección del Echo (`statsEchoLecc[40]`, veces y % máx./mín.,
     NVS `eLec` en un solo bloque); ESTAD. del Echo con 17 páginas como el Koch (más errores, totales, 14 de
     lecciones con `dibujarPaginaLecciones()`, compartida, y borrado, que también borra `eLec`), **práctica** (`echoPracticando`: `RETO n/N`
@@ -311,10 +311,10 @@ montaje del decodificador, GPS.
   regenerado el 10 oct 2026).
 
 ## Pendiente
-1. **Tras la v1.00b:** probar a mano lo que solo se ha probado por serie (listas, aceleración al girar rápido,
-   Echo por lección, corrección total del Koch, X6200 con KEY) y, en la placa 2, el manejo sin encoder de las
-   pantallas nuevas (listas, menús, CONFIG). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques
-   también con batería y sin medidor).
+1. **Pruebas a mano** (11 oct 2026): hechas en la placa 1 (listas y menús, aceleración, corrección total del Koch,
+   Echo por lección) y en la placa 2 (OTA a la v1.01b; menús, listas, edición con vuelta, páginas y práctica sin
+   encoder). Falta la X6200 con KEY. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con
+   batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
    ganancia en banco; luego entrada del decodificador en GPIO6 (el firmware ya está, v0.9a); GPS cuando
