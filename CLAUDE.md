@@ -295,10 +295,17 @@ montaje del decodificador, GPS.
     sale SATURA). RV2 hay que llevarlo casi al máximo (multivuelta): con 0,1–0,5 V~ en la punta de J3 la barra llega
     al 60–90 % sin saturar. **Con Morse limpio** (generador del móvil/PC, texto de la NOAA "OFFSHORE WATERS...
     NATIONAL ... SERVICE WASHINGTON DC") descodifica bien en AUTO y con tono fijo, y los wpm estimados son correctos.
-    **Pendiente de mejorar:** (1) mete espacios dentro de las palabras ("OFFS HORE", "WA SHIN GTON"): corta palabra a
-    los 5 puntos de silencio y, si el generador usa Farnsworth (más pausa entre letras), la supera; (2) **con solo
-    ruido de banda** (uSDR sin señal) descodifica letras falsas (E, I, T, S) y en AUTO salta de frecuencia: falta un
-    silenciador (no descodificar sin un tono claro sobre el ruido).
+    **Mejoras del 11 oct 2026 (en la v1.02b, sin subir versión), probadas en la placa 1:**
+    - **Silenciador:** un tono solo empieza si supera `DECOD_SNR_INICIO` (4×) el ruido de fondo; marcas de menos de
+      `DECOD_MARCA_MIN_MS` (24 ms) o del 40 % del punto se descartan; en AUTO solo se cambia de tono si destaca
+      `DECOD_AUTO_DESTACA` (2,5×) sobre la media de todos. El ruido se mide como un **suelo** (baja deprisa, sube
+      despacio): con una media normal, los bordes de los elementos lo inflaban y el silenciador se comía puntos (se
+      probó y descodificaba peor). Resultado: **con solo ruido de banda ya no salen letras** y el Morse limpio va bien.
+    - **Fin de palabra adaptativo:** media móvil de la pausa entre letras (`huecoLetraMs`) y palabra a
+      `DECOD_PALABRA_X` (1,7×) esa pausa, nunca menos de 5 puntos. **Sigue partiendo y juntando palabras** con la
+      fuente de prueba (vídeo de YouTube de la NOAA: "OF FSH ORE WA TERS", "WASHINGTON DC" → "...ONBC"): la pausa entre
+      letras y entre palabras se parecen demasiado para el decodificador. Aparcado por decisión del usuario; para
+      afinarlo haría falta sacar por serie la duración de cada silencio y del punto.
   - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
   - **TUNE** (v0.9e): portadora continua por KEY de 1–10 s (`trxTuneSeg`, NVS
     `ttune`, por defecto 5) para ajustar acoplador o potencia. La duración se elige en OPERAR (`TUNE 5s`, a la derecha
@@ -338,8 +345,8 @@ montaje del decodificador, GPS.
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
    ganancia en banco; GPS cuando llegue (opcionales: enable del GPS y BME280). Entrada del decodificador en GPIO6:
-   **montada y probada el 11 oct 2026** (ver DECODIFICAR); falta mejorar el corte de palabras y el silenciador con
-   ruido, y comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
+   **montada y probada el 11 oct 2026** (ver DECODIFICAR; silenciador hecho); falta afinar el corte de palabras y
+   comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
      2016 bytes libres de 4096 tras Duo). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la

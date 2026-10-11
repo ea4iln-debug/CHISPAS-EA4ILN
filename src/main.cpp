@@ -1900,7 +1900,9 @@ void procesarQSO() {
 // la duracion de las marcas y los silencios, comparada con un punto que se adapta a la velocidad, da puntos,
 // rayas, fin de caracter y espacio. Tono fijo (400-1000 Hz) o automatico: busca el mas fuerte de 400 a
 // 1000 Hz en pasos de 50. Mientras sale por KEY (y 300 ms despues) no escucha, para no descodificar el tono
-// de la propia emisora. Sin probar con senal real (el circuito de entrada aun no esta montado).
+// de la propia emisora. Silenciador: un tono solo cuenta si supera DECOD_SNR_INICIO veces el ruido medio y dura
+// al menos dos bloques (con solo ruido de banda no descodifica). El fin de palabra se adapta a la pausa real
+// entre letras (vale con espaciado Farnsworth). Probado con Morse limpio el 11 oct 2026.
 #define DECOD_CANAL_ADC   5     // GPIO6 = ADC1, canal 5
 #define DECOD_FS          8000  // Hz
 #define DECOD_N           96    // Muestras por bloque (12 ms, ancho de banda ~80 Hz)
@@ -1909,6 +1911,10 @@ void procesarQSO() {
 #define DECOD_MIN_SENAL   1500.0f   // Magnitud minima para considerar que hay tono (amplitud ~30 cuentas)
 #define DECOD_ESCALA_MAX  96000.0f  // Magnitud a fondo de escala (amplitud ~2000 cuentas): barra al 100 %
 #define DECOD_SORDO_TRAS_KEY_MS 300
+#define DECOD_SNR_INICIO  4.0f  // Un tono empieza si supera 4 veces el ruido medio (12 dB)
+#define DECOD_AUTO_DESTACA 2.5f // AUTO: se cambia de tono si destaca 2,5 veces sobre la media de todos
+#define DECOD_MARCA_MIN_MS 24   // Marcas mas cortas (un bloque) son ruido
+#define DECOD_PALABRA_X   1.7f  // Fin de palabra: silencio de 1,7 veces la pausa media entre letras
 #define DECOD_PILA        4096
 
 TaskHandle_t tareaDecod = NULL;
@@ -1961,6 +1967,7 @@ void tareaDecodFn(void* parametro) {
   uint8_t largo = 0;
   bool espacioPendiente = false;
   bool saturado = false;
+  float huecoLetraMs = 3 * puntoMs;  // Pausa media entre letras (media movil): da el fin de palabra
 
   for (;;) {
     if (!decodActivo) {
@@ -1993,28 +2000,38 @@ void tareaDecodFn(void* parametro) {
       float m;
       if (trxTonoDecodHz == 0) {
         // Automatico: energia de cada tono, suavizada; se cambia al mas fuerte si destaca de verdad
+        // (y sobre la media de todos: el ruido es plano y un tono no)
         uint8_t mejor = binActual;
+        float mediaBins = 0;
         for (uint8_t b = 0; b < DECOD_NUM_BINS; b++) {
           float e = goertzel(muestras, coefGoertzel(400 + 50 * b));
           energiaBin[b] = 0.9f * energiaBin[b] + 0.1f * e;
+          mediaBins += energiaBin[b];
           if (energiaBin[b] > energiaBin[mejor]) mejor = b;
         }
+        mediaBins /= DECOD_NUM_BINS;
         if (mejor != binActual && energiaBin[mejor] > 1.5f * energiaBin[binActual] &&
-            energiaBin[mejor] > DECOD_MIN_SENAL) binActual = mejor;
+            energiaBin[mejor] > DECOD_AUTO_DESTACA * mediaBins && energiaBin[mejor] > DECOD_MIN_SENAL) {
+          binActual = mejor;
+        }
         decodFrecHz = 400 + 50 * binActual;
       } else {
         decodFrecHz = trxTonoDecodHz;
       }
       m = goertzel(muestras, coefGoertzel(decodFrecHz));
 
-      // Umbral adaptativo: ruido (lento, solo sin tono) y pico (sube rapido, baja despacio)
-      if (!tono) ruido = 0.95f * ruido + 0.05f * m;
+      // Umbral adaptativo: ruido de fondo y pico (sube rapido, baja despacio). El ruido se mide como un suelo:
+      // baja enseguida y sube muy despacio, para que los bordes de los puntos y rayas no lo inflen (con un ruido
+      // inflado, el silenciador se comia elementos)
+      if (!tono) ruido = (m < ruido) ? 0.7f * ruido + 0.3f * m : 0.98f * ruido + 0.02f * m;
       if (m > pico) pico = 0.5f * pico + 0.5f * m;
       else pico = 0.995f * pico;
       if (pico < ruido * 2) pico = ruido * 2;
       float alto = ruido + 0.55f * (pico - ruido);
       float bajo = ruido + 0.40f * (pico - ruido);
-      bool hayTono = tono ? (m > bajo) : (m > alto && m > DECOD_MIN_SENAL && pico > 3 * ruido);
+      // Para empezar, ademas, el silenciador: destacar sobre el ruido medio (con solo ruido no hay tono)
+      bool hayTono = tono ? (m > bajo)
+                          : (m > alto && m > DECOD_MIN_SENAL && pico > 3 * ruido && m > DECOD_SNR_INICIO * ruido);
 
       // Sordo mientras se emite por KEY y justo despues
       bool sordo = keyActivaDesdeMs != 0 || millis() - keyFinMs < DECOD_SORDO_TRAS_KEY_MS;
@@ -2032,7 +2049,12 @@ void tareaDecodFn(void* parametro) {
       } else {
         if (tono) {
           // Fin de una marca: punto o raya segun el punto estimado; las muy cortas son ruido
-          if (marcaMs >= max(13.0f, puntoMs * 0.3f)) {
+          if (marcaMs >= max((float)DECOD_MARCA_MIN_MS, puntoMs * 0.4f)) {
+            // El silencio de antes de esta marca, si cerro una letra sin llegar a palabra, es una pausa entre
+            // letras: su media da el fin de palabra
+            if (espacioPendiente && silencioMs >= 2 * puntoMs) {
+              huecoLetraMs = constrain(0.75f * huecoLetraMs + 0.25f * silencioMs, 3 * puntoMs, 15 * puntoMs);
+            }
             bool raya = marcaMs > 2 * puntoMs;
             if (largo < 8) patron[largo] = raya ? '-' : '.';
             if (largo < 8) largo++;
@@ -2049,7 +2071,7 @@ void tareaDecodFn(void* parametro) {
           decodEnviarCaracter(largo <= 7 ? decodificarPatron(patron) : '*');
           largo = 0;
           espacioPendiente = true;
-        } else if (espacioPendiente && silencioMs >= 5 * puntoMs) {
+        } else if (espacioPendiente && silencioMs >= max(5 * puntoMs, DECOD_PALABRA_X * huecoLetraMs)) {
           decodEnviarCaracter(' ');
           espacioPendiente = false;
         }
