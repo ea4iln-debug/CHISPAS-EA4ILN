@@ -707,7 +707,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v1.00b<br>11 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v1.01b<br>11 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
@@ -794,7 +794,7 @@ def main():
 <li><b>3. Palas</b>: comprobar por serie DIT/DAH antes del keyer. ✔</li>
 <li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). ✔ <i>El piezo suena muy bajo: cuando lleguen U2 y LS1, montarlos en su sitio (hoja 4) y ajustar la ganancia.</i></li>
 <li><b>5. KEY</b> con R10: pantalla TRX → OPERAR. Primero GPIO2 con el polímetro (≈ 3,3 V con cada elemento, 0 V en reposo); luego, sin emisora, continuidad entre punta y malla de J4 al manipular. ✔ <i>Con la uSDR: puente R-T en J4 (manipula por el anillo).</i></li>
-<li><b>6. Decodificador</b> (hoja 6): sin emisora, polímetro en GPIO6 ≈ 1,65 V. Luego RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra (y <code>[DECOD]</code> por serie si se compila con <code>DEPURACION_DECOD 1</code>).</li>
+<li><b>6. Decodificador</b> (hoja 6): sin emisora, polímetro en GPIO6 ≈ 1,65 V. Luego RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra (y <code>[DECOD]</code> por serie con CONF → CONFIG → DEPURACION → DECOD en SÍ).</li>
 <li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional.</li>
 <li><b>9. Batería</b> al final, comprobada la polaridad.</li>
 </ul>

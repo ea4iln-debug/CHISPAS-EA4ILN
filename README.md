@@ -5,7 +5,7 @@
 ![Plataforma](https://img.shields.io/badge/plataforma-ESP32--S3-blue)
 ![Placa](https://img.shields.io/badge/placa-Heltec%20WiFi%20LoRa%2032%20V3-orange)
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2B%20PlatformIO-teal)
-![Versión](https://img.shields.io/badge/firmware-v1.00b-green)
+![Versión](https://img.shields.io/badge/firmware-v1.01b-green)
 ![Estado](https://img.shields.io/badge/estado-beta-yellow)
 ![Licencia del software](https://img.shields.io/badge/software-GPL--3.0-blue)
 ![Licencia del hardware](https://img.shields.io/badge/hardware%20y%20docs-CC%20BY--NC--SA%204.0-lightgrey)
@@ -254,11 +254,11 @@ muy larga (2,5 s) = dormir.
 | 5 | **PROP.** | Propagación: índices solares y condiciones por banda |
 | 6 | **POTA** | Spots de activaciones en CW |
 | 7 | **SOL** | Sol y línea gris: hoy, ahora y mañana |
-| 8 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización y fábrica) y `STATUS` |
+| 8 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización, depuración y fábrica) y `STATUS` |
 
 La cabecera muestra la hora (local o UTC, a elegir), el nombre de la pantalla y la batería (`PWR` si no hay batería).
-Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captura_oled.py) (necesita compilar con
-`DEPURACION_SERIE 1`).
+Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captura_oled.py) (necesita
+**CONF. > CONFIG > DEPURACION > ORDENES SERIE** en `SI`).
 
 ### Entrenador CW
 
@@ -318,6 +318,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | **TONO** | Frecuencia del tono CW (400–1000 Hz), con un pitido de prueba |
 | **WEBCONF** | Abre el portal WiFi (ver abajo) |
 | **ACTUALIZAR FW** | Actualización por OTA (ver [arriba](#actualizar-por-wifi-ota)) |
+| **DEPURACION** | Mensajes y órdenes por serie para pruebas: órdenes serie, diagnóstico, decodificador y retraso CW (todo en `NO` por defecto) |
 | **FABRICA** | Borra todo (pide confirmar) y reinicia |
 
 **CONF. > STATUS** muestra, en cinco páginas, la estación (ID, locator, hora y versión), el sistema (batería, LoRa,
@@ -389,8 +390,8 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 - **Cálculo solar** con las ecuaciones de la NOAA a partir del locator Maidenhead.
 - **Persistencia** en NVS: configuración del entrenador, keyer, Echo y TRX, estadísticas, datos de la estación y
   memorias.
-- **Depuración:** `DEPURACION_SERIE`, `DEPURACION_DIAG`, `DEPURACION_DECOD` y `DEPURACION_CW`, al principio de
-  `src/main.cpp`, activan órdenes y mensajes por serie (a 0 en las releases).
+- **Depuración:** en **CONF. > CONFIG > DEPURACION** se activan, sin recompilar, las órdenes por serie (captura
+  de pantalla y simulación del encoder) y los mensajes `[DIAG]`, `[DECOD]` y `[CW]`; se guardan en NVS.
 
 ---
 
@@ -406,7 +407,7 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 - [ ] Decodificador CW desde el audio del transceptor (firmware listo; pendiente de montaje y ajuste)
 - [ ] GPS: locator y hora automáticos
 - [ ] Que el Koch y el Echo repitan más los caracteres con más errores
-- [ ] Medida del consumo en reposo (deep sleep)
+- [x] Medida del consumo en reposo (deep sleep): inapreciable (0,00 A en el medidor)
 - [ ] PCB propia
 
 ---

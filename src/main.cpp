@@ -4,7 +4,7 @@
  * @brief Chispas: entrenador de CW portatil para la Heltec WiFi LoRa 32 V3 (ESP32-S3). Koch, Echo, keyer
  *        iambico, practica y QSO por LoRa, manipulacion del transceptor (KEY), decodificador CW, propagacion,
  *        spots POTA, sol y linea gris, y actualizacion por OTA desde las releases de GitHub.
- * @version 1.00b - Primera release (beta)
+ * @version 1.01b - Depuracion desde CONF > CONFIG
  * @date 2026-10-11
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -19,13 +19,13 @@
 
 // Version: se ve en Inicio, en CONF > STATUS y por serie. La etiqueta de la release de GitHub es "v" + esto
 // (la actualizacion OTA las compara). Cambiarla en cada version que se cargue o se publique
-#define FW_VERSION "1.00b"
+#define FW_VERSION "1.01b"
 
-// Depuracion: 0 en las versiones publicadas
-#define DEPURACION_SERIE 0  // Ordenes por serie: 'p' vuelca la OLED (docs/captura_oled.py) y d/i/k/l/a simulan el encoder
-#define DEPURACION_DIAG  0  // "[DIAG]" cada minuto: memoria, pilas, NVS y CPU
-#define DEPURACION_DECOD 0  // "[DECOD]" cada 2 s con el decodificador en marcha (para ajustar RV2 en banco)
-#define DEPURACION_CW    0  // "[CW ...]": retraso de cada transicion del motor CW (medido: 0 ms)
+// Depuracion: se activa en CONF > CONFIG > DEPURACION (NVS "depu", un bit por opcion; todo apagado por defecto)
+#define DEPU_SERIE 0x01  // Ordenes por serie: 'p' vuelca la OLED (docs/captura_oled.py) y d/i/k/l/a simulan el encoder
+#define DEPU_DIAG  0x02  // "[DIAG]" cada minuto: memoria, pilas, NVS y CPU
+#define DEPU_DECOD 0x04  // "[DECOD]" cada 2 s con el decodificador en marcha (para ajustar RV2 en banco)
+#define DEPU_CW    0x08  // "[CW ...]": retraso de cada transicion del motor CW (medido: 0 ms)
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -47,6 +47,9 @@
 #include <driver/rtc_io.h>
 #include <driver/adc.h>  // ADC por DMA (decodificador CW de la pantalla TRX)
 #include "certificados_github.h"  // Raices TLS para la actualizacion OTA
+
+volatile uint8_t depuracion = 0;  // Bits DEPU_*; la lee tambien la tarea del motor CW
+inline bool depuActiva(uint8_t bit) { return (depuracion & bit) != 0; }
 
 // ============================================================================
 // DEFINICION DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
@@ -482,9 +485,8 @@ uint8_t editorSel = 0;      // Posicion en la rueda
 
 int rssiUltimo = 0;
 
-// Depuracion (DEPURACION_CW): cuanto llega tarde cada transicion del motor CW respecto a lo programado; se
+// Depuracion (DEPU_CW): cuanto llega tarde cada transicion del motor CW respecto a lo programado; se
 // informa por serie al final de cada grupo. Solo lo usa la tarea del motor CW
-#if DEPURACION_CW
 uint32_t medidaCWNum = 0;
 uint32_t medidaCWSuma = 0;
 uint32_t medidaCWMax = 0;
@@ -503,7 +505,6 @@ void informarRetrasoCW(const char* origen) {
   medidaCWSuma = 0;
   medidaCWMax = 0;
 }
-#endif
 
 // ============================================================================
 // CONTROL DE AUDIO Y LED MORSE
@@ -594,9 +595,7 @@ bool esperarMotorCW(TickType_t objetivo, uint32_t id) {
     if (id <= motorCWCancelada) return false;
     TickType_t ahora = xTaskGetTickCount();
     if ((int32_t)(objetivo - ahora) <= 0) {
-#if DEPURACION_CW
-      registrarRetrasoCW(ahora - objetivo);
-#endif
+      if (depuActiva(DEPU_CW)) registrarRetrasoCW(ahora - objetivo);
       return true;
     }
     ulTaskNotifyTake(pdTRUE, objetivo - ahora);
@@ -652,9 +651,7 @@ void tareaEmisionCW(void* parametro) {
     emitirTextoMotorCW(p);
     conmutarEmisionMorse(false);  // Por si se ha cortado con el tono encendido
     motorCWFinMs = millis();
-#if DEPURACION_CW
-    informarRetrasoCW(p.origen);
-#endif
+    if (depuActiva(DEPU_CW)) informarRetrasoCW(p.origen);
     motorCWTerminadas = p.id;
   }
 }
@@ -1102,6 +1099,7 @@ void cargarDatosNVS() {
   aceleracionGiro = prefs.getUChar("acel", 5);   // ACELERACION_MAX
   if (aceleracionGiro == 1 || aceleracionGiro > 5) aceleracionGiro = 5;
   frecTonoHz = constrain(prefs.getUShort("tono", FREC_AUDIO_HZ), TONO_MIN_HZ, TONO_MAX_HZ);
+  depuracion = prefs.getUChar("depu", 0) & (DEPU_SERIE | DEPU_DIAG | DEPU_DECOD | DEPU_CW);
 
   for (int i = 0; i < 40; i++) {
     String kComp = "c_" + String(i);
@@ -1154,6 +1152,12 @@ void guardarAceleracionNVS() {
 void guardarTonoNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUShort("tono", frecTonoHz);
+  prefs.end();
+}
+
+void guardarDepuracionNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUChar("depu", depuracion);
   prefs.end();
 }
 
@@ -2312,15 +2316,13 @@ void procesarTrx() {
     pantallaPendiente = true;
   }
 
-#if DEPURACION_DECOD
   // Para ajustar RV2 en banco
   static unsigned long ultimoDiag = 0;
-  if (decodActivo && millis() - ultimoDiag >= 2000) {
+  if (depuActiva(DEPU_DECOD) && decodActivo && millis() - ultimoDiag >= 2000) {
     ultimoDiag = millis();
     Serial.printf("[DECOD] %u Hz, nivel %u%%, umbral %u%%, %u wpm%s\n", decodFrecHz, decodNivelPct, decodUmbralPct,
                   decodWpm, decodSaturado ? ", SATURA" : "");
   }
-#endif
 
   if (trxEnviandoMemoria || trxSintonizando) {
     if (motorCWOcupado() && palaPulsada()) motorCWDetener();  // Break-in: las palas cortan la memoria o el tune
@@ -2507,12 +2509,19 @@ bool procesarVistaPortal(uint8_t& foco, int8_t giro, bool pulsa, bool atras);
 // CONF: menu con CONFIG (opciones) y STATUS (informacion, en paginas)
 #define OPCION_BARRA_CONFIG 2
 uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // Menu: 0 = CONFIG, 1 = STATUS, 2 = barra ant./sig.
-enum SubConf { CONF_MENU, CONF_CONFIG, CONF_STATUS, CONF_PORTAL, CONF_EDITOR, CONF_OTA };
+enum SubConf { CONF_MENU, CONF_CONFIG, CONF_STATUS, CONF_PORTAL, CONF_EDITOR, CONF_OTA, CONF_DEPURACION };
 SubConf subConf = CONF_MENU;
 // Lista de CONFIG (4 a la vista; "volver" en el pie)
-enum OpcionConf { OC_ID, OC_LOCATOR, OC_ACELERACION, OC_APAGADO, OC_TONO, OC_WEBCONF, OC_ACTUALIZAR, OC_FABRICA, OC_VOLVER };
-#define N_OPCIONES_CONF 9
+enum OpcionConf { OC_ID, OC_LOCATOR, OC_ACELERACION, OC_APAGADO, OC_TONO, OC_WEBCONF, OC_ACTUALIZAR, OC_DEPURACION,
+                  OC_FABRICA, OC_VOLVER };
+#define N_OPCIONES_CONF 10
 uint8_t focoConf = 0;
+// Lista de DEPURACION: una opcion SI/NO por bit DEPU_* y "volver" en el pie (foco N_OPCIONES_DEPU)
+#define N_OPCIONES_DEPU 4
+const uint8_t BITS_DEPU[N_OPCIONES_DEPU] = { DEPU_SERIE, DEPU_DIAG, DEPU_DECOD, DEPU_CW };
+const char* const NOMBRES_OPCIONES_DEPU[N_OPCIONES_DEPU] = { "ORDENES SERIE", "DIAG (1 MIN)", "DECOD (2 S)",
+                                                             "RETRASO CW" };
+uint8_t focoDepu = 0;
 uint8_t focoPortalConf = 0;  // Vista del portal: 0 = ver qr, 1 = volver
 uint8_t paginaStatus = 0;
 #define N_PAGINAS_STATUS 5
@@ -4516,13 +4525,14 @@ String valorOpcionConf(uint8_t i) {
     case OC_TONO:        return String(frecTonoHz) + " Hz";
     case OC_WEBCONF:     return estadoWifi == WIFI_PORTAL ? String("ABIERTO") : String("");
     case OC_ACTUALIZAR:  return hayActualizacion() ? "v" + otaVersionNueva : String("");
-    case OC_FABRICA:     return confirmandoFabrica ? String("OTRA VEZ") : String("");
+    case OC_DEPURACION:  return depuracion != 0 ? String("SI") : String("NO");
+    case OC_FABRICA:    return confirmandoFabrica ? String("OTRA VEZ") : String("");
     default:             return String("");
   }
 }
 
 const char* const NOMBRES_OPCIONES_CONF[N_OPCIONES_CONF - 1] = {
-  "ID", "LOCATOR", "ACELERACION", "APAGADO", "TONO", "WEBCONF", "ACTUALIZAR FW", "FABRICA"
+  "ID", "LOCATOR", "ACELERACION", "APAGADO", "TONO", "WEBCONF", "ACTUALIZAR FW", "DEPURACION", "FABRICA"
 };
 
 // CONFIG: lista de opciones (4 a la vista, con el valor a la derecha) y "volver" en el pie
@@ -4530,6 +4540,16 @@ void dibujarListaConf() {
   dibujarListaOpciones(NOMBRES_OPCIONES_CONF, N_OPCIONES_CONF - 1, focoConf, valorOpcionConf,
                        (1UL << OC_ACELERACION) | (1UL << OC_APAGADO) | (1UL << OC_TONO));
   dibujarPieCentrado(focoConf == OC_VOLVER ? "> volver" : "  volver");
+}
+
+String valorOpcionDepu(uint8_t i) {
+  return depuActiva(BITS_DEPU[i]) ? String("SI") : String("NO");
+}
+
+// DEPURACION: salidas por serie para pruebas en banco (pulsar cambia SI/NO; se guarda en la NVS)
+void dibujarListaDepuracion() {
+  dibujarListaOpciones(NOMBRES_OPCIONES_DEPU, N_OPCIONES_DEPU, focoDepu, valorOpcionDepu, 0);
+  dibujarPieCentrado(focoDepu == N_OPCIONES_DEPU ? "> volver" : "  volver");
 }
 
 // Datos del portal (red, clave, web) con "ver qr" y "volver": CONF > WEBCONF y, sin conexion, PROP, POTA y SOL
@@ -4589,6 +4609,10 @@ void renderizarPantallaConfig() {
 
     case CONF_OTA:
       dibujarPantallaOta();
+      break;
+
+    case CONF_DEPURACION:
+      dibujarListaDepuracion();
       break;
   }
 }
@@ -5162,9 +5186,7 @@ void procesarCara() {
 //   pulsacion corta del eje (= corta del PRG) y larga del eje (= larga del PRG, salvo
 //   donde esta solo mueve el foco: ahi no hace nada, o sale de la edicion).
 enum EventoBoton { BOTON_NINGUNO, BOTON_CORTA, BOTON_LARGA, ENC_DERECHA, ENC_IZQUIERDA, ENC_PULSA, ENC_LARGA };
-#if DEPURACION_SERIE
 EventoBoton eventoSerie = BOTON_NINGUNO;  // Evento simulado por serie (ver procesarOrdenesSerie)
-#endif
 
 struct Pulsador {
   uint8_t pin;
@@ -5353,13 +5375,9 @@ void navegarDesdeBarra() {
 void dormirChispas(const char* motivo);  // Definida antes de setup()
 
 void procesarBoton() {
-#if DEPURACION_SERIE
   EventoBoton ev = (eventoSerie != BOTON_NINGUNO) ? eventoSerie : leerEventoBoton();
   if (eventoSerie != BOTON_NINGUNO) giroRapido = false;
   eventoSerie = BOTON_NINGUNO;
-#else
-  EventoBoton ev = leerEventoBoton();
-#endif
   if (ev == BOTON_NINGUNO) return;
   if (ev == BOTON_LARGA) {
     dormirChispas("PRG LARGO");  // No vuelve: al despertar, la placa arranca de nuevo
@@ -5588,7 +5606,7 @@ void procesarBoton() {
         break;
 
       case CONF_CONFIG:
-        // Lista: ID, LOCATOR, ACELERACION, APAGADO, TONO, WEBCONF, FABRICA y volver (en el pie)
+        // Lista: ID, LOCATOR, ACELERACION, APAGADO, TONO, WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA y volver (pie)
         if (atras) {
           subConf = CONF_MENU;
           confirmandoFabrica = false;
@@ -5627,6 +5645,10 @@ void procesarBoton() {
             case OC_ACTUALIZAR:
               confEntrarOta();
               break;
+            case OC_DEPURACION:
+              subConf = CONF_DEPURACION;
+              focoDepu = 0;
+              break;
             case OC_FABRICA:
               if (!confirmandoFabrica) confirmandoFabrica = true;
               else resetFabrica();
@@ -5641,6 +5663,24 @@ void procesarBoton() {
       case CONF_PORTAL:
         // Foco: 0 ver qr, 1 volver (sin portal abierto, solo volver). El portal sigue abierto al volver
         if (procesarVistaPortal(focoPortalConf, giro, pulsa, atras)) subConf = CONF_CONFIG;
+        break;
+
+      case CONF_DEPURACION:
+        // Foco: una opcion por bit DEPU_* (pulsar cambia SI/NO) y volver (pie)
+        if (atras) {
+          subConf = CONF_CONFIG;
+        } else if (giro != 0) {
+          focoDepu = (focoDepu + N_OPCIONES_DEPU + 1 + giro) % (N_OPCIONES_DEPU + 1);
+        } else if (pulsa) {
+          if (focoDepu < N_OPCIONES_DEPU) {
+            depuracion ^= BITS_DEPU[focoDepu];
+            guardarDepuracionNVS();
+            Serial.printf("[DEPURACION] %s: %s\n", NOMBRES_OPCIONES_DEPU[focoDepu],
+                          depuActiva(BITS_DEPU[focoDepu]) ? "SI" : "NO");
+          } else {
+            subConf = CONF_CONFIG;
+          }
+        }
         break;
 
       case CONF_STATUS:
@@ -6192,7 +6232,6 @@ void procesarBateriaYPantalla() {
   }
 }
 
-#if DEPURACION_DIAG
 /**
  * Diagnostico por serie cada DIAG_INTERVALO_MS: memoria (libre, minimo historico y mayor bloque, para
  * vigilar la fragmentacion), pila libre de cada tarea, uso de la NVS y frecuencia de la CPU
@@ -6212,7 +6251,6 @@ void procesarDiagnostico() {
                 uxTaskGetStackHighWaterMark(tareaKeyer), hayNvs ? nvs.used_entries : 0,
                 hayNvs ? nvs.total_entries : 0, getCpuFrequencyMhz());
 }
-#endif
 
 /**
  * Ahorro: la OLED pasa al minimo de brillo (display.dim: contraste 0) tras BRILLO_TENUE_MS sin tocar
@@ -6233,7 +6271,6 @@ void procesarBrillo() {
   }
 }
 
-#if DEPURACION_SERIE
 // Ordenes por serie para capturas y pruebas desde el PC. 'p' vuelca el buffer de la OLED (1024 bytes, formato
 // del SSD1306: byte = x + (y / 8) * 128, bit = y % 8) en hexadecimal entre dos marcas; docs/captura_oled.py lo
 // guarda en PNG (es la copia en RAM: no ve si el panel esta negro o atenuado). 'd' derecha, 'i' izquierda,
@@ -6259,12 +6296,9 @@ void procesarOrdenesSerie() {
   }
   Serial.println(F("[CAPTURA] FIN"));
 }
-#endif
 
 void loop() {
-#if DEPURACION_SERIE
-  procesarOrdenesSerie();
-#endif
+  if (depuActiva(DEPU_SERIE)) procesarOrdenesSerie();
   procesarBoton();
   procesarTonoPrueba();
   procesarTextoKeyer();
@@ -6279,9 +6313,7 @@ void loop() {
   procesarWifi();
   procesarOta();
   procesarBateriaYPantalla();
-#if DEPURACION_DIAG
-  procesarDiagnostico();
-#endif
+  if (depuActiva(DEPU_DIAG)) procesarDiagnostico();
   procesarStatus();
   procesarBrillo();
   procesarApagadoAuto();

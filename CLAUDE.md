@@ -23,14 +23,14 @@ montaje del decodificador, GPS.
 - **Primera release: v1.00b (beta), 11 oct 2026**, publicada como prerelease: https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.00b
   (con `gh`, instalado en el segundo equipo: `C:\Program Files\GitHub CLI\gh.exe`, sesión de ea4iln-debug). Etiqueta
   de git y de GitHub: `v` + `FW_VERSION`. Para probar el OTA sin publicar otra versión: compilar temporalmente con
-  `FW_VERSION "0.99"` y `DEPURACION_SERIE 1`, cargar, y ACTUALIZAR FW instala la última release.
+  `FW_VERSION "0.99"`, cargar, y ACTUALIZAR FW instala la última release.
 - **Binarios de cada release** (nombres exactos; el OTA busca el suyo por nombre):
   `chispas-<ver>.bin` (app, placa con encoder), `chispas-<ver>-sin-encoder.bin` (app, sin encoder) y, para grabar por
   USB en `0x0`, `chispas-<ver>-usb.bin` y `chispas-<ver>-sin-encoder-usb.bin` (imagen completa: `esptool.py
   --chip esp32s3 merge_bin -o ... --flash_mode dio --flash_size 8MB 0x0 bootloader.bin 0x8000 partitions.bin
   0xe000 boot_app0.bin 0x10000 firmware.bin`; `boot_app0.bin` está en
   `framework-arduinoespressif32/tools/partitions/`). Más `docs/LICENCIAS_TERCEROS.txt`.
-- **Antes de publicar:** los cuatro `DEPURACION_*` a 0, compilar los dos entornos, probar en placa y pedir al usuario
+- **Antes de publicar:** compilar los dos entornos, probar en placa y pedir al usuario
   que confirme. Publicar con `gh release create v<ver> ... --prerelease` (beta) y las notas en castellano.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >
   ACTUALIZAR FW (`CONF_OTA`, `confEntrarOta()`, `procesarOta()`, `buscarActualizacion()`, `instalarActualizacion()`):
@@ -40,15 +40,18 @@ montaje del decodificador, GPS.
   del almacén de Windows; si GitHub cambia de autoridad y ninguna vale, falla sin instalar). No instala con batería
   < 30 % sin USB. Aviso: con el WiFi ya encendido en PROP o POTA, comprueba una vez al día y lo enseña en la línea de
   estado (`FW NUEVO: v1.01b`) y en la lista de CONFIG. Particiones `default_8MB.csv` (app0/app1 de 3,2 MB).
-- **Depuración** (interruptores al principio de `main.cpp`, a 0 en las releases): `DEPURACION_SERIE` (órdenes por
-  serie: `p` vuelca la OLED para `docs/captura_oled.py`; `d`, `i`, `k`, `l`, `a` simulan el encoder),
-  `DEPURACION_DIAG` (`[DIAG]` cada minuto), `DEPURACION_DECOD` (`[DECOD]` cada 2 s), `DEPURACION_CW`. Para rehacer las
-  capturas del README: `DEPURACION_SERIE 1`, locator genérico IN80dk (en CONFIG) y el script de capturas (reinicia la
-  placa antes de cada una y navega con las órdenes); luego volver a poner el locator de la placa y la depuración a 0.
+- **Depuración** (desde la v1.01b, en el aparato: CONF > CONFIG > DEPURACION; antes eran `#define DEPURACION_*` y
+  había que recompilar): lista `CONF_DEPURACION` con ORDENES SERIE (`p` vuelca la OLED para
+  `docs/captura_oled.py`; `d`, `i`, `k`, `l`, `a` simulan el encoder), DIAG (1 MIN) (`[DIAG]`), DECOD (2 S)
+  (`[DECOD]`) y RETRASO CW (`[CW ...]`); pulsar cambia SI/NO. Variable `depuracion` (bits `DEPU_*`,
+  `depuActiva()`), NVS `depu` en `chispas`, todo apagado por defecto; sobrevive al reinicio (el script de capturas
+  reinicia la placa) y el reset de fábrica lo apaga. En CONFIG la opción muestra SI si hay alguna activa. Para rehacer
+  las capturas del README: ORDENES SERIE en SI, locator genérico IN80dk (en CONFIG) y el script de capturas; luego
+  volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.00b** (primera release). Historial de cambios: `git log`. Placa 1 (protoboard con
-  encoder, palas, KEY y batería; entorno normal) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.00b
+- Firmware: `src/main.cpp` **v1.01b** (depuración desde el menú; sin publicar como release). Historial de cambios:
+  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.01b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.00b
   desde el 11 oct 2026, cargada por USB con PlatformIO para conservar su NVS). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
   de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
@@ -112,7 +115,7 @@ montaje del decodificador, GPS.
 - **CONF** (v0.9g, reestructurada; probado por serie con capturas en la placa 1): menú con título
   " CONFIGURACION ", `< CONFIG >` y `< STATUS >` (`subConf`: `CONF_MENU/CONFIG/STATUS/PORTAL/EDITOR`).
   - **CONFIG:** lista con 4 a la vista, valor a la derecha y barra de desplazamiento; "volver" en el pie
-    (`OpcionConf`: ID, LOCATOR, ACELERACION, APAGADO, TONO, WEBCONF, FABRICA). ID y LOCATOR con el editor de las
+    (`OpcionConf`: ID, LOCATOR, ACELERACION, APAGADO, TONO, WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA). ID y LOCATOR con el editor de las
     memorias (`confAbrirEditor()`; destinos `EDITOR_ID_ESTACION` -2 y `EDITOR_LOCATOR` -3; solo letras y cifras, y
     `/` en el ID); OK valida con `aplicarIndicativo()`/`aplicarLocator()` (las mismas que el portal) y, si no vale,
     "NO VALIDO" y se sigue editando; guarda en `estacion`. WEBCONF abre el portal y una vista con sus datos
@@ -320,8 +323,8 @@ montaje del decodificador, GPS.
 3. **Ideas aparcadas** (para repensar más adelante):
    - Repetir más las letras con más errores en Koch y Echo (las estadísticas por carácter ya existen, v0.8g).
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
-     2016 bytes libres de 4096 tras Duo). El consumo en deep sleep no se ha medido (por USB lo tapan el CP2102 y el cargador; haría falta
-     medir en el cable de la batería con un polímetro en µA).
+     2016 bytes libres de 4096 tras Duo). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
+     resolución del aparato; el valor en µA sigue sin medir).
    - Detectar USB y carga: la V3 no lo permite por software. Propuesta sin decidir: divisor 100k/150k del pin 5V
      (J2-2) a GPIO33 (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.
 4. QSO LIBRE: probar en los dos sentidos cuando la placa 2 tenga palas. A futuro: audio I2S y OTA.
