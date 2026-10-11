@@ -551,15 +551,17 @@ def p_key():
 # Decodificador
 # ----------------------------------------------------------------------------
 def p_deco():
-    s = S(1050, 390)
-    j = s.block(20, 95, 80, 170, "J3", [("T", 125), ("S", 240)], "right", "#eaf6f7")
-    s.text(60, 165, "jack", 9, "middle", "normal", "#555")
-    s.text(60, 177, "3,5 mm", 9, "middle", "normal", "#555")
+    s = S(1050, 440)
+    j = s.block(20, 95, 80, 170, "J3", [("T", 125), ("R", 185), ("S", 240)], "right", "#eaf6f7")
+    s.text(60, 150, "jack", 9, "middle", "normal", "#555")
+    s.text(60, 162, "3,5 mm", 9, "middle", "normal", "#555")
+    # Anillo libre: con salida mono el anillo ya toca la malla; con salida estereo, puentearlo uniria L y R
+    s.text(120, 181, "libre", 8.5, "start", "italic", "#888")
     s.text(20, 70, "← cable M-M desde la salida", 9.5, "start", "italic", "#00838f")
     s.text(20, 83, "de altavoz ext. de la emisora", 9.5, "start", "italic", "#00838f")
     s.line([j["T"], (200, 125)])
     w = s.pot(200, 125, 245, "RV2", "10 kΩ")
-    s.text(200, 262, "trimmer: nivel", 9, "middle", "italic", "#555")
+    s.text(210, 262, "trimmer: nivel", 9, "start", "italic", "#555")
     s.line([(200, 245), (200, 290)])
     s.line([w, (290, w[1])])
     s.cap(290, 185, 360, 185, "C2", "1 µF")
@@ -580,7 +582,10 @@ def p_deco():
     s.cap(760, 185, 760, 290, "C3", "10 nF", color=C_OPT, dash="4 3")
     s.text(778, 262, "opcional,", 8.5, "start", "italic", C_OPT)
     s.text(778, 273, "no comprado", 8.5, "start", "italic", C_OPT)
-    h = s.block(900, 35, 110, 280, "Heltec V3", [("3V3", 60), ("GPIO6", 185), ("GND", 290)], "left", "#e8f0e8", ["ESP32-S3"])
+    h = s.block(900, 35, 120, 280, "Heltec V3", [("3V3", 60), ("GPIO6", 185), ("GND", 290)], "left", "#e8f0e8", ["ESP32-S3"])
+    for t, y in (("pin 2 · 3", 76), ("pin 17", 185), ("pin 1", 290)):
+        s.text(1014, y + 4, t, 8.5, "end", "normal", "#666")
+    s.text(960, 310, "conector J3 de la placa", 8.5, "middle", "italic", "#666")
     s.line([(430, 60), h["3V3"]], C_3V3, 1.8)
     s.dot(430, 60, C_3V3)
     s.dot(660, 60, C_3V3)
@@ -591,9 +596,11 @@ def p_deco():
     s.tag(820, 180, "ADC1", "#00838f")
     s.vcc(430, 50)
     s.line([(430, 50), (430, 60)], C_3V3, 1.6)
-    notes(s, 20, 322, [
-        "RV2: empezar con el cursor cerca de GND y subir. Pantalla TRX → DECODIFICAR: barra de nivel (sin «SATURA») y [DECOD] por serie.",
-        "D1: banda (cátodo) a 3V3. D2: banda a GPIO6. C2 sin polaridad. GPIO6 es ADC1: funciona con el WiFi encendido.",
+    notes(s, 20, 337, [
+        "Pines de la Heltec en su conector J3 (no confundir con el jack J3): GPIO6 = pin 17, 3V3 = pin 2 o 3, GND = pin 1 (el del pad cuadrado).",
+        "RV2 (trimmer 3296): patilla 3 a la punta de J3, patilla 1 a GND, cursor (2, la central) a C2. Empezar con el cursor cerca de GND.",
+        "D1: banda (cátodo) a 3V3. D2: banda a GPIO6. C2 sin polaridad. R4 y R5 dejan la entrada en 1,65 V (mitad del ADC).",
+        "Anillo de J3 sin conectar: con salida mono ya toca la malla; puentearlo con la punta uniría los dos canales de una salida estéreo.",
         "J3 une la masa de la emisora a GND. Si hay zumbido (lazo de masa): trafo de aislamiento 600:600 (no comprado).",
         "Al conectar J3 se calla el altavoz de la emisora: para seguir oyéndola hace falta un divisor 1 → 2 (no comprado).",
     ])
@@ -763,7 +770,8 @@ def main():
     pages.append(f'''<div class="page">{header("Entrada de audio del decodificador", 6, T)}
 <div class="panel"><h2>7 · Entrada de audio desde la emisora (decodificador CW)</h2>{fit(p_deco(), 118)}</div>
 <ul>
-<li>El firmware lo usa en la pantalla <b>TRX</b>: DECODIFICAR y QSO. Tono fijo (400–1000 Hz) o automático.</li>
+<li>El firmware lo usa en la pantalla <b>TRX</b>: DECODIFICAR y QSO. Tono en DECODIFICAR → menu → TONO: AUTO o fijo (400–1000 Hz).</li>
+<li>Salida de la emisora: altavoz exterior o auriculares, con el volumen bajo. La barra de nivel no debe marcar «SATURA» (bajar RV2 o el volumen); sin nada conectado, con GPIO6 al aire, también puede salir.</li>
 <li>Mientras se emite por KEY, el decodificador no escucha (para no descodificar el tono de la propia emisora).</li>
 </ul></div>''')
 
@@ -786,7 +794,7 @@ def main():
 <li><b>3. Palas</b>: comprobar por serie DIT/DAH antes del keyer. ✔</li>
 <li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). ✔ <i>El piezo suena muy bajo: cuando lleguen U2 y LS1, montarlos en su sitio (hoja 4) y ajustar la ganancia.</i></li>
 <li><b>5. KEY</b> con R10: pantalla TRX → OPERAR. Primero GPIO2 con el polímetro (≈ 3,3 V con cada elemento, 0 V en reposo); luego, sin emisora, continuidad entre punta y malla de J4 al manipular. ✔ <i>Con la uSDR: puente R-T en J4 (manipula por el anillo).</i></li>
-<li><b>6. Decodificador</b>: RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra y <code>[DECOD]</code> por serie.</li>
+<li><b>6. Decodificador</b> (hoja 6): sin emisora, polímetro en GPIO6 ≈ 1,65 V. Luego RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra (y <code>[DECOD]</code> por serie si se compila con <code>DEPURACION_DECOD 1</code>).</li>
 <li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional.</li>
 <li><b>9. Batería</b> al final, comprobada la polaridad.</li>
 </ul>
