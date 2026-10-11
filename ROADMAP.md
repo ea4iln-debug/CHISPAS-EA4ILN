@@ -58,10 +58,15 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
   publicar.
 - **ESP-NOW para Duo y QSO:** las tramas no dependen de la radio; enviarlas por ESP-NOW permitiría practicar con
   placas ESP32 sin LoRa, a corta distancia (50–200 m) y sin router.
-- **Audio I2S:** tono de mejor calidad con un DAC o amplificador I2S en lugar de PWM.
 
 ### Por decidir
 - **SOTA:** las condiciones de su API exigen aprobación previa para software generado con IA.
+
+### A estudiar (no prioritario)
+- **Audio I2S:** tono senoidal con rampas (sin clics) y volumen por software con un módulo DAC + amplificador I2S
+  (p. ej. MAX98357A, 3 GPIO). Sustituiría al PAM8302A y obligaría a rehacer la salida de auriculares.
+- **GPS ATGM336H** en lugar del NEO-6M: más pequeño, más barato y de menor consumo (GPS + BeiDou), con la misma
+  conexión (UART a 9600 bd, NMEA). Por ahora se sigue con el NEO-6M.
 
 ## 4. Documentación y publicación
 - Al montar el amplificador y el GPS: esquema (quitar PENDIENTE), README y capturas.
@@ -72,7 +77,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 1. **Sin piezas:** batería después del decodificador, prueba de estabilidad de una noche, keyer iámbico y X6200.
 2. **Al llegar el amplificador:** montaje, ganancia y control de SD en el firmware.
 3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.03b.
-4. **Después:** POTA sin conexión, cola de spots, ESP-NOW, audio I2S y PCB.
+4. **Después:** POTA sin conexión, cola de spots, ESP-NOW y PCB.
 
 ## Hecho
 - ✅ Entrenador Koch estilo LCWO con corrección por letra o por total, Echo y TX libre (keyer iámbico A/B).

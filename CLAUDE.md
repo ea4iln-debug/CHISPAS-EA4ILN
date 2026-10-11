@@ -353,7 +353,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
      resolución del aparato) y después en µA (12 oct 2026): **despreciable**.
    - Detectar USB y carga: la V3 no lo permite por software. Propuesta sin decidir: divisor 100k/150k del pin 5V
      (J2-2) a GPIO33 (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.
-4. QSO LIBRE: probar en los dos sentidos cuando la placa 2 tenga palas. A futuro: audio I2S y OTA.
+4. QSO LIBRE: probar en los dos sentidos cuando la placa 2 tenga palas. A estudiar, no prioritarios: audio I2S y GPS ATGM336H en lugar del NEO-6M (ver `ROADMAP.md`).
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).
