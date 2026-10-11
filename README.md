@@ -18,10 +18,10 @@
 > [descargo de responsabilidad](#descargo-de-responsabilidad).
 
 <p align="center">
-  <img src="docs/img/prototipo.jpg" width="800" alt="Prototipo de Chispas en protoboard: Heltec V3 con encoder, jack de auriculares, buzzer y potenciómetro de volumen, manipulador de palas y una segunda placa con batería">
+  <img src="docs/img/prototipo.jpg" width="800" alt="Prototipo de Chispas en protoboard: Heltec V3 con antena LoRa, encoder, buzzer, manipulador de palas, jacks de auriculares, KEY y audio de la emisora, y sensor BME280">
   <br>
-  <sub>El prototipo en protoboard (octubre de 2026): Heltec V3 con encoder, buzzer, jack de auriculares, volumen y
-  manipulador de palas. Abajo a la derecha, la segunda placa, con batería, para practicar por LoRa.</sub>
+  <sub>El prototipo en protoboard (12 de octubre de 2026): Heltec V3 con antena LoRa, encoder, buzzer, volumen,
+  manipulador de palas, jacks de auriculares, de KEY y de audio de la emisora, optoacoplador y sensor BME280.</sub>
 </p>
 
 Chispas reúne en un aparato de bolsillo lo necesario para aprender y practicar CW: un entrenador por el método Koch,
