@@ -116,6 +116,7 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 | 5 | J3-16 | Pala de raya (DAH), pull-up interno | ✅ |
 | 6 | J3-17 | Entrada de audio del decodificador (ADC1, por DMA) | ✅ |
 | 7 | J3-18 | Tono CW por PWM (buzzer y auriculares) | ✅ |
+| 38 | J3-11 | Apagado (SD) del amplificador PAM8302A | 🚧 |
 | 19 / 20 | J2-18 / J2-17 | Encoder CLK / DT | ✅ |
 | 48 | J2-14 | Pulsador del encoder | ✅ |
 | 47 | J2-13 | RX desde el TX del GPS | 🚧 |
@@ -398,18 +399,8 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 
 ## Hoja de ruta
 
-- [x] Tono por buzzer piezo y auriculares con volumen
-- [x] Estadísticas por carácter y por lección (Koch y Echo)
-- [x] QSO por LoRa con las palas
-- [x] Salida KEY aislada para manipular el transceptor, con tune
-- [x] Configuración en el aparato (indicativo, locator...) y página de estado
-- [x] Actualización por WiFi desde las releases de GitHub
-- [ ] Amplificador y altavoz para el tono (piezas en camino)
-- [x] Decodificador CW desde el audio del transceptor
-- [ ] GPS: locator y hora automáticos
-- [x] Que el Koch y el Echo repitan más los caracteres con más errores
-- [x] Medida del consumo en reposo (deep sleep): inapreciable (0,00 A en el medidor)
-- [ ] PCB propia
+Lo pendiente (pruebas, hardware y desarrollo) está en [ROADMAP.md](ROADMAP.md). Lo siguiente: amplificador y
+altavoz para el tono, GPS para el locator y la hora automáticos, y POTA sin conexión.
 
 ---
 

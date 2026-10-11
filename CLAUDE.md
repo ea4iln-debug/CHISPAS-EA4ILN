@@ -5,7 +5,7 @@
 para radioaficionados (indicativo EA4ILN) sobre una **Heltec WiFi LoRa 32 V3** (ESP32-S3FN8, SX1262 a 868 MHz,
 OLED 0,96", sin PSRAM, 8 MB de flash). Entrenador Koch estilo LCWO, Echo, keyer iámbico, práctica y QSO por LoRa,
 conexión con el transceptor (KEY, tune, memorias, decodificador), propagación, spots POTA, sol y línea gris,
-configuración en el aparato y actualización OTA desde las releases de GitHub. Pendiente: amplificador del tono y GPS.
+configuración en el aparato y actualización OTA desde las releases de GitHub. Pendiente: amplificador del tono y GPS (ver `ROADMAP.md`).
 
 ## Repositorio
 - GitHub: `https://github.com/ea4iln-debug/CHISPAS-EA4ILN` (GitHub redirige la URL anterior del repositorio).
@@ -55,8 +55,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - Firmware: `src/main.cpp` **v1.02b** (refuerzo de las letras con más errores; silenciador y fin de palabra del
   decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
-  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.02b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.01b
-  desde el 11 oct 2026, por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
+  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.02b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.02b
+  desde el 12 oct 2026, por OTA; antes la v1.01b, también por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
   de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
   Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
@@ -258,7 +258,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   placa 1 (alimentada a través del medidor USB); probado sin medidor y con batería (10 oct 2026):
   encendió 8 de 10 veces, así que el medidor no es la causa. Aparcado por decisión del usuario. Las órdenes de diagnóstico por serie de la v0.8a (`s`, `a`, `b`, `v`)
   se quitaron en la v0.8b a petición del usuario (están en el historial de git, commit 2f61d2f, si hacen falta).
-- **Dormir** (v0.7n, probado en la placa 2: tres ciclos): PRG largo, o `apagadoAutoMin` sin tocar nada (v0.7o: se
+- **Dormir** (v0.7n, probado en la placa 2: tres ciclos; y en la placa 1 el 12 oct 2026): PRG largo, o `apagadoAutoMin` sin tocar nada (v0.7o: se
   elige en CONF → `apagado`: nunca, 5, 10, 15, 30, 60 o 120 min; por defecto 30; NVS `apag`), salvo en CW y LoRa y
   sus subpantallas o con el portal abierto → `dormirChispas()`: aviso 1,5 s, OLED,
   WiFi, LoRa y LED apagados; KEY en BAJO, Vext apagada y divisor de batería desactivado, retenidos con `gpio_hold_en`
@@ -331,8 +331,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   en 1 kΩ: se prueba con auriculares. Descartados: transistor con buzzer magnético o altavoz (se pierden RV1 y el
   silencio del jack) y dos GPIO en contrafase (RV1 deja de regular el buzzer). **Pedidos** (10 oct 2026): módulo
   **PAM8302A** (U2) y **altavoz de 8 Ω 0,5–1 W** (LS1), en el sitio del piezo: TN → A+ con R9 10 kΩ a GND, A− y GND
-  a GND, VIN a 3V3 (el pin 5V no tiene tensión con batería), salida al altavoz; SD sin conectar (o a GPIO38 para
-  apagarlo fuera de CW/LoRa: ~4 mA en reposo). RV1 sigue de volumen; el PAM8302A tiene mucha ganancia: bajar su
+  a GND, VIN a 3V3 (el pin 5V no tiene tensión con batería), salida al altavoz; **SD a GPIO38** (decidido el 12 oct
+  2026; J3-11): el firmware lo pondrá en BAJO fuera de CW/LoRa/TRX y al dormir (con `gpio_hold`), porque el 3V3 sigue
+  vivo en deep sleep y sin SD el amplificador gastaría ~4 mA también dormido. RV1 sigue de volumen; el PAM8302A tiene mucha ganancia: bajar su
   trimmer si lo trae, o 47 kΩ en serie con A+. Vigilar picos en el 3V3 (la OLED de la placa 1 es sensible).
   En el esquema (hoja 4) están el piezo montado y, debajo, el montaje con U2, R9 y LS1 marcado PENDIENTE (PDF
   regenerado el 10 oct 2026).
@@ -345,11 +346,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
    ganancia en banco; GPS cuando llegue (opcionales: enable del GPS y BME280). Entrada del decodificador en GPIO6:
-   **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; queda comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
+   **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; queda comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
      2016 bytes libres de 4096 tras Duo). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
-     resolución del aparato; el valor en µA sigue sin medir).
+     resolución del aparato) y después en µA (12 oct 2026): **despreciable**.
    - Detectar USB y carga: la V3 no lo permite por software. Propuesta sin decidir: divisor 100k/150k del pin 5V
      (J2-2) a GPIO33 (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.
 4. QSO LIBRE: probar en los dos sentidos cuando la placa 2 tenga palas. A futuro: audio I2S y OTA.
@@ -376,6 +377,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 4 / 5 | Pala DIT / DAH (pull-up interno; `KEYER_PADDLE_DIT/DAH`). **Montado y probado** |
 | 6 | Entrada del decodificador (ADC1): acoplo 1 µF, polarización 2×10 kΩ, trimmer, 1 kΩ y 2×1N4148 |
 | 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, buzzer piezo pasivo en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R |
+| 38 | SD (apagado) del amplificador PAM8302A, pendiente de montar. BAJO = apagado |
 | 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
 | 3 (futuro) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido |
@@ -383,7 +385,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 
 Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, el más cercano al USB):
 - J3: 18 GPIO7 tono · 17 GPIO6 decod. · 16 GPIO5 DAH · 15 GPIO4 DIT · 14 GPIO3 GPS en · 13 GPIO2 KEY · 12 GPIO1 (VBAT, no)
-  · 11/10/9 GPIO38/39/40 (libres) · 8/7 GPIO41/42 · 6/5 GPIO45/46 (no) · 4 GPIO37 (no) · 3/2 **3V3** · 1 **GND**.
+  · 11 GPIO38 SD del amplificador · 10/9 GPIO39/40 (libres) · 8/7 GPIO41/42 · 6/5 GPIO45/46 (no) · 4 GPIO37 (no) · 3/2 **3V3** · 1 **GND**.
 - J2: 18/17 GPIO19/20 encoder CLK/DT · 16 GPIO21 (OLED_RST) · 15 GPIO26 (flash, no) · 14 GPIO48 encoder SW · 13 GPIO47 GPS RX
   · 12/11 GPIO33/34 · 10 GPIO35 (LED) · 9 GPIO36 (Vext) · 8 GPIO0 (PRG) · 7 RST · 6/5 GPIO43/44 (UART0) · 4/3 Ve · 2 5V · 1 GND.
 - `Ve` es Vext (conmutada por GPIO36, alimenta la OLED): los módulos van a 3V3 de J3. `5V` solo tiene tensión con USB.
@@ -391,7 +393,7 @@ Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, 
   (mismo bus; 0x76 no choca con la OLED 0x3C): solo si faltan pines, soldando hilo fino.
 - GPIO3 es pin de arranque (JTAG) solo con un eFuse grabado (de fábrica no): el 100 kΩ del enable no debería afectar
   (razonado, sin probar).
-- Pines libres: 38–42, 33 y 34. No usar: 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46 (arranque).
+- Pines libres: 39–42, 33 y 34. No usar: 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46 (arranque).
 
 Esquema de conexiones: `docs/esquema_protoboard.pdf` (7 hojas: vista general, pines, entradas, tono y amplificador,
 KEY y alimentación, decodificador, componentes y montaje), generado con `docs/gen_esquema.py` (HTML/SVG; el PDF se
@@ -399,9 +401,8 @@ imprime con Edge sin interfaz: `msedge --headless --no-pdf-header-footer --print
 con `C:\Program Files\Google\Chrome\Application\chrome.exe`). El script recibe la ruta del HTML como argumento. Las hojas
 tienen altura fija y ocultan lo que sobra: tras cambios grandes, revisar el PDF (no basta con el HTML en pantalla). Si cambia algún pin, actualizar el script y regenerar el PDF.
 
-## KiCad: APLAZADO
-**No trabajar en KiCad, `pins.h`, `pcb_spec.md` ni `gen_kicad.py` por ahora.** (Referencia, sin usar: describen una
-PCB portadora rev. A.2; la fuente de verdad del circuito era `gen_kicad.py`.)
+## PCB
+Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de KiCad en el repositorio.
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno.

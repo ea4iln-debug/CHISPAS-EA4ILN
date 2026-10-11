@@ -453,8 +453,10 @@ def p_ampli():
     # U2: patillas de entrada a la izquierda; alimentacion arriba y abajo; salida a la derecha
     u = s.block(360, 50, 170, 200, "U2 · PAM8302A", [("SD", 80), ("A+", 140), ("A−", 190)], "left", "#fff",
                 ["amplificador mono 2,5 W"])
-    s.line([u["SD"], (250, 80)], C_OPT, 1.6, "5 4")
-    s.text(245, 84, "sin conectar (opcional: GPIO38 para apagarlo)", 9, "end", "italic", C_OPT)
+    # SD a GPIO38: el firmware apaga U2 fuera de CW/LoRa/TRX y al dormir (si no, gasta ~4 mA siempre, tambien dormido)
+    s.line([u["SD"], (200, 80)])
+    s.text(195, 76, "GPIO38", 10, "end", "bold")
+    s.text(195, 89, "J3-11", 9, "end", "normal", "#666")
     s.line([u["A−"], (315, 190), (315, 205)])
     s.gnd(315, 205)
     s.line([(410, 50), (410, 28)], C_3V3, 1.8)
@@ -480,6 +482,7 @@ def p_ampli():
         "VIN a 3V3 (el pin 5V no tiene tensión con batería). OUT+/OUT− van en puente: ninguna de las dos a GND.",
         "RV1 sigue de volumen. Si satura con poco giro: bajar el trimmer de ganancia de U2 (si lo trae) o 47 kΩ en serie con A+.",
         "Comprobar las patillas del módulo que llegue. Con volumen alto, vigilar que la OLED no parpadee (picos en el 3V3).",
+        "SD a GPIO38: BAJO = apagado (< 1 µA). El firmware lo enciende solo para el tono; sin SD gastaría ~4 mA, también dormido.",
     ], 9.5, 14)
     return s.svg()
 
@@ -655,6 +658,7 @@ PINES = [
     ("7", "Tono CW", "R1 1 kΩ → RV1 → buzzer (o ampli U2) / auriculares", "PWM (LEDC) 850 Hz (CONF: 400–1000)", ""),
     ("19", "Encoder CLK", "KY-040 CLK", "Entrada (pull-up en el módulo)", ""),
     ("20", "Encoder DT", "KY-040 DT", "Entrada (pull-up en el módulo)", ""),
+    ("38", "Apagado del amplificador", "SD de U2 (PAM8302A)", "Salida, BAJO = apagado (fuera de CW/LoRa/TRX y al dormir)", "pendiente"),
     ("41", "BME280 SDA", "Wire1", "I2C", "opc"),
     ("42", "BME280 SCL", "Wire1", "I2C", "opc"),
     ("47", "RX del GPS", "TX del NEO-6M", "UART1 RX, 9600 bd", ""),
@@ -707,7 +711,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v1.02b<br>11 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v1.02b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
@@ -741,8 +745,8 @@ def main():
 <div><table><tr><th>GPIO</th><th>Función</th><th>Conecta a</th><th>Modo</th></tr>{filas}</table></div>
 <div><h2>Reglas</h2><ul>
 <li><b>No usar</b>: 0 (PRG), 1 (lectura de batería), 8–14 (LoRa), 17/18/21 (OLED), 26–32 (flash), 35 (LED), 36 (Vext), 37 (control de batería), 43/44 (USB serie), 45/46 (arranque).</li>
-<li><b>Libres de reserva</b> (según el pinout publicado de la V3, sin probar en tu placa): 33, 34, 38, 39, 40.</li>
-<li><b>GPIO19/20</b> son USB D−/D+ del S3, pero funcionan como entradas del encoder (probado con <code>prueba_pines</code>). Plan B: 38/39/40.</li>
+<li><b>Libres de reserva</b> (según el pinout publicado de la V3, sin probar en tu placa): 33, 34, 39, 40 (38 queda para el SD del amplificador).</li>
+<li><b>GPIO19/20</b> son USB D−/D+ del S3, pero funcionan como entradas del encoder (probado con <code>prueba_pines</code>). Plan B: 39/40 o 33/34.</li>
 <li><b>GPIO41/42</b> para el BME280 (Wire1): comprobar que salen al conector. Si la placa saca 17/18, el BME280 puede ir al bus del OLED.</li>
 <li><b>GPIO3</b> es pin de arranque (origen del JTAG) pero solo cuenta con el eFuse grabado: la R8 de 100 kΩ a 3V3 no molesta. <b>GPIO45</b> nunca con pull-up: cambia la tensión de la flash y la placa no arranca.</li>
 <li><b>GPIO2</b> maneja la emisora: en BAJO desde el arranque y con R10 a GND. El firmware solo la activa en la pantalla TRX (OPERAR y QSO), con corte de seguridad a los 10 s.</li>
@@ -784,7 +788,6 @@ def main():
 <div><h2>No está en la lista y conviene tener</h2><ul>
 <li><b>Soldador y estaño</b>: J2 (5 patillas), SW1 en el cable de la batería y, si hace falta, las tiras de pines de la Heltec.</li>
 <li><b>Divisor minijack 1 → 2</b>: para seguir oyendo la emisora con J3 conectado.</li>
-<li><b>2 pulsadores 6×6 mm</b>: para probar el keyer sin palas (de GPIO4/5 a GND).</li>
 <li>Opcionales sin comprar: C3 10 nF (filtro del ADC), trafo 600:600 (lazo de masa), 1 kΩ + 100 nF (arranque suave de Q1).</li>
 </ul>
 <h2 style="margin-top:3mm">Orden de montaje (un bloque cada vez)</h2><ul>
