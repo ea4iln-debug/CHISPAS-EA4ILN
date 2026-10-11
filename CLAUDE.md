@@ -6,7 +6,7 @@ para radioaficionados (indicativo EA4ILN) sobre una **Heltec WiFi LoRa 32 V3** (
 OLED 0,96", sin PSRAM, 8 MB de flash). Entrenador Koch estilo LCWO, Echo, keyer iámbico, práctica y QSO por LoRa,
 conexión con el transceptor (KEY, tune, memorias, decodificador), propagación, spots POTA, sol y línea gris,
 configuración en el aparato y actualización OTA desde las releases de GitHub. Pendiente: amplificador del tono,
-montaje del decodificador, GPS.
+afinar la separación de palabras del decodificador, GPS.
 
 ## Repositorio
 - GitHub: `https://github.com/ea4iln-debug/CHISPAS-EA4ILN` (GitHub redirige la URL anterior del repositorio).
