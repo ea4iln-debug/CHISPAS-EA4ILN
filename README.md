@@ -5,7 +5,7 @@
 ![Plataforma](https://img.shields.io/badge/plataforma-ESP32--S3-blue)
 ![Placa](https://img.shields.io/badge/placa-Heltec%20WiFi%20LoRa%2032%20V3-orange)
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2B%20PlatformIO-teal)
-![Versión](https://img.shields.io/badge/firmware-v1.01b-green)
+![Versión](https://img.shields.io/badge/firmware-v1.02b-green)
 ![Estado](https://img.shields.io/badge/estado-beta-yellow)
 ![Licencia del software](https://img.shields.io/badge/software-GPL--3.0-blue)
 ![Licencia del hardware](https://img.shields.io/badge/hardware%20y%20docs-CC%20BY--NC--SA%204.0-lightgrey)
@@ -13,9 +13,8 @@
 > *"Chispas"* era el apodo que se daba al radiotelegrafista de a bordo.
 
 > [!WARNING]
-> **Versión beta.** La 1.00b es la primera versión publicada. Chispas es todavía un prototipo en protoboard: el
-> decodificador CW no se ha probado con señal real, la salida KEY solo se ha probado con un transceptor y los
-> valores del circuito son de partida. Úsalo bajo tu responsabilidad: lee el
+> **Versión beta.** Chispas es todavía un prototipo en protoboard: la salida KEY solo se ha probado con un
+> transceptor y varios valores del circuito son de partida. Úsalo bajo tu responsabilidad: lee el
 > [descargo de responsabilidad](#descargo-de-responsabilidad).
 
 <p align="center">
@@ -68,7 +67,7 @@ GitHub.
 | **TX libre (keyer iámbico)** | Modos A y B, 10–40 wpm, palas normales o invertidas. Descodifica en pantalla lo que se manipula. | ✅ |
 | **Práctica Duo por LoRa** | Práctica en pareja entre dos Chispas: uno envía grupos y el otro los recibe y los copia. Tramas digitales a 868 MHz, sin audio. | ✅ |
 | **QSO libre por LoRa** | QSO con las palas entre dos Chispas: cada palabra se envía al terminarla y lo recibido suena cuando dejas de manipular (si manipulas mientras suena, se corta). | ✅ |
-| **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`), decodificador CW del audio de la emisora y QSO con las dos cosas a la vez. | ✅ KEY / 🚧 decodificador |
+| **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez. | ✅ |
 | **Propagación** | Índices solares y condiciones por banda de [hamqsl.com](https://www.hamqsl.com/). | ✅ |
 | **Spots POTA** | Activaciones en CW publicadas en [pota.app](https://pota.app/). | ✅ |
 | **Sol y línea gris** | Salida y puesta del sol y ventanas de línea gris de hoy y de mañana, y altura actual del sol, para el locator de la estación. Funciona sin conexión. | ✅ |
@@ -115,7 +114,7 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 | 2 | J3-13 | Salida KEY (PC817, 330 Ω, y 10 kΩ a GND). Solo la activa la pantalla TRX | ✅ (probada con una uSDR) |
 | 4 | J3-15 | Pala de punto (DIT), pull-up interno | ✅ |
 | 5 | J3-16 | Pala de raya (DAH), pull-up interno | ✅ |
-| 6 | J3-17 | Entrada de audio del decodificador (ADC1, por DMA) | 🚧 montaje |
+| 6 | J3-17 | Entrada de audio del decodificador (ADC1, por DMA) | ✅ |
 | 7 | J3-18 | Tono CW por PWM (buzzer y auriculares) | ✅ |
 | 19 / 20 | J2-18 / J2-17 | Encoder CLK / DT | ✅ |
 | 48 | J2-14 | Pulsador del encoder | ✅ |
@@ -151,7 +150,7 @@ Para grabar la imagen completa basta con [ESP Tool web](https://espressif.github
 
 ```bash
 pip install esptool
-esptool.py --chip esp32s3 --port COMx write_flash 0x0 chispas-1.01b-usb.bin
+esptool.py --chip esp32s3 --port COMx write_flash 0x0 chispas-1.02b-usb.bin
 ```
 
 La imagen completa **borra la configuración** guardada (estación, estadísticas y red WiFi): úsala para la primera
@@ -378,8 +377,9 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
   con tipo (grupo Duo o palabra de QSO), número de secuencia, wpm e indicativo. Antes de transmitir se escucha el
   canal (CAD).
 - **Decodificador CW:** el ADC lee el audio de la emisora por DMA a 8 kHz en una tarea del otro núcleo; algoritmo de
-  Goertzel en bloques de 12 ms, tono fijo o automático (400–1000 Hz), umbral y velocidad adaptativos. No escucha
-  mientras se emite por KEY.
+  Goertzel en bloques de 12 ms, tono fijo o automático (400–1000 Hz), umbral y velocidad adaptativos, silenciador
+  (con solo ruido de banda no descodifica) y fin de palabra según la pausa real entre letras. No escucha mientras se
+  emite por KEY. Comprobado con audio Morse real.
 - **Salida KEY con seguridad:** solo se activa en la pantalla TRX y se corta sola si queda activa más de 10 s (en el
   tune, su duración más 2 s).
 - **Actualización OTA:** consulta la API de GitHub, compara versiones (`1.00b` < `1.01b` < `1.01`) y escribe la otra
@@ -405,7 +405,7 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 - [x] Configuración en el aparato (indicativo, locator...) y página de estado
 - [x] Actualización por WiFi desde las releases de GitHub
 - [ ] Amplificador y altavoz para el tono (piezas en camino)
-- [ ] Decodificador CW desde el audio del transceptor (firmware listo; pendiente de montaje y ajuste)
+- [x] Decodificador CW desde el audio del transceptor (falta afinar la separación de palabras)
 - [ ] GPS: locator y hora automáticos
 - [x] Que el Koch y el Echo repitan más los caracteres con más errores
 - [x] Medida del consumo en reposo (deep sleep): inapreciable (0,00 A en el medidor)

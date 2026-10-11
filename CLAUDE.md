@@ -23,7 +23,8 @@ montaje del decodificador, GPS.
 - **Primera release: v1.00b (beta), 11 oct 2026**, publicada como prerelease: https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.00b
   (con `gh`, instalado en el segundo equipo: `C:\Program Files\GitHub CLI\gh.exe`, sesión de ea4iln-debug).
   **v1.01b (beta)**, 11 oct 2026, también prerelease; en el primer equipo no hay `gh`: se creó con la API REST y la
-  credencial de git (script temporal, fuera del repositorio). Etiqueta
+  credencial de git (script temporal, fuera del repositorio). **v1.02b (beta)**, 11 oct 2026, prerelease (con `gh`
+  desde el segundo equipo): refuerzo de letras con errores y decodificador comprobado con audio real. Etiqueta
   de git y de GitHub: `v` + `FW_VERSION`. Para probar el OTA sin publicar otra versión: compilar temporalmente con
   `FW_VERSION "0.99"`, cargar, y ACTUALIZAR FW instala la última release.
 - **Binarios de cada release** (nombres exactos; el OTA busca el suyo por nombre):
@@ -52,8 +53,8 @@ montaje del decodificador, GPS.
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.02b** (refuerzo de las letras con más errores; en la placa 1, **sin release**: el
-  usuario decide cuándo se sube la versión y cuándo se publica);
+- Firmware: `src/main.cpp` **v1.02b** (refuerzo de las letras con más errores; silenciador y fin de palabra del
+  decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
   `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.02b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.01b
   desde el 11 oct 2026, por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
@@ -295,7 +296,8 @@ montaje del decodificador, GPS.
     sale SATURA). RV2 hay que llevarlo casi al máximo (multivuelta): con 0,1–0,5 V~ en la punta de J3 la barra llega
     al 60–90 % sin saturar. **Con Morse limpio** (generador del móvil/PC, texto de la NOAA "OFFSHORE WATERS...
     NATIONAL ... SERVICE WASHINGTON DC") descodifica bien en AUTO y con tono fijo, y los wpm estimados son correctos.
-    **Mejoras del 11 oct 2026 (en la v1.02b, sin subir versión), probadas en la placa 1:**
+    **Comprobado y funcionando con audio Morse en entorno real** (11 oct 2026, placa 1): descodifica perfectamente.
+    **Mejoras del 11 oct 2026 (en la v1.02b), probadas en la placa 1:**
     - **Silenciador:** un tono solo empieza si supera `DECOD_SNR_INICIO` (4×) el ruido de fondo; marcas de menos de
       `DECOD_MARCA_MIN_MS` (24 ms) o del 40 % del punto se descartan; en AUTO solo se cambia de tono si destaca
       `DECOD_AUTO_DESTACA` (2,5×) sobre la media de todos. El ruido se mide como un **suelo** (baja deprisa, sube
@@ -304,8 +306,9 @@ montaje del decodificador, GPS.
     - **Fin de palabra adaptativo:** media móvil de la pausa entre letras (`huecoLetraMs`) y palabra a
       `DECOD_PALABRA_X` (1,7×) esa pausa, nunca menos de 5 puntos. **Sigue partiendo y juntando palabras** con la
       fuente de prueba (vídeo de YouTube de la NOAA: "OF FSH ORE WA TERS", "WASHINGTON DC" → "...ONBC"): la pausa entre
-      letras y entre palabras se parecen demasiado para el decodificador. Aparcado por decisión del usuario; para
-      afinarlo haría falta sacar por serie la duración de cada silencio y del punto.
+      letras y entre palabras se parecen demasiado para el decodificador. **Pendiente: afinar las pausas** (aunque
+      ahora descodifica perfectamente las letras); para hacerlo, sacar por serie la duración de cada silencio y del
+      punto y ajustar `DECOD_PALABRA_X` y el fin de carácter con datos reales.
   - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
   - **TUNE** (v0.9e): portadora continua por KEY de 1–10 s (`trxTuneSeg`, NVS
     `ttune`, por defecto 5) para ajustar acoplador o potencia. La duración se elige en OPERAR (`TUNE 5s`, a la derecha
@@ -345,8 +348,8 @@ montaje del decodificador, GPS.
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
    ganancia en banco; GPS cuando llegue (opcionales: enable del GPS y BME280). Entrada del decodificador en GPIO6:
-   **montada y probada el 11 oct 2026** (ver DECODIFICAR; silenciador hecho); falta afinar el corte de palabras y
-   comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
+   **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real; queda **afinar las pausas** (separación
+   de palabras) y comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
      2016 bytes libres de 4096 tras Duo). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la

@@ -707,7 +707,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v1.01b<br>11 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v1.02b<br>11 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
@@ -794,11 +794,11 @@ def main():
 <li><b>3. Palas</b>: comprobar por serie DIT/DAH antes del keyer. ✔</li>
 <li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). ✔ <i>El piezo suena muy bajo: cuando lleguen U2 y LS1, montarlos en su sitio (hoja 4) y ajustar la ganancia.</i></li>
 <li><b>5. KEY</b> con R10: pantalla TRX → OPERAR. Primero GPIO2 con el polímetro (≈ 3,3 V con cada elemento, 0 V en reposo); luego, sin emisora, continuidad entre punta y malla de J4 al manipular. ✔ <i>Con la uSDR: puente R-T en J4 (manipula por el anillo).</i></li>
-<li><b>6. Decodificador</b> (hoja 6): sin emisora, polímetro en GPIO6 ≈ 1,65 V. Luego RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra (y <code>[DECOD]</code> por serie con CONF → CONFIG → DEPURACION → DECOD en SÍ).</li>
+<li><b>6. Decodificador</b> (hoja 6): sin emisora, polímetro en GPIO6 ≈ 1,65 V. Luego RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra (y <code>[DECOD]</code> por serie con CONF → CONFIG → DEPURACION → DECOD en SÍ). ✔ <i>RV2 queda casi al máximo con 0,1–0,5 V de la emisora.</i></li>
 <li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional.</li>
 <li><b>9. Batería</b> al final, comprobada la polaridad.</li>
 </ul>
-<p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas, tono (R1, RV1, C1, R2, R3, J2, BZ1) y KEY (R7, R10, U1, J4) con la uSDR. El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
+<p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas, tono (R1, RV1, C1, R2, R3, J2, BZ1) KEY (R7, R10, U1, J4) con la uSDR y decodificador (C2, R4–R6, RV2, D1, D2) con audio Morse real. El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
 </div></div></div>''')
 
     doc = f'<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Chispas · esquema de conexiones</title><style>{CSS}</style></head><body>{"".join(pages)}</body></html>'
