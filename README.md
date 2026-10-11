@@ -151,7 +151,7 @@ Para grabar la imagen completa basta con [ESP Tool web](https://espressif.github
 
 ```bash
 pip install esptool
-esptool.py --chip esp32s3 --port COMx write_flash 0x0 chispas-1.00b-usb.bin
+esptool.py --chip esp32s3 --port COMx write_flash 0x0 chispas-1.01b-usb.bin
 ```
 
 La imagen completa **borra la configuración** guardada (estación, estadísticas y red WiFi): úsala para la primera
