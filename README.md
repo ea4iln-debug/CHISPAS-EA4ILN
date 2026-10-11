@@ -301,6 +301,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | <img src="docs/img/conf_editor.png" width="256" alt="Editor del indicativo"><br>Editor del indicativo | <img src="docs/img/status.png" width="256" alt="STATUS: estación"><br>STATUS: estación | <img src="docs/img/status2.png" width="256" alt="STATUS: sistema"><br>STATUS: sistema |
 | <img src="docs/img/status3.png" width="256" alt="STATUS: WiFi"><br>STATUS: WiFi | <img src="docs/img/status4.png" width="256" alt="STATUS: memoria"><br>STATUS: memoria | <img src="docs/img/status5.png" width="256" alt="STATUS: arranque"><br>STATUS: arranque |
 | <img src="docs/img/webconf.png" width="256" alt="Webconf"><br>Webconf | <img src="docs/img/webconf_qr.png" width="256" alt="QR de webconf"><br>QR para unir el móvil | <img src="docs/img/ota.png" width="256" alt="Actualizar firmware"><br>Actualizar firmware |
+| <img src="docs/img/depuracion.png" width="256" alt="Depuración"><br>Depuración | | |
 
 ---
 
