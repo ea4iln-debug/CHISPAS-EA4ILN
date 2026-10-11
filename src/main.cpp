@@ -1,8 +1,10 @@
 /**
  * @file main.cpp
- * @author Chispas EA4ILN Project
- * @brief Firmware para Heltec WiFi LoRa 32 V3 (ESP32-S3) - Aprendizaje CW y LoRa Duo.
- * @version 0.9g - CONF con CONFIG (ID, locator, aceleracion...) y STATUS; Echo por leccion
+ * @author EA4ILN
+ * @brief Chispas: entrenador de CW portatil para la Heltec WiFi LoRa 32 V3 (ESP32-S3). Koch, Echo, keyer
+ *        iambico, practica y QSO por LoRa, manipulacion del transceptor (KEY), decodificador CW, propagacion,
+ *        spots POTA, sol y linea gris, y actualizacion por OTA desde las releases de GitHub.
+ * @version 1.00b - Primera release (beta)
  * @date 2026-10-11
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -15,7 +17,15 @@
  * Consulta el archivo LICENSE o <https://www.gnu.org/licenses/>.
  */
 
-#define FW_VERSION "0.9g"  // Se muestra en la pantalla 1 y por serie al arrancar: cambiarla en cada version
+// Version: se ve en Inicio, en CONF > STATUS y por serie. La etiqueta de la release de GitHub es "v" + esto
+// (la actualizacion OTA las compara). Cambiarla en cada version que se cargue o se publique
+#define FW_VERSION "1.00b"
+
+// Depuracion: 0 en las versiones publicadas
+#define DEPURACION_SERIE 0  // Ordenes por serie: 'p' vuelca la OLED (docs/captura_oled.py) y d/i/k/l/a simulan el encoder
+#define DEPURACION_DIAG  0  // "[DIAG]" cada minuto: memoria, pilas, NVS y CPU
+#define DEPURACION_DECOD 0  // "[DECOD]" cada 2 s con el decodificador en marcha (para ajustar RV2 en banco)
+#define DEPURACION_CW    0  // "[CW ...]": retraso de cada transicion del motor CW (medido: 0 ms)
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -26,6 +36,7 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <HTTPClient.h>
+#include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <time.h>
@@ -35,6 +46,7 @@
 #include <driver/gpio.h>
 #include <driver/rtc_io.h>
 #include <driver/adc.h>  // ADC por DMA (decodificador CW de la pantalla TRX)
+#include "certificados_github.h"  // Raices TLS para la actualizacion OTA
 
 // ============================================================================
 // DEFINICION DE PINES NATIVOS (Heltec WiFi LoRa 32 V3 / ESP32-S3)
@@ -78,7 +90,7 @@
 #define ENC_SW_PIN      48  // Pulsador del eje, sin pull-up en el modulo: INPUT_PULLUP
 #define SPEAKER_PWM_PIN  7  // Tono CW por PWM (J3-18): volumen, auriculares y buzzer (ver esquema, hoja 4)
 
-#define FREC_AUDIO_HZ    850// Tono Morse local por defecto (850 Hz); se elige en CONF -> tono (frecTonoHz)
+#define FREC_AUDIO_HZ    850 // Tono CW por defecto; se elige en CONF > CONFIG > TONO (frecTonoHz)
 #define TONO_MIN_HZ      400
 #define TONO_MAX_HZ      1000
 #define TONO_PASO_HZ     50
@@ -177,10 +189,10 @@ const char* obtenerCodigoMorse(char c) {
 #define MORSE_ESPACIO_PALABRA  0x00
 #define MORSE_NO_VALIDO        0x01  // Centinela sin elementos: caracter sin codigo Morse
 
-// Datos de la estacion: se guardan en NVS (espacio NVS_ESTACION) y se cambian desde el portal WiFi
+// Datos de la estacion: en NVS (espacio NVS_ESTACION); se cambian en CONF > CONFIG o en el portal (webconf)
 #define NVS_ESTACION "estacion"
 #define INDICATIVO_POR_DEFECTO "EA4ILN"
-#define LOCATOR_POR_DEFECTO    "IN80dk"  // Madrid (generico): cada estacion pone el suyo en webconf
+#define LOCATOR_POR_DEFECTO    "IN80dk"  // Madrid (generico): cada estacion pone el suyo
 char indicativoEstacion[TRAMA_LONG_INDICATIVO + 1] = INDICATIVO_POR_DEFECTO;
 char locatorEstacion[7] = LOCATOR_POR_DEFECTO;
 bool horaUtcCabecera = false;  // Hora de la cabecera en UTC ("12:05Z") en vez de local; se elige en webconf
@@ -234,7 +246,7 @@ void IRAM_ATTR cbInterrupcionLora() {
 uint8_t pantallaActual = 1;         
 // Pantallas principales, en el orden en que se recorren con ant. / sig.
 #define PANTALLA_INICIO      1
-#define PANTALLA_CW          2  // Entrenador Koch
+#define PANTALLA_CW          2  // Entrenador: Koch, Echo y TX libre (keyer)
 #define PANTALLA_LORA        3  // Practica Duo / QSO libre
 #define PANTALLA_TRX         4  // Conexion con el transceptor: decodificar, operar (KEY), QSO y memorias
 #define PANTALLA_PROPAGACION 5
@@ -244,7 +256,6 @@ uint8_t pantallaActual = 1;
 const uint8_t TOTAL_PANTALLAS = 8;
 uint8_t opcionNavegacionP1234 = 1;  // 0 = "ant.", 1 = "sig."
 
-int contadorPulsaciones = 0;
 String estadoLoraStr = "INICIANDO...";
 bool modoRadioRxActivo = false;
 
@@ -286,7 +297,9 @@ uint8_t keyerWpm = 20;
 bool keyerModoB = false;            // false = modo A
 bool keyerPalasInvertidas = false;  // true = punta de la clavija = raya
 bool enKeyer = false;               // Subpantalla del keyer abierta
-uint8_t opcionKeyer = 0;            // 0 = wpm, 1 = modo, 2 = palas, 3 = borrar, 4 = volver
+uint8_t opcionKeyer = 0;            // Pantalla: 0 = borrar, 1 = menu
+bool keyerEnAjustes = false;        // Lista de ajustes (menu): 0 wpm, 1 modo, 2 palas, 3 salir, 4 volver (pie)
+uint8_t opcionAjustesKeyer = 0;
 String textoKeyer = "";             // Lo descodificado de la manipulacion
 volatile uint32_t keyerUltimoUsoMs = 0;  // Ultima vez que se pulso una pala o sono un elemento (QSO)
 
@@ -323,7 +336,7 @@ uint16_t espaciadoCW = 200;
 uint8_t leccionCW = 4;
 uint8_t caracteresCW = 5;
 uint8_t gruposCW = 20;
-uint8_t opcionSubpantalla = 5;
+uint8_t opcionSubpantalla = 6;  // Ajustes del Koch: 6 = iniciar
 
 enum EstadoCW { 
   CW_IDLE, 
@@ -371,12 +384,16 @@ bool confirmandoBorrado = false;
 
 unsigned long tiempoCWProximo = 0;
 
-// Variables de estado para Pantalla 4 (Transceptor LoRa)
+// Pantalla LoRa: menu (PRACTICA DUO y QSO LIBRE) y sus subpantallas
 bool enPantalla4_Sub = false;  
 uint8_t opcionPantalla4 = 2;   // 0=PRACTICA DUO, 1=QSO LIBRE, 2=BARRA INFERIOR (ant/sig)
 uint8_t subpantalla4Activa = 0;
 
-uint8_t opcionDuo4_1 = 3;      
+uint8_t opcionDuo4_1 = 0;       // Duo: 0 enviar, 1 ver (solo con un grupo oculto), 2 menu
+// Ajustes ("menu") de Duo (0 wpm, 1 espaciado, 2 leccion, 3 salir, 4 volver) y de QSO (0 wpm, 1 ver, 2 salir,
+// 3 volver). Las palas siguen funcionando en los del QSO
+bool loraEnAjustes = false;
+uint8_t opcionAjustesLora = 0;
 String grupoDuoTransmitido = "";
 String grupoDuoRecibido = "";
 bool grupoDuoRevelado = false;
@@ -402,8 +419,8 @@ uint8_t colaRxNum = 0;
 // QSO por LoRa (subpantalla 2): lo manipulado con las palas se envia palabra a palabra (trama de texto) y lo
 // recibido suena cuando hay un silencio de palabra sin manipular; si se manipula mientras suena, se corta y el
 // resto queda solo como texto. Usa la cola de recepcion del Duo
-#define OPCIONES_QSO 3
-uint8_t opcionQSO = 2;            // 0 wpm (el de TX LIBRE), 1 ver, 2 salir
+#define OPCIONES_QSO 2
+uint8_t opcionQSO = 1;            // 0 borrar, 1 menu (wpm, el de TX LIBRE; ver; salir)
 bool qsoVerRx = true;             // false: lo recibido sale como "?" mientras suena (NVS "qver")
 bool qsoSonando = false;          // Una palabra recibida esta en el motor CW
 String qsoPalabraSonando = "";
@@ -417,10 +434,14 @@ char qsoIndicativoRx[TRAMA_LONG_INDICATIVO + 1] = "";
 #define TRX_OPCION_MEMORIAS 3
 #define TRX_OPCION_BARRA 4
 uint8_t opcionTrx = TRX_OPCION_BARRA;  // 0 decodificar, 1 operar, 2 qso, 3 memorias (pie), 4 barra ant./sig.
-enum SubTrx { TRX_MENU, TRX_DECOD, TRX_OPERAR, TRX_QSO, TRX_MEMORIAS, TRX_LISTA_ENVIO, TRX_EDITOR };
+enum SubTrx { TRX_MENU, TRX_DECOD, TRX_OPERAR, TRX_QSO, TRX_MEMORIAS, TRX_LISTA_ENVIO, TRX_EDITOR, TRX_AJUSTES };
 SubTrx subTrx = TRX_MENU;
 SubTrx subTrxOrigen = TRX_MENU;  // A donde vuelven la lista de envio y el editor
-uint8_t opcionTrxSub = 0;        // Foco dentro de la subpantalla
+SubTrx trxAjustesOrigen = TRX_OPERAR;  // A donde vuelve la lista de ajustes ("menu" de OPERAR o QSO)
+uint8_t opcionTrxSub = 0;        // Foco dentro de la subpantalla (OPERAR y QSO: 0 mem, 1 tune, 2 menu)
+uint8_t opcionAjustesTrx = 0;    // Ajustes: 0 wpm, 1 tono local, 2 tune (s), 3 SU, 4 salir, 5 volver (pie)
+bool decodEnAjustes = false;     // DECODIFICAR > menu: 0 tono, 1 salir, 2 volver (pie)
+uint8_t opcionAjustesDecod = 0;
 uint8_t trxWpm = 20;             // Keyer y memorias por KEY (NVS "twpm")
 uint16_t trxTonoDecodHz = 0;     // Tono del decodificador: 0 = automatico, 400-1000 (NVS "tdec")
 String trxTextoRx = "";          // Descodificado de la emisora
@@ -428,7 +449,7 @@ String trxTextoTx = "";          // Manipulado y memorias enviadas
 char trxSu[TRAMA_LONG_INDICATIVO + 1] = "";  // Indicativo del corresponsal ({SU})
 bool trxEnviandoMemoria = false;
 // Tune: portadora continua por KEY para ajustar el acoplador o la potencia (OPERAR y QSO). La duracion se
-// elige en OPERAR (NVS "ttune"); mientras dura, el corte de seguridad deja ese tiempo mas un margen
+// elige en su menu (NVS "ttune"); mientras dura, el corte de seguridad deja ese tiempo mas un margen
 #define TRX_TUNE_MIN_S 1
 #define TRX_TUNE_MAX_S 10
 #define TRX_TUNE_MARGEN_MS 2000
@@ -460,17 +481,10 @@ uint8_t editorMax = TRX_MEMORIA_MAX;
 uint8_t editorSel = 0;      // Posicion en la rueda
 
 int rssiUltimo = 0;
-float snrUltimo = 0.0;
 
-// ============================================================================
-// DEPURACION: MEDIDA DE LA TEMPORIZACION CW
-// ============================================================================
-// Mide cuanto llega tarde cada transicion (encender/apagar) respecto a lo programado.
-// Ese retraso alarga el elemento o la pausa anterior. Se informa por serie al final
-// de cada grupo. Poner a 0 para quitarlo del firmware. Solo lo usa la tarea del motor CW.
-#define DEBUG_CW 0
-
-#if DEBUG_CW
+// Depuracion (DEPURACION_CW): cuanto llega tarde cada transicion del motor CW respecto a lo programado; se
+// informa por serie al final de cada grupo. Solo lo usa la tarea del motor CW
+#if DEPURACION_CW
 uint32_t medidaCWNum = 0;
 uint32_t medidaCWSuma = 0;
 uint32_t medidaCWMax = 0;
@@ -580,7 +594,7 @@ bool esperarMotorCW(TickType_t objetivo, uint32_t id) {
     if (id <= motorCWCancelada) return false;
     TickType_t ahora = xTaskGetTickCount();
     if ((int32_t)(objetivo - ahora) <= 0) {
-#if DEBUG_CW
+#if DEPURACION_CW
       registrarRetrasoCW(ahora - objetivo);
 #endif
       return true;
@@ -638,7 +652,7 @@ void tareaEmisionCW(void* parametro) {
     emitirTextoMotorCW(p);
     conmutarEmisionMorse(false);  // Por si se ha cortado con el tono encendido
     motorCWFinMs = millis();
-#if DEBUG_CW
+#if DEPURACION_CW
     informarRetrasoCW(p.origen);
 #endif
     motorCWTerminadas = p.id;
@@ -832,6 +846,7 @@ void iniciarKeyer() {
 void entrarEnKeyer() {
   motorCWDetener();
   enKeyer = true;
+  keyerEnAjustes = false;
   opcionKeyer = 0;
   textoKeyer = "";
   xQueueReset(colaKeyerTexto);
@@ -1059,7 +1074,7 @@ extern uint8_t apagadoAutoMin;  // Minutos del apagado automatico; definida con 
 extern uint8_t aceleracionGiro;  // Aceleracion del encoder; definida con las opciones de CONF
 
 void cargarDatosNVS() {
-  prefs.begin(NVS_ENTRENADOR, true);
+  prefs.begin(NVS_ENTRENADOR, false);  // Lectura y escritura: en el primer arranque crea el espacio (sin errores)
   wpmCW = prefs.getUChar("wpm", 25);
   espaciadoCW = prefs.getUShort("sp", 200);
   leccionCW = prefs.getUChar("leccion", 4);
@@ -1111,13 +1126,7 @@ void cargarDatosNVS() {
   if (prefs.isKey("eLec") && prefs.getBytesLength("eLec") == sizeof(statsEchoLecc)) {
     prefs.getBytes("eLec", statsEchoLecc, sizeof(statsEchoLecc));
   }
-  bool hayBloqueAntiguo = prefs.isKey("car");  // v0.8f: Koch y Echo juntos; se descarta (se empieza de cero)
   prefs.end();
-  if (hayBloqueAntiguo) {
-    prefs.begin(NVS_ENTRENADOR, false);
-    prefs.remove("car");
-    prefs.end();
-  }
 }
 
 void guardarUltimaConfiguracionNVS() {
@@ -1239,9 +1248,12 @@ void borrarEstadisticasEchoNVS() {
 }
 
 void cargarEstacionNVS() {
-  prefs.begin(NVS_ESTACION, true);
-  strlcpy(indicativoEstacion, prefs.getString("call", INDICATIVO_POR_DEFECTO).c_str(), sizeof(indicativoEstacion));
-  strlcpy(locatorEstacion, prefs.getString("loc", LOCATOR_POR_DEFECTO).c_str(), sizeof(locatorEstacion));
+  prefs.begin(NVS_ESTACION, false);  // Como en cargarDatosNVS(): crea el espacio en el primer arranque
+  // Con isKey: getString() de una clave que aun no existe imprime un error por serie
+  strlcpy(indicativoEstacion, prefs.isKey("call") ? prefs.getString("call").c_str() : INDICATIVO_POR_DEFECTO,
+          sizeof(indicativoEstacion));
+  strlcpy(locatorEstacion, prefs.isKey("loc") ? prefs.getString("loc").c_str() : LOCATOR_POR_DEFECTO,
+          sizeof(locatorEstacion));
   horaUtcCabecera = prefs.getBool("utc", false);
   // Memorias de la pantalla TRX: sin clave guardada, la precargada (una memoria borrada se guarda vacia)
   for (uint8_t i = 0; i < TRX_NUM_MEMORIAS; i++) {
@@ -1344,7 +1356,7 @@ BateriaInfo bateriaActual = {0.0, 0, SOLO_USB};
 bool pantallaPendiente = false;  // Redibujar en cuanto no suene CW
 
 // ============================================================================
-// DIBUJO Y RENDERIZADO OLED (BARRA SUPERIOR: MAYÚSCULAS | INFERIOR: MINÚSCULAS)
+// DIBUJO EN LA OLED: CABECERA, PIES Y PIEZAS COMUNES (cabecera en mayusculas, pies en minusculas)
 // ============================================================================
 bool horaLocalValida(struct tm& t) {
   return getLocalTime(&t, 0) && t.tm_year > 120;  // Sin sincronizar el reloj empieza en 1970
@@ -1474,6 +1486,63 @@ void dibujarPieCentrado(const String& txt) {
   display.print(txt);
 }
 
+// ----------------------------------------------------------------------------
+// Piezas comunes de los menus (estilo de CONF)
+// ----------------------------------------------------------------------------
+// Titulo de un menu, en negativo y centrado (CW, LoRa, TRX, PROP, POTA, SOL, CONF)
+void dibujarTituloMenu(const char* titulo) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
+  int x = (128 - w) / 2;
+  display.fillRect(x - 2, 11, w + 4, h + 4, SSD1306_WHITE);
+  display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+  display.setCursor(x, 13);
+  display.print(titulo);
+  display.setTextColor(SSD1306_WHITE);
+}
+
+// Pie de las paginas que se pasan girando: "1/2 INDICES  >volver" (pulsar vuelve)
+void dibujarPiePaginas(uint8_t pagina, uint8_t total, const String& nombre) {
+  dibujarPieCentrado(String(pagina + 1) + "/" + String(total) + " " + nombre + "  >volver");
+}
+
+// Pie con dos opciones: "> iniciar   > volver"
+void dibujarPieDos(bool foco1, const char* op1, bool foco2, const char* op2) {
+  dibujarPieCentrado((foco1 ? "> " : "  ") + String(op1) + "   " + (foco2 ? "> " : "  ") + String(op2));
+}
+
+/**
+ * Lista de opciones como CONF > CONFIG: 4 a la vista, nombre a la izquierda, valor a la derecha y barra de
+ * desplazamiento. foco >= n = el foco esta en el pie (la lista se queda al final). editables: bit i = la
+ * opcion i se edita girando (su valor sale en video inverso mientras se edita). El pie lo pone quien llama
+ */
+void dibujarListaOpciones(const char* const* nombres, uint8_t n, uint8_t foco, String (*valor)(uint8_t),
+                          uint32_t editables) {
+  uint8_t primera = 0;
+  if (n > 4) primera = foco < n ? max(0, (int)foco - 3) : n - 4;
+  for (uint8_t k = 0; k < 4 && primera + k < n; k++) {
+    uint8_t i = primera + k;
+    int16_t y = 12 + k * 10;
+    display.setCursor(0, y);
+    display.print(foco == i ? '>' : ' ');
+    display.print(nombres[i]);
+    // El valor acaba en x = 123 para dejar sitio a la barra de desplazamiento
+    String v = valor(i);
+    display.setCursor(124 - v.length() * 6, y);
+    if (editables & (1UL << i)) imprimirValor(foco == i, v);
+    else display.print(v);
+  }
+  if (n > 4) {
+    // Barra de desplazamiento: 2 px a la derecha, con el tramo de lista que se ve
+    const int16_t yBarra = 12, altoBarra = 38;
+    int16_t altoTramo = altoBarra * 4 / n;
+    int16_t yTramo = yBarra + (altoBarra - altoTramo) * primera / (n - 4);
+    display.drawFastVLine(127, yBarra, altoBarra, SSD1306_WHITE);
+    display.fillRect(125, yTramo, 3, altoTramo, SSD1306_WHITE);
+  }
+}
+
 void dibujarBarraAvanzarRetroceder(bool enfocada, const String& centro = "") {
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setTextSize(1);
@@ -1493,7 +1562,7 @@ void dibujarBarraAvanzarRetroceder(bool enfocada, const String& centro = "") {
   display.setCursor(128 - w, 55);
   display.print(txtSig);
 
-  // En el centro: indicador de pagina ("1/2") o "« opc »" si las opciones solo salen al girar
+  // En el centro, opcional: por ejemplo "memorias" en el menu TRX
   if (centro.length() > 0) {
     display.getTextBounds(centro, 0, 0, &x1, &y1, &w, &h);
     display.setCursor((128 - w) / 2, 55);
@@ -1679,7 +1748,8 @@ void entrarEnQSO() {
   enPantalla4_Sub = true;
   subpantalla4Activa = 2;
   modoRadioRxActivo = true;
-  opcionQSO = 2;
+  opcionQSO = 1;
+  loraEnAjustes = false;
   qsoSonando = false;
   qsoPalabraSonando = qsoTextoRx = qsoTextoTx = qsoPalabraTx = "";
   qsoIndicativoRx[0] = '\0';
@@ -2000,6 +2070,11 @@ String trxLimpiarTexto(String t, bool conVariables, uint8_t maximo) {
   return r;
 }
 
+// OPERAR, QSO o sus ajustes: las palas manipulan la emisora
+bool trxManipulando() {
+  return subTrx == TRX_OPERAR || subTrx == TRX_QSO || subTrx == TRX_AJUSTES;
+}
+
 // Habilita la salida KEY (OPERAR y QSO) y pone el keyer en marcha
 void trxHabilitarKey() {
   keyCortadaPorSeguridad = false;
@@ -2036,12 +2111,13 @@ void trxEntrarSub(SubTrx sub) {
   editandoValor = false;
   switch (sub) {
     case TRX_DECOD:
-      opcionTrxSub = 2;  // salir
+      opcionTrxSub = 1;  // menu
+      decodEnAjustes = false;
       trxTextoRx = "";
       decodEmpezar();
       break;
     case TRX_OPERAR:
-      opcionTrxSub = 3;  // mem
+      opcionTrxSub = 0;  // mem
       trxTextoTx = "";
       trxHabilitarKey();
       break;
@@ -2121,7 +2197,7 @@ void trxCerrarEditor(bool guardar) {
     }
   }
   subTrx = subTrxOrigen;
-  if (subTrx == TRX_OPERAR || subTrx == TRX_QSO) trxHabilitarKey();
+  if (trxManipulando()) trxHabilitarKey();
   else keyerPausar();
 }
 
@@ -2186,7 +2262,7 @@ void trxCaracterManipulado(char c) {
   if (subTrx == TRX_EDITOR) {
     if (c == ' ') { if (editorTexto.length() > 0 && !editorTexto.endsWith(" ")) editorAnadir(" "); }
     else if (c != '*') editorAnadir(String(c));
-  } else if (subTrx == TRX_OPERAR || subTrx == TRX_QSO) {
+  } else if (trxManipulando()) {
     if (c == ' ') { if (trxTextoTx.length() > 0 && !trxTextoTx.endsWith(" ")) trxTextoTx += ' '; }
     else trxTextoTx += c;
     if (trxTextoTx.length() > QSO_TEXTO_MAX) trxTextoTx.remove(0, trxTextoTx.length() - QSO_TEXTO_MAX);
@@ -2236,13 +2312,15 @@ void procesarTrx() {
     pantallaPendiente = true;
   }
 
-  // Diagnostico por serie para ajustar RV2 en banco
+#if DEPURACION_DECOD
+  // Para ajustar RV2 en banco
   static unsigned long ultimoDiag = 0;
   if (decodActivo && millis() - ultimoDiag >= 2000) {
     ultimoDiag = millis();
     Serial.printf("[DECOD] %u Hz, nivel %u%%, umbral %u%%, %u wpm%s\n", decodFrecHz, decodNivelPct, decodUmbralPct,
                   decodWpm, decodSaturado ? ", SATURA" : "");
   }
+#endif
 
   if (trxEnviandoMemoria || trxSintonizando) {
     if (motorCWOcupado() && palaPulsada()) motorCWDetener();  // Break-in: las palas cortan la memoria o el tune
@@ -2251,7 +2329,7 @@ void procesarTrx() {
       trxEnviandoMemoria = false;
       trxSintonizando = false;
       pantallaPendiente = true;
-      if (subTrx == TRX_OPERAR || subTrx == TRX_QSO) keyerReanudar();
+      if (trxManipulando()) keyerReanudar();
     }
   }
 }
@@ -2277,7 +2355,6 @@ void procesarRecepcionLoRa() {
   if (state == RADIOLIB_ERR_NONE && trama[0] == 'M' && trama[1] == 'M' &&
       (trama[2] >> 4) == TRAMA_VERSION) {
     rssiUltimo = radio.getRSSI();
-    snrUltimo = radio.getSNR();
     pantallaPendiente = true;
 
     uint8_t tipo = trama[2] & 0x0F;
@@ -2320,11 +2397,6 @@ void procesarRecepcionLoRa() {
 }
 
 /**
- * Sale de las subpantallas LoRa (Duo / QSO): desactiva la recepcion, corta el tono
- * que pudiera estar sonando y limpia el estado, para que un paquete que llegue despues
- * no suene encima del entrenador ni de otras pantallas.
- */
-/**
  * Despierta la radio (duerme fuera de Duo y QSO) y la pone a escuchar. Con el SX1262 dormido, BUSY
  * esta en alto y startReceive() se queda esperando: hay que despertarlo antes bajando NSS, que es lo
  * que hace standby(..., true). Sin esto, la placa que solo escuchaba no recibia (probado).
@@ -2335,6 +2407,10 @@ void loraEscuchar() {
   if (estado != RADIOLIB_ERR_NONE) Serial.printf("[LORA] ERROR AL DESPERTAR LA RADIO: %d\n", estado);
 }
 
+/**
+ * Sale de las subpantallas LoRa (Duo / QSO): desactiva la recepcion, corta el tono que pudiera estar sonando
+ * y limpia el estado, para que un paquete que llegue despues no suene encima de otras pantallas
+ */
 void salirModoLoRa() {
   if (subpantalla4Activa == 2) {
     qsoEnviarPalabra();  // Lo que quedara a medias
@@ -2344,6 +2420,7 @@ void salirModoLoRa() {
   }
   enPantalla4_Sub = false;
   subpantalla4Activa = 0;
+  loraEnAjustes = false;
   editandoValor = false;
   modoRadioRxActivo = false;
   radio.sleep();  // Ahorro: fuera de Duo y QSO la radio duerme (sleep templado: conserva la configuracion)
@@ -2362,9 +2439,9 @@ void salirModoLoRa() {
 // ============================================================================
 // WIFI: HORA NTP, PROPAGACION (hamqsl.com) Y SPOTS POTA
 // ============================================================================
-// El WiFi solo se enciende en las pantallas 5 y 6 y se apaga al salir de ellas.
-// Si no hay red guardada o no conecta, la placa abre un punto de acceso para
-// configurar la red desde el movil (WiFiManager). La red queda guardada en NVS.
+// El WiFi solo se enciende en PROP y POTA, en SOL sin hora, para el portal (webconf) y para ACTUALIZAR FW, y se
+// apaga al salir. Si no hay red guardada o no conecta, PROP, POTA y SOL lo dicen y ofrecen abrir el portal
+// (WiFiManager), donde se elige la red desde el movil; queda guardada en la NVS del WiFi.
 // SOTA no se incluye: sus condiciones de uso exigen aprobacion previa para software generado por IA.
 #define WIFI_TIMEOUT_CONEXION_MS 15000
 #define PORTAL_TIMEOUT_S         300
@@ -2380,7 +2457,6 @@ void salirModoLoRa() {
 #define SPOTS_POR_PAGINA         4
 
 enum EstadoWifi { WIFI_APAGADO, WIFI_CONECTANDO, WIFI_PORTAL, WIFI_CONECTADO, WIFI_SIN_CONEXION };
-uint8_t opcionSinConexion = 0;  // Sin conexion en PROP, POTA o SOL: 0 = "abrir webconf", 1 = barra ant./sig.
 EstadoWifi estadoWifi = WIFI_APAGADO;
 unsigned long inicioConexionWifi = 0;
 WiFiManager wm;
@@ -2412,20 +2488,30 @@ bool spotsPotaValidos = false;
 unsigned long spotsPotaIntentoMs = 0;  // 0 = nunca
 uint8_t paginaSpots = 0;
 
-#define OPCION_BARRA_PROP 2
-#define OPCION_BARRA_SPOTS 2
-uint8_t opcionPantallaProp = OPCION_BARRA_PROP;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
-uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;  // 0 = mas (pagina), 1 = actualizar, 2 = barra ant./sig.
+// PROP, POTA y SOL: menu (VER DATOS y ACTUALIZAR; sin conexion, ABRIR WEBCONF y REINTENTAR), paginas que se
+// pasan girando y vista del portal. Solo se ve una de las tres a la vez: comparten el estado
+#define OPCION_BARRA_DATOS 2
+#define OPCION_BARRA_PROP  OPCION_BARRA_DATOS
+#define OPCION_BARRA_SPOTS OPCION_BARRA_DATOS
+uint8_t opcionPantallaProp = OPCION_BARRA_PROP;    // Menu: 0 = ver datos, 1 = actualizar, 2 = barra ant./sig.
+uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;
+uint8_t opcionPantallaSol = OPCION_BARRA_DATOS;
+enum SubDatos { DATOS_MENU, DATOS_PAGINAS, DATOS_PORTAL };
+SubDatos subDatos = DATOS_MENU;
+uint8_t focoPortalDatos = 0;
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
+uint8_t paginaSol = 0;                      // 0 = hoy, 1 = ahora, 2 = manana
+void dibujarVistaPortal(uint8_t foco);      // Definidas con la pantalla CONF
+bool procesarVistaPortal(uint8_t& foco, int8_t giro, bool pulsa, bool atras);
 
 // CONF: menu con CONFIG (opciones) y STATUS (informacion, en paginas)
 #define OPCION_BARRA_CONFIG 2
 uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // Menu: 0 = CONFIG, 1 = STATUS, 2 = barra ant./sig.
-enum SubConf { CONF_MENU, CONF_CONFIG, CONF_STATUS, CONF_PORTAL, CONF_EDITOR };
+enum SubConf { CONF_MENU, CONF_CONFIG, CONF_STATUS, CONF_PORTAL, CONF_EDITOR, CONF_OTA };
 SubConf subConf = CONF_MENU;
 // Lista de CONFIG (4 a la vista; "volver" en el pie)
-enum OpcionConf { OC_ID, OC_LOCATOR, OC_ACELERACION, OC_APAGADO, OC_TONO, OC_WEBCONF, OC_FABRICA, OC_VOLVER };
-#define N_OPCIONES_CONF 8
+enum OpcionConf { OC_ID, OC_LOCATOR, OC_ACELERACION, OC_APAGADO, OC_TONO, OC_WEBCONF, OC_ACTUALIZAR, OC_FABRICA, OC_VOLVER };
+#define N_OPCIONES_CONF 9
 uint8_t focoConf = 0;
 uint8_t focoPortalConf = 0;  // Vista del portal: 0 = ver qr, 1 = volver
 uint8_t paginaStatus = 0;
@@ -2517,7 +2603,7 @@ WiFiManagerParameter* const paramMemorias[TRX_NUM_MEMORIAS] = {
   &paramMemoria1, &paramMemoria2, &paramMemoria3, &paramMemoria4, &paramMemoria5, &paramMemoria6
 };
 
-bool locatorALatLon(const char* loc, float& lat, float& lon);  // Definida en la pantalla 7
+bool locatorALatLon(const char* loc, float& lat, float& lon);  // Definida con la pantalla SOL
 
 // Indicativo de 3 a 8 caracteres (letras, cifras y "/"). Si vale, pasa a ser el de la estacion (sin guardar)
 bool aplicarIndicativo(String call) {
@@ -2719,10 +2805,6 @@ void abrirPortalWifi() {
   pantallaPendiente = true;
 }
 
-/**
- * Sin red guardada o si no conecta: no se abre el portal solo; la pantalla lo explica y ofrece
- * "abrir webconf" (el usuario decide).
- */
 // Ahorro: la CPU va a 80 MHz con el WiFi apagado y a 240 MHz con el encendido (HTTPS y portal).
 // El motor CW, el keyer (ticks del systimer), el tono, el I2C y el puerto serie (APB a 80 MHz) no
 // dependen de esta frecuencia.
@@ -2739,7 +2821,9 @@ void quedarseSinConexion() {
   WiFi.mode(WIFI_OFF);
   cpuSegunWifi(false);
   estadoWifi = WIFI_SIN_CONEXION;
-  opcionSinConexion = 0;  // Foco en "abrir webconf"
+  // PROP, POTA y SOL vuelven a su menu, con el foco en "ABRIR WEBCONF"
+  subDatos = DATOS_MENU;
+  opcionPantallaProp = opcionPantallaSpots = opcionPantallaSol = 0;
   pantallaPendiente = true;
 }
 
@@ -2787,6 +2871,160 @@ bool descargarUrl(const char* url, String& cuerpo) {
   else Serial.printf("[WIFI] %s -> HTTP %d\n", url, codigo);
   http.end();
   return codigo == HTTP_CODE_OK;
+}
+
+// ============================================================================
+// ACTUALIZACION DEL FIRMWARE (OTA) DESDE LAS RELEASES DE GITHUB
+// ============================================================================
+// CONF > CONFIG > ACTUALIZAR FW: consulta la ultima release (tambien las beta), compara su etiqueta ("v1.01b")
+// con FW_VERSION y, si es mas nueva y el usuario confirma, descarga el binario de esta placa y lo instala en la
+// otra particion de aplicacion (default_8MB.csv: app0/app1). El TLS se valida con los certificados raiz de
+// include/certificados_github.h. Ademas, con el WiFi ya encendido en PROP o POTA, se mira una vez al dia si hay
+// version nueva y se avisa en su linea de estado.
+#define OTA_URL_RELEASES "https://api.github.com/repos/ea4iln-debug/CHISPAS-EA4ILN/releases?per_page=1"
+#define OTA_COMPROBACION_MS (24UL * 60 * 60 * 1000)
+#define OTA_BATERIA_MIN_PCT 30  // Con menos bateria (y sin USB) no se instala: un corte a medias obliga a cargar por USB
+
+enum EstadoOta { OTA_REPOSO, OTA_CONECTANDO, OTA_BUSCANDO, OTA_AL_DIA, OTA_HAY_NUEVA, OTA_DESCARGANDO, OTA_ERROR, OTA_HECHO };
+EstadoOta estadoOta = OTA_REPOSO;
+String otaVersionNueva = "";   // Etiqueta de la ultima release, sin la "v"
+String otaUrlBinario = "";     // Binario de esta placa en esa release ("" si no lo trae)
+String otaError = "";          // Motivo del fallo, corto (cabe en una linea)
+uint8_t otaProgreso = 0;       // % descargado
+bool otaComprobada = false;
+unsigned long otaComprobadaMs = 0;
+uint8_t focoOta = 0;           // Con version nueva: 0 instalar, 1 volver
+
+/**
+ * Compara versiones "1.00b", "1.01b", "1.10": numeros separados por puntos y, al final, una letra opcional
+ * (beta). A igual numero, la version sin letra es mas nueva. Devuelve >0 si a es mas nueva que b
+ */
+int compararVersiones(const String& a, const String& b) {
+  auto trocear = [](const String& v, long num[3], bool& beta) {
+    uint8_t n = 0;
+    num[0] = num[1] = num[2] = 0;
+    beta = false;
+    for (size_t i = 0; i < v.length(); i++) {
+      char c = v[i];
+      if (isdigit(c) && n < 3) num[n] = num[n] * 10 + (c - '0');
+      else if (c == '.') n++;
+      else if (isalpha(c)) beta = true;
+    }
+  };
+  long na[3], nb[3];
+  bool betaA, betaB;
+  trocear(a, na, betaA);
+  trocear(b, nb, betaB);
+  for (uint8_t i = 0; i < 3; i++) {
+    if (na[i] != nb[i]) return na[i] > nb[i] ? 1 : -1;
+  }
+  if (betaA != betaB) return betaA ? -1 : 1;
+  return 0;
+}
+
+bool hayActualizacion() {
+  return otaUrlBinario.length() > 0 && compararVersiones(otaVersionNueva, FW_VERSION) > 0;
+}
+
+/**
+ * Consulta la ultima release en la API de GitHub (con el WiFi conectado). Deja la version y la URL del binario
+ * de esta placa: "chispas-<version>.bin" o, sin encoder, "chispas-<version>-sin-encoder.bin". Bloquea 1-3 s
+ */
+bool buscarActualizacion() {
+  WiFiClientSecure cliente;
+  cliente.setCACert(CERTIFICADOS_GITHUB);
+  HTTPClient http;
+  http.setTimeout(8000);
+  String cuerpo;
+  int codigo = -1;
+  if (http.begin(cliente, OTA_URL_RELEASES)) {
+    http.setUserAgent("Chispas-EA4ILN/" FW_VERSION);  // La API de GitHub lo exige
+    http.addHeader("Accept", "application/vnd.github+json");
+    codigo = http.GET();
+    if (codigo == HTTP_CODE_OK) cuerpo = http.getString();
+    http.end();
+  }
+  otaComprobada = true;
+  otaComprobadaMs = millis();
+  if (codigo != HTTP_CODE_OK) {
+    otaError = codigo < 0 ? "SIN CONEXION" : "GITHUB: HTTP " + String(codigo);
+    Serial.printf("[OTA] RELEASES -> %d\n", codigo);
+    return false;
+  }
+
+  // Solo la etiqueta y los binarios: el resto de la respuesta (notas, autores...) se descarta al leer
+  JsonDocument filtro;
+  filtro[0]["tag_name"] = true;
+  filtro[0]["assets"][0]["name"] = true;
+  filtro[0]["assets"][0]["browser_download_url"] = true;
+  JsonDocument doc;
+  if (deserializeJson(doc, cuerpo, DeserializationOption::Filter(filtro))) {
+    otaError = "RESPUESTA NO VALIDA";
+    return false;
+  }
+  if (doc[0].isNull()) {
+    otaError = "NO HAY RELEASES";
+    return false;
+  }
+  String etiqueta = doc[0]["tag_name"] | "";
+  if (etiqueta.startsWith("v") || etiqueta.startsWith("V")) etiqueta.remove(0, 1);
+  otaVersionNueva = etiqueta;
+  otaUrlBinario = "";
+  // Nombre exacto: la release lleva tambien las imagenes completas para grabar por USB ("...-usb.bin")
+#ifdef SIN_ENCODER
+  String binario = "chispas-" + etiqueta + "-sin-encoder.bin";
+#else
+  String binario = "chispas-" + etiqueta + ".bin";
+#endif
+  for (JsonObject a : doc[0]["assets"].as<JsonArray>()) {
+    if (binario.equalsIgnoreCase(a["name"] | "")) otaUrlBinario = a["browser_download_url"] | "";
+  }
+  Serial.printf("[OTA] ULTIMA RELEASE v%s (instalada v%s)%s\n", otaVersionNueva.c_str(), FW_VERSION,
+                otaUrlBinario.length() ? "" : ", SIN BINARIO PARA ESTA PLACA");
+  return true;
+}
+
+void actualizarPantalla();  // Definida con el resto del dibujo
+
+/**
+ * Descarga e instala el binario (sigue la redireccion de GitHub a su servidor de descargas). La pantalla
+ * enseña el progreso; al terminar, reinicia. Si falla, la version instalada sigue intacta
+ */
+void instalarActualizacion() {
+  if (bateriaActual.estado != SOLO_USB && bateriaActual.porcentaje < OTA_BATERIA_MIN_PCT) {
+    estadoOta = OTA_ERROR;
+    otaError = "BATERIA BAJA (<" + String(OTA_BATERIA_MIN_PCT) + "%)";
+    return;
+  }
+  estadoOta = OTA_DESCARGANDO;
+  otaProgreso = 0;
+  actualizarPantalla();
+  motorCWDetener();
+  keyerPausar();
+  Serial.printf("[OTA] DESCARGANDO %s\n", otaUrlBinario.c_str());
+
+  WiFiClientSecure cliente;
+  cliente.setCACert(CERTIFICADOS_GITHUB);
+  httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  httpUpdate.rebootOnUpdate(false);
+  httpUpdate.onProgress([](int hecho, int total) {
+    uint8_t pct = total > 0 ? (uint8_t)((int64_t)hecho * 100 / total) : 0;
+    if (pct != otaProgreso) {
+      otaProgreso = pct;
+      actualizarPantalla();
+    }
+  });
+  t_httpUpdate_return r = httpUpdate.update(cliente, otaUrlBinario);
+  if (r == HTTP_UPDATE_OK) {
+    estadoOta = OTA_HECHO;
+    actualizarPantalla();
+    Serial.printf("[OTA] INSTALADA v%s: REINICIANDO\n", otaVersionNueva.c_str());
+    delay(2000);
+    ESP.restart();
+  }
+  estadoOta = OTA_ERROR;
+  otaError = "ERROR " + String(httpUpdate.getLastError());
+  Serial.printf("[OTA] FALLO: %s\n", httpUpdate.getLastErrorString().c_str());
 }
 
 String valorEtiquetaXml(const String& xml, const char* etiqueta) {
@@ -2892,7 +3130,7 @@ void pedirActualizacionWifi() {
 void procesarWifi() {
   static uint8_t pantallaAnterior = 0;
   // PROP y POTA encienden el WiFi al entrar; SOL tambien, pero solo si aun no hay hora (para
-  // sincronizarla por NTP). Si no conecta, muestran el aviso con "abrir webconf". En CONF y SOL el WiFi
+  // sincronizarla por NTP). Si no conecta, su menu ofrece ABRIR WEBCONF y REINTENTAR. En CONF y SOL el WiFi
   // solo sigue encendido si el portal esta abierto: si se llega con el WiFi conectado (desde PROP o
   // POTA) se apaga, porque no se usa (eran unos 40 mA de mas, medido).
   if (pantallaActual != pantallaAnterior) {
@@ -2923,7 +3161,7 @@ void procesarWifi() {
       } else if (!wm.getConfigPortalActive()) {
         Serial.println(F("[WIFI] PORTAL CERRADO POR TIEMPO"));
         apagarWifi();
-        // En PROP, POTA o SOL se vuelve al aviso de "sin conexion" (con "abrir webconf")
+        // En PROP, POTA o SOL se vuelve a su menu sin conexion (ABRIR WEBCONF y REINTENTAR)
         if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
             pantallaActual == PANTALLA_SOL) {
           quedarseSinConexion();
@@ -2954,6 +3192,12 @@ void procesarWifi() {
         actualizandoWifi = false;
         pantallaPendiente = true;
       }
+      // Aviso de version nueva: una vez al dia, aprovechando el WiFi de PROP o POTA
+      bool enDatos = pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS;
+      if (enDatos && !actualizandoWifi && (!otaComprobada || millis() - otaComprobadaMs > OTA_COMPROBACION_MS)) {
+        buscarActualizacion();
+        pantallaPendiente = true;
+      }
       break;
     }
 
@@ -2963,7 +3207,8 @@ void procesarWifi() {
 }
 
 /**
- * Si no hay conexion dibuja el estado del WiFi en el cuerpo de la pantalla y devuelve true.
+ * Vista del portal: con el portal abierto, sus datos (red, clave y web); conectando, el aviso. Devuelve
+ * false en los demas estados (no dibuja nada)
  */
 bool dibujarEstadoWifi() {
   switch (estadoWifi) {
@@ -2981,35 +3226,13 @@ bool dibujarEstadoWifi() {
       display.setCursor(0, 42);
       display.print(F("WEB   192.168.4.1"));
       return true;
-    case WIFI_APAGADO:
-      // Solo se ve un instante al entrar en PROP, POTA o SOL, justo antes de empezar a conectar
-      display.setCursor(0, 22);
-      display.print(F("CONECTANDO WIFI..."));
-      return true;
-    case WIFI_SIN_CONEXION:
-      // El pie lo pone dibujarPieSinConexion() en cada pantalla
-      display.setCursor(0, 12);
-      display.print(F("SIN CONEXION WIFI"));
-      display.setCursor(0, 24);
-      display.print(F("LA RED NO ESTA O NO"));
-      display.setCursor(0, 33);
-      display.print(F("HAY NINGUNA GUARDADA."));
-      display.setCursor(0, 42);
-      display.print(F("CONFIGURALA:"));
-      return true;
     default:
       return false;
   }
 }
 
-// Pie de PROP, POTA y SOL sin conexion: "abrir webconf" o, al girar, la barra ant./sig.
-void dibujarPieSinConexion() {
-  if (opcionSinConexion == 1) dibujarBarraAvanzarRetroceder(true, String((char)0xAE) + " opc " + String((char)0xAF));
-  else dibujarPieCentrado("> abrir webconf");
-}
-
 // ============================================================================
-// RENDERIZADO PANTALLAS (1 A 6)
+// DIBUJO DE LAS PANTALLAS
 // ============================================================================
 void renderizarPantallaInicio() {
   int16_t x1, y1;
@@ -3085,7 +3308,7 @@ void dibujarMasErrores(const StatsCaracter* tabla) {
     display.print(F(" por letra)"));
     return;
   }
-  char linea[24];
+  char linea[40];  // 21 caracteres a la vista; holgura para el compilador
   for (uint8_t k = 0; k < n; k++) {
     const StatsCaracter& s = tabla[lista[k]];
     uint32_t total = (uint32_t)s.aciertos + s.fallos;
@@ -3174,20 +3397,78 @@ void dibujarPaginaBorrado(const __FlashStringHelper* que) {
   dibujarPieCentrado(confirmandoBorrado ? "> confirmar" : "> borrar");
 }
 
+// Ajustes de TX LIBRE (lista): 0 wpm (se edita girando), 1 modo, 2 palas, 3 salir; pie: 4 volver
+#define N_AJUSTES_KEYER 4
+const char* const NOMBRES_AJUSTES_KEYER[N_AJUSTES_KEYER] = { "WPM", "MODO", "PALAS", "SALIR" };
+
+String valorAjusteKeyer(uint8_t i) {
+  switch (i) {
+    case 0: return String(keyerWpm);
+    case 1: return keyerModoB ? String("B") : String("A");
+    case 2: return keyerPalasInvertidas ? String("INV") : String("NORM");
+    default: return String("");
+  }
+}
+
+// Nombre de una pagina de ESTAD. (Koch o Echo) para el pie: "ERRORES", "TOTALES", "L01-03"... "L40", "BORRAR"
+String nombrePaginaEstad(uint8_t pagina) {
+  if (pagina == 0) return "ERRORES";
+  if (pagina == 1) return "TOTALES";
+  uint8_t primera = (pagina - PAG_STATS_PRIMERA_LECCION) * 3 + 1;
+  if (primera > 40) return "BORRAR";
+  char t[10];
+  if (primera + 2 <= 40) snprintf(t, sizeof(t), "L%02u-%02u", primera, primera + 2);
+  else snprintf(t, sizeof(t), "L%02u", primera);
+  return String(t);
+}
+
+// Ajustes del Koch (lista): 0-4 se editan girando, 5 abre ESTAD.; en el pie, 6 = iniciar y 7 = volver
+#define N_AJUSTES_KOCH 6
+const char* const NOMBRES_AJUSTES_KOCH[N_AJUSTES_KOCH] = { "WPM", "ESPACIADO", "LECCION", "CARACTERES", "GRUPOS", "ESTADISTICAS" };
+
+String valorAjusteKoch(uint8_t i) {
+  switch (i) {
+    case 0: return String(wpmCW);
+    case 1: return String(espaciadoCW) + "%";
+    case 2: return String(leccionCW);
+    case 3: return String(caracteresCW);
+    case 4: return String(gruposCW);
+    default: return String("");
+  }
+}
+
+// Ajustes del Echo (lista): 0-3 y 5 se editan girando, 4 cambia VER, 6 abre ESTAD.; pie: 7 iniciar, 8 volver
+#define N_AJUSTES_ECHO 7
+const char* const NOMBRES_AJUSTES_ECHO[N_AJUSTES_ECHO] = { "WPM", "ESPACIADO", "LECCION", "LETRAS", "VER LETRA", "RETOS", "ESTADISTICAS" };
+
+String valorAjusteEcho(uint8_t i) {
+  switch (i) {
+    case 0: return String(echoWpm);
+    case 1: return String(echoEspaciado) + "%";
+    case 2: return String(echoLeccion);
+    case 3: return String(echoLargo);
+    case 4: return echoVerObjetivo ? String("SI") : String("NO");
+    case 5: return String(echoRetos);
+    default: return String("");
+  }
+}
+
 void renderizarPantallaCW() {
   display.setTextColor(SSD1306_WHITE);
 
-  if (enKeyer) {
+  if (enKeyer && keyerEnAjustes) {
+    // Ajustes de TX LIBRE (lista como CONF > CONFIG). Las palas siguen manipulando
+    display.setTextSize(1);
+    dibujarListaOpciones(NOMBRES_AJUSTES_KEYER, N_AJUSTES_KEYER, opcionAjustesKeyer, valorAjusteKeyer, 0x1);
+    dibujarPieCentrado(opcionAjustesKeyer == N_AJUSTES_KEYER ? "> volver" : "  volver");
+
+  } else if (enKeyer) {
     display.setTextSize(1);
 
-    // Opciones: ">20WPM >MODO A >NORM" (20 caracteres)
+    // Ajustes a la vista (se cambian en "menu"): "20WPM  MODO A  NORM"
     display.setCursor(0, 12);
-    display.print(opcionKeyer == 0 ? ">" : " ");
-    imprimirValor(opcionKeyer == 0, String(keyerWpm) + "WPM");
-    display.print(opcionKeyer == 1 ? " >" : "  ");
-    display.print(keyerModoB ? F("MODO B") : F("MODO A"));
-    display.print(opcionKeyer == 2 ? " >" : "  ");
-    display.print(keyerPalasInvertidas ? F("INV") : F("NORM"));
+    display.print(String(keyerWpm) + "WPM  " + (keyerModoB ? "MODO B" : "MODO A") + "  " +
+                  (keyerPalasInvertidas ? "INV" : "NORM"));
 
     // Texto descodificado: 3 lineas de 21 caracteres. Al llenarse se quitan lineas enteras
     // por arriba, para que el texto no se desplace caracter a caracter
@@ -3202,8 +3483,7 @@ void renderizarPantallaCW() {
       display.print(t.substring(linea * ANCHO, min((int)t.length(), (linea + 1) * ANCHO)));
     }
 
-    dibujarPieCentrado((opcionKeyer == 3 ? "> " : "  ") + String("borrar   ") +
-                       (opcionKeyer == 4 ? "> " : "  ") + String("volver"));
+    dibujarPieDos(opcionKeyer == 0, "borrar", opcionKeyer == 1, "menu");
 
   } else if (enEcho && enEstadisticasEcho) {
     display.setTextSize(1);
@@ -3212,43 +3492,14 @@ void renderizarPantallaCW() {
     else if (paginaStatsEcho < TOTAL_PAGINAS_STATS_ECHO - 1) dibujarPaginaLecciones(statsEchoLecc, paginaStatsEcho - 2);
     else dibujarPaginaBorrado(F("ECHO"));
     if (paginaStatsEcho < TOTAL_PAGINAS_STATS_ECHO - 1) {
-      dibujarPieCentrado("pag " + String(paginaStatsEcho + 1) + "/" + String(TOTAL_PAGINAS_STATS_ECHO) + "   > volver");
+      dibujarPiePaginas(paginaStatsEcho, TOTAL_PAGINAS_STATS_ECHO, nombrePaginaEstad(paginaStatsEcho));
     }
 
   } else if (enEcho && !echoPracticando) {
     // Ajustes del Echo, con la disposicion de los del Koch
     display.setTextSize(1);
-
-    display.setCursor(0, 12);
-    display.print(opcionEcho == 0 ? ">" : " ");
-    display.print(F("WPM: ")); imprimirValor(opcionEcho == 0, String(echoWpm));
-
-    display.setCursor(64, 12);
-    display.print(opcionEcho == 1 ? ">" : " ");
-    display.print(F("SP: ")); imprimirValor(opcionEcho == 1, String(echoEspaciado) + "%");
-
-    display.setCursor(0, 22);
-    display.print(opcionEcho == 2 ? ">" : " ");
-    display.print(F("LECCION: ")); imprimirValor(opcionEcho == 2, String(echoLeccion));
-
-    display.setCursor(0, 32);
-    display.print(opcionEcho == 3 ? ">" : " ");
-    display.print(F("LETRAS: ")); imprimirValor(opcionEcho == 3, String(echoLargo));
-
-    display.setCursor(82, 32);
-    display.print(opcionEcho == 4 ? ">" : " ");
-    display.print(echoVerObjetivo ? F("VER SI") : F("VER NO"));
-
-    display.setCursor(0, 42);
-    display.print(opcionEcho == 5 ? ">" : " ");
-    display.print(F("RETOS: ")); imprimirValor(opcionEcho == 5, String(echoRetos));
-
-    display.setCursor(82, 42);
-    display.print(opcionEcho == 6 ? ">" : " ");
-    display.print(F("ESTAD."));
-
-    dibujarPieCentrado((opcionEcho == 7 ? "> " : "  ") + String("iniciar  ") +
-                       (opcionEcho == 8 ? "> " : "  ") + String("volver"));
+    dibujarListaOpciones(NOMBRES_AJUSTES_ECHO, N_AJUSTES_ECHO, opcionEcho, valorAjusteEcho, 0x2F);  // 0-3 y 5
+    dibujarPieDos(opcionEcho == N_AJUSTES_ECHO, "iniciar", opcionEcho == N_AJUSTES_ECHO + 1, "volver");
 
   } else if (enEcho && estadoEcho == ECHO_FIN) {
     display.setTextSize(1);
@@ -3310,18 +3561,7 @@ void renderizarPantallaCW() {
   } else if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
     // Mismo estilo que la pantalla LoRa: titulo en negativo y tres opciones
     display.setTextSize(1);
-
-    const char* titulo = " ENTRENADOR CW ";
-    int16_t x1, y1;
-    uint16_t w, h;
-    display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
-    int x = (128 - w) / 2;
-    int y = 13;
-    display.fillRect(x - 2, y - 2, w + 4, h + 4, SSD1306_WHITE);
-    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-    display.setCursor(x, y);
-    display.print(titulo);
-    display.setTextColor(SSD1306_WHITE);
+    dibujarTituloMenu(" ENTRENADOR CW ");
 
     const char* opciones[] = { "< KOCH (RX) >", "< ECHO (TX) >", "< TX LIBRE >" };
     for (uint8_t i = 0; i < 3; i++) dibujarOpcionCentrada(opcionPantalla3 == i, opciones[i], 24 + i * 9);
@@ -3329,36 +3569,10 @@ void renderizarPantallaCW() {
     dibujarBarraAvanzarRetroceder(opcionPantalla3 == OPCION_BARRA_CW);
 
   } else if (enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
+    // Ajustes del Koch: lista como CONF > CONFIG; "iniciar" y "volver" en el pie
     display.setTextSize(1);
-
-    display.setCursor(0, 12);
-    display.print(opcionSubpantalla == 0 ? ">" : " ");
-    display.print(F("WPM: ")); imprimirValor(opcionSubpantalla == 0, String(wpmCW));
-
-    display.setCursor(64, 12);
-    display.print(opcionSubpantalla == 1 ? ">" : " ");
-    display.print(F("SP: ")); imprimirValor(opcionSubpantalla == 1, String(espaciadoCW) + "%");
-
-    display.setCursor(0, 22);
-    display.print(opcionSubpantalla == 2 ? ">" : " ");
-    display.print(F("LECCION: ")); imprimirValor(opcionSubpantalla == 2, String(leccionCW));
-
-    display.setCursor(0, 32);
-    display.print(opcionSubpantalla == 3 ? ">" : " ");
-    display.print(F("CARACTERES: ")); imprimirValor(opcionSubpantalla == 3, String(caracteresCW));
-
-    display.setCursor(0, 42);
-    display.print(opcionSubpantalla == 4 ? ">" : " ");
-    display.print(F("GRUPOS: ")); imprimirValor(opcionSubpantalla == 4, String(gruposCW));
-
-    // Estadisticas de las lecciones: ultima opcion, en el hueco a la derecha de GRUPOS
-    display.setCursor(82, 42);
-    display.print(opcionSubpantalla == 7 ? ">" : " ");
-    display.print(F("ESTAD."));
-
-    String txtPie3_1 = (opcionSubpantalla == 5 ? "> " : "  ") + String("iniciar  ") + 
-                       (opcionSubpantalla == 6 ? "> " : "  ") + String("volver");
-    dibujarPieCentrado(txtPie3_1);
+    dibujarListaOpciones(NOMBRES_AJUSTES_KOCH, N_AJUSTES_KOCH, opcionSubpantalla, valorAjusteKoch, 0x1F);
+    dibujarPieDos(opcionSubpantalla == N_AJUSTES_KOCH, "iniciar", opcionSubpantalla == N_AJUSTES_KOCH + 1, "volver");
 
   } else if (enEstadisticas3_5) {
     display.setTextSize(1);
@@ -3366,11 +3580,11 @@ void renderizarPantallaCW() {
     if (paginaStats3_5 < PAG_STATS_PRIMERA_LECCION) {
       if (paginaStats3_5 == 0) dibujarMasErrores(statsCarKoch);
       else dibujarTotalesKoch();
-      dibujarPieCentrado("pag " + String(paginaStats3_5 + 1) + "/" + String(TOTAL_PAGINAS_STATS) + "   > volver");
+      dibujarPiePaginas(paginaStats3_5, TOTAL_PAGINAS_STATS, nombrePaginaEstad(paginaStats3_5));
 
     } else if (paginaStats3_5 < PAG_STATS_BORRADO) {
       dibujarPaginaLecciones(statsKoch, paginaStats3_5 - PAG_STATS_PRIMERA_LECCION);
-      dibujarPieCentrado("pag " + String(paginaStats3_5 + 1) + "/" + String(TOTAL_PAGINAS_STATS) + "   > volver");
+      dibujarPiePaginas(paginaStats3_5, TOTAL_PAGINAS_STATS, nombrePaginaEstad(paginaStats3_5));
 
     } else {
       dibujarPaginaBorrado(F("KOCH"));  // Solo estadisticas del Koch: el resto, en CONF (fabrica)
@@ -3398,7 +3612,7 @@ void renderizarPantallaCW() {
 
       if (hayMasPaginas) {
         int paginas = (totalChars + charPorPagina - 1) / charPorPagina;
-        dibujarPieCentrado("pag " + String(paginaListado3_3 + 1) + "/" + String(paginas) + "   > mas");
+        dibujarPieCentrado(String(paginaListado3_3 + 1) + "/" + String(paginas) + " GRUPOS   > mas");
       } else {
         // Corregir marcando cada fallo (x letra) o solo con el numero de fallos (total)
         String txtPie = (opcionFinListado3_3 == 0 ? ">" : " ") + String("x letra ") +
@@ -3514,50 +3728,62 @@ void dibujarUltimasLineas(String t, int16_t y, uint8_t lineas, uint8_t alto) {
   }
 }
 
+// Ajustes ("menu") de PRACTICA DUO y de QSO LIBRE
+#define N_AJUSTES_DUO 4
+const char* const NOMBRES_AJUSTES_DUO[N_AJUSTES_DUO] = { "WPM", "ESPACIADO", "LECCION", "SALIR" };
+#define N_AJUSTES_QSO_LORA 3
+const char* const NOMBRES_AJUSTES_QSO_LORA[N_AJUSTES_QSO_LORA] = { "WPM", "VER LO RECIBIDO", "SALIR" };
+
+String valorAjusteDuo(uint8_t i) {
+  switch (i) {
+    case 0: return String(wpmCW);
+    case 1: return String(espaciadoCW) + "%";
+    case 2: return String(leccionCW);
+    default: return String("");
+  }
+}
+
+String valorAjusteQsoLora(uint8_t i) {
+  switch (i) {
+    case 0: return String(keyerWpm);
+    case 1: return qsoVerRx ? String("SI") : String("NO");
+    default: return String("");
+  }
+}
+
 void renderizarPantallaLora() {
   display.setTextColor(SSD1306_WHITE);
 
-  if (!enPantalla4_Sub) {
+  if (enPantalla4_Sub && loraEnAjustes) {
     display.setTextSize(1);
-    
-    const char* titulo = " TRANSCEPTOR LORA ";
-    int16_t x1, y1;
-    uint16_t w, h;
-    display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
-    
-    int x = (128 - w) / 2;
-    int y = 14;
+    bool esDuo = (subpantalla4Activa == 1);
+    uint8_t n = esDuo ? N_AJUSTES_DUO : N_AJUSTES_QSO_LORA;
+    if (esDuo) dibujarListaOpciones(NOMBRES_AJUSTES_DUO, n, opcionAjustesLora, valorAjusteDuo, 0x7);
+    else dibujarListaOpciones(NOMBRES_AJUSTES_QSO_LORA, n, opcionAjustesLora, valorAjusteQsoLora, 0x1);
+    dibujarPieCentrado(opcionAjustesLora == n ? "> volver" : "  volver");
 
-    display.fillRect(x - 2, y - 2, w + 4, h + 4, SSD1306_WHITE);
-    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-    display.setCursor(x, y);
-    display.print(titulo);
-
-    display.setTextColor(SSD1306_WHITE);
-
-    dibujarOpcionCentrada(opcionPantalla4 == 0, "< PRACTICA DUO >", 28);
-    dibujarOpcionCentrada(opcionPantalla4 == 1, "< QSO LIBRE >", 38);
+  } else if (!enPantalla4_Sub) {
+    display.setTextSize(1);
+    dibujarTituloMenu(" TRANSCEPTOR LORA ");
+    // Mismas posiciones que el menu de CONF
+    dibujarOpcionCentrada(opcionPantalla4 == 0, "< PRACTICA DUO >", 27);
+    dibujarOpcionCentrada(opcionPantalla4 == 1, "< QSO LIBRE >", 37);
 
     dibujarBarraAvanzarRetroceder(opcionPantalla4 == 2);
 
   } else if (subpantalla4Activa == 1) {
     display.setTextSize(1);
 
+    // La cabecera ya da el wpm y el espaciado: aqui, la leccion y las letras por grupo (se cambian en "menu")
     display.setCursor(0, 11);
-    display.print(opcionDuo4_1 == 0 ? ">" : " ");
-    display.print(F("WPM:")); imprimirValor(opcionDuo4_1 == 0, String(wpmCW));
-
-    display.setCursor(52, 11);
-    display.print(opcionDuo4_1 == 1 ? ">" : " ");
-    display.print(F("SP:")); imprimirValor(opcionDuo4_1 == 1, String(espaciadoCW) + "%");
+    display.print("LECCION " + String(leccionCW) + "  " + String(caracteresCW) + " LETRAS");  // 20 como mucho
 
     display.setCursor(0, 21);
-    display.print(opcionDuo4_1 == 2 ? ">" : " ");
-    display.print(F("LECC:")); imprimirValor(opcionDuo4_1 == 2, String(leccionCW));
-
+    display.print(F("TX -> "));
     if (grupoDuoTransmitido.length() > 0) {
-      display.setCursor(52, 21);
-      display.print(F("TX:[")); display.print(grupoDuoTransmitido); display.print(F("]"));
+      display.print(F("[")); display.print(grupoDuoTransmitido); display.print(F("]"));
+    } else {
+      display.print(F("--"));
     }
 
     display.setCursor(0, 32);
@@ -3581,12 +3807,10 @@ void renderizarPantallaLora() {
       display.print(txtRssi);
     }
 
-    // "ver" solo aparece si hay un grupo recibido sin revelar (con el, 20 de los 21 caracteres)
-    bool conVer = hayGrupoDuoPorRevelar();
-    const char* sep = conVer ? " " : "  ";
-    String txtPie4_1 = (opcionDuo4_1 == 3 ? ">" : " ") + String("enviar") + sep;
-    if (conVer) txtPie4_1 += (opcionDuo4_1 == 4 ? ">" : " ") + String("ver") + sep;
-    txtPie4_1 += (opcionDuo4_1 == 5 ? ">" : " ") + String("volver");
+    // Pie: "> enviar   ver   menu" (21 caracteres); "ver" solo si hay un grupo recibido sin revelar
+    String txtPie4_1 = (opcionDuo4_1 == 0 ? "> " : "  ") + String("enviar ");
+    if (hayGrupoDuoPorRevelar()) txtPie4_1 += (opcionDuo4_1 == 1 ? "> " : "  ") + String("ver ");
+    txtPie4_1 += (opcionDuo4_1 == 2 ? "> " : "  ") + String("menu");
     dibujarPieCentrado(txtPie4_1);
 
   } else if (subpantalla4Activa == 2) {
@@ -3614,15 +3838,7 @@ void renderizarPantallaLora() {
 
     dibujarUltimasLineas(qsoTextoTx + "_", 37, 2, 8);
 
-    // Pie a mano (21 caracteres) para poder editar el wpm en video inverso: ">20WPM >VER SI >salir"
-    display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
-    display.setCursor(1, 55);
-    display.print(opcionQSO == 0 ? ">" : " ");
-    imprimirValor(opcionQSO == 0, String(keyerWpm) + "WPM");
-    display.print(opcionQSO == 1 ? " >" : "  ");
-    display.print(qsoVerRx ? F("VER SI") : F("VER NO"));
-    display.print(opcionQSO == 2 ? " >" : "  ");
-    display.print(F("salir"));
+    dibujarPieDos(opcionQSO == 0, "borrar", opcionQSO == 1, "menu");
   }
 }
 
@@ -3695,17 +3911,40 @@ void dibujarEditor() {
   }
 }
 
-// Pie de OPERAR y QSO: ">mem >SU >tune >salir" (21 caracteres); foco 0..3. "tune" en negativo mientras emite
+// Pie de OPERAR y QSO: "> mem   > tune   > menu" (centrado); foco 0..2. "tune" en negativo mientras emite
 void dibujarPieTrx(uint8_t foco) {
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
-  const char* opciones[] = { "mem", "SU", "tune", "salir" };
-  display.setCursor(1, 55);
-  for (uint8_t i = 0; i < 4; i++) {
-    if (i > 0) display.print(' ');
-    display.print(foco == i ? '>' : ' ');
-    if (i == 2 && trxSintonizando) display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+  const char* opciones[] = { "mem", "tune", "menu" };
+  display.setCursor(1, 55);  // "> mem    tune    menu": 21 caracteres
+  for (uint8_t i = 0; i < 3; i++) {
+    if (i > 0) display.print(F("  "));
+    display.print(foco == i ? F("> ") : F("  "));
+    if (i == 1 && trxSintonizando) display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     display.print(opciones[i]);
     display.setTextColor(SSD1306_WHITE);
+  }
+}
+
+// Ajustes de DECODIFICAR ("menu"): 0 tono (se edita girando), 1 salir
+#define N_AJUSTES_DECOD 2
+const char* const NOMBRES_AJUSTES_DECOD[N_AJUSTES_DECOD] = { "TONO", "SALIR" };
+
+String valorAjusteDecod(uint8_t i) {
+  if (i != 0) return String("");
+  return trxTonoDecodHz == 0 ? String("AUTO") : String(trxTonoDecodHz) + " Hz";
+}
+
+// Ajustes de OPERAR y QSO ("menu"): 0 wpm y 2 tune se editan girando, 1 tono local, 3 SU (editor), 4 salir
+#define N_AJUSTES_TRX 5
+const char* const NOMBRES_AJUSTES_TRX[N_AJUSTES_TRX] = { "WPM", "TONO LOCAL", "TUNE", "SU", "SALIR" };
+
+String valorAjusteTrx(uint8_t i) {
+  switch (i) {
+    case 0: return String(trxWpm);
+    case 1: return trxTonoLocal ? String("SI") : String("NO");
+    case 2: return String(trxTuneSeg) + " s";
+    case 3: return trxSu[0] ? String(trxSu) : String("--");
+    default: return String("");
   }
 }
 
@@ -3716,16 +3955,7 @@ void renderizarPantallaTrx() {
   switch (subTrx) {
     case TRX_MENU: {
       // Como CW y LoRa: titulo en negativo, tres opciones y "memorias" en el centro del pie
-      const char* titulo = " TRANSCEPTOR ";
-      int16_t x1, y1;
-      uint16_t w, h;
-      display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
-      int x = (128 - w) / 2;
-      display.fillRect(x - 2, 11, w + 4, h + 4, SSD1306_WHITE);
-      display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-      display.setCursor(x, 13);
-      display.print(titulo);
-      display.setTextColor(SSD1306_WHITE);
+      dibujarTituloMenu(" TRANSCEPTOR ");
       const char* opciones[] = { "< DECODIFICAR >", "< OPERAR >", "< QSO >" };
       for (uint8_t i = 0; i < 3; i++) dibujarOpcionCentrada(opcionTrx == i, opciones[i], 24 + i * 9);
       dibujarBarraAvanzarRetroceder(opcionTrx == TRX_OPCION_BARRA,
@@ -3733,45 +3963,42 @@ void renderizarPantallaTrx() {
       break;
     }
 
-    case TRX_DECOD: {
-      dibujarEstadoDecod(11);
-      dibujarUltimasLineas(trxTextoRx, 21, 3, 9);
-      // Pie: ">AUTO >borrar >salir" (el tono se edita girando: AUTO, 400..1000 Hz)
-      display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
-      display.setCursor(1, 55);
-      display.print(opcionTrxSub == 0 ? ">" : " ");
-      imprimirValor(opcionTrxSub == 0, trxTonoDecodHz == 0 ? String("AUTO") : String(trxTonoDecodHz) + "Hz");
-      display.print(opcionTrxSub == 1 ? " >" : "  ");
-      display.print(F("borrar"));
-      display.print(opcionTrxSub == 2 ? " >" : "  ");
-      display.print(F("salir"));
+    case TRX_DECOD:
+      if (decodEnAjustes) {
+        // TONO: AUTO o 400..1000 Hz (se edita girando)
+        dibujarListaOpciones(NOMBRES_AJUSTES_DECOD, N_AJUSTES_DECOD, opcionAjustesDecod, valorAjusteDecod, 0x1);
+        dibujarPieCentrado(opcionAjustesDecod == N_AJUSTES_DECOD ? "> volver" : "  volver");
+      } else {
+        dibujarEstadoDecod(11);
+        dibujarUltimasLineas(trxTextoRx, 21, 3, 9);
+        dibujarPieDos(opcionTrxSub == 0, "borrar", opcionTrxSub == 1, "menu");
+      }
       break;
-    }
 
     case TRX_OPERAR: {
+      // Ajustes a la vista (se cambian en "menu"): "20WPM TONO SI TUNE 5s" (21 caracteres; con 10 s,
+      // "TUNE10s" para que no pase de una linea)
       display.setCursor(0, 11);
-      display.print(opcionTrxSub == 0 ? ">" : " ");
-      imprimirValor(opcionTrxSub == 0, String(trxWpm) + "WPM");
-      display.print(opcionTrxSub == 1 ? " >" : "  ");
-      display.print(trxTonoLocal ? F("TONO SI") : F("TONO NO"));
+      display.print(String(trxWpm) + "WPM " + (trxTonoLocal ? "TONO SI" : "TONO NO") +
+                    (trxTuneSeg < 10 ? " TUNE " : " TUNE") + String(trxTuneSeg) + "s");
       dibujarUltimasLineas(trxTextoTx + "_", 21, 2, 9);
       display.setCursor(0, 41);
       if (keyCortadaPorSeguridad) {
         display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-        display.print(F("KEY CORTADA"));
+        display.print(F("KEY CORTADA (>10 s)"));
         display.setTextColor(SSD1306_WHITE);
       } else {
         display.print(F("SU: "));
         display.print(trxSu[0] ? trxSu : "--");
       }
-      // Duracion del tune, a la derecha (">TUNE 10s" cabe detras de "SU: " y 8 caracteres)
-      display.setCursor(74, 41);
-      display.print(opcionTrxSub == 2 ? ">" : " ");
-      display.print(F("TUNE "));
-      imprimirValor(opcionTrxSub == 2, String(trxTuneSeg) + "s");
-      dibujarPieTrx(opcionTrxSub >= 3 ? opcionTrxSub - 3 : 255);
+      dibujarPieTrx(opcionTrxSub);
       break;
     }
+
+    case TRX_AJUSTES:
+      dibujarListaOpciones(NOMBRES_AJUSTES_TRX, N_AJUSTES_TRX, opcionAjustesTrx, valorAjusteTrx, 0x5);  // 0 y 2
+      dibujarPieCentrado(opcionAjustesTrx == N_AJUSTES_TRX ? "> volver" : "  volver");
+      break;
 
     case TRX_QSO: {
       // Recibido arriba, estado del decodificador en el separador, manipulado abajo
@@ -3796,44 +4023,94 @@ void renderizarPantallaTrx() {
   }
 }
 
+// ----------------------------------------------------------------------------
+// PROP, POTA y SOL: menu (como CONF), paginas que se pasan girando y vista del portal
+// ----------------------------------------------------------------------------
+// Estado del WiFi para la linea de estado del menu; "" si no hay nada que decir. Con una version nueva del
+// firmware en GitHub, se avisa aqui (se instala en CONF > CONFIG > ACTUALIZAR FW)
+String textoEstadoDatosWifi() {
+  if (actualizandoWifi) return "ACTUALIZANDO...";
+  if (hayActualizacion() && pantallaActual != PANTALLA_SOL) return "FW NUEVO: v" + otaVersionNueva;
+  switch (estadoWifi) {
+    case WIFI_CONECTANDO:   return "CONECTANDO WIFI...";
+    case WIFI_PORTAL:       return "PORTAL ABIERTO";
+    case WIFI_SIN_CONEXION: return "SIN CONEXION WIFI";
+    default:                return "";
+  }
+}
+
+/**
+ * Menu de PROP, POTA o SOL: titulo, dos opciones (sin conexion: ABRIR WEBCONF y REINTENTAR), una linea de
+ * estado y la barra ant./sig. Foco: 0 y 1 = opciones, 2 = barra
+ */
+void dibujarMenuDatos(const char* titulo, uint8_t opcion, const char* op0, const char* op1, const String& estado) {
+  dibujarTituloMenu(titulo);
+  bool sinConexion = (estadoWifi == WIFI_SIN_CONEXION);
+  dibujarOpcionCentrada(opcion == 0, sinConexion ? "< ABRIR WEBCONF >" : op0, 25);
+  dibujarOpcionCentrada(opcion == 1, sinConexion ? "< REINTENTAR >" : op1, 34);
+  if (estado.length() > 0) dibujarTituloCentrado(estado, 43);
+  dibujarBarraAvanzarRetroceder(opcion == OPCION_BARRA_DATOS);
+}
+
+// Cuerpo de una pagina sin datos: el estado del WiFi o el aviso que toque
+void dibujarSinDatos(const String& aviso) {
+  display.setCursor(0, 22);
+  display.print(aviso);
+}
+
+const char* const NOMBRES_PAGINAS_PROP[2] = { "INDICES", "BANDAS" };
+
 void renderizarPantallaPropagacion() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
 
-  if (!dibujarEstadoWifi()) {
-    if (actualizandoWifi) {
-      display.setCursor(0, 22);
-      display.print(F("ACTUALIZANDO..."));
-    } else if (!propagacion.validos) {
-      display.setCursor(0, 22);
-      display.print(F("SIN DATOS"));
-    } else if (paginaPropagacion == 1) {
-      // Prevision de hamqsl por banda: D = dia, N = noche
-      for (uint8_t b = 0; b < 4; b++) {
-        char linea[24];
-        snprintf(linea, sizeof(linea), "%s D:%-4s N:%s", NOMBRES_BANDAS_PANTALLA[b],
-                 propagacion.bandas[b][0], propagacion.bandas[b][1]);
-        display.setCursor(0, 12 + b * 10);
-        display.print(linea);
-      }
+  String estado = textoEstadoDatosWifi();
+  if (estado.length() == 0) {
+    if (!propagacion.validos) {
+      estado = "SIN DATOS";
     } else {
-      display.setCursor(0, 12);
-      display.print(F("SFI ")); display.print(propagacion.sfi);
-      display.print(F("  SSN ")); display.print(propagacion.manchas);
-
-      display.setCursor(0, 22);
-      display.print(F("A ")); display.print(propagacion.aIndex);
-      display.print(F("  K ")); display.print(propagacion.kIndex);
-      display.print(F("  XR ")); display.print(propagacion.rayosX);
-
-      // "08 Oct 2026 1205 GMT" -> se muestra la hora del dato
+      // "08 Oct 2026 1205 GMT" -> "HAMQSL 1205 GMT"
       String act = String(propagacion.actualizado);
-      display.setCursor(0, 32);
-      display.print(F("HAMQSL ")); display.print(act.length() > 8 ? act.substring(act.length() - 8) : act);
+      estado = "HAMQSL " + (act.length() > 8 ? act.substring(act.length() - 8) : act);
     }
+  }
+
+  if (subDatos == DATOS_PORTAL) {
+    dibujarVistaPortal(focoPortalDatos);
+    return;
+  }
+  if (subDatos == DATOS_MENU) {
+    dibujarMenuDatos(" PROPAGACION ", opcionPantallaProp, "< VER DATOS >", "< ACTUALIZAR >", estado);
+    return;
+  }
+
+  // Paginas
+  if (actualizandoWifi || !propagacion.validos) {
+    dibujarSinDatos(estado);
+  } else if (paginaPropagacion == 1) {
+    // Prevision de hamqsl por banda: D = dia, N = noche
+    for (uint8_t b = 0; b < 4; b++) {
+      char linea[24];
+      snprintf(linea, sizeof(linea), "%s D:%-4s N:%s", NOMBRES_BANDAS_PANTALLA[b],
+               propagacion.bandas[b][0], propagacion.bandas[b][1]);
+      display.setCursor(0, 12 + b * 10);
+      display.print(linea);
+    }
+  } else {
+    display.setCursor(0, 12);
+    display.print(F("SFI ")); display.print(propagacion.sfi);
+    display.print(F("  SSN ")); display.print(propagacion.manchas);
+
+    display.setCursor(0, 22);
+    display.print(F("A ")); display.print(propagacion.aIndex);
+    display.print(F("  K ")); display.print(propagacion.kIndex);
+    display.print(F("  XR ")); display.print(propagacion.rayosX);
+
+    display.setCursor(0, 32);
+    display.print(estado);  // "HAMQSL 1205 GMT": hora del dato
 
     struct tm local;
-    if (paginaPropagacion == 0 && horaLocalValida(local)) {
+    if (horaLocalValida(local)) {
       time_t ahora = time(nullptr);
       struct tm utc;
       gmtime_r(&ahora, &utc);
@@ -3843,81 +4120,69 @@ void renderizarPantallaPropagacion() {
       display.print(txtHora);
     }
   }
+  dibujarPiePaginas(paginaPropagacion, 2, NOMBRES_PAGINAS_PROP[paginaPropagacion]);
+}
 
-  if (estadoWifi == WIFI_SIN_CONEXION) {
-    dibujarPieSinConexion();
-    return;
-  }
-  String txtPagina = String(paginaPropagacion + 1) + "/2";
-  if (opcionPantallaProp == OPCION_BARRA_PROP) {
-    dibujarBarraAvanzarRetroceder(true, txtPagina);
-  } else {
-    String pie = (opcionPantallaProp == 0 ? "> " : "  ") + String("mas > ") + txtPagina +
-                 (opcionPantallaProp == 1 ? "  > " : "    ") + String("act.");
-    dibujarPieCentrado(pie);
-  }
+uint8_t paginasSpots() {
+  return max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
 }
 
 void renderizarPantallaSpots() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
-  uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
+  uint8_t paginas = paginasSpots();
+  if (paginaSpots >= paginas) paginaSpots = 0;  // Han llegado menos spots
 
-  if (!dibujarEstadoWifi()) {
-    if (actualizandoWifi) {
-      display.setCursor(0, 22);
-      display.print(F("ACTUALIZANDO..."));
-    } else if (!spotsPotaValidos) {
-      display.setCursor(0, 22);
-      display.print(F("SIN DATOS"));
-    } else if (numSpotsPota == 0) {
-      display.setCursor(0, 22);
-      display.print(F("NO HAY SPOTS CW"));
-    } else {
-      // Indicativo, frecuencia (kHz) y referencia en 21 caracteres. La referencia va entera y
-      // pegada a la derecha, con la frecuencia delante. Si no cabe todo, la frecuencia pierde
-      // el decimal ("14045.5" -> "14045") y, si aun asi no cabe, se recorta el indicativo.
-      const int ANCHO_LINEA = 21;
-      display.setTextWrap(false);
-      for (uint8_t i = 0; i < SPOTS_POR_PAGINA; i++) {
-        uint8_t idx = paginaSpots * SPOTS_POR_PAGINA + i;
-        if (idx >= numSpotsPota) break;
-        const SpotPota& sp = spotsPota[idx];
-        char frec[sizeof(sp.frecuencia)];
-        strlcpy(frec, sp.frecuencia, sizeof(frec));
-        int largoRef = strlen(sp.referencia);
-        if ((int)(strlen(sp.indicativo) + strlen(frec) + largoRef) + 2 > ANCHO_LINEA) {
-          char* punto = strchr(frec, '.');
-          if (punto) *punto = '\0';
-        }
-        int anchoIndicativo = max(1, ANCHO_LINEA - (int)strlen(frec) - largoRef - 2);
-        char linea[40];
-        snprintf(linea, sizeof(linea), "%-*.*s %s %s", anchoIndicativo, anchoIndicativo,
-                 sp.indicativo, frec, sp.referencia);
-        display.setCursor(0, 12 + i * 10);
-        display.print(linea);
-      }
-      display.setTextWrap(true);
-    }
+  String estado = textoEstadoDatosWifi();
+  if (estado.length() == 0) {
+    if (!spotsPotaValidos) estado = "SIN DATOS";
+    else if (numSpotsPota == 0) estado = "NO HAY SPOTS CW";
+    else estado = String(numSpotsPota) + " SPOTS CW";
   }
 
-  if (estadoWifi == WIFI_SIN_CONEXION) {
-    dibujarPieSinConexion();
+  if (subDatos == DATOS_PORTAL) {
+    dibujarVistaPortal(focoPortalDatos);
     return;
   }
-  String txtPagina = String(paginaSpots + 1) + "/" + String(paginas);
-  if (opcionPantallaSpots == OPCION_BARRA_SPOTS) {
-    dibujarBarraAvanzarRetroceder(true, txtPagina);
-  } else {
-    // Maximo 21 caracteres: "> mas > 10/10  > act."
-    String pie = (opcionPantallaSpots == 0 ? "> " : "  ") + String("mas > ") + txtPagina +
-                 (opcionPantallaSpots == 1 ? "  > " : "    ") + String("act.");
-    dibujarPieCentrado(pie);
+  if (subDatos == DATOS_MENU) {
+    dibujarMenuDatos(" SPOTS POTA ", opcionPantallaSpots, "< VER SPOTS >", "< ACTUALIZAR >", estado);
+    return;
   }
+
+  // Paginas
+  if (actualizandoWifi || !spotsPotaValidos || numSpotsPota == 0) {
+    dibujarSinDatos(estado);
+  } else {
+    // Indicativo, frecuencia (kHz) y referencia en 21 caracteres. La referencia va entera y
+    // pegada a la derecha, con la frecuencia delante. Si no cabe todo, la frecuencia pierde
+    // el decimal ("14045.5" -> "14045") y, si aun asi no cabe, se recorta el indicativo.
+    const int ANCHO_LINEA = 21;
+    display.setTextWrap(false);
+    for (uint8_t i = 0; i < SPOTS_POR_PAGINA; i++) {
+      uint8_t idx = paginaSpots * SPOTS_POR_PAGINA + i;
+      if (idx >= numSpotsPota) break;
+      const SpotPota& sp = spotsPota[idx];
+      char frec[sizeof(sp.frecuencia)];
+      strlcpy(frec, sp.frecuencia, sizeof(frec));
+      int largoRef = strlen(sp.referencia);
+      if ((int)(strlen(sp.indicativo) + strlen(frec) + largoRef) + 2 > ANCHO_LINEA) {
+        char* punto = strchr(frec, '.');
+        if (punto) *punto = '\0';
+      }
+      int anchoIndicativo = max(1, ANCHO_LINEA - (int)strlen(frec) - largoRef - 2);
+      char linea[40];
+      snprintf(linea, sizeof(linea), "%-*.*s %s %s", anchoIndicativo, anchoIndicativo,
+               sp.indicativo, frec, sp.referencia);
+      display.setCursor(0, 12 + i * 10);
+      display.print(linea);
+    }
+    display.setTextWrap(true);
+  }
+  dibujarPiePaginas(paginaSpots, paginas, "SPOTS");
 }
 
 // ============================================================================
-// PANTALLA 7: SOL Y LINEA GRIS (CALCULO LOCAL, SIN WIFI)
+// PANTALLA SOL: SOL Y LINEA GRIS (CALCULO LOCAL, SIN WIFI)
 // ============================================================================
 // Ecuaciones solares de NOAA (precision de un par de minutos). Ventana de linea gris:
 // sol entre GRIS_ELEV_MIN y GRIS_ELEV_MAX grados de altura (unos 30-40 min antes y
@@ -3986,6 +4251,42 @@ String formatearMinuto(int minutoUtc, int difLocal) {
   return String(txt);
 }
 
+// Salida, puesta y ventanas de linea gris del dia de "instante", en hora local
+void dibujarDiaSol(time_t instante, float lat, float lon, int difLocal) {
+  struct tm utc;
+  gmtime_r(&instante, &utc);
+  DatosSol d = calcularSol(utc, lat, lon);
+  // -0.833 grados: salida y puesta oficiales (refraccion y radio del disco)
+  String sale = formatearMinuto(minutoUtcAltura(d, lat, lon, -0.833, true), difLocal);
+  String pone = formatearMinuto(minutoUtcAltura(d, lat, lon, -0.833, false), difLocal);
+
+  display.setCursor(0, 12);
+  display.print("SALE " + sale + " PONE " + pone);
+  display.setCursor(0, 22);
+  display.print("GRIS AM " + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MIN, true), difLocal) +
+                "-" + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MAX, true), difLocal));
+  display.setCursor(0, 32);
+  display.print("GRIS PM " + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MAX, false), difLocal) +
+                "-" + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MIN, false), difLocal));
+
+  // Fecha del dia (local), para distinguir HOY de MANANA
+  time_t t = instante + difLocal * 60;
+  struct tm f;
+  gmtime_r(&t, &f);
+  char linea[40];
+  snprintf(linea, sizeof(linea), "%02d/%02d/%04d HORA LOCAL", f.tm_mday, f.tm_mon + 1, f.tm_year + 1900);
+  display.setCursor(0, 42);
+  display.print(linea);
+}
+
+const char* const NOMBRES_PAGINAS_SOL[3] = { "HOY", "AHORA", "MA\xA4" "ANA" };  // 0xA4 = enye en CP437
+
+// SOL: "actualizar" sincroniza la hora por NTP (enciende el WiFi si hace falta)
+void actualizarHoraSol() {
+  if (estadoWifi == WIFI_CONECTADO) configTzTime(ZONA_HORARIA, "pool.ntp.org", "time.cloudflare.com");
+  else if (estadoWifi == WIFI_APAGADO) encenderWifi();
+}
+
 void renderizarPantallaSol() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
@@ -3993,25 +4294,37 @@ void renderizarPantallaSol() {
   float lat, lon;
   struct tm local;
   bool conHora = horaLocalValida(local);
-  if (estadoWifi == WIFI_PORTAL || estadoWifi == WIFI_CONECTANDO || estadoWifi == WIFI_SIN_CONEXION ||
-      (!conHora && estadoWifi == WIFI_APAGADO)) {
-    // Sin hora, SOL enciende el WiFi para sincronizarla (APAGADO solo se ve un instante al entrar)
-    dibujarEstadoWifi();
-  } else if (!locatorALatLon(locatorEstacion, lat, lon)) {
-    display.setCursor(0, 22);
-    display.print(F("LOCATOR NO VALIDO"));
+  bool locatorOk = locatorALatLon(locatorEstacion, lat, lon);
+
+  // Linea de estado: el WiFi si se esta usando; si no, la hora o el locator
+  String estado = textoEstadoDatosWifi();
+  if (estado.length() == 0) {
+    if (!locatorOk) estado = "LOCATOR NO VALIDO";
+    else if (!conHora && estadoWifi == WIFI_CONECTADO) estado = "SINCRONIZANDO HORA...";
+    else if (!conHora) estado = "SIN HORA";
+    else estado = "LOCATOR " + String(locatorEstacion);
+  }
+
+  if (subDatos == DATOS_PORTAL) {
+    dibujarVistaPortal(focoPortalDatos);
+    return;
+  }
+  if (subDatos == DATOS_MENU) {
+    dibujarMenuDatos(" SOL Y LINEA GRIS ", opcionPantallaSol, "< VER DATOS >", "< ACTUALIZAR >", estado);
+    return;
+  }
+
+  // Paginas
+  if (!locatorOk) {
+    dibujarSinDatos("LOCATOR NO VALIDO");
     display.setCursor(0, 32);
-    display.print(F("CAMBIALO EN WEBCONF"));
-  } else if (!conHora && estadoWifi == WIFI_CONECTADO) {
-    display.setCursor(0, 22);
-    display.print(F("SINCRONIZANDO HORA..."));  // NTP tarda un momento tras conectar
+    display.print(F("CAMBIALO EN CONFIG"));
   } else if (!conHora) {
-    display.setCursor(0, 12);
-    display.print(F("SIN HORA."));
-    display.setCursor(0, 22);
-    display.print(F("PONLA EN WEBCONF"));
-    display.setCursor(0, 32);
-    display.print(F("(PANTALLA CONF.)"));
+    dibujarSinDatos(estado);
+    if (estadoWifi != WIFI_CONECTADO && estadoWifi != WIFI_CONECTANDO) {
+      display.setCursor(0, 32);
+      display.print(F("PONLA EN WEBCONF"));
+    }
   } else {
     time_t ahora = time(nullptr);
     struct tm utc;
@@ -4020,34 +4333,31 @@ void renderizarPantallaSol() {
     if (difLocal > 720) difLocal -= 1440;
     if (difLocal < -720) difLocal += 1440;
 
-    DatosSol d = calcularSol(utc, lat, lon);
-    // -0.833 grados: salida y puesta oficiales (refraccion y radio del disco)
-    String sale = formatearMinuto(minutoUtcAltura(d, lat, lon, -0.833, true), difLocal);
-    String pone = formatearMinuto(minutoUtcAltura(d, lat, lon, -0.833, false), difLocal);
-
-    display.setCursor(0, 12);
-    display.print("SALE " + sale + " PONE " + pone);
-
-    display.setCursor(0, 22);
-    display.print("GRIS AM " + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MIN, true), difLocal) +
-                  "-" + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MAX, true), difLocal));
-    display.setCursor(0, 32);
-    display.print("GRIS PM " + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MAX, false), difLocal) +
-                  "-" + formatearMinuto(minutoUtcAltura(d, lat, lon, GRIS_ELEV_MIN, false), difLocal));
-
-    char linea[24];
-    bool enGris = d.elevacion >= GRIS_ELEV_MIN && d.elevacion <= GRIS_ELEV_MAX;
-    snprintf(linea, sizeof(linea), "%s SOL %+.1f%s", locatorEstacion, d.elevacion, enGris ? " GRIS" : "");
-    display.setCursor(0, 42);
-    display.print(linea);
+    if (paginaSol == 1) {
+      // AHORA: altura del sol, linea gris, hora y locator
+      DatosSol d = calcularSol(utc, lat, lon);
+      bool enGris = d.elevacion >= GRIS_ELEV_MIN && d.elevacion <= GRIS_ELEV_MAX;
+      char linea[24];
+      snprintf(linea, sizeof(linea), "SOL %+.1f GRADOS", d.elevacion);
+      display.setCursor(0, 12);
+      display.print(linea);
+      display.setCursor(0, 22);
+      display.print(enGris ? F("EN LINEA GRIS") : F("FUERA DE LINEA GRIS"));
+      snprintf(linea, sizeof(linea), "UTC %02d:%02d LOC %02d:%02d", utc.tm_hour, utc.tm_min, local.tm_hour, local.tm_min);
+      display.setCursor(0, 32);
+      display.print(linea);
+      display.setCursor(0, 42);
+      display.print(F("LOCATOR ")); display.print(locatorEstacion);
+    } else {
+      // HOY o MANANA (el mismo instante, un dia despues)
+      dibujarDiaSol(ahora + (paginaSol == 2 ? 86400 : 0), lat, lon, difLocal);
+    }
   }
-
-  if (estadoWifi == WIFI_SIN_CONEXION) dibujarPieSinConexion();
-  else dibujarBarraAvanzarRetroceder(true);
+  dibujarPiePaginas(paginaSol, 3, NOMBRES_PAGINAS_SOL[paginaSol]);
 }
 
 // ============================================================================
-// PANTALLA 8: CONFIGURACION
+// PANTALLA CONF: CONFIGURACION, STATUS Y ACTUALIZACION
 // ============================================================================
 /**
  * Reset de fabrica: borra estadisticas, configuracion del entrenador, datos de la estacion
@@ -4076,13 +4386,14 @@ void resetFabrica() {
 // WiFi iniciado). El bloque "sta.ssid" lleva la longitud delante (4 bytes en el IDF 4.4; 1 en otras
 // versiones). Vacio si no hay red guardada
 String ssidGuardada() {
-  Preferences p;
-  if (!p.begin("nvs.net80211", true)) return String();
+  // API de NVS de ESP-IDF directamente: sin red guardada no imprime errores (Preferences si)
+  nvs_handle_t h;
+  if (nvs_open("nvs.net80211", NVS_READONLY, &h) != ESP_OK) return String();
   uint8_t buf[40] = {0};
-  size_t n = p.getBytesLength("sta.ssid");
-  if (n == 0 || n > sizeof(buf)) { p.end(); return String(); }
-  p.getBytes("sta.ssid", buf, n);
-  p.end();
+  size_t n = sizeof(buf);
+  esp_err_t err = nvs_get_blob(h, "sta.ssid", buf, &n);
+  nvs_close(h);
+  if (err != ESP_OK || n == 0) return String();
   uint8_t cab = (n >= 36) ? 4 : 1;
   uint32_t largo = (cab == 4) ? (buf[0] | (buf[1] << 8) | (buf[2] << 16) | ((uint32_t)buf[3] << 24)) : buf[0];
   if (largo > 32 || largo > n - cab) return String();
@@ -4133,7 +4444,7 @@ const char* const NOMBRES_PAGINAS_STATUS[N_PAGINAS_STATUS] = { "ESTACION", "SIST
 
 // STATUS: cuatro lineas por pagina (21 caracteres) y, en el pie, la pagina y "volver"
 void dibujarPaginaStatus() {
-  char l[4][24];
+  char l[4][40];  // 21 caracteres a la vista; holgura para el compilador
   for (uint8_t i = 0; i < 4; i++) l[i][0] = '\0';
   switch (paginaStatus) {
     case 0: {  // Estacion
@@ -4192,8 +4503,7 @@ void dibujarPaginaStatus() {
     display.setCursor(0, 12 + i * 10);
     display.print(l[i]);
   }
-  dibujarPieCentrado(String(paginaStatus + 1) + "/" + String(N_PAGINAS_STATUS) + " " +
-                     NOMBRES_PAGINAS_STATUS[paginaStatus] + "  >volver");
+  dibujarPiePaginas(paginaStatus, N_PAGINAS_STATUS, NOMBRES_PAGINAS_STATUS[paginaStatus]);
 }
 
 // Valor de cada opcion de CONFIG (a la derecha de la linea)
@@ -4205,63 +4515,61 @@ String valorOpcionConf(uint8_t i) {
     case OC_APAGADO:     return textoApagado();
     case OC_TONO:        return String(frecTonoHz) + " Hz";
     case OC_WEBCONF:     return estadoWifi == WIFI_PORTAL ? String("ABIERTO") : String("");
+    case OC_ACTUALIZAR:  return hayActualizacion() ? "v" + otaVersionNueva : String("");
     case OC_FABRICA:     return confirmandoFabrica ? String("OTRA VEZ") : String("");
     default:             return String("");
   }
 }
 
 const char* const NOMBRES_OPCIONES_CONF[N_OPCIONES_CONF - 1] = {
-  "ID", "LOCATOR", "ACELERACION", "APAGADO", "TONO", "WEBCONF", "FABRICA"
+  "ID", "LOCATOR", "ACELERACION", "APAGADO", "TONO", "WEBCONF", "ACTUALIZAR FW", "FABRICA"
 };
 
 // CONFIG: lista de opciones (4 a la vista, con el valor a la derecha) y "volver" en el pie
 void dibujarListaConf() {
-  const uint8_t n = N_OPCIONES_CONF - 1;  // Sin "volver"
-  uint8_t primera = focoConf < n ? max(0, (int)focoConf - 3) : n - 4;
-  for (uint8_t k = 0; k < 4; k++) {
-    uint8_t i = primera + k;
-    int16_t y = 12 + k * 10;
-    display.setCursor(0, y);
-    display.print(focoConf == i ? '>' : ' ');
-    display.print(NOMBRES_OPCIONES_CONF[i]);
-    // El valor acaba en x = 123 para dejar sitio a la barra de desplazamiento
-    String v = valorOpcionConf(i);
-    display.setCursor(124 - v.length() * 6, y);
-    bool editable = (i == OC_ACELERACION || i == OC_APAGADO || i == OC_TONO);
-    if (editable) imprimirValor(focoConf == i, v);
-    else display.print(v);
-  }
-  // Barra de desplazamiento: 2 px a la derecha, con el tramo de lista que se ve
-  const int16_t yBarra = 12, altoBarra = 38;
-  int16_t altoTramo = altoBarra * 4 / n;
-  int16_t yTramo = yBarra + (altoBarra - altoTramo) * primera / (n - 4);
-  display.drawFastVLine(127, yBarra, altoBarra, SSD1306_WHITE);
-  display.fillRect(125, yTramo, 3, altoTramo, SSD1306_WHITE);
+  dibujarListaOpciones(NOMBRES_OPCIONES_CONF, N_OPCIONES_CONF - 1, focoConf, valorOpcionConf,
+                       (1UL << OC_ACELERACION) | (1UL << OC_APAGADO) | (1UL << OC_TONO));
   dibujarPieCentrado(focoConf == OC_VOLVER ? "> volver" : "  volver");
 }
+
+// Datos del portal (red, clave, web) con "ver qr" y "volver": CONF > WEBCONF y, sin conexion, PROP, POTA y SOL
+void dibujarVistaPortal(uint8_t foco) {
+  if (estadoWifi == WIFI_PORTAL || estadoWifi == WIFI_CONECTANDO) {
+    dibujarEstadoWifi();
+  } else {
+    display.setCursor(0, 22);
+    display.print(F("PORTAL CERRADO"));
+    display.setCursor(0, 32);
+    display.print(F("WIFI ")); display.print(textoEstadoWifi());
+  }
+  if (estadoWifi == WIFI_PORTAL) dibujarPieDos(foco == 0, "ver qr", foco == 1, "volver");
+  else dibujarPieCentrado("> volver");
+}
+
+// Eventos de la vista del portal. Devuelve true cuando hay que salir de ella
+bool procesarVistaPortal(uint8_t& foco, int8_t giro, bool pulsa, bool atras) {
+  if (atras) return true;
+  if (giro != 0 && estadoWifi == WIFI_PORTAL) foco = (foco + 1) % 2;
+  else if (pulsa) {
+    if (foco == 0 && estadoWifi == WIFI_PORTAL) vistaPortal = VISTA_QR_RED;
+    else return true;
+  }
+  return false;
+}
+
+void dibujarPantallaOta();  // Definida justo debajo, con la logica de la actualizacion
 
 void renderizarPantallaConfig() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
 
   switch (subConf) {
-    case CONF_MENU: {
-      // Como CW, LoRa y TRX: titulo en negativo y dos opciones
-      const char* titulo = " CONFIGURACION ";
-      int16_t x1, y1;
-      uint16_t w, h;
-      display.getTextBounds(titulo, 0, 0, &x1, &y1, &w, &h);
-      int x = (128 - w) / 2;
-      display.fillRect(x - 2, 11, w + 4, h + 4, SSD1306_WHITE);
-      display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-      display.setCursor(x, 13);
-      display.print(titulo);
-      display.setTextColor(SSD1306_WHITE);
+    case CONF_MENU:
+      dibujarTituloMenu(" CONFIGURACION ");
       dibujarOpcionCentrada(opcionPantallaConfig == 0, "< CONFIG >", 27);
       dibujarOpcionCentrada(opcionPantallaConfig == 1, "< STATUS >", 37);
       dibujarBarraAvanzarRetroceder(opcionPantallaConfig == OPCION_BARRA_CONFIG);
       break;
-    }
 
     case CONF_CONFIG:
       dibujarListaConf();
@@ -4272,25 +4580,15 @@ void renderizarPantallaConfig() {
       break;
 
     case CONF_PORTAL:
-      // Datos del portal (red, clave, web); "ver qr" para unir el movil con la camara
-      if (estadoWifi == WIFI_PORTAL || estadoWifi == WIFI_CONECTANDO) {
-        dibujarEstadoWifi();
-      } else {
-        display.setCursor(0, 22);
-        display.print(F("PORTAL CERRADO"));
-        display.setCursor(0, 32);
-        display.print(F("WIFI ")); display.print(textoEstadoWifi());
-      }
-      if (estadoWifi == WIFI_PORTAL) {
-        dibujarPieCentrado((focoPortalConf == 0 ? "> " : "  ") + String("ver qr   ") +
-                           (focoPortalConf == 1 ? "> " : "  ") + String("volver"));
-      } else {
-        dibujarPieCentrado("> volver");
-      }
+      dibujarVistaPortal(focoPortalConf);
       break;
 
     case CONF_EDITOR:
       dibujarEditor();
+      break;
+
+    case CONF_OTA:
+      dibujarPantallaOta();
       break;
   }
 }
@@ -4320,6 +4618,75 @@ void confCerrarEditor(bool guardar) {
   }
   editorError = false;
   subConf = CONF_CONFIG;
+}
+
+// ACTUALIZAR FW: enciende el WiFi (si hace falta) y procesarOta() busca la ultima release al conectar
+void confEntrarOta() {
+  subConf = CONF_OTA;
+  focoOta = 0;
+  otaError = "";
+  if (estadoWifi == WIFI_PORTAL) {
+    estadoOta = OTA_ERROR;
+    otaError = "CIERRA EL PORTAL";
+    return;
+  }
+  estadoOta = OTA_CONECTANDO;
+  if (estadoWifi == WIFI_APAGADO || estadoWifi == WIFI_SIN_CONEXION) encenderWifi();
+}
+
+// Al salir se apaga el WiFi: en CONF solo se usa para el portal
+void confSalirOta() {
+  subConf = CONF_CONFIG;
+  estadoOta = OTA_REPOSO;
+  if (estadoWifi != WIFI_PORTAL && estadoWifi != WIFI_APAGADO) apagarWifi();
+}
+
+void procesarOta() {
+  if (pantallaActual != PANTALLA_CONFIG || subConf != CONF_OTA || estadoOta != OTA_CONECTANDO) return;
+  if (estadoWifi == WIFI_SIN_CONEXION) {
+    estadoOta = OTA_ERROR;
+    otaError = "SIN CONEXION WIFI";
+    pantallaPendiente = true;
+  } else if (estadoWifi == WIFI_CONECTADO) {
+    estadoOta = OTA_BUSCANDO;
+    actualizarPantalla();
+    if (!buscarActualizacion()) estadoOta = OTA_ERROR;
+    else if (hayActualizacion()) estadoOta = OTA_HAY_NUEVA;
+    else estadoOta = OTA_AL_DIA;
+    pantallaPendiente = true;
+  }
+}
+
+// Pantalla de ACTUALIZAR FW: version instalada, estado y, al descargar, una barra de progreso
+void dibujarPantallaOta() {
+  dibujarTituloCentrado(F("- ACTUALIZAR FW -"));
+  display.setCursor(0, 22);
+  display.print(F("INSTALADA  v" FW_VERSION));
+  display.setCursor(0, 32);
+  switch (estadoOta) {
+    case OTA_CONECTANDO: display.print(F("CONECTANDO WIFI...")); break;
+    case OTA_BUSCANDO:   display.print(F("BUSCANDO EN GITHUB...")); break;
+    case OTA_AL_DIA:
+      display.print(F("ULTIMA     v")); display.print(otaVersionNueva);
+      display.setCursor(0, 42);
+      // Mas nueva pero sin binario para esta placa (con o sin encoder): no se puede instalar
+      display.print(compararVersiones(otaVersionNueva, FW_VERSION) > 0 ? F("SIN BINARIO PARA ESTA") : F("YA ESTA AL DIA"));
+      break;
+    case OTA_HAY_NUEVA:
+      display.print(F("NUEVA      v")); display.print(otaVersionNueva);
+      break;
+    case OTA_DESCARGANDO: {
+      display.print(F("INSTALANDO ")); display.print(otaProgreso); display.print('%');
+      display.drawRect(0, 43, 128, 7, SSD1306_WHITE);
+      display.fillRect(1, 44, 126 * otaProgreso / 100, 5, SSD1306_WHITE);
+      break;
+    }
+    case OTA_HECHO:      display.print(F("INSTALADA: REINICIA")); break;
+    default:             display.print(otaError); break;
+  }
+  if (estadoOta == OTA_HAY_NUEVA) dibujarPieDos(focoOta == 0, "instalar", focoOta == 1, "volver");
+  else if (estadoOta == OTA_DESCARGANDO) dibujarPieCentrado(F("NO LA APAGUES"));
+  else if (estadoOta != OTA_HECHO) dibujarPieCentrado(F("> volver"));
 }
 
 // STATUS se redibuja cada segundo (hora, tiempo encendido, memoria)
@@ -4795,7 +5162,9 @@ void procesarCara() {
 //   pulsacion corta del eje (= corta del PRG) y larga del eje (= larga del PRG, salvo
 //   donde esta solo mueve el foco: ahi no hace nada, o sale de la edicion).
 enum EventoBoton { BOTON_NINGUNO, BOTON_CORTA, BOTON_LARGA, ENC_DERECHA, ENC_IZQUIERDA, ENC_PULSA, ENC_LARGA };
-EventoBoton eventoSerie = BOTON_NINGUNO;  // PROVISIONAL: evento simulado por serie (ver procesarCapturaSerie)
+#if DEPURACION_SERIE
+EventoBoton eventoSerie = BOTON_NINGUNO;  // Evento simulado por serie (ver procesarOrdenesSerie)
+#endif
 
 struct Pulsador {
   uint8_t pin;
@@ -4958,8 +5327,9 @@ void entrarEnPantalla(uint8_t pantalla, bool haciaAtras = false) {
   if (pantalla == PANTALLA_CW) opcionPantalla3 = OPCION_BARRA_CW;
   else if (pantalla == PANTALLA_LORA) opcionPantalla4 = 2;
   else if (pantalla == PANTALLA_TRX) { opcionTrx = TRX_OPCION_BARRA; subTrx = TRX_MENU; }
-  else if (pantalla == PANTALLA_PROPAGACION) opcionPantallaProp = OPCION_BARRA_PROP;
-  else if (pantalla == PANTALLA_SPOTS) opcionPantallaSpots = OPCION_BARRA_SPOTS;
+  else if (pantalla == PANTALLA_PROPAGACION) { opcionPantallaProp = OPCION_BARRA_PROP; subDatos = DATOS_MENU; }
+  else if (pantalla == PANTALLA_SPOTS) { opcionPantallaSpots = OPCION_BARRA_SPOTS; subDatos = DATOS_MENU; }
+  else if (pantalla == PANTALLA_SOL) { opcionPantallaSol = OPCION_BARRA_DATOS; subDatos = DATOS_MENU; }
   else if (pantalla == PANTALLA_CONFIG) {
     opcionPantallaConfig = OPCION_BARRA_CONFIG;
     subConf = CONF_MENU;
@@ -4971,7 +5341,6 @@ void entrarEnPantalla(uint8_t pantalla, bool haciaAtras = false) {
 void navegarDesdeBarra() {
   if (opcionNavegacionP1234 == 0) entrarEnPantalla(pantallaActual == 1 ? TOTAL_PANTALLAS : pantallaActual - 1, true);
   else entrarEnPantalla(pantallaActual == TOTAL_PANTALLAS ? 1 : pantallaActual + 1);
-  contadorPulsaciones++;
 }
 
 // ============================================================================
@@ -4984,9 +5353,13 @@ void navegarDesdeBarra() {
 void dormirChispas(const char* motivo);  // Definida antes de setup()
 
 void procesarBoton() {
-  EventoBoton ev = (eventoSerie != BOTON_NINGUNO) ? eventoSerie : leerEventoBoton();  // PROVISIONAL: serie
+#if DEPURACION_SERIE
+  EventoBoton ev = (eventoSerie != BOTON_NINGUNO) ? eventoSerie : leerEventoBoton();
   if (eventoSerie != BOTON_NINGUNO) giroRapido = false;
   eventoSerie = BOTON_NINGUNO;
+#else
+  EventoBoton ev = leerEventoBoton();
+#endif
   if (ev == BOTON_NINGUNO) return;
   if (ev == BOTON_LARGA) {
     dormirChispas("PRG LARGO");  // No vuelve: al despertar, la placa arranca de nuevo
@@ -5015,19 +5388,6 @@ void procesarBoton() {
   bool ejeLarga = (ev == ENC_LARGA);
   bool atras = (ev == BOTON_CORTA);
 
-  // PROP, POTA o SOL sin conexion WiFi: [sig.] -> [abrir webconf] -> [ant.]
-  if (estadoWifi == WIFI_SIN_CONEXION && (pantallaActual == PANTALLA_PROPAGACION ||
-      pantallaActual == PANTALLA_SPOTS || pantallaActual == PANTALLA_SOL)) {
-    if (atras) entrarEnPantalla(PANTALLA_INICIO);
-    else if (giro != 0) moverFocoAnillo(opcionSinConexion, 1, giro);
-    else if (pulsa) {
-      if (opcionSinConexion == 0) abrirPortalWifi();
-      else navegarDesdeBarra();
-    }
-    actualizarPantalla();
-    return;
-  }
-
   // Mientras se edita un valor, "atras" y la larga del eje solo salen de la edicion
   if ((atras || ejeLarga) && editandoValor) {
     editandoValor = false;
@@ -5045,7 +5405,7 @@ void procesarBoton() {
       } else if (pulsa) {
         if (opcionPantalla4 == 0) {
           enPantalla4_Sub = true; subpantalla4Activa = 1;
-          modoRadioRxActivo = true; opcionDuo4_1 = 3;
+          modoRadioRxActivo = true; opcionDuo4_1 = 0; loraEnAjustes = false;
           loraEscuchar();  // La radio duerme fuera de Duo y QSO
         } else if (opcionPantalla4 == 1) {
           entrarEnQSO();
@@ -5054,54 +5414,63 @@ void procesarBoton() {
         }
       }
 
+    } else if (loraEnAjustes) {
+      // Ajustes ("menu"). Duo: 0 wpm, 1 espaciado, 2 leccion, 3 salir, 4 volver.
+      // QSO: 0 wpm, 1 ver, 2 salir, 3 volver (las palas siguen funcionando)
+      bool esDuo = (subpantalla4Activa == 1);
+      uint8_t n = esDuo ? N_AJUSTES_DUO : N_AJUSTES_QSO_LORA;
+      if (atras) {
+        loraEnAjustes = false;
+      } else if (giro != 0) {
+        if (editandoValor) {
+          if (!esDuo) ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
+          else if (opcionAjustesLora == 0) ajustarValor(wpmCW, giro, 15, 30);
+          else if (opcionAjustesLora == 1) ajustarValor(espaciadoCW, giro * 10, 100, 200);
+          else ajustarValor(leccionCW, giro, 1, 40);
+        } else {
+          opcionAjustesLora = (opcionAjustesLora + n + 1 + giro) % (n + 1);
+        }
+      } else if (pulsa) {
+        if (opcionAjustesLora == n) loraEnAjustes = false;                       // volver
+        else if (opcionAjustesLora == n - 1) salirModoLoRa();                   // salir
+        else if (!esDuo && opcionAjustesLora == 1) qsoVerRx = !qsoVerRx;
+        else editandoValor = !editandoValor;                                    // Pulsar, girar y pulsar
+      }
+
     } else if (subpantalla4Activa == 1) {
-      // Duo. Foco: 0 wpm, 1 espaciado, 2 leccion, 3 enviar, 4 ver (solo si hay grupo oculto), 5 volver
+      // Duo. Foco: 0 enviar, 1 ver (solo si hay grupo oculto), 2 menu
       if (atras) {
         salirModoLoRa();
       } else if (giro != 0) {
-        if (editandoValor) {
-          switch (opcionDuo4_1) {
-            case 0: ajustarValor(wpmCW, giro, 15, 30); break;
-            case 1: ajustarValor(espaciadoCW, giro * 10, 100, 200); break;
-            case 2: ajustarValor(leccionCW, giro, 1, 40); break;
-          }
-        } else {
-          do {
-            opcionDuo4_1 = (opcionDuo4_1 + 6 + giro) % 6;
-          } while (opcionDuo4_1 == 4 && !hayGrupoDuoPorRevelar());
-        }
+        do {
+          opcionDuo4_1 = (opcionDuo4_1 + 3 + giro) % 3;
+        } while (opcionDuo4_1 == 1 && !hayGrupoDuoPorRevelar());
       } else if (ejeLarga) {
         grupoDuoRevelado = true;  // Atajo de "ver"
-        if (opcionDuo4_1 == 4) opcionDuo4_1 = 3;
+        if (opcionDuo4_1 == 1) opcionDuo4_1 = 0;
       } else if (pulsa) {
-        switch (opcionDuo4_1) {
-          case 0: case 1: case 2:
-            editandoValor = !editandoValor;  // Pulsar, girar y pulsar
-            break;
-          case 3: {
-            String nuevoGrupo = "";
-            for (int i = 0; i < caracteresCW; i++) nuevoGrupo += caracterKochAleatorio(leccionCW);
-            transmitirGrupoDuoLoRa(nuevoGrupo);
-            break;
-          }
-          case 4: grupoDuoRevelado = true; opcionDuo4_1 = 3; break;
-          case 5: salirModoLoRa(); break;
+        if (opcionDuo4_1 == 0) {
+          String nuevoGrupo = "";
+          for (int i = 0; i < caracteresCW; i++) nuevoGrupo += caracterKochAleatorio(leccionCW);
+          transmitirGrupoDuoLoRa(nuevoGrupo);
+        } else if (opcionDuo4_1 == 1) {
+          grupoDuoRevelado = true;
+          opcionDuo4_1 = 0;
+        } else {
+          loraEnAjustes = true;
+          opcionAjustesLora = 0;
         }
       }
 
     } else if (subpantalla4Activa == 2) {
-      // QSO. Foco: 0 wpm, 1 ver, 2 salir. Las palas funcionan con cualquier foco
+      // QSO. Foco: 0 borrar (los dos textos), 1 menu. Las palas funcionan con cualquier foco
       if (atras || ejeLarga) {
         salirModoLoRa();
       } else if (giro != 0) {
-        if (editandoValor) ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
-        else opcionQSO = (opcionQSO + OPCIONES_QSO + giro) % OPCIONES_QSO;
+        opcionQSO = (opcionQSO + OPCIONES_QSO + giro) % OPCIONES_QSO;
       } else if (pulsa) {
-        switch (opcionQSO) {
-          case 0: editandoValor = !editandoValor; break;
-          case 1: qsoVerRx = !qsoVerRx; break;
-          case 2: salirModoLoRa(); break;
-        }
+        if (opcionQSO == 0) qsoTextoRx = qsoTextoTx = "";
+        else { loraEnAjustes = true; opcionAjustesLora = 0; }
       }
     }
 
@@ -5121,50 +5490,63 @@ void procesarBoton() {
         break;
 
       case TRX_DECOD:
-        // Foco: 0 tono (AUTO o 400-1000 Hz), 1 borrar, 2 salir
-        if (atras || ejeLarga) trxSalirAlMenu();
-        else if (giro != 0) {
-          if (editandoValor) ajustarTonoDecod(giro);
-          else opcionTrxSub = (opcionTrxSub + 3 + giro) % 3;
-        } else if (pulsa) {
-          if (opcionTrxSub == 0) editandoValor = !editandoValor;
-          else if (opcionTrxSub == 1) trxTextoRx = "";
-          else trxSalirAlMenu();
-        }
-        break;
-
-      case TRX_OPERAR:
-        // Foco: 0 wpm, 1 tono local, 2 duracion del tune, 3 mem, 4 SU, 5 tune, 6 salir. Las palas manipulan
-        // la emisora con cualquier foco
-        if (atras || ejeLarga) trxSalirAlMenu();
-        else if (giro != 0) {
-          if (editandoValor && opcionTrxSub == 0) ajustarValor(trxWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
-          else if (editandoValor) ajustarValor(trxTuneSeg, giro, TRX_TUNE_MIN_S, TRX_TUNE_MAX_S);
-          else opcionTrxSub = (opcionTrxSub + 7 + giro) % 7;
-        } else if (pulsa) {
-          switch (opcionTrxSub) {
-            case 0: editandoValor = !editandoValor; break;
-            case 1: trxTonoLocal = !trxTonoLocal; break;
-            case 2: editandoValor = !editandoValor; break;
-            case 3: trxAbrirListaEnvio(); break;
-            case 4: trxAbrirEditor(-1); break;
-            case 5: trxTune(); break;
-            case 6: trxSalirAlMenu(); break;
+        if (decodEnAjustes) {
+          // Ajustes. Foco: 0 tono (AUTO o 400-1000 Hz), 1 salir, 2 volver (pie)
+          if (atras) decodEnAjustes = false;
+          else if (giro != 0) {
+            if (editandoValor) ajustarTonoDecod(giro);
+            else opcionAjustesDecod = (opcionAjustesDecod + N_AJUSTES_DECOD + 1 + giro) % (N_AJUSTES_DECOD + 1);
+          } else if (pulsa) {
+            if (opcionAjustesDecod == 0) editandoValor = !editandoValor;
+            else if (opcionAjustesDecod == 1) { decodEnAjustes = false; trxSalirAlMenu(); }
+            else decodEnAjustes = false;
+          }
+        } else {
+          // Foco: 0 borrar, 1 menu
+          if (atras || ejeLarga) trxSalirAlMenu();
+          else if (giro != 0) opcionTrxSub = (opcionTrxSub + 1) % 2;
+          else if (pulsa) {
+            if (opcionTrxSub == 0) trxTextoRx = "";
+            else { decodEnAjustes = true; opcionAjustesDecod = 0; }
           }
         }
         break;
 
+      case TRX_OPERAR:
       case TRX_QSO:
-        // Foco: 0 mem, 1 SU, 2 tune, 3 salir. El wpm, el tono local y la duracion del tune se eligen en OPERAR
+        // OPERAR y QSO. Foco: 0 mem, 1 tune, 2 menu (ajustes). Las palas manipulan la emisora con cualquier foco
         if (atras || ejeLarga) trxSalirAlMenu();
-        else if (giro != 0) opcionTrxSub = (opcionTrxSub + 4 + giro) % 4;
+        else if (giro != 0) opcionTrxSub = (opcionTrxSub + 3 + giro) % 3;
         else if (pulsa) {
           if (opcionTrxSub == 0) trxAbrirListaEnvio();
-          else if (opcionTrxSub == 1) trxAbrirEditor(-1);
-          else if (opcionTrxSub == 2) trxTune();
-          else trxSalirAlMenu();
+          else if (opcionTrxSub == 1) trxTune();
+          else {
+            trxAjustesOrigen = subTrx;
+            subTrx = TRX_AJUSTES;
+            opcionAjustesTrx = 0;
+          }
         }
         break;
+
+      case TRX_AJUSTES: {
+        // Foco: 0 wpm, 1 tono local, 2 tune (s), 3 SU, 4 salir, 5 volver (pie). Las palas siguen manipulando
+        const uint8_t N_FOCO = N_AJUSTES_TRX + 1;
+        if (atras) subTrx = trxAjustesOrigen;
+        else if (giro != 0) {
+          if (editandoValor && opcionAjustesTrx == 0) ajustarValor(trxWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
+          else if (editandoValor) ajustarValor(trxTuneSeg, giro, TRX_TUNE_MIN_S, TRX_TUNE_MAX_S);
+          else opcionAjustesTrx = (opcionAjustesTrx + N_FOCO + giro) % N_FOCO;
+        } else if (pulsa) {
+          switch (opcionAjustesTrx) {
+            case 0: case 2: editandoValor = !editandoValor; break;
+            case 1: trxTonoLocal = !trxTonoLocal; break;
+            case 3: trxAbrirEditor(-1); break;  // Vuelve aqui
+            case 4: trxSalirAlMenu(); break;
+            default: subTrx = trxAjustesOrigen; break;
+          }
+        }
+        break;
+      }
 
       case TRX_MEMORIAS:
       case TRX_LISTA_ENVIO: {
@@ -5242,6 +5624,9 @@ void procesarBoton() {
               subConf = CONF_PORTAL;
               focoPortalConf = 0;
               break;
+            case OC_ACTUALIZAR:
+              confEntrarOta();
+              break;
             case OC_FABRICA:
               if (!confirmandoFabrica) confirmandoFabrica = true;
               else resetFabrica();
@@ -5255,18 +5640,21 @@ void procesarBoton() {
 
       case CONF_PORTAL:
         // Foco: 0 ver qr, 1 volver (sin portal abierto, solo volver). El portal sigue abierto al volver
-        if (atras) subConf = CONF_CONFIG;
-        else if (giro != 0 && estadoWifi == WIFI_PORTAL) focoPortalConf = (focoPortalConf + 1) % 2;
-        else if (pulsa) {
-          if (focoPortalConf == 0 && estadoWifi == WIFI_PORTAL) vistaPortal = VISTA_QR_RED;
-          else subConf = CONF_CONFIG;
-        }
+        if (procesarVistaPortal(focoPortalConf, giro, pulsa, atras)) subConf = CONF_CONFIG;
         break;
 
       case CONF_STATUS:
         // Girar pasa pagina; pulsar (o atras) vuelve al menu
         if (atras || pulsa || ejeLarga) subConf = CONF_MENU;
         else if (giro != 0) paginaStatus = (paginaStatus + N_PAGINAS_STATUS + giro) % N_PAGINAS_STATUS;
+        break;
+
+      case CONF_OTA:
+        // Con version nueva: 0 instalar, 1 volver. Si no, cualquier pulsacion (o atras) vuelve
+        if (estadoOta == OTA_DESCARGANDO || estadoOta == OTA_HECHO) break;
+        if (estadoOta == OTA_HAY_NUEVA && giro != 0) focoOta = (focoOta + 1) % 2;
+        else if (atras || (pulsa && (estadoOta != OTA_HAY_NUEVA || focoOta == 1))) confSalirOta();
+        else if (pulsa) instalarActualizacion();
         break;
 
       case CONF_EDITOR:
@@ -5278,28 +5666,49 @@ void procesarBoton() {
         break;
     }
 
-  } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS) {
-    // P4 y P5: [sig.] -> [mas >] -> [act.] -> [ant.]
+  } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
+             pantallaActual == PANTALLA_SOL) {
+    // Menu: [sig.] -> [VER DATOS] -> [ACTUALIZAR] -> [ant.] (sin conexion: ABRIR WEBCONF y REINTENTAR).
+    // Paginas: girar pasa pagina y pulsar (o atras) vuelve al menu
     bool esProp = (pantallaActual == PANTALLA_PROPAGACION);
-    uint8_t& opcion = esProp ? opcionPantallaProp : opcionPantallaSpots;
-    uint8_t barra = esProp ? OPCION_BARRA_PROP : OPCION_BARRA_SPOTS;
-    if (atras) {
-      entrarEnPantalla(PANTALLA_INICIO);
-    } else if (giro != 0) {
-      moverFocoAnillo(opcion, barra, giro);
-    } else if (pulsa) {
-      if (opcion == barra) {
-        navegarDesdeBarra();
-      } else if (esProp && opcion == 0) {
-        paginaPropagacion = (paginaPropagacion + 1) % 2;
-      } else if (esProp && opcion == 1) {
-        pedirActualizacionWifi();
-      } else if (!esProp && opcion == 0) {
-        uint8_t paginas = max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
-        paginaSpots = (paginaSpots + 1) % paginas;
-      } else if (!esProp && opcion == 1) {
-        pedirActualizacionWifi();
-      }
+    bool esSol = (pantallaActual == PANTALLA_SOL);
+    uint8_t& opcion = esProp ? opcionPantallaProp : (esSol ? opcionPantallaSol : opcionPantallaSpots);
+    uint8_t& pagina = esProp ? paginaPropagacion : (esSol ? paginaSol : paginaSpots);
+    uint8_t paginas = esProp ? 2 : (esSol ? 3 : paginasSpots());
+    switch (subDatos) {
+      case DATOS_MENU:
+        if (atras) entrarEnPantalla(PANTALLA_INICIO);
+        else if (giro != 0) moverFocoAnillo(opcion, OPCION_BARRA_DATOS, giro);
+        else if (pulsa) {
+          if (opcion == OPCION_BARRA_DATOS) {
+            navegarDesdeBarra();
+          } else if (estadoWifi == WIFI_SIN_CONEXION) {
+            if (opcion == 0) {
+              abrirPortalWifi();
+              subDatos = DATOS_PORTAL;
+              focoPortalDatos = 0;
+            } else {
+              encenderWifi();  // Reintentar
+            }
+          } else if (opcion == 0) {
+            subDatos = DATOS_PAGINAS;
+            pagina = 0;
+          } else if (esSol) {
+            actualizarHoraSol();
+          } else {
+            pedirActualizacionWifi();
+          }
+        }
+        break;
+
+      case DATOS_PAGINAS:
+        if (atras || pulsa || ejeLarga) subDatos = DATOS_MENU;
+        else if (giro != 0) pagina = (pagina + paginas + giro) % paginas;
+        break;
+
+      case DATOS_PORTAL:
+        if (procesarVistaPortal(focoPortalDatos, giro, pulsa, atras)) subDatos = DATOS_MENU;
+        break;
     }
 
   } else if (pantallaActual == PANTALLA_CW) {
@@ -5371,21 +5780,33 @@ void procesarBoton() {
         else if (estadoEcho != ECHO_RESULTADO) echoNuevoReto(true);  // Con el resultado a la vista, sigue solo
       }
 
-    } else if (enKeyer) {
-      // Foco: 0 wpm, 1 modo, 2 palas, 3 borrar, 4 volver. Las palas funcionan con cualquier foco
-      if (atras || ejeLarga) {
-        salirDeKeyer();
+    } else if (enKeyer && keyerEnAjustes) {
+      // Ajustes de TX LIBRE. Foco: 0 wpm, 1 modo, 2 palas, 3 salir, 4 volver (pie). Las palas siguen manipulando
+      const uint8_t N_FOCO = N_AJUSTES_KEYER + 1;
+      if (atras) {
+        keyerEnAjustes = false;
       } else if (giro != 0) {
         if (editandoValor) ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
-        else opcionKeyer = (opcionKeyer + 5 + giro) % 5;
+        else opcionAjustesKeyer = (opcionAjustesKeyer + N_FOCO + giro) % N_FOCO;
       } else if (pulsa) {
-        switch (opcionKeyer) {
+        switch (opcionAjustesKeyer) {
           case 0: editandoValor = !editandoValor; break;
           case 1: keyerModoB = !keyerModoB; break;
           case 2: keyerPalasInvertidas = !keyerPalasInvertidas; break;
-          case 3: textoKeyer = ""; break;
-          case 4: salirDeKeyer(); break;
+          case 3: keyerEnAjustes = false; salirDeKeyer(); break;
+          default: keyerEnAjustes = false; break;
         }
+      }
+
+    } else if (enKeyer) {
+      // Foco: 0 borrar, 1 menu (ajustes). Las palas funcionan con cualquier foco
+      if (atras || ejeLarga) {
+        salirDeKeyer();
+      } else if (giro != 0) {
+        opcionKeyer = (opcionKeyer + 1) % 2;
+      } else if (pulsa) {
+        if (opcionKeyer == 0) textoKeyer = "";
+        else { keyerEnAjustes = true; opcionAjustesKeyer = 0; }
       }
 
     } else if (enEstadisticas3_5) {
@@ -5495,10 +5916,9 @@ void procesarBoton() {
       }
 
     } else if (enSubpantallaCW) {
-      // Configuracion de KOCH. Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos,
-      // 7 estadisticas, 5 iniciar, 6 volver (en ese orden de recorrido; ESTAD. va junto a GRUPOS)
-      static const uint8_t ORDEN_FOCO[] = { 0, 1, 2, 3, 4, 7, 5, 6 };
-      const uint8_t N_FOCO = sizeof(ORDEN_FOCO);
+      // Ajustes del KOCH (lista). Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos, 5 estadisticas,
+      // 6 iniciar, 7 volver
+      const uint8_t N_FOCO = N_AJUSTES_KOCH + 2;
       if (atras) {
         enSubpantallaCW = false;
       } else if (giro != 0) {
@@ -5511,18 +5931,16 @@ void procesarBoton() {
             case 4: ajustarValor(gruposCW, giro * 10, 10, 50); break;
           }
         } else {
-          uint8_t pos = 0;
-          while (pos < N_FOCO && ORDEN_FOCO[pos] != opcionSubpantalla) pos++;
-          opcionSubpantalla = ORDEN_FOCO[(pos + N_FOCO + giro) % N_FOCO];
+          opcionSubpantalla = (opcionSubpantalla + N_FOCO + giro) % N_FOCO;
         }
       } else if (pulsa) {
         if (opcionSubpantalla <= 4) editandoValor = !editandoValor;
-        else if (opcionSubpantalla == 5) iniciarPracticaCW();
-        else if (opcionSubpantalla == 7) {
+        else if (opcionSubpantalla == 5) {
           enEstadisticas3_5 = true;  // Al salir se vuelve aqui
           paginaStats3_5 = 0;
           confirmandoBorrado = false;
         }
+        else if (opcionSubpantalla == 6) iniciarPracticaCW();
         else enSubpantallaCW = false;
       }
 
@@ -5535,7 +5953,7 @@ void procesarBoton() {
       } else if (pulsa) {
         if (opcionPantalla3 == 0) {
           enSubpantallaCW = true;
-          opcionSubpantalla = 5;
+          opcionSubpantalla = 6;  // iniciar
         } else if (opcionPantalla3 == 1) {
           entrarEnEcho();
         } else if (opcionPantalla3 == 2) {
@@ -5774,9 +6192,10 @@ void procesarBateriaYPantalla() {
   }
 }
 
+#if DEPURACION_DIAG
 /**
  * Diagnostico por serie cada DIAG_INTERVALO_MS: memoria (libre, minimo historico y mayor bloque, para
- * vigilar la fragmentacion), pila libre de cada tarea, uso de la NVS y frecuencia de la CPU.
+ * vigilar la fragmentacion), pila libre de cada tarea, uso de la NVS y frecuencia de la CPU
  */
 #define DIAG_INTERVALO_MS 60000UL
 
@@ -5793,6 +6212,7 @@ void procesarDiagnostico() {
                 uxTaskGetStackHighWaterMark(tareaKeyer), hayNvs ? nvs.used_entries : 0,
                 hayNvs ? nvs.total_entries : 0, getCpuFrequencyMhz());
 }
+#endif
 
 /**
  * Ahorro: la OLED pasa al minimo de brillo (display.dim: contraste 0) tras BRILLO_TENUE_MS sin tocar
@@ -5813,13 +6233,12 @@ void procesarBrillo() {
   }
 }
 
-// PROVISIONAL: captura de la pantalla por serie. La orden 'p' vuelca el buffer de la OLED (1024 bytes,
-// formato del SSD1306: byte = x + (y / 8) * 128, bit = y % 8) en hexadecimal entre dos marcas.
-// En el PC, docs/captura_oled.py lo convierte en PNG. Es la copia en RAM: no ve si el panel esta negro
-// o atenuado. Para quitarla, borrar esta funcion, su llamada en loop() y el script.
-// Tambien simula el encoder, para hacer capturas de todas las pantallas desde el PC: 'd' derecha,
-// 'i' izquierda, 'k' pulsar, 'l' pulsacion larga del eje y 'a' atras (PRG corto); quitar con eventoSerie
-void procesarCapturaSerie() {
+#if DEPURACION_SERIE
+// Ordenes por serie para capturas y pruebas desde el PC. 'p' vuelca el buffer de la OLED (1024 bytes, formato
+// del SSD1306: byte = x + (y / 8) * 128, bit = y % 8) en hexadecimal entre dos marcas; docs/captura_oled.py lo
+// guarda en PNG (es la copia en RAM: no ve si el panel esta negro o atenuado). 'd' derecha, 'i' izquierda,
+// 'k' pulsar, 'l' pulsacion larga del eje y 'a' atras (PRG corto) simulan el encoder
+void procesarOrdenesSerie() {
   if (!Serial.available()) return;
   int c = Serial.read();
   switch (c) {
@@ -5840,9 +6259,12 @@ void procesarCapturaSerie() {
   }
   Serial.println(F("[CAPTURA] FIN"));
 }
+#endif
 
 void loop() {
-  procesarCapturaSerie();  // PROVISIONAL
+#if DEPURACION_SERIE
+  procesarOrdenesSerie();
+#endif
   procesarBoton();
   procesarTonoPrueba();
   procesarTextoKeyer();
@@ -5855,8 +6277,11 @@ void loop() {
   procesarQSO();
   procesarTrx();
   procesarWifi();
+  procesarOta();
   procesarBateriaYPantalla();
+#if DEPURACION_DIAG
   procesarDiagnostico();
+#endif
   procesarStatus();
   procesarBrillo();
   procesarApagadoAuto();

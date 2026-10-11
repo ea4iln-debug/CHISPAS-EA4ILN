@@ -700,7 +700,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v0.9e<br>11 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v1.00b<br>11 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
@@ -738,7 +738,7 @@ def main():
 <li><b>GPIO19/20</b> son USB D−/D+ del S3, pero funcionan como entradas del encoder (probado con <code>prueba_pines</code>). Plan B: 38/39/40.</li>
 <li><b>GPIO41/42</b> para el BME280 (Wire1): comprobar que salen al conector. Si la placa saca 17/18, el BME280 puede ir al bus del OLED.</li>
 <li><b>GPIO3</b> es pin de arranque (origen del JTAG) pero solo cuenta con el eFuse grabado: la R8 de 100 kΩ a 3V3 no molesta. <b>GPIO45</b> nunca con pull-up: cambia la tensión de la flash y la placa no arranca.</li>
-<li><b>GPIO2</b> maneja la emisora: en BAJO desde el arranque (firmware v0.6c o posterior) y con R10 a GND. El firmware solo la activa en la pantalla TRX (OPERAR y QSO), con corte de seguridad a los 10 s.</li>
+<li><b>GPIO2</b> maneja la emisora: en BAJO desde el arranque y con R10 a GND. El firmware solo la activa en la pantalla TRX (OPERAR y QSO), con corte de seguridad a los 10 s.</li>
 <li>La Heltec V3 tapa casi toda una protoboard: mejor dejarla fuera y unirla con cables Dupont M-H.</li>
 </ul></div></div></div>''')
 
@@ -763,7 +763,7 @@ def main():
     pages.append(f'''<div class="page">{header("Entrada de audio del decodificador", 6, T)}
 <div class="panel"><h2>7 · Entrada de audio desde la emisora (decodificador CW)</h2>{fit(p_deco(), 118)}</div>
 <ul>
-<li>El firmware (v0.9a o posterior) lo usa en la pantalla <b>TRX</b>: DECODIFICAR y QSO. Tono fijo (400–1000 Hz) o automático.</li>
+<li>El firmware lo usa en la pantalla <b>TRX</b>: DECODIFICAR y QSO. Tono fijo (400–1000 Hz) o automático.</li>
 <li>Mientras se emite por KEY, el decodificador no escucha (para no descodificar el tono de la propia emisora).</li>
 </ul></div>''')
 
@@ -780,7 +780,7 @@ def main():
 <li>Opcionales sin comprar: C3 10 nF (filtro del ADC), trafo 600:600 (lazo de masa), 1 kΩ + 100 nF (arranque suave de Q1).</li>
 </ul>
 <h2 style="margin-top:3mm">Orden de montaje (un bloque cada vez)</h2><ul>
-<li><b>0. Firmware v0.6c o posterior</b> antes de cablear: palas a GPIO4/5 y GPIO2 como salida en BAJO desde el arranque. ✔</li>
+<li><b>0. Firmware</b> antes de cablear: palas a GPIO4/5 y GPIO2 como salida en BAJO desde el arranque. ✔</li>
 <li><b>1. Raíles</b>: 3V3 y GND de la Heltec a los raíles. Polímetro: 3,3 V entre raíles y ningún cortocircuito. ✔</li>
 <li><b>2. Encoder</b> y programa de prueba de pines (19, 20, 48 y reserva 38–40) por serie. ✔</li>
 <li><b>3. Palas</b>: comprobar por serie DIT/DAH antes del keyer. ✔</li>

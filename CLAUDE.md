@@ -3,9 +3,10 @@
 ## Qué es
 **Chispas** ("chispas" era el apodo del radiotelegrafista de a bordo): dispositivo portátil de CW
 para radioaficionados (indicativo EA4ILN) sobre una **Heltec WiFi LoRa 32 V3** (ESP32-S3FN8, SX1262 a 868 MHz,
-OLED 0,96", sin PSRAM, 8 MB de flash). Hoy: entrenador Koch estilo LCWO, keyer iámbico, modo Echo, práctica en pareja
-por LoRa, propagación, spots POTA, sol y línea gris. A medio plazo: tono por buzzer, salida KEY, decodificador desde
-el transceptor, GPS/locator.
+OLED 0,96", sin PSRAM, 8 MB de flash). Entrenador Koch estilo LCWO, Echo, keyer iámbico, práctica y QSO por LoRa,
+conexión con el transceptor (KEY, tune, memorias, decodificador), propagación, spots POTA, sol y línea gris,
+configuración en el aparato y actualización OTA desde las releases de GitHub. Pendiente: amplificador del tono,
+montaje del decodificador, GPS.
 
 ## Repositorio
 - GitHub: `https://github.com/ea4iln-debug/CHISPAS-EA4ILN` (GitHub redirige la URL anterior del repositorio).
@@ -14,24 +15,45 @@ el transceptor, GPS/locator.
   (`LICENSE`, texto oficial de gnu.org; cabecera SPDX en cada archivo de código); hardware y documentación (esquema,
   lista de componentes, diseño, README) con **CC BY-NC-SA 4.0** (`LICENSE-HARDWARE.md`). `include/wm_strings_chispas.h`
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
+  Los `.bin` de las releases van con `docs/LICENCIAS_TERCEROS.txt` (avisos de las librerías; regenerarlo si cambian).
 
-## Estado actual (10 oct 2026)
-- Firmware: `src/main.cpp` **v0.9g** (CONF con CONFIG y STATUS; Echo por lección) en la placa 1; v0.9f (Koch: corregir
-  por letra o total; aceleración del giro); v0.9e (TUNE en TRX); v0.9d (limpieza de depuración); v0.9c (propagación cada hora) en las dos placas. v0.8d: opción **`tono`** en CONF
-  (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`; pitido de prueba de 0,3 s al editarla; probada con
-  auriculares el 10 oct 2026; por defecto 850 Hz desde la v0.8e). **Captura de pantalla provisional**
-  (v0.8c, probada): la orden serie `p` vuelca el buffer de la OLED y `docs/captura_oled.py` lo guarda en PNG (usar el
-  Python de PlatformIO: `~\.platformio\penv\Scripts\python.exe`; cerrar antes el monitor serie). Ve la copia en RAM,
-  no el panel. **v0.9b (provisional):** órdenes serie que simulan el encoder (`d` derecha, `i` izquierda, `k` pulsar,
-  `l` larga, `a` atrás; `eventoSerie` en `procesarBoton()`). Con ellas se hicieron las 29 capturas de `docs/img/` del
-  README (10 oct 2026; SOL y CONF con IN80dk, puesto con la orden `g`, que se quitó en la v0.9d: para otra captura
-  publicable, poner el locator genérico en webconf). Quitar captura y simulación juntas antes de una release.  **v0.9d:** `DEBUG_CW` a 0 (la medida dio 0 ms). `[DIAG]` y `[DECOD]` se quedan hasta acabar sus pruebas. Placa 1 (protoboard con encoder, palas y batería; entorno normal) y placa 2
-  (desnuda, sin encoder; entorno `heltec_sin_encoder`). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @
-  6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
+## Releases y OTA
+- **Versión:** `#define FW_VERSION` (y `@version` de la cabecera de `main.cpp`). Formato `X.YYb` (b = beta; sin letra,
+  final): `compararVersiones()` ordena 1.00b < 1.01b < 1.01. Subirla en cada cambio que se cargue o se publique.
+- **Primera release: v1.00b (beta), 11 oct 2026.** Etiqueta de git y de GitHub: `v` + `FW_VERSION`.
+- **Binarios de cada release** (nombres exactos; el OTA busca el suyo por nombre):
+  `chispas-<ver>.bin` (app, placa con encoder), `chispas-<ver>-sin-encoder.bin` (app, sin encoder) y, para grabar por
+  USB en `0x0`, `chispas-<ver>-usb.bin` y `chispas-<ver>-sin-encoder-usb.bin` (imagen completa: `esptool.py
+  --chip esp32s3 merge_bin -o ... --flash_mode dio --flash_size 8MB 0x0 bootloader.bin 0x8000 partitions.bin
+  0xe000 boot_app0.bin 0x10000 firmware.bin`; `boot_app0.bin` está en
+  `framework-arduinoespressif32/tools/partitions/`). Más `docs/LICENCIAS_TERCEROS.txt`.
+- **Antes de publicar:** los cuatro `DEPURACION_*` a 0, compilar los dos entornos, probar en placa y pedir al usuario
+  que confirme. Publicar con `gh release create v<ver> ... --prerelease` (beta) y las notas en castellano.
+- **OTA** (v1.00b; consulta probada contra GitHub, la instalación se prueba al publicar): CONF > CONFIG >
+  ACTUALIZAR FW (`CONF_OTA`, `confEntrarOta()`, `procesarOta()`, `buscarActualizacion()`, `instalarActualizacion()`):
+  enciende el WiFi, consulta `api.github.com/repos/.../releases?per_page=1` (incluye prereleases), compara, y con
+  "instalar" descarga con `httpUpdate` (sigue la redirección a `release-assets.githubusercontent.com`) y reinicia.
+  TLS validado con `include/certificados_github.h` (Sectigo E46, USERTrust ECC/RSA, ISRG X1, DigiCert G2; exportados
+  del almacén de Windows; si GitHub cambia de autoridad y ninguna vale, falla sin instalar). No instala con batería
+  < 30 % sin USB. Aviso: con el WiFi ya encendido en PROP o POTA, comprueba una vez al día y lo enseña en la línea de
+  estado (`FW NUEVO: v1.01b`) y en la lista de CONFIG. Particiones `default_8MB.csv` (app0/app1 de 3,2 MB).
+- **Depuración** (interruptores al principio de `main.cpp`, a 0 en las releases): `DEPURACION_SERIE` (órdenes por
+  serie: `p` vuelca la OLED para `docs/captura_oled.py`; `d`, `i`, `k`, `l`, `a` simulan el encoder),
+  `DEPURACION_DIAG` (`[DIAG]` cada minuto), `DEPURACION_DECOD` (`[DECOD]` cada 2 s), `DEPURACION_CW`. Para rehacer las
+  capturas del README: `DEPURACION_SERIE 1`, locator genérico IN80dk (en CONFIG) y el script de capturas (reinicia la
+  placa antes de cada una y navega con las órdenes); luego volver a poner el locator de la placa y la depuración a 0.
+
+## Estado actual (11 oct 2026)
+- Firmware: `src/main.cpp` **v1.00b** (primera release). Historial de cambios: `git log`. Placa 1 (protoboard con
+  encoder, palas, KEY y batería; entorno normal) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; sigue
+  con la v0.9c hasta actualizarla). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
+  el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
+  de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
+  Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
   **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
   firmware; programas de prueba aparte en `pruebas/` con sus entornos (`prueba_pines`, `prueba_bateria`).
-- La versión está en `#define FW_VERSION` (y en `@version` de la cabecera): se ve en la pantalla 1 y por serie.
-  Subirla en cada cambio que se cargue en placa.
+- Tono: opción TONO en CONFIG (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`, por defecto 850; pitido de
+  prueba de 0,3 s al editarla).
 - Pruebas con LED, pantalla, monitor serie y **audio** (desde el 10 oct 2026: tono montado; el buzzer suena muy bajo,
   mejor probar a oído con auriculares). Ver "Tono" en Funciones.
 - Pantallas (`PANTALLA_*`, recorrido con ant./sig.): 1 Inicio, 2 CW, 3 LoRa (Duo/QSO), 4 TRX (transceptor, v0.9a),
@@ -62,8 +84,16 @@ el transceptor, GPS/locator.
 - **PRG corto = atrás** (sale de la edición, sube un nivel; en las pantallas principales va a Inicio).
   **PRG largo = dormir** (deep sleep; despierta pulsando PRG). Ver "Dormir" en Funciones.
 - Al cambiar de pantalla el foco queda en la flecha usada (`entrarEnPantalla(p, haciaAtras)`).
-- Barra inferior: `ant.`/`sig.`; en PROP y POTA, la página ("1/2") en el centro y la opción "mas >" (el `« opc »` de CONF
-  desapareció en la v0.9g, con el menú CONFIG/STATUS). Sin ayudas tipo `- : opc`.
+- Barra inferior de los menús: `ant.`/`sig.`. Sin ayudas tipo `- : opc`.
+- **Estilo común (v0.9h, el de CONF):** las pantallas principales son un **menú** (título en negativo con
+  `dibujarTituloMenu()`, opciones centradas `< ... >` y barra `ant.`/`sig.`). Los ajustes son **listas**
+  (`dibujarListaOpciones()`: 4 a la vista, nombre a la izquierda, valor a la derecha, barra de desplazamiento; lo
+  que se edita girando sale en vídeo inverso) con las acciones en el pie (`volver`, o `iniciar`/`volver` con
+  `dibujarPieDos()`). Los datos en **páginas** se pasan girando y pulsar (o atrás) vuelve; pie
+  `1/2 INDICES  >volver` (`dibujarPiePaginas()`). Así están todas las pantallas salvo Inicio (portada, se queda
+  igual por decisión del usuario). Las de manipular o escuchar (TX LIBRE, OPERAR, QSO, PRÁCTICA DUO, QSO LIBRE y
+  DECODIFICAR) tienen un pie corto y **"menu"**, que abre la lista de sus ajustes con SALIR al final y volver en el
+  pie.
 - Entradas: encoder por interrupción en CLK/DT con tabla de cuadratura (`isrEncoder`, en IRAM, lee `GPIO_IN_REG`);
   PRG y pulsador del eje con `leerPulsador()` (antirrebote: el eje rebota al soltar). Eventos `BOTON_CORTA/LARGA` y
   `ENC_DERECHA/IZQUIERDA/PULSA/LARGA`, todos tratados en `procesarBoton()`.
@@ -94,8 +124,9 @@ el transceptor, GPS/locator.
 ## Funciones (probadas en placa salvo que se diga)
 - **Pantalla CW** (v0.7d; nombres y orden de la v0.8g): estilo LoRa, título " ENTRENADOR CW " en negativo y
   `< KOCH (RX) >`, `< ECHO (TX) >`, `< TX LIBRE >`, centradas con `dibujarOpcionCentrada()` como las de LoRa (`opcionPantalla3` 0/1/2; no caben 4 opciones con 9 px por línea).
-  - **KOCH (RX)**: configuración (wpm, espaciado, lección, caracteres, grupos, `>ESTAD.` como última opción a la
-    derecha de GRUPOS, iniciar, volver; foco 7 = estadísticas). Práctica: pausa/seguir y salir; resultado: volver y
+  - **KOCH (RX)**: ajustes en lista desde la v0.9h (WPM, ESPACIADO, LECCION, CARACTERES, GRUPOS, ESTAD.; pie
+    `iniciar`/`volver`; `opcionSubpantalla` 0–7, 6 = iniciar por defecto). El Echo, igual (`NOMBRES_AJUSTES_ECHO`).
+    ESTAD. (Koch y Echo): pie `3/17 L01-03  >volver` (`nombrePaginaEstad()`). Práctica: pausa/seguir y salir; resultado: volver y
     rep. Al salir de estadísticas se vuelve a la configuración. **Corrección por carácter** (v0.8f, probada): en
     "corregir" se marcan los fallos en el listado (cursor subrayado, `focoCorregir`; pulsar marca/desmarca en vídeo
     inverso, `marcasFallo[]`; anillo caracteres → rep. → ok); `numeroErrores` sale de las marcas. "ok"
@@ -128,8 +159,9 @@ el transceptor, GPS/locator.
     (GPIO4/5) cada 1 ms; solo activa en su pantalla o en la práctica del Echo. Memoria de la pala contraria: modo A
     solo en la pausa entre elementos; modo B también durante el elemento. Descodifica lo manipulado (silencio de 2
     puntos = fin de carácter, 6 = espacio (5 hasta la v0.8i: partía palabras); patrón desconocido = `*`) y lo pasa a `loop()` por una cola; también sale
-    por serie. Opciones: wpm 10–40, MODO A/B, palas NORM/INV, borrar, volver; en `chispas` (`kwpm`, `kmodob`,
-    `kinv`). Salida por LED y tono en GPIO7; KEY aún no. El apretón iámbico y el texto largo aún no se han validado.
+    por serie. Desde la v0.9h: arriba `20WPM  MODO A  NORM`, el texto y el pie `> borrar  menu`; "menu" abre la
+    lista (`keyerEnAjustes`): WPM 10–40, MODO A/B, PALAS NORM/INV y SALIR, con volver en el pie; en `chispas`
+    (`kwpm`, `kmodob`, `kinv`). Salida por LED y tono en GPIO7; KEY aún no. El apretón iámbico y el texto largo aún no se han validado.
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso
@@ -138,22 +170,30 @@ el transceptor, GPS/locator.
   (`transmitirTextoLoRa(tipo, wpm, texto)`; tipo 1 = grupo Duo, tipo 2 = palabra de QSO); antes de transmitir se lee
   la trama pendiente y se escucha el canal (CAD, 3 intentos, espera 100 ms). Lo que llega *durante* `transmit()` se
   pierde por ser semidúplex. Cola de recepción de 8 (`colaRxDuo`, compartida).
-  - **PRÁCTICA DUO**: grupos Koch a los wpm del emisor (5–60); RSSI en pantalla; "ver" en el pie solo si hay un
-    grupo oculto.
+  - **PRÁCTICA DUO**: grupos Koch a los wpm del emisor (5–60); RSSI en pantalla. Desde la v0.9h: arriba
+    `LECCION 4  5 LETRAS` (wpm y espaciado van en la cabecera), TX y RX, y el pie `> enviar  ver  menu` ("ver"
+    solo si hay un grupo oculto; `opcionDuo4_1` 0–2); menu (`loraEnAjustes`): WPM, ESPACIADO, LECCION, SALIR.
   - **QSO LIBRE** (v0.8h, probado en un sentido: placa 1 → placa 2, que no tiene palas): con las palas (keyer activo
     en cualquier foco, wpm de TX LIBRE); cada palabra se envía sola al detectar el espacio entre palabras
     (`qsoCaracterManipulado()`; a los 32 caracteres, en el acto; al salir, lo que quede). Lo recibido suena a los wpm
     del emisor (SP 100 %) cuando se lleva un silencio de 7 puntos sin manipular (`keyerUltimoUsoMs`, lo actualiza la
     tarea del keyer), con el keyer en pausa; tocar una pala mientras suena lo corta (break-in) y lo pendiente pasa a
     texto (`procesarQSO()`). Pantalla: recibido arriba (2 líneas), separador con indicativo y RSSI, manipulado abajo
-    (2 líneas); pie `>20WPM >VER SI >salir`. VER NO: la palabra sale como `???` mientras suena (NVS `qver`). El keyer
+    (2 líneas); pie `> borrar  menu` (v0.9h; borrar limpia los dos textos, no la palabra que se está enviando);
+    menu: WPM, VER LO RECIBIDO y SALIR. VER NO: la palabra sale como `???` mientras suena (NVS `qver`). El keyer
     cierra la palabra a los 6 puntos de silencio (con 5 se enviaba letra a letra).
 - **Radio** (v0.4c, `#define LORA_*`): 868,1 MHz, SF7, 250 kHz, CR 4/7, sync 0x12, 10 dBm, TCXO 1,8 V (DIO2 como RF
   switch lo activa RadioLib 6.6 en `begin()`; SPI 9/11/10). RSSI a 2 m: unos -40/-45 dBm.
 - **WiFi** (v0.5a/b, v0.7k): se enciende al entrar en PROP y POTA, y en SOL solo si no hay hora (para el NTP).
-  Si no hay red guardada o no conecta en 15 s, el portal **no se abre solo**: estado `WIFI_SIN_CONEXION` con aviso fijo
-  y opción `> abrir webconf` (foco por defecto; girar lleva a ant./sig.; `opcionSinConexion`); si el portal se cierra
-  por tiempo (5 min) en esas pantallas, vuelve el aviso. Al reentrar se reintenta. Hora NTP (CET/CEST) al conectar.
+  Si no hay red guardada o no conecta en 15 s, el portal **no se abre solo**: estado `WIFI_SIN_CONEXION`. Desde la
+  v0.9h, PROP, POTA y SOL son un **menú** (`subDatos`: `DATOS_MENU/PAGINAS/PORTAL`, compartido) con `< VER DATOS >`
+  (o VER SPOTS) y `< ACTUALIZAR >` y una línea de estado (conectando, hora del dato de hamqsl, nº de spots, locator);
+  sin conexión, las opciones pasan a `< ABRIR WEBCONF >` (abre el portal y su vista, la misma de CONF:
+  `dibujarVistaPortal()`) y `< REINTENTAR >`, con el foco en la primera (`quedarseSinConexion()`). Páginas: PROP
+  INDICES y BANDAS; POTA, 4 spots por página; SOL HOY, AHORA y MAÑANA (salida, puesta y línea gris de mañana; AHORA:
+  altura del sol, si está en línea gris, hora y locator). En SOL, ACTUALIZAR vuelve a sincronizar la hora por NTP
+  (`actualizarHoraSol()`). Probado por serie con capturas (PROP y POTA con datos reales). Si el portal se cierra
+  por tiempo (5 min) en esas pantallas, vuelve el menú sin conexión. Al reentrar se reintenta. Hora NTP (CET/CEST) al conectar.
   HTTPS con `setInsecure()`. PROP: hamqsl.com cada 60 min (su autor pide no consultar el XML más de una vez por hora; desde la v0.9c), dos páginas (índices y condiciones por banda). POTA: spots
   solo CW cada 2 min (sin límites publicados: con moderación); línea de spot en 21 caracteres (referencia entera a la
   derecha; la frecuencia pierde el decimal y luego se recorta el indicativo si no cabe).
@@ -219,12 +259,16 @@ el transceptor, GPS/locator.
     Koch, Echo, TX LIBRE ni LoRa). `trxTonoLocal` (NVS `ttono`): buzzer/auriculares mientras sale por KEY. Corte de
     seguridad si KEY sigue activa más de 10 s seguidos (`KEY_MAX_CONTINUA_MS`): "KEY CORTADA (>10 s)" y por serie con
     las marcas de tiempo.
-  - **OPERAR:** keyer con wpm propio (`trxWpm`, NVS `twpm`), TONO SÍ/NO, duración del TUNE, mem (lista para enviar),
-    SU (indicativo del corresponsal, editor), tune y salir. Las palas cortan una memoria que se está enviando.
+  - **OPERAR:** keyer con wpm propio (`trxWpm`, NVS `twpm`). Desde la v0.9h: arriba los ajustes a la vista
+    (`20WPM TONO SI TUNE 5s`), el texto manipulado, la línea de SU y el pie `> mem  tune  menu` (`dibujarPieTrx()`,
+    igual en QSO). "menu" abre la lista de ajustes (`TRX_AJUSTES`, vuelve a `trxAjustesOrigen`): WPM, TONO LOCAL,
+    TUNE (s), SU (editor) y SALIR, con volver en el pie; las palas siguen manipulando (`trxManipulando()`). Las palas cortan una memoria que se está enviando.
   - **DECODIFICAR:** tarea `decod` (núcleo 0, prioridad 2) que lee GPIO6 (ADC1 canal 5) por DMA (`adc_digi_*` del
     IDF 4.4) a 8 kHz; Goertzel en bloques de 96 muestras (12 ms); tono fijo 400–1000 Hz o AUTO (el más fuerte de
     13, `trxTonoDecodHz`, NVS `tdec`); umbral adaptativo (ruido/pico, histéresis); punto adaptativo (5–50 wpm);
-    barra de nivel logarítmica con la marca del umbral y "SATURA" si toca los topes (bajar RV2); `[DECOD] ...`
+    barra de nivel logarítmica con la marca del umbral y "SATURA" si toca los topes (bajar RV2; sin el
+    montaje, con GPIO6 al aire, también sale); pie `> borrar  menu` y menu con TONO (AUTO o Hz) y SALIR
+    (v0.9h, `decodEnAjustes`); `[DECOD] ...`
     por serie cada 2 s. Sordo mientras sale por KEY y 300 ms después. Mientras funciona no se lee la batería (mismo
     ADC1). Valores de partida sin ajustar: `DECOD_MIN_SENAL` 1500, `DECOD_ESCALA_MAX` 96000.
   - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
@@ -259,8 +303,10 @@ el transceptor, GPS/locator.
   regenerado el 10 oct 2026).
 
 ## Pendiente
-1. **Siguiente sesión:** por decidir (opcional de las estadísticas: que el Koch y el Echo repitan más las letras
-   con más errores). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con batería y sin medidor).
+1. **Tras la v1.00b:** probar a mano lo que solo se ha probado por serie (listas, aceleración al girar rápido,
+   Echo por lección, corrección total del Koch, OTA real de una versión a otra, X6200 con KEY) y actualizar la
+   placa 2 (por USB o OTA, binario `-sin-encoder`). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques
+   también con batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
    ganancia en banco; luego entrada del decodificador en GPIO6 (el firmware ya está, v0.9a); GPS cuando
