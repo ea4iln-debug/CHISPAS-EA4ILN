@@ -21,7 +21,9 @@ montaje del decodificador, GPS.
 - **Versión:** `#define FW_VERSION` (y `@version` de la cabecera de `main.cpp`). Formato `X.YYb` (b = beta; sin letra,
   final): `compararVersiones()` ordena 1.00b < 1.01b < 1.01. Subirla en cada cambio que se cargue o se publique.
 - **Primera release: v1.00b (beta), 11 oct 2026**, publicada como prerelease: https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.00b
-  (con `gh`, instalado en el segundo equipo: `C:\Program Files\GitHub CLI\gh.exe`, sesión de ea4iln-debug). Etiqueta
+  (con `gh`, instalado en el segundo equipo: `C:\Program Files\GitHub CLI\gh.exe`, sesión de ea4iln-debug).
+  **v1.01b (beta)**, 11 oct 2026, también prerelease; en el primer equipo no hay `gh`: se creó con la API REST y la
+  credencial de git (script temporal, fuera del repositorio). Etiqueta
   de git y de GitHub: `v` + `FW_VERSION`. Para probar el OTA sin publicar otra versión: compilar temporalmente con
   `FW_VERSION "0.99"`, cargar, y ACTUALIZAR FW instala la última release.
 - **Binarios de cada release** (nombres exactos; el OTA busca el suyo por nombre):
@@ -50,7 +52,7 @@ montaje del decodificador, GPS.
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.01b** (depuración desde el menú; sin publicar como release). Historial de cambios:
+- Firmware: `src/main.cpp` **v1.01b** (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
   `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.01b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.00b
   desde el 11 oct 2026, cargada por USB con PlatformIO para conservar su NVS). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
