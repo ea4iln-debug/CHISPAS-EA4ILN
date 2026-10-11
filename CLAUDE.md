@@ -382,7 +382,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
 | 3 (futuro) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido |
-| BME280 (futuro) | I2C 0x76: recomendado Wire1 en GPIO41/42 |
+| 41 / 42 | BME280 (en mano, sin montar; decidido el 12 oct 2026): I2C 0x76 en Wire1, SDA 41 (J3-8), SCL 42 (J3-7). Uso: página AMBIENTE en SOL, tendencia y aviso de tormenta, altitud barométrica y macro {WX}; controlador propio (ver `ROADMAP.md`) |
 
 Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, el más cercano al USB):
 - J3: 18 GPIO7 tono · 17 GPIO6 decod. · 16 GPIO5 DAH · 15 GPIO4 DIT · 14 GPIO3 GPS en · 13 GPIO2 KEY · 12 GPIO1 (VBAT, no)

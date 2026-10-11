@@ -31,7 +31,8 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - Divisor de minijack 1 → 2, para seguir oyendo la emisora con el decodificador conectado.
 
 ### En mano, sin montar
-- **BME280** (GY-BME280-3.3): temperatura, presión y humedad por I2C en Wire1 (GPIO41/42). Uso en estudio.
+- **BME280** (GY-BME280-3.3): I2C en Wire1, SDA a GPIO41 (J3-8), SCL a GPIO42 (J3-7), VCC a 3V3. Estudiado y
+  aprobado (12 oct 2026): viable, consumo despreciable también dormido.
 
 ### Opcional
 - **Trafo de aislamiento 600:600**, solo si aparece zumbido por lazo de masa con la emisora.
@@ -50,7 +51,14 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
   cuando hace falta el tono.
 - **GPS:** locator y hora automáticos (UART por la matriz GPIO, NMEA a 9600 bd); el locator alimenta SOL y la hora
   sustituye al NTP cuando no hay WiFi.
-- **BME280** (si se monta): datos en alguna pantalla.
+- **BME280** (decidido el 12 oct 2026), con controlador propio (fórmulas de compensación de Bosch, sin librerías):
+  - Lecturas de temperatura, humedad y presión en una página nueva **AMBIENTE** de la pantalla SOL.
+  - Tendencia de la presión (últimas 3 h) y **aviso de tormenta** si baja deprisa.
+  - **Altitud barométrica** para SOTA, calibrable con una altitud conocida o con el GPS.
+  - Macro **{WX}** en las memorias de TRX (por ejemplo `WX 18C`).
+  - Detectar si el chip es en realidad un BMP280 (sin humedad) y decirlo en STATUS.
+  - La temperatura sale alta dentro de la caja (calor del ESP32, la radio y el amplificador): solo orientativa.
+  - Por decidir tras probarlo: mantener el historial de presión con Chispas dormido (despertar cada 15 min).
 
 ### Ideas decididas
 - **POTA sin conexión:** lista de parques en un CSV guardado en la placa (partición de 1,5 MB reservada, LittleFS);
