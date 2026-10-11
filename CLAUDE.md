@@ -48,8 +48,8 @@ montaje del decodificador, GPS.
 
 ## Estado actual (11 oct 2026)
 - Firmware: `src/main.cpp` **v1.00b** (primera release). Historial de cambios: `git log`. Placa 1 (protoboard con
-  encoder, palas, KEY y batería; entorno normal) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; sigue
-  con la v0.9c hasta actualizarla). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
+  encoder, palas, KEY y batería; entorno normal) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.00b
+  desde el 11 oct 2026, cargada por USB con PlatformIO para conservar su NVS). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
   de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
   Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
@@ -307,8 +307,8 @@ montaje del decodificador, GPS.
 
 ## Pendiente
 1. **Tras la v1.00b:** probar a mano lo que solo se ha probado por serie (listas, aceleración al girar rápido,
-   Echo por lección, corrección total del Koch, OTA real de una versión a otra, X6200 con KEY) y actualizar la
-   placa 2 (por USB o OTA, binario `-sin-encoder`). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques
+   Echo por lección, corrección total del Koch, X6200 con KEY) y, en la placa 2, el manejo sin encoder de las
+   pantallas nuevas (listas, menús, CONFIG). OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques
    también con batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
