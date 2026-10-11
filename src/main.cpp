@@ -4,7 +4,7 @@
  * @brief Chispas: entrenador de CW portatil para la Heltec WiFi LoRa 32 V3 (ESP32-S3). Koch, Echo, keyer
  *        iambico, practica y QSO por LoRa, manipulacion del transceptor (KEY), decodificador CW, propagacion,
  *        spots POTA, sol y linea gris, y actualizacion por OTA desde las releases de GitHub.
- * @version 1.01b - Depuracion desde CONF > CONFIG
+ * @version 1.02b - Refuerzo de las letras con mas errores en Koch y Echo
  * @date 2026-10-11
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -19,7 +19,7 @@
 
 // Version: se ve en Inicio, en CONF > STATUS y por serie. La etiqueta de la release de GitHub es "v" + esto
 // (la actualizacion OTA las compara). Cambiarla en cada version que se cargue o se publique
-#define FW_VERSION "1.01b"
+#define FW_VERSION "1.02b"
 
 // Depuracion: se activa en CONF > CONFIG > DEPURACION (NVS "depu", un bit por opcion; todo apagado por defecto)
 #define DEPU_SERIE 0x01  // Ordenes por serie: 'p' vuelca la OLED (docs/captura_oled.py) y d/i/k/l/a simulan el encoder
@@ -138,12 +138,36 @@ uint8_t caracteresDeLeccion(uint8_t leccion) {
 // Con reparto uniforme saldria 1 de cada N: en la leccion 40, un 2,4 %
 #define PESO_LETRA_NUEVA_PCT 25
 
-char caracterKochAleatorio(uint8_t leccion) {
+// Refuerzo de las letras con mas errores (Koch y Echo): 0 = no, 1 = suave (tope x2), 2 = fuerte (tope x3)
+#define REFUERZO_NO     0
+#define REFUERZO_SUAVE  1
+#define REFUERZO_FUERTE 2
+float pesoRefuerzo(uint8_t i, uint8_t refuerzo);  // Definida con las estadisticas por caracter
+
+/**
+ * Un caracter al azar de la leccion. La letra nueva (la ultima que entra) sale el PESO_LETRA_NUEVA_PCT % de las
+ * veces; el resto se reparte entre las demas, por igual o, con refuerzo, segun su peso (mas errores, mas veces)
+ */
+char caracterKochAleatorio(uint8_t leccion, uint8_t refuerzo = REFUERZO_NO) {
   uint8_t n = caracteresDeLeccion(leccion);
-  // Con pocas letras (4 o menos) el reparto uniforme ya le da ese % o mas
-  if (n * PESO_LETRA_NUEVA_PCT <= 100) return TABLA_KOCH[random(0, n)];
-  if (random(100) < PESO_LETRA_NUEVA_PCT) return TABLA_KOCH[n - 1];
-  return TABLA_KOCH[random(0, n - 1)];  // El resto, repartido entre las demas
+  // Con pocas letras (4 o menos) el reparto uniforme ya le da ese % o mas a la nueva: entra en el sorteo comun
+  bool nuevaAparte = n * PESO_LETRA_NUEVA_PCT > 100;
+  if (nuevaAparte && random(100) < PESO_LETRA_NUEVA_PCT) return TABLA_KOCH[n - 1];
+  uint8_t m = nuevaAparte ? n - 1 : n;  // Candidatas
+  if (refuerzo == REFUERZO_NO) return TABLA_KOCH[random(0, m)];
+
+  float pesos[TOTAL_CARACTERES_KOCH];
+  float total = 0;
+  for (uint8_t i = 0; i < m; i++) {
+    pesos[i] = pesoRefuerzo(i, refuerzo);
+    total += pesos[i];
+  }
+  float r = random(0, 100000) / 100000.0f * total;
+  for (uint8_t i = 0; i < m; i++) {
+    if (r < pesos[i]) return TABLA_KOCH[i];
+    r -= pesos[i];
+  }
+  return TABLA_KOCH[m - 1];
 }
 
 struct PatronMorse {
@@ -313,9 +337,10 @@ enum EstadoEcho { ECHO_ESPERA, ECHO_REPRODUCIENDO, ECHO_ESCUCHANDO, ECHO_RESULTA
 bool enEcho = false;              // Echo abierto (ajustes, practica o estadisticas)
 bool echoPracticando = false;
 bool enEstadisticasEcho = false;
-#define OPCION_ECHO_INICIAR 7
-uint8_t opcionEcho = OPCION_ECHO_INICIAR;  // Ajustes: 0 wpm, 1 sp, 2 leccion, 3 letras, 4 ver, 5 retos, 6 estad., 7 iniciar, 8 volver
-#define N_OPCIONES_ECHO 9
+#define OPCION_ECHO_INICIAR 8
+uint8_t opcionEcho = OPCION_ECHO_INICIAR;  // Ajustes: 0 wpm, 1 sp, 2 leccion, 3 letras, 4 ver, 5 retos, 6 refuerzo,
+                                           // 7 estad., 8 iniciar, 9 volver
+#define N_OPCIONES_ECHO 10
 uint8_t opcionPracticaEcho = 0;   // Practica: 0 repetir, 1 salir. Resultado: 0 volver, 1 rep.
 uint8_t echoWpm = 20;
 uint16_t echoEspaciado = 200;
@@ -323,6 +348,7 @@ uint8_t echoLeccion = 4;
 uint8_t echoLargo = 1;            // Letras por reto (1-5)
 bool echoVerObjetivo = true;      // Ensenar la letra antes de manipularla (para aprender)
 uint8_t echoRetos = 20;           // Retos por practica (10-50); cada intento cuenta, tambien al repetir tras un fallo
+uint8_t echoRefuerzo = REFUERZO_SUAVE;  // Mas retos con las letras de mas errores (NVS "eref")
 EstadoEcho estadoEcho = ECHO_ESPERA;
 String echoObjetivo = "";
 String echoRespuesta = "";
@@ -339,7 +365,8 @@ uint16_t espaciadoCW = 200;
 uint8_t leccionCW = 4;
 uint8_t caracteresCW = 5;
 uint8_t gruposCW = 20;
-uint8_t opcionSubpantalla = 6;  // Ajustes del Koch: 6 = iniciar
+uint8_t refuerzoKoch = REFUERZO_SUAVE;  // Mas veces las letras de mas errores (NVS "kref")
+uint8_t opcionSubpantalla = 7;  // Ajustes del Koch: 7 = iniciar
 
 enum EstadoCW { 
   CW_IDLE, 
@@ -883,11 +910,60 @@ int indiceKoch(char c) {
   return -1;
 }
 
+// Olvido gradual: al pasar de STATS_OLVIDO_INTENTOS, aciertos y fallos de esa letra se dividen a la mitad. Asi
+// pesa mas lo reciente (en MAS ERRORES y en el refuerzo) y una letra ya dominada deja de reforzarse
+#define STATS_OLVIDO_INTENTOS 100
+
 void registrarCaracter(StatsCaracter* tabla, char c, bool acierto) {
   int i = indiceKoch(c);
   if (i < 0) return;
   uint16_t& cuenta = acierto ? tabla[i].aciertos : tabla[i].fallos;
   if (cuenta < UINT16_MAX) cuenta++;
+  if ((uint32_t)tabla[i].aciertos + tabla[i].fallos > STATS_OLVIDO_INTENTOS) {
+    tabla[i].aciertos = (tabla[i].aciertos + 1) / 2;
+    tabla[i].fallos = (tabla[i].fallos + 1) / 2;
+  }
+}
+
+/**
+ * Peso de un caracter en el sorteo con refuerzo: 1 + tope x tasa de fallos, sin pasar del tope (x2 suave, x3
+ * fuerte). La tasa es la suma de Koch y Echo, suavizada ((fallos + 1) / (intentos + 2)) para que un fallo suelto
+ * no dispare una letra con pocos datos. Con menos de MIN_INTENTOS_LETRA intentos, peso 1 (como sin refuerzo)
+ */
+float pesoRefuerzo(uint8_t i, uint8_t refuerzo) {
+  uint32_t fallos = (uint32_t)statsCarKoch[i].fallos + statsCarEcho[i].fallos;
+  uint32_t intentos = fallos + statsCarKoch[i].aciertos + statsCarEcho[i].aciertos;
+  if (refuerzo == REFUERZO_NO || intentos < MIN_INTENTOS_LETRA) return 1.0f;
+  float tope = (refuerzo == REFUERZO_FUERTE) ? 3.0f : 2.0f;
+  float tasa = (fallos + 1.0f) / (intentos + 2.0f);
+  return min(tope, 1.0f + tope * tasa);
+}
+
+// Hay datos para reforzar en la leccion: alguna de sus letras con MIN_INTENTOS_LETRA intentos o mas
+bool hayDatosRefuerzo(uint8_t leccion) {
+  uint8_t n = caracteresDeLeccion(leccion);
+  for (uint8_t i = 0; i < n; i++) {
+    uint32_t intentos = (uint32_t)statsCarKoch[i].aciertos + statsCarKoch[i].fallos +
+                        statsCarEcho[i].aciertos + statsCarEcho[i].fallos;
+    if (intentos >= MIN_INTENTOS_LETRA) return true;
+  }
+  return false;
+}
+
+// Por serie, al empezar una practica: las letras que salen mas de lo normal y su peso
+void informarRefuerzo(const char* origen, uint8_t leccion, uint8_t refuerzo) {
+  if (refuerzo == REFUERZO_NO) return;
+  Serial.printf("[%s] REFUERZO %s:", origen, refuerzo == REFUERZO_FUERTE ? "FUERTE" : "SUAVE");
+  uint8_t n = caracteresDeLeccion(leccion);
+  bool alguna = false;
+  for (uint8_t i = 0; i < n; i++) {
+    float p = pesoRefuerzo(i, refuerzo);
+    if (p > 1.05f) {
+      Serial.printf(" %c x%.1f", TABLA_KOCH[i], p);
+      alguna = true;
+    }
+  }
+  Serial.println(alguna ? "" : " SIN DATOS (sorteo normal)");
 }
 
 void guardarStatsKochNVS() {
@@ -942,7 +1018,7 @@ void registrarLeccionEchoNVS(uint8_t lecc, float pct) {
 void echoNuevoReto(bool repetirMismo) {
   if (!repetirMismo || echoObjetivo.length() == 0) {
     echoObjetivo = "";
-    for (uint8_t i = 0; i < echoLargo; i++) echoObjetivo += caracterKochAleatorio(echoLeccion);
+    for (uint8_t i = 0; i < echoLargo; i++) echoObjetivo += caracterKochAleatorio(echoLeccion, echoRefuerzo);
   }
   echoRespuesta = "";
   keyerPausar();
@@ -963,6 +1039,7 @@ void entrarEnEcho() {
 
 void iniciarPracticaEcho() {
   guardarEchoNVS();
+  informarRefuerzo("ECHO", echoLeccion, echoRefuerzo);
   echoPracticando = true;
   opcionPracticaEcho = 0;
   echoAciertos = 0;
@@ -1092,6 +1169,8 @@ void cargarDatosNVS() {
   echoLargo = constrain(prefs.getUChar("elargo", 1), 1, 5);
   echoVerObjetivo = prefs.getBool("ever", true);
   echoRetos = constrain(prefs.getUChar("eretos", 20), 10, 50);
+  echoRefuerzo = min(prefs.getUChar("eref", REFUERZO_SUAVE), (uint8_t)REFUERZO_FUERTE);
+  refuerzoKoch = min(prefs.getUChar("kref", REFUERZO_SUAVE), (uint8_t)REFUERZO_FUERTE);
   echoTotalIntentos = prefs.getUInt("eint", 0);
   echoTotalAciertos = prefs.getUInt("eok", 0);
   echoSesiones = prefs.getUShort("eses", 0);
@@ -1129,6 +1208,7 @@ void cargarDatosNVS() {
 
 void guardarUltimaConfiguracionNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUChar("kref", refuerzoKoch);
   prefs.putUChar("wpm", wpmCW);
   prefs.putUShort("sp", espaciadoCW);
   prefs.putUChar("leccion", leccionCW);
@@ -1187,6 +1267,7 @@ void guardarEchoNVS() {
   prefs.putUChar("elargo", echoLargo);
   prefs.putBool("ever", echoVerObjetivo);
   prefs.putUChar("eretos", echoRetos);
+  prefs.putUChar("eref", echoRefuerzo);
   prefs.end();
 }
 
@@ -3431,9 +3512,23 @@ String nombrePaginaEstad(uint8_t pagina) {
   return String(t);
 }
 
-// Ajustes del Koch (lista): 0-4 se editan girando, 5 abre ESTAD.; en el pie, 6 = iniciar y 7 = volver
-#define N_AJUSTES_KOCH 6
-const char* const NOMBRES_AJUSTES_KOCH[N_AJUSTES_KOCH] = { "WPM", "ESPACIADO", "LECCION", "CARACTERES", "GRUPOS", "ESTADISTICAS" };
+// REFUERZO: NO, SUAVE o FUERTE; "S/D" (sin datos) si ninguna letra de la leccion tiene intentos suficientes
+String textoRefuerzo(uint8_t refuerzo, uint8_t leccion) {
+  if (refuerzo == REFUERZO_NO) return String("NO");
+  String t = (refuerzo == REFUERZO_FUERTE) ? "FUERTE" : "SUAVE";
+  return hayDatosRefuerzo(leccion) ? t : t + " S/D";
+}
+
+// NO -> SUAVE -> FUERTE -> NO (se cambia pulsando)
+uint8_t siguienteRefuerzo(uint8_t refuerzo) {
+  return (refuerzo + 1) % (REFUERZO_FUERTE + 1);
+}
+
+// Ajustes del Koch (lista): 0-4 se editan girando, 5 refuerzo (pulsar), 6 abre ESTAD.; pie: 7 iniciar, 8 volver
+#define N_AJUSTES_KOCH 7
+const char* const NOMBRES_AJUSTES_KOCH[N_AJUSTES_KOCH] = {
+  "WPM", "ESPACIADO", "LECCION", "CARACTERES", "GRUPOS", "REFUERZO", "ESTADISTICAS"
+};
 
 String valorAjusteKoch(uint8_t i) {
   switch (i) {
@@ -3442,13 +3537,17 @@ String valorAjusteKoch(uint8_t i) {
     case 2: return String(leccionCW);
     case 3: return String(caracteresCW);
     case 4: return String(gruposCW);
+    case 5: return textoRefuerzo(refuerzoKoch, leccionCW);
     default: return String("");
   }
 }
 
-// Ajustes del Echo (lista): 0-3 y 5 se editan girando, 4 cambia VER, 6 abre ESTAD.; pie: 7 iniciar, 8 volver
-#define N_AJUSTES_ECHO 7
-const char* const NOMBRES_AJUSTES_ECHO[N_AJUSTES_ECHO] = { "WPM", "ESPACIADO", "LECCION", "LETRAS", "VER LETRA", "RETOS", "ESTADISTICAS" };
+// Ajustes del Echo (lista): 0-3 y 5 se editan girando, 4 cambia VER, 6 refuerzo (pulsar), 7 abre ESTAD.;
+// pie: 8 iniciar, 9 volver
+#define N_AJUSTES_ECHO 8
+const char* const NOMBRES_AJUSTES_ECHO[N_AJUSTES_ECHO] = {
+  "WPM", "ESPACIADO", "LECCION", "LETRAS", "VER LETRA", "RETOS", "REFUERZO", "ESTADISTICAS"
+};
 
 String valorAjusteEcho(uint8_t i) {
   switch (i) {
@@ -3458,6 +3557,7 @@ String valorAjusteEcho(uint8_t i) {
     case 3: return String(echoLargo);
     case 4: return echoVerObjetivo ? String("SI") : String("NO");
     case 5: return String(echoRetos);
+    case 6: return textoRefuerzo(echoRefuerzo, echoLeccion);
     default: return String("");
   }
 }
@@ -4760,6 +4860,7 @@ void iniciarPracticaCW() {
   totalCaracteresLeccion = gruposCW * caracteresCW;
 
   guardarUltimaConfiguracionNVS();
+  informarRefuerzo("KOCH", leccionCW, refuerzoKoch);
 
   estadoCW = CW_GENERAR_GRUPO;
   mostrarTextoGrupo = false;
@@ -4776,7 +4877,7 @@ void detenerPracticaCW() {
 void generarGrupoKoch() {
   grupoActualStr = "";
   for (int i = 0; i < caracteresCW; i++) {
-    grupoActualStr += caracterKochAleatorio(leccionCW);
+    grupoActualStr += caracterKochAleatorio(leccionCW, refuerzoKoch);
   }
 
   if (textoCompletoLeccion.length() > 0) textoCompletoLeccion += " ";
@@ -5770,7 +5871,7 @@ void procesarBoton() {
       }
 
     } else if (enEcho && !echoPracticando) {
-      // Ajustes. Foco: 0 wpm, 1 sp, 2 leccion, 3 letras, 4 ver, 5 retos, 6 estad., 7 iniciar, 8 volver
+      // Ajustes. Foco: 0 wpm, 1 sp, 2 leccion, 3 letras, 4 ver, 5 retos, 6 refuerzo, 7 estad., 8 iniciar, 9 volver
       if (atras) {
         salirDeEcho();
       } else if (giro != 0) {
@@ -5788,13 +5889,14 @@ void procesarBoton() {
       } else if (pulsa) {
         switch (opcionEcho) {
           case 4: echoVerObjetivo = !echoVerObjetivo; break;
-          case 6:
+          case 6: echoRefuerzo = siguienteRefuerzo(echoRefuerzo); break;
+          case 7:
             enEstadisticasEcho = true;  // Al salir se vuelve aqui
             paginaStatsEcho = 0;
             confirmandoBorrado = false;
             break;
-          case 7: iniciarPracticaEcho(); break;
-          case 8: salirDeEcho(); break;
+          case 8: iniciarPracticaEcho(); break;
+          case 9: salirDeEcho(); break;
           default: editandoValor = !editandoValor; break;  // 0, 1, 2, 3 y 5
         }
       }
@@ -5956,8 +6058,8 @@ void procesarBoton() {
       }
 
     } else if (enSubpantallaCW) {
-      // Ajustes del KOCH (lista). Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos, 5 estadisticas,
-      // 6 iniciar, 7 volver
+      // Ajustes del KOCH (lista). Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos, 5 refuerzo,
+      // 6 estadisticas, 7 iniciar, 8 volver
       const uint8_t N_FOCO = N_AJUSTES_KOCH + 2;
       if (atras) {
         enSubpantallaCW = false;
@@ -5975,12 +6077,13 @@ void procesarBoton() {
         }
       } else if (pulsa) {
         if (opcionSubpantalla <= 4) editandoValor = !editandoValor;
-        else if (opcionSubpantalla == 5) {
+        else if (opcionSubpantalla == 5) refuerzoKoch = siguienteRefuerzo(refuerzoKoch);
+        else if (opcionSubpantalla == 6) {
           enEstadisticas3_5 = true;  // Al salir se vuelve aqui
           paginaStats3_5 = 0;
           confirmandoBorrado = false;
         }
-        else if (opcionSubpantalla == 6) iniciarPracticaCW();
+        else if (opcionSubpantalla == 7) iniciarPracticaCW();
         else enSubpantallaCW = false;
       }
 
@@ -5993,7 +6096,7 @@ void procesarBoton() {
       } else if (pulsa) {
         if (opcionPantalla3 == 0) {
           enSubpantallaCW = true;
-          opcionSubpantalla = 6;  // iniciar
+          opcionSubpantalla = 7;  // iniciar
         } else if (opcionPantalla3 == 1) {
           entrarEnEcho();
         } else if (opcionPantalla3 == 2) {

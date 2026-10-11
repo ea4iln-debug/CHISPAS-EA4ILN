@@ -52,7 +52,8 @@ montaje del decodificador, GPS.
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.01b** (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
+- Firmware: `src/main.cpp` **v1.02b** (refuerzo de las letras con más errores; compilada, sin cargar ni publicar);
+  v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
   `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; v1.01b desde el 11 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.01b
   desde el 11 oct 2026, por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
@@ -149,6 +150,15 @@ montaje del decodificador, GPS.
     3–16 lecciones, 17 borrado (solo lo del Koch). La letra nueva de la lección sale el 25 % de las veces
     (`PESO_LETRA_NUEVA_PCT`, `caracterKochAleatorio()`, también en Duo y Echo); con 4 caracteres o menos, reparto
     uniforme. Tabla Koch de LCWO (v0.3i).
+    **REFUERZO** (v1.02b, sin probar en placa; decidido el 11 oct 2026): opción NO / SUAVE / FUERTE en los ajustes
+    del Koch (`refuerzoKoch`, NVS `kref`) y del Echo (`echoRefuerzo`, NVS `eref`), por defecto SUAVE. El sorteo
+    (`caracterKochAleatorio(leccion, refuerzo)`) mantiene la letra nueva al 25 % y reparte el resto por pesos:
+    `pesoRefuerzo()` = 1 + tope × (fallos + 1) / (intentos + 2), con tope ×2 (suave) o ×3 (fuerte), usando la
+    **suma de las estadísticas del Koch y del Echo** (la corrección por totales del Koch no da datos por letra; el
+    Echo sí). Con menos de 5 intentos, peso 1. Sin datos en la lección, el valor sale `SUAVE S/D` y el sorteo es
+    normal. **Olvido gradual** (`registrarCaracter()`): al pasar de 100 intentos una letra, aciertos y fallos se
+    dividen a la mitad (también afecta a MÁS ERRORES). Por serie al empezar: `[KOCH] REFUERZO SUAVE: K x1.6 ...`.
+    El Duo no usa refuerzo.
   - **ECHO (TX)** (v0.7b; reestructurado en la v0.8g, probado): Chispas emite 1–5 letras de la lección del Echo con
     el motor CW (keyer en pausa mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las
     palas; durante el Echo el keyer descodifica con `echoWpm`. Como el Koch: **ajustes** propios (WPM 10–40, SP
@@ -323,7 +333,6 @@ montaje del decodificador, GPS.
    (ajustar RV2 con la barra, `DECOD_MIN_SENAL` y la escala; probar AUTO y tono fijo); que el ADC por DMA arranque
    y pare sin errores y que la batería se siga leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
-   - Repetir más las letras con más errores en Koch y Echo (las estadísticas por carácter ya existen, v0.8g).
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
      2016 bytes libres de 4096 tras Duo). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
      resolución del aparato; el valor en µA sigue sin medir).

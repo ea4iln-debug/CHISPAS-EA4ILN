@@ -63,8 +63,8 @@ GitHub.
 
 | Función | Descripción | Estado |
 |---|---|---|
-| **Koch (RX)** | Orden de caracteres de LCWO (lecciones 1–40), grupos aleatorios configurables (wpm, espaciado, caracteres y grupos). La letra nueva de cada lección sale el 25 % de las veces. Al terminar se corrige **letra a letra** (marcando cada fallo) o con el **total de fallos**; estadísticas por lección y por carácter. | ✅ |
-| **Echo (TX)** | Chispas emite letras y hay que repetirlas con las palas. Ajustes propios (wpm, espaciado, lección, letras por reto, número de retos), resultado al terminar y estadísticas por lección y por carácter. | ✅ |
+| **Koch (RX)** | Orden de caracteres de LCWO (lecciones 1–40), grupos aleatorios configurables (wpm, espaciado, caracteres y grupos). La letra nueva de cada lección sale el 25 % de las veces y, con el **refuerzo**, las letras que más fallas salen más (hasta el doble o el triple). Al terminar se corrige **letra a letra** (marcando cada fallo) o con el **total de fallos**; estadísticas por lección y por carácter. | ✅ |
+| **Echo (TX)** | Chispas emite letras y hay que repetirlas con las palas. Ajustes propios (wpm, espaciado, lección, letras por reto, número de retos, refuerzo de las letras con más errores), resultado al terminar y estadísticas por lección y por carácter. | ✅ |
 | **TX libre (keyer iámbico)** | Modos A y B, 10–40 wpm, palas normales o invertidas. Descodifica en pantalla lo que se manipula. | ✅ |
 | **Práctica Duo por LoRa** | Práctica en pareja entre dos Chispas: uno envía grupos y el otro los recibe y los copia. Tramas digitales a 868 MHz, sin audio. | ✅ |
 | **QSO libre por LoRa** | QSO con las palas entre dos Chispas: cada palabra se envía al terminarla y lo recibido suena cuando dejas de manipular (si manipulas mientras suena, se corta). | ✅ |
@@ -407,7 +407,7 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 - [ ] Amplificador y altavoz para el tono (piezas en camino)
 - [ ] Decodificador CW desde el audio del transceptor (firmware listo; pendiente de montaje y ajuste)
 - [ ] GPS: locator y hora automáticos
-- [ ] Que el Koch y el Echo repitan más los caracteres con más errores
+- [x] Que el Koch y el Echo repitan más los caracteres con más errores
 - [x] Medida del consumo en reposo (deep sleep): inapreciable (0,00 A en el medidor)
 - [ ] PCB propia
 
