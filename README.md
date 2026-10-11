@@ -283,8 +283,8 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | | | |
 |:---:|:---:|:---:|
 | <img src="docs/img/trx.png" width="256" alt="Menú TRX"><br>Menú | <img src="docs/img/trx_operar.png" width="256" alt="Operar"><br>Operar | <img src="docs/img/trx_menu.png" width="256" alt="Ajustes de Operar y QSO"><br>Operar y QSO: menu |
-| <img src="docs/img/trx_qso.png" width="256" alt="QSO por la emisora"><br>QSO | <img src="docs/img/trx_decodificar.png" width="256" alt="Decodificar"><br>Decodificar (sin entrada: satura) | <img src="docs/img/trx_memorias.png" width="256" alt="Memorias"><br>Memorias |
-| <img src="docs/img/trx_editor.png" width="256" alt="Editor de memorias"><br>Editor (rueda de caracteres) | | |
+| <img src="docs/img/trx_qso.png" width="256" alt="QSO por la emisora"><br>QSO | <img src="docs/img/trx_decodificar.png" width="256" alt="Decodificar"><br>Decodificar (sin señal) | <img src="docs/img/trx_memorias.png" width="256" alt="Memorias"><br>Memorias |
+| <img src="docs/img/trx_editor.png" width="256" alt="Editor de memorias"><br>Editor (rueda de caracteres, con {WX}) | | |
 
 ### Utilidades
 
@@ -293,6 +293,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | <img src="docs/img/prop_menu.png" width="256" alt="Menú de propagación"><br>Propagación: menú | <img src="docs/img/prop.png" width="256" alt="Índices"><br>Índices | <img src="docs/img/prop2.png" width="256" alt="Condiciones por banda"><br>Condiciones por banda |
 | <img src="docs/img/pota_menu.png" width="256" alt="Menú POTA"><br>POTA: menú | <img src="docs/img/pota.png" width="256" alt="Spots POTA"><br>Spots POTA | <img src="docs/img/sol_menu.png" width="256" alt="Menú del sol"><br>Sol: menú |
 | <img src="docs/img/sol.png" width="256" alt="Sol hoy"><br>Sol: hoy | <img src="docs/img/sol_ahora.png" width="256" alt="Sol ahora"><br>Sol: ahora | <img src="docs/img/sol_manana.png" width="256" alt="Sol mañana"><br>Sol: mañana |
+| <img src="docs/img/ambiente.png" width="256" alt="Ambiente: temperatura, humedad, presión, tendencia y altitud"><br>Ambiente (BME280) | | |
 
 ### Configuración
 
@@ -302,7 +303,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | <img src="docs/img/conf_editor.png" width="256" alt="Editor del indicativo"><br>Editor del indicativo | <img src="docs/img/status.png" width="256" alt="STATUS: estación"><br>STATUS: estación | <img src="docs/img/status2.png" width="256" alt="STATUS: sistema"><br>STATUS: sistema |
 | <img src="docs/img/status3.png" width="256" alt="STATUS: WiFi"><br>STATUS: WiFi | <img src="docs/img/status4.png" width="256" alt="STATUS: memoria"><br>STATUS: memoria | <img src="docs/img/status5.png" width="256" alt="STATUS: arranque"><br>STATUS: arranque |
 | <img src="docs/img/webconf.png" width="256" alt="Webconf"><br>Webconf | <img src="docs/img/webconf_qr.png" width="256" alt="QR de webconf"><br>QR para unir el móvil | <img src="docs/img/ota.png" width="256" alt="Actualizar firmware"><br>Actualizar firmware |
-| <img src="docs/img/depuracion.png" width="256" alt="Depuración"><br>Depuración | | |
+| <img src="docs/img/status6.png" width="256" alt="STATUS: sensor"><br>STATUS: sensor | <img src="docs/img/depuracion.png" width="256" alt="Depuración"><br>Depuración | |
 
 ---
 

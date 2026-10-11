@@ -23,7 +23,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   (con `gh`, instalado en el segundo equipo: `C:\Program Files\GitHub CLI\gh.exe`, sesión de ea4iln-debug).
   **v1.01b (beta)**, 11 oct 2026, también prerelease; en el primer equipo no hay `gh`: se creó con la API REST y la
   credencial de git (script temporal, fuera del repositorio). **v1.02b (beta)**, 11 oct 2026, prerelease (con `gh`
-  desde el segundo equipo): refuerzo de letras con errores y decodificador comprobado con audio real. Etiqueta
+  desde el segundo equipo): refuerzo de letras con errores y decodificador comprobado con audio real. **v1.03b (beta)**,
+  12 oct 2026, prerelease (API REST desde el primer equipo): sensor BME280. Capturas del README rehechas ese día con
+  `nav.py` (script temporal: órdenes serie, capturas y escritura en el editor de rueda), locator IN80dk durante las
+  capturas y restaurado después. Etiqueta
   de git y de GitHub: `v` + `FW_VERSION`. Para probar el OTA sin publicar otra versión: compilar temporalmente con
   `FW_VERSION "0.99"`, cargar, y ACTUALIZAR FW instala la última release.
 - **Binarios de cada release** (nombres exactos; el OTA busca el suyo por nombre):
@@ -52,7 +55,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.03b** (sensor BME280; sin publicar). v1.02b (refuerzo de las letras con más errores;
+- Firmware: `src/main.cpp` **v1.03b** (sensor BME280; release publicada el 12 oct 2026). v1.02b (refuerzo de las letras con más errores;
   silenciador y fin de palabra del decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
   `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; BME280; v1.03b desde el 12 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.02b

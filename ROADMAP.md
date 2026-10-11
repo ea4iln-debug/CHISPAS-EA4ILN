@@ -1,6 +1,6 @@
 # Hoja de ruta de Chispas
 
-Estado a 12 de octubre de 2026, con el firmware **v1.03b** (beta, sin publicar). Lo marcado ✅ está hecho y probado en placa.
+Estado a 12 de octubre de 2026, con el firmware **v1.03b** (beta). Lo marcado ✅ está hecho y probado en placa.
 
 ## 1. Pruebas pendientes
 
@@ -73,13 +73,12 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 ## 4. Documentación y publicación
 - Al montar el amplificador y el GPS: esquema (quitar PENDIENTE), README y capturas.
-- Rehacer la captura `status.png` del README (muestra la v1.00b) con el locator genérico.
-- Próxima release (v1.03b) cuando haya algo nuevo probado: previsiblemente, amplificador y GPS.
+- Próxima release (v1.04b) cuando haya algo nuevo probado: previsiblemente, amplificador y GPS.
 
 ## Orden propuesto
 1. **Sin piezas:** batería después del decodificador, prueba de estabilidad de una noche, keyer iámbico y X6200.
 2. **Al llegar el amplificador:** montaje, ganancia y control de SD en el firmware.
-3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.03b.
+3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.04b.
 4. **Después:** POTA sin conexión, cola de spots y PCB.
 
 ## Hecho
