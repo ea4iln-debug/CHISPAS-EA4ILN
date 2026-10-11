@@ -345,7 +345,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
-   ganancia en banco; GPS cuando llegue (opcionales: enable del GPS y BME280). Entrada del decodificador en GPIO6:
+   ganancia en banco; amplificador y altavoz llegan el 13 oct y GPS el 14 oct 2026 (opcional: enable del GPS); BME280 ya en mano, uso en estudio. Entrada del decodificador en GPIO6:
    **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; queda comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
@@ -360,7 +360,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - Práctica en pareja con **tramas digitales**, no audio: un byte por carácter con bit centinela (punto = 0,
   raya = 1) y un byte reservado para el espacio entre palabras. Cabecera con magic, versión/tipo, `seq`, wpm e
   indicativo (8 caracteres). Unos 32 caracteres por trama; enviar por frase o línea, no por pulsación. Capa de
-  transporte intercambiable (LoRa / ESP-NOW).
+  transporte intercambiable (LoRa; ESP-NOW descartado en el proyecto principal el 12 oct 2026: a estudiar como fork de
+  bajo coste, ver `ROADMAP.md`).
 - Si el firmware del Morserino-32 sirve de referencia: es open source y su protocolo MOPP envía un paquete por
   palabra. Las V3 no son compatibles con los Morserino oficiales.
 - POTA/SOTA: búsqueda de parque offline con CSV guardado en LittleFS; spots online con cola si no hay cobertura.

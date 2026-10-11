@@ -21,17 +21,19 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 ## 2. Hardware
 
 ### En camino
-- **Amplificador PAM8302A (U2) y altavoz de 8 Ω (LS1):** en el sitio del piezo (hoja 4 del esquema), con R9 de 10 kΩ.
+- **Amplificador PAM8302A (U2) y altavoz de 8 Ω (LS1)** (llegan el 13 oct): en el sitio del piezo (hoja 4 del esquema), con R9 de 10 kΩ.
   Ajustar la ganancia en banco y vigilar los picos en el 3V3 (la OLED de la placa 1 es sensible).
   **SD a GPIO38** (J3-11), para que el firmware lo apague cuando no se usa: el 3V3 sigue encendido en deep sleep y,
   sin SD, el amplificador gastaría unos 4 mA también dormido.
-- **GPS NEO-6M:** TX del GPS a GPIO47 (J2-13). Opcional: alimentación conmutada con AO3401A (Q1) y R8 en GPIO3.
+- **GPS NEO-6M** (llega el 14 oct): TX del GPS a GPIO47 (J2-13). Opcional: alimentación conmutada con AO3401A (Q1) y R8 en GPIO3.
 
 ### Por comprar
 - Divisor de minijack 1 → 2, para seguir oyendo la emisora con el decodificador conectado.
 
+### En mano, sin montar
+- **BME280** (GY-BME280-3.3): temperatura, presión y humedad por I2C en Wire1 (GPIO41/42). Uso en estudio.
+
 ### Opcional
-- **BME280** en Wire1 (GPIO41/42): temperatura, presión y humedad.
 - **Trafo de aislamiento 600:600**, solo si aparece zumbido por lazo de masa con la emisora.
 - **C3 (10–100 nF) de GPIO6 a GND**, solo si el decodificador da ruido o letras falsas (por ejemplo, al transmitir
   con potencia): filtra la RF y el ruido de alta frecuencia y estabiliza la lectura del ADC.
@@ -56,13 +58,13 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - **Cola de spots POTA:** publicar el spot propio al activar un parque (indicativo, referencia, frecuencia, CW) y, si
   no hay cobertura, guardarlo y enviarlo en cuanto haya WiFi. Antes, revisar las condiciones de la API de POTA para
   publicar.
-- **ESP-NOW para Duo y QSO:** las tramas no dependen de la radio; enviarlas por ESP-NOW permitiría practicar con
-  placas ESP32 sin LoRa, a corta distancia (50–200 m) y sin router.
 
 ### Por decidir
 - **SOTA:** las condiciones de su API exigen aprobación previa para software generado con IA.
 
 ### A estudiar (no prioritario)
+- **Fork de bajo coste con ESP-NOW** (fuera del proyecto principal): una unidad con un ESP32 cualquiera, sin LoRa,
+  que haga Duo y QSO por ESP-NOW a corta distancia (50–200 m) y sin router; las tramas no dependen de la radio.
 - **Audio I2S:** tono senoidal con rampas (sin clics) y volumen por software con un módulo DAC + amplificador I2S
   (p. ej. MAX98357A, 3 GPIO). Sustituiría al PAM8302A y obligaría a rehacer la salida de auriculares.
 - **GPS ATGM336H** en lugar del NEO-6M: más pequeño, más barato y de menor consumo (GPS + BeiDou), con la misma
@@ -77,7 +79,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 1. **Sin piezas:** batería después del decodificador, prueba de estabilidad de una noche, keyer iámbico y X6200.
 2. **Al llegar el amplificador:** montaje, ganancia y control de SD en el firmware.
 3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.03b.
-4. **Después:** POTA sin conexión, cola de spots, ESP-NOW y PCB.
+4. **Después:** POTA sin conexión, cola de spots y PCB.
 
 ## Hecho
 - ✅ Entrenador Koch estilo LCWO con corrección por letra o por total, Echo y TX libre (keyer iámbico A/B).
