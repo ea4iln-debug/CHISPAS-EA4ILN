@@ -20,7 +20,10 @@ montaje del decodificador, GPS.
 ## Releases y OTA
 - **Versión:** `#define FW_VERSION` (y `@version` de la cabecera de `main.cpp`). Formato `X.YYb` (b = beta; sin letra,
   final): `compararVersiones()` ordena 1.00b < 1.01b < 1.01. Subirla en cada cambio que se cargue o se publique.
-- **Primera release: v1.00b (beta), 11 oct 2026.** Etiqueta de git y de GitHub: `v` + `FW_VERSION`.
+- **Primera release: v1.00b (beta), 11 oct 2026**, publicada como prerelease: https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.00b
+  (con `gh`, instalado en el segundo equipo: `C:\Program Files\GitHub CLI\gh.exe`, sesión de ea4iln-debug). Etiqueta
+  de git y de GitHub: `v` + `FW_VERSION`. Para probar el OTA sin publicar otra versión: compilar temporalmente con
+  `FW_VERSION "0.99"` y `DEPURACION_SERIE 1`, cargar, y ACTUALIZAR FW instala la última release.
 - **Binarios de cada release** (nombres exactos; el OTA busca el suyo por nombre):
   `chispas-<ver>.bin` (app, placa con encoder), `chispas-<ver>-sin-encoder.bin` (app, sin encoder) y, para grabar por
   USB en `0x0`, `chispas-<ver>-usb.bin` y `chispas-<ver>-sin-encoder-usb.bin` (imagen completa: `esptool.py
@@ -29,7 +32,7 @@ montaje del decodificador, GPS.
   `framework-arduinoespressif32/tools/partitions/`). Más `docs/LICENCIAS_TERCEROS.txt`.
 - **Antes de publicar:** los cuatro `DEPURACION_*` a 0, compilar los dos entornos, probar en placa y pedir al usuario
   que confirme. Publicar con `gh release create v<ver> ... --prerelease` (beta) y las notas en castellano.
-- **OTA** (v1.00b; consulta probada contra GitHub, la instalación se prueba al publicar): CONF > CONFIG >
+- **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >
   ACTUALIZAR FW (`CONF_OTA`, `confEntrarOta()`, `procesarOta()`, `buscarActualizacion()`, `instalarActualizacion()`):
   enciende el WiFi, consulta `api.github.com/repos/.../releases?per_page=1` (incluye prereleases), compara, y con
   "instalar" descarga con `httpUpdate` (sigue la redirección a `release-assets.githubusercontent.com`) y reinicia.
