@@ -405,7 +405,7 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 - [x] Configuración en el aparato (indicativo, locator...) y página de estado
 - [x] Actualización por WiFi desde las releases de GitHub
 - [ ] Amplificador y altavoz para el tono (piezas en camino)
-- [x] Decodificador CW desde el audio del transceptor (falta afinar la separación de palabras)
+- [x] Decodificador CW desde el audio del transceptor
 - [ ] GPS: locator y hora automáticos
 - [x] Que el Koch y el Echo repitan más los caracteres con más errores
 - [x] Medida del consumo en reposo (deep sleep): inapreciable (0,00 A en el medidor)

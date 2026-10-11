@@ -5,8 +5,7 @@
 para radioaficionados (indicativo EA4ILN) sobre una **Heltec WiFi LoRa 32 V3** (ESP32-S3FN8, SX1262 a 868 MHz,
 OLED 0,96", sin PSRAM, 8 MB de flash). Entrenador Koch estilo LCWO, Echo, keyer iámbico, práctica y QSO por LoRa,
 conexión con el transceptor (KEY, tune, memorias, decodificador), propagación, spots POTA, sol y línea gris,
-configuración en el aparato y actualización OTA desde las releases de GitHub. Pendiente: amplificador del tono,
-afinar la separación de palabras del decodificador, GPS.
+configuración en el aparato y actualización OTA desde las releases de GitHub. Pendiente: amplificador del tono y GPS.
 
 ## Repositorio
 - GitHub: `https://github.com/ea4iln-debug/CHISPAS-EA4ILN` (GitHub redirige la URL anterior del repositorio).
@@ -304,11 +303,9 @@ afinar la separación de palabras del decodificador, GPS.
       despacio): con una media normal, los bordes de los elementos lo inflaban y el silenciador se comía puntos (se
       probó y descodificaba peor). Resultado: **con solo ruido de banda ya no salen letras** y el Morse limpio va bien.
     - **Fin de palabra adaptativo:** media móvil de la pausa entre letras (`huecoLetraMs`) y palabra a
-      `DECOD_PALABRA_X` (1,7×) esa pausa, nunca menos de 5 puntos. **Sigue partiendo y juntando palabras** con la
-      fuente de prueba (vídeo de YouTube de la NOAA: "OF FSH ORE WA TERS", "WASHINGTON DC" → "...ONBC"): la pausa entre
-      letras y entre palabras se parecen demasiado para el decodificador. **Pendiente: afinar las pausas** (aunque
-      ahora descodifica perfectamente las letras); para hacerlo, sacar por serie la duración de cada silencio y del
-      punto y ajustar `DECOD_PALABRA_X` y el fin de carácter con datos reales.
+      `DECOD_PALABRA_X` (1,7×) esa pausa, nunca menos de 5 puntos. Con un vídeo de YouTube de la NOAA llegó a partir y
+      juntar palabras ("OF FSH ORE WA TERS"), pero **el usuario confirma (11 oct 2026) que corta las palabras
+      perfectamente** con la v1.02b: no hace falta afinar las pausas.
   - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
   - **TUNE** (v0.9e): portadora continua por KEY de 1–10 s (`trxTuneSeg`, NVS
     `ttune`, por defecto 5) para ajustar acoplador o potencia. La duración se elige en OPERAR (`TUNE 5s`, a la derecha
@@ -348,8 +345,7 @@ afinar la separación de palabras del decodificador, GPS.
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
    ganancia en banco; GPS cuando llegue (opcionales: enable del GPS y BME280). Entrada del decodificador en GPIO6:
-   **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real; queda **afinar las pausas** (separación
-   de palabras) y comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
+   **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; queda comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
      2016 bytes libres de 4096 tras Duo). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
