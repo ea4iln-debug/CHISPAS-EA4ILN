@@ -274,7 +274,7 @@ montaje del decodificador, GPS.
   (uSDR, HF QRP SDR, 11 oct 2026): manipula por el **anillo**, no por la punta (con el jack a medias funcionaba y a
   fondo no), así que J4 lleva un **puente R-T** (esquema, hoja 5) y vale para emisoras de punta o de anillo; la
   emisora, en llave recta. Xiegu X6200: sin probar (debería valer con el puente, en llave recta;
-  si sale punto-raya alternado, está en modo iámbico). **Sin probar:** el decodificador con señal.
+  si sale punto-raya alternado, está en modo iámbico). Decodificador: montado y probado el 11 oct 2026 (ver DECODIFICAR).
   - **Salida KEY:** `conmutarEmisionMorse()` activa GPIO2 solo con `keyHabilitada` (OPERAR y QSO de TRX; nunca en
     Koch, Echo, TX LIBRE ni LoRa). `trxTonoLocal` (NVS `ttono`): buzzer/auriculares mientras sale por KEY. Corte de
     seguridad si KEY sigue activa más de 10 s seguidos (`KEY_MAX_CONTINUA_MS`): "KEY CORTADA (>10 s)" y por serie con
@@ -290,7 +290,15 @@ montaje del decodificador, GPS.
     montaje, con GPIO6 al aire, también sale); pie `> borrar  menu` y menu con TONO (AUTO o Hz) y SALIR
     (v0.9h, `decodEnAjustes`); `[DECOD] ...`
     por serie cada 2 s. Sordo mientras sale por KEY y 300 ms después. Mientras funciona no se lee la batería (mismo
-    ADC1). Valores de partida sin ajustar: `DECOD_MIN_SENAL` 1500, `DECOD_ESCALA_MAX` 96000.
+    ADC1). Valores de partida: `DECOD_MIN_SENAL` 1500, `DECOD_ESCALA_MAX` 96000.
+    **Montado y probado en la placa 1 (11 oct 2026):** sin nada en J3, GPIO6 a ~1,65 V y barra baja y quieta (ya no
+    sale SATURA). RV2 hay que llevarlo casi al máximo (multivuelta): con 0,1–0,5 V~ en la punta de J3 la barra llega
+    al 60–90 % sin saturar. **Con Morse limpio** (generador del móvil/PC, texto de la NOAA "OFFSHORE WATERS...
+    NATIONAL ... SERVICE WASHINGTON DC") descodifica bien en AUTO y con tono fijo, y los wpm estimados son correctos.
+    **Pendiente de mejorar:** (1) mete espacios dentro de las palabras ("OFFS HORE", "WA SHIN GTON"): corta palabra a
+    los 5 puntos de silencio y, si el generador usa Farnsworth (más pausa entre letras), la supera; (2) **con solo
+    ruido de banda** (uSDR sin señal) descodifica letras falsas (E, I, T, S) y en AUTO salta de frecuencia: falta un
+    silenciador (no descodificar sin un tono claro sobre el ruido).
   - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
   - **TUNE** (v0.9e): portadora continua por KEY de 1–10 s (`trxTuneSeg`, NVS
     `ttune`, por defecto 5) para ajustar acoplador o potencia. La duración se elige en OPERAR (`TUNE 5s`, a la derecha
@@ -329,11 +337,9 @@ montaje del decodificador, GPS.
    batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
-   ganancia en banco; luego entrada del decodificador en GPIO6 (el firmware ya está, v0.9a); GPS cuando
-   llegue (opcionales: enable del GPS y BME280). **Pendiente de comprobar en la pantalla TRX** (la KEY ya funciona con la
-   uSDR): decodificador con señal real
-   (ajustar RV2 con la barra, `DECOD_MIN_SENAL` y la escala; probar AUTO y tono fijo); que el ADC por DMA arranque
-   y pare sin errores y que la batería se siga leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
+   ganancia en banco; GPS cuando llegue (opcionales: enable del GPS y BME280). Entrada del decodificador en GPIO6:
+   **montada y probada el 11 oct 2026** (ver DECODIFICAR); falta mejorar el corte de palabras y el silenciador con
+   ruido, y comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2 y 2 pulsadores 6×6 mm. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
      2016 bytes libres de 4096 tras Duo). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
