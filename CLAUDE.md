@@ -369,8 +369,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    ganancia en banco; amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (opcional: enable del GPS); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
    **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; la batería se sigue leyendo bien después de usar DECODIFICAR o QSO (probado en la placa 2 el 12 oct 2026). Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
-   - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
-     2016 bytes libres de 4096 tras Duo). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
+   - **Estabilidad comprobada** (placa 2, v1.03b, noche del 12 oct 2026: 8 h en POTA, 233 consultas HTTPS a pota.app, una
+     con HTTP -11, tiempo de lectura, que se recuperó sola): heap libre 248,8–249,1 KB, mínimo 165,5 → 162,7 KB en la
+     primera hora y luego fijo, mayor bloque 180 212 B fijo (sin fragmentación), pila libre loop 2568, motorCW 3292,
+     keyer 2304 sin cambios. Pendiente solo la pila del motor CW tras Duo (2016 bytes libres de 4096, medida antigua). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
      resolución del aparato) y después en µA (12 oct 2026): **despreciable**.
    - Detectar USB y carga: la V3 no lo permite por software. Propuesta sin decidir: divisor 100k/150k del pin 5V
      (J2-2) a GPIO33 (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.

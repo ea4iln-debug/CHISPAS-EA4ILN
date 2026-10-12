@@ -9,7 +9,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 | | Prueba | Cómo |
 |---|---|---|
 | ⬜ | QSO LIBRE en los dos sentidos | Necesita palas en la placa 2 (o cambiar las palas de placa) |
-| ⬜ | Estabilidad tras muchas horas | Una noche con `[DIAG]` cada minuto en la pantalla POTA: memoria libre, mínimo, mayor bloque y pilas de las tareas |
+| ✅ | Estabilidad tras muchas horas | Placa 2, noche del 12 oct 2026: 8 h en POTA (233 consultas HTTPS); heap libre ±150 B, mínimo estable tras la 1.ª hora, mayor bloque y pilas sin cambios |
 | ✅ | OTA del binario sin encoder a la v1.02b y a la v1.03b | Placa 2, 12 oct 2026 |
 | ✅ | Batería después del decodificador | Placa 2, 12 oct 2026: la tensión se sigue leyendo bien tras DECODIFICAR y QSO |
 | ✅ | QSO del TRX con emisora real | 12 oct 2026: manipular y decodificar en la misma sesión, sin descodificar lo propio |
@@ -76,7 +76,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - Próxima release (v1.04b) cuando haya algo nuevo probado: previsiblemente, amplificador y GPS.
 
 ## Orden propuesto
-1. **Sin piezas:** prueba de estabilidad de una noche (en marcha, placa 2).
+1. **Sin piezas:** QSO LIBRE en los dos sentidos; tendencia del BME280 con varias horas de datos (placa 1).
 2. **Al llegar el amplificador:** montaje, ganancia y control de SD en el firmware.
 3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.04b.
 4. **Después:** POTA sin conexión, cola de spots y PCB.
