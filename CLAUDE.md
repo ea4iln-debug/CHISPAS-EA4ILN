@@ -61,8 +61,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   del 12 oct 2026, instalada por OTA en la placa 1 y probada). v1.03b (sensor BME280; release del 12 oct 2026). v1.02b (refuerzo de las letras con más errores;
   silenciador y fin de palabra del decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
-  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; BME280; v1.03b desde el 12 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.03b
-  desde el 12 oct 2026, por OTA; antes la v1.02b y la v1.01b, también por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
+  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; BME280, amplificador y altavoz; v1.06b desde el 12 oct 2026, por USB; ORDENES SERIE en SI) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.06b
+  desde el 12 oct 2026, por OTA; antes la v1.05b, la v1.04b, la v1.03b, la v1.02b y la v1.01b, también por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
   de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
   Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
