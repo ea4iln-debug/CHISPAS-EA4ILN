@@ -5,7 +5,7 @@
 ![Plataforma](https://img.shields.io/badge/plataforma-ESP32--S3-blue)
 ![Placa](https://img.shields.io/badge/placa-Heltec%20WiFi%20LoRa%2032%20V3-orange)
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2B%20PlatformIO-teal)
-![Versión](https://img.shields.io/badge/firmware-v1.03b-green)
+![Versión](https://img.shields.io/badge/firmware-v1.04b-green)
 ![Estado](https://img.shields.io/badge/estado-beta-yellow)
 ![Licencia del software](https://img.shields.io/badge/software-GPL--3.0-blue)
 ![Licencia del hardware](https://img.shields.io/badge/hardware%20y%20docs-CC%20BY--NC--SA%204.0-lightgrey)
@@ -77,7 +77,7 @@ GitHub.
 | **Actualización OTA** | Busca la última release en GitHub, avisa si hay versión nueva y la instala por WiFi (TLS validado). | ✅ |
 | **Batería** | Tensión y porcentaje. Detecta cuando no hay batería conectada. | ✅ |
 | **Cara de Chispas** | Salvapantallas animado con expresiones y gestos. | ✅ |
-| **Tono por buzzer y auriculares** | Tono CW (400–1000 Hz, 850 por defecto) con volumen y silencio automático del buzzer al conectar auriculares. El piezo suena bajo: falta montar el amplificador. | ✅ / 🚧 |
+| **Tono por altavoz y auriculares** | Tono CW (400–1000 Hz, 850 por defecto) por un altavoz con amplificador PAM8302A, con volumen y silencio automático del altavoz al conectar auriculares. El amplificador solo se enciende en CW, LoRa y TRX. | ✅ |
 | **Ahorro de energía** | CPU a 80 MHz sin WiFi, radio dormida fuera de LoRa, pantalla atenuada y apagado automático (deep sleep). | ✅ |
 | **GPS** | Posición y locator automáticos. | 🚧 |
 
@@ -94,9 +94,9 @@ El prototipo actual se monta en protoboard, sin PCB. Componentes principales:
 
 - Encoder rotativo **KY-040** con pulsador.
 - Manipulador de **palas** con clavija estéreo de 3,5 mm.
-- **Buzzer piezoeléctrico pasivo** (no activo ni magnético), potenciómetro de volumen de 10 kΩ logarítmico y jack de
-  auriculares con conmutación. A 3,3 V el piezo suena bajo: en su sitio irá un amplificador **PAM8302A** con un
-  altavoz de 8 Ω (en camino).
+- Amplificador **PAM8302A** con **altavoz de 8 Ω**, potenciómetro de volumen de 10 kΩ logarítmico y jack de
+  auriculares con conmutación (al meter la clavija, el altavoz calla). Sustituye al buzzer piezoeléctrico del
+  principio, que a 3,3 V sonaba muy bajo.
 - Optoacoplador **PC817** para la salida KEY, con resistencia de 10 kΩ a GND y un jack con la punta y el anillo
   unidos (vale para emisoras que manipulan por cualquiera de los dos).
 - Entrada de audio de la emisora para el decodificador: polarización a 1,65 V, trimmer de nivel y diodos de protección.
@@ -117,7 +117,7 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 | 5 | J3-16 | Pala de raya (DAH), pull-up interno | ✅ |
 | 6 | J3-17 | Entrada de audio del decodificador (ADC1, por DMA) | ✅ |
 | 7 | J3-18 | Tono CW por PWM (buzzer y auriculares) | ✅ |
-| 38 | J3-11 | Apagado (SD) del amplificador PAM8302A | 🚧 |
+| 38 | J3-11 | Apagado (SD) del amplificador PAM8302A: solo encendido en CW, LoRa y TRX | ✅ |
 | 19 / 20 | J2-18 / J2-17 | Encoder CLK / DT | ✅ |
 | 48 | J2-14 | Pulsador del encoder | ✅ |
 | 47 | J2-13 | RX desde el TX del GPS | 🚧 |
@@ -402,8 +402,8 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 
 ## Hoja de ruta
 
-Lo pendiente (pruebas, hardware y desarrollo) está en [ROADMAP.md](ROADMAP.md). Lo siguiente: amplificador y
-altavoz para el tono, GPS para el locator y la hora automáticos, y POTA sin conexión.
+Lo pendiente (pruebas, hardware y desarrollo) está en [ROADMAP.md](ROADMAP.md). Lo siguiente: GPS para el locator
+y la hora automáticos, y POTA sin conexión.
 
 ---
 

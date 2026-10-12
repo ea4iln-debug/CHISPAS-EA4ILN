@@ -219,7 +219,7 @@ def vista_general():
         dash = "6 4" if c == C_OPT else None
         s.line([(290, y), (414, y)], c, 2, dash)
     # Derecha
-    blk(760, 70, 250, 85, "Tono CW (GPIO7, PWM)", ["R1 → volumen RV1 → C1 → 220 Ω (R2, R3)", "TN de J2: buzzer BZ1 (o ampli U2 + LS1)", "Clavija en J2 = buzzer/altavoz en silencio"], "#c2185b")
+    blk(760, 70, 250, 85, "Tono CW (GPIO7, PWM)", ["R1 → volumen RV1 → C1 → 220 Ω (R2, R3)", "TN de J2: ampli U2 + altavoz LS1 (antes BZ1)", "Clavija en J2 = buzzer/altavoz en silencio"], "#c2185b")
     blk(760, 165, 250, 70, "Decodificador (GPIO6, ADC1)", ["← altavoz ext. de la emisora (J3)", "RV2 nivel · C2 · 1,65 V · R6 + D1/D2"], "#00838f")
     blk(760, 250, 250, 70, "Salida KEY (GPIO2)", ["R7 330 Ω → PC817 (U1) → J4 · R10 a GND", "→ toma KEY de la emisora (aislada)"], C_ISO)
     blk(760, 330, 250, 55, "Raíles de la protoboard", ["Rojo = 3V3 · Azul = GND (nada a 5 V)"], "#555")
@@ -440,7 +440,7 @@ def p_tono():
 
 
 # ----------------------------------------------------------------------------
-# Tono con amplificador (pendiente): sustituye a BZ1 en el contacto TN de J2
+# Tono con amplificador (montado el 12 oct 2026): sustituye a BZ1 en el contacto TN de J2
 # ----------------------------------------------------------------------------
 def p_ampli():
     s = S(1050, 365)
@@ -655,10 +655,10 @@ PINES = [
     ("4", "Pala DIT", "Punta de J1", "Entrada con pull-up interno", ""),
     ("5", "Pala DAH", "Anillo de J1", "Entrada con pull-up interno", ""),
     ("6", "Entrada del decodificador", "R6 1 kΩ, D1/D2, polarización 1,65 V", "ADC1 por DMA a 8 kHz (pantalla TRX)", ""),
-    ("7", "Tono CW", "R1 1 kΩ → RV1 → buzzer (o ampli U2) / auriculares", "PWM (LEDC) 850 Hz (CONF: 400–1000)", ""),
+    ("7", "Tono CW", "R1 1 kΩ → RV1 → ampli U2 + altavoz / auriculares", "PWM (LEDC) 850 Hz (CONF: 400–1000)", ""),
     ("19", "Encoder CLK", "KY-040 CLK", "Entrada (pull-up en el módulo)", ""),
     ("20", "Encoder DT", "KY-040 DT", "Entrada (pull-up en el módulo)", ""),
-    ("38", "Apagado del amplificador", "SD de U2 (PAM8302A)", "Salida, BAJO = apagado (fuera de CW/LoRa/TRX y al dormir)", "pendiente"),
+    ("38", "Apagado del amplificador", "SD de U2 (PAM8302A)", "Salida, BAJO = apagado (fuera de CW/LoRa/TRX y al dormir)", ""),
     ("41", "BME280 SDA", "Wire1", "I2C, 0x76 (opcional; montado)", ""),
     ("42", "BME280 SCL", "Wire1", "I2C (opcional; montado)", ""),
     ("47", "RX del GPS", "TX del NEO-6M", "UART1 RX, 9600 bd", ""),
@@ -677,8 +677,8 @@ BOM = [
     ("ENC1", "Encoder KY-040", "Menús", ""), ("GPS1", "NEO-6M GY-GPS6MV2", "Posición / hora", "pendiente"),
     ("SW1", "Interruptor SS12D00", "On/off batería", ""), ("BAT1", "LiPo 3,7 V 3000 mAh JST 1,25", "Alimentación", ""),
     ("Q1, R8", "AO3401A + adaptador SOT-23 + 100 kΩ", "Enable del GPS", "opc"), ("BME1", "BME280 GY-BME280-3.3 (opcional)", "Sensor ambiental", ""),
-    ("U2", "Módulo amplificador PAM8302A (mono, 2,5 W)", "Altavoz, en el sitio de BZ1 (TN)", "pendiente"),
-    ("LS1", "Altavoz 8 Ω 0,5–1 W, 28–40 mm", "Tono", "pendiente"), ("R9", "Resistencia 10 kΩ", "Pull-down de la entrada de U2", "pendiente"),
+    ("U2", "Módulo amplificador PAM8302A (mono, 2,5 W)", "Altavoz, en el sitio de BZ1 (TN)", ""),
+    ("LS1", "Altavoz 8 Ω 0,5–1 W, 28–40 mm", "Tono", ""), ("R9", "Resistencia 10 kΩ", "Pull-down de la entrada de U2", ""),
 ]
 
 CSS = """
@@ -711,7 +711,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v1.03b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v1.04b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
@@ -763,7 +763,7 @@ def main():
 
     pages.append(f'''<div class="page">{header("Salida de audio: tono CW (buzzer, auriculares, volumen) y amplificador", 4, T)}
 <div class="panel"><h2>5 · Tono CW: buzzer, auriculares con silencio automático y volumen (montado)</h2>{fit(p_tono(), 80)}</div>
-<div class="panel" style="margin-top:3mm"><h2>5b · Alternativa con amplificador y altavoz en el sitio de BZ1 <span class="badge b-pend">PENDIENTE</span></h2>{fit(p_ampli(), 66)}</div>
+<div class="panel" style="margin-top:3mm"><h2>5b · Amplificador y altavoz en el sitio de BZ1 (montado)</h2>{fit(p_ampli(), 66)}</div>
 </div>''')
 
     pages.append(f'''<div class="page">{header("Salida KEY hacia la emisora y alimentación", 5, T)}
@@ -795,13 +795,13 @@ def main():
 <li><b>1. Raíles</b>: 3V3 y GND de la Heltec a los raíles. Polímetro: 3,3 V entre raíles y ningún cortocircuito. ✔</li>
 <li><b>2. Encoder</b> y programa de prueba de pines (19, 20, 48 y reserva 38–40) por serie. ✔</li>
 <li><b>3. Palas</b>: comprobar por serie DIT/DAH antes del keyer. ✔</li>
-<li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). ✔ <i>El piezo suena muy bajo: cuando lleguen U2 y LS1, montarlos en su sitio (hoja 4) y ajustar la ganancia.</i></li>
+<li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). ✔ <i>El piezo sonaba muy bajo: sustituido por U2 y LS1 (hoja 4, 5b), con SD a GPIO38.</i> ✔</li>
 <li><b>5. KEY</b> con R10: pantalla TRX → OPERAR. Primero GPIO2 con el polímetro (≈ 3,3 V con cada elemento, 0 V en reposo); luego, sin emisora, continuidad entre punta y malla de J4 al manipular. ✔ <i>Con la uSDR: puente R-T en J4 (manipula por el anillo).</i></li>
 <li><b>6. Decodificador</b> (hoja 6): sin emisora, polímetro en GPIO6 ≈ 1,65 V. Luego RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra (y <code>[DECOD]</code> por serie con CONF → CONFIG → DEPURACION → DECOD en SÍ). ✔ <i>RV2 queda casi al máximo con 0,1–0,5 V de la emisora.</i></li>
 <li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional. ✔</li>
 <li><b>9. Batería</b> al final, comprobada la polaridad.</li>
 </ul>
-<p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas, tono (R1, RV1, C1, R2, R3, J2, BZ1), KEY (R7, R10, U1, J4) con la uSDR, BME280 (BME1) y decodificador (C2, R4–R6, RV2, D1, D2) con audio Morse real. El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
+<p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas, tono (R1, RV1, C1, R2, R3, J2, y luego U2, R9 y LS1 en lugar de BZ1), KEY (R7, R10, U1, J4) con la uSDR, BME280 (BME1) y decodificador (C2, R4–R6, RV2, D1, D2) con audio Morse real. El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
 </div></div></div>''')
 
     doc = f'<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Chispas · esquema de conexiones</title><style>{CSS}</style></head><body>{"".join(pages)}</body></html>'

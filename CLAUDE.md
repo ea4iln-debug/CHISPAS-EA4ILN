@@ -55,7 +55,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.03b** (sensor BME280; release publicada el 12 oct 2026). v1.02b (refuerzo de las letras con más errores;
+- Firmware: `src/main.cpp` **v1.04b** (control del amplificador: SD en GPIO38; release publicada el 12 oct 2026 para
+  instalarla por OTA, sin probar antes en placa a petición del usuario). v1.03b (sensor BME280; release del 12 oct 2026). v1.02b (refuerzo de las letras con más errores;
   silenciador y fin de palabra del decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
   `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; BME280; v1.03b desde el 12 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.03b
@@ -356,8 +357,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   2026; J3-11): el firmware lo pondrá en BAJO fuera de CW/LoRa/TRX y al dormir (con `gpio_hold`), porque el 3V3 sigue
   vivo en deep sleep y sin SD el amplificador gastaría ~4 mA también dormido. RV1 sigue de volumen; el PAM8302A tiene mucha ganancia: bajar su
   trimmer si lo trae, o 47 kΩ en serie con A+. Vigilar picos en el 3V3 (la OLED de la placa 1 es sensible).
-  En el esquema (hoja 4) están el piezo montado y, debajo, el montaje con U2, R9 y LS1 marcado PENDIENTE (PDF
-  regenerado el 10 oct 2026).
+  **Montados el 12 oct 2026** (placa 1): el altavoz suena bien con RV1 de volumen y calla al meter los auriculares.
+  **Firmware v1.04b:** `ponerAmplificador()`/`procesarAmplificador()`: SD en ALTO solo en CW, LoRa y TRX y durante el
+  pitido de prueba del TONO (`aplicarFrecTono(true)` lo enciende), en BAJO en el resto; al dormir, BAJO retenido con
+  `gpio_hold_en` (se libera en `setup()`, donde arranca en BAJO). `[AMP] ENCENDIDO/APAGADO` por serie. **Control de
+  SD sin probar en placa.** Esquema (hoja 4, 5b) actualizado: montado.
 
 ## Pendiente
 1. **Pruebas a mano** (11 oct 2026): hechas en la placa 1 (listas y menús, aceleración, corrección total del Koch,
@@ -401,7 +405,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 4 / 5 | Pala DIT / DAH (pull-up interno; `KEYER_PADDLE_DIT/DAH`). **Montado y probado** |
 | 6 | Entrada del decodificador (ADC1): acoplo 1 µF, polarización 2×10 kΩ, trimmer, 1 kΩ y 2×1N4148 |
 | 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, buzzer piezo pasivo en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R |
-| 38 | SD (apagado) del amplificador PAM8302A, pendiente de montar. BAJO = apagado |
+| 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado; control de SD de la v1.04b sin probar |
 | 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
 | 3 (futuro) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido |

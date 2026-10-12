@@ -4,7 +4,7 @@
  * @brief Chispas: entrenador de CW portatil para la Heltec WiFi LoRa 32 V3 (ESP32-S3). Koch, Echo, keyer
  *        iambico, practica y QSO por LoRa, manipulacion del transceptor (KEY), decodificador CW, propagacion,
  *        spots POTA, sol y linea gris, y actualizacion por OTA desde las releases de GitHub.
- * @version 1.03b - Sensor ambiental BME280 (AMBIENTE en SOL, aviso de tormenta, altitud y {WX})
+ * @version 1.04b - Amplificador PAM8302A: SD en GPIO38 (solo en CW, LoRa y TRX; apagado al dormir)
  * @date 2026-10-11
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -19,7 +19,7 @@
 
 // Version: se ve en Inicio, en CONF > STATUS y por serie. La etiqueta de la release de GitHub es "v" + esto
 // (la actualizacion OTA las compara). Cambiarla en cada version que se cargue o se publique
-#define FW_VERSION "1.03b"
+#define FW_VERSION "1.04b"
 
 // Depuracion: se activa en CONF > CONFIG > DEPURACION (NVS "depu", un bit por opcion; todo apagado por defecto)
 #define DEPU_SERIE 0x01  // Ordenes por serie: 'p' vuelca la OLED (docs/captura_oled.py) y d/i/k/l/a simulan el encoder
@@ -92,6 +92,7 @@ inline bool depuActiva(uint8_t bit) { return (depuracion & bit) != 0; }
 #define ENC_DT_PIN      20  // Pull-up de 10 kOhm en el modulo
 #define ENC_SW_PIN      48  // Pulsador del eje, sin pull-up en el modulo: INPUT_PULLUP
 #define SPEAKER_PWM_PIN  7  // Tono CW por PWM (J3-18): volumen, auriculares y buzzer (ver esquema, hoja 4)
+#define AMP_SD_PIN      38  // SD del amplificador PAM8302A (J3-11): ALTO = encendido. Solo en CW, LoRa y TRX
 
 #define FREC_AUDIO_HZ    850 // Tono CW por defecto; se elige en CONF > CONFIG > TONO (frecTonoHz)
 #define TONO_MIN_HZ      400
@@ -564,9 +565,26 @@ uint16_t frecTonoHz = FREC_AUDIO_HZ;  // Tono CW (buzzer y auriculares); se elig
 // Pitido de prueba al elegir el tono en CONF (alli no emite el motor CW). Lo apaga procesarTonoPrueba()
 unsigned long tonoPruebaFinMs = 0;  // 0 = sin pitido
 
+// Amplificador del altavoz (PAM8302A): en reposo gasta ~4 mA, tambien con la placa dormida (va al 3V3), asi que
+// solo se enciende donde puede sonar algo: CW, LoRa y TRX, y el pitido de prueba del tono en CONF
+bool amplificadorEncendido = false;
+
+void ponerAmplificador(bool encendido) {
+  if (encendido == amplificadorEncendido) return;
+  amplificadorEncendido = encendido;
+  digitalWrite(AMP_SD_PIN, encendido ? HIGH : LOW);
+  Serial.println(encendido ? F("[AMP] ENCENDIDO") : F("[AMP] APAGADO"));
+}
+
+void procesarAmplificador() {
+  ponerAmplificador(pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA ||
+                    pantallaActual == PANTALLA_TRX || tonoPruebaFinMs != 0);
+}
+
 void aplicarFrecTono(bool pitidoPrueba) {
   ledcChangeFrequency(CANAL_PWM_AUDIO, frecTonoHz, RES_PWM_AUDIO);
   if (pitidoPrueba) {
+    ponerAmplificador(true);
     ledcWrite(CANAL_PWM_AUDIO, 128);
     tonoPruebaFinMs = millis() + TONO_PRUEBA_MS;
     if (tonoPruebaFinMs == 0) tonoPruebaFinMs = 1;
@@ -6529,9 +6547,11 @@ void dormirChispas(const char* motivo) {
   digitalWrite(LED_PIN, LOW);
   ledcWrite(CANAL_PWM_AUDIO, 0);
   digitalWrite(KEY_OUT_PIN, LOW);
+  digitalWrite(AMP_SD_PIN, LOW);  // Amplificador apagado: el 3V3 sigue vivo durante el sueno
   digitalWrite(VEXT_CTRL, HIGH);
   digitalWrite(ADC_CTRL_PIN, LOW);
   gpio_hold_en((gpio_num_t)KEY_OUT_PIN);
+  gpio_hold_en((gpio_num_t)AMP_SD_PIN);
   gpio_hold_en((gpio_num_t)VEXT_CTRL);
   gpio_hold_en((gpio_num_t)ADC_CTRL_PIN);
   gpio_deep_sleep_hold_en();
@@ -6562,12 +6582,15 @@ void setup() {
   // Al despertar del deep sleep siguen retenidos los pines que se fijaron al dormir: se liberan
   gpio_deep_sleep_hold_dis();
   gpio_hold_dis((gpio_num_t)KEY_OUT_PIN);
+  gpio_hold_dis((gpio_num_t)AMP_SD_PIN);
   gpio_hold_dis((gpio_num_t)VEXT_CTRL);
   gpio_hold_dis((gpio_num_t)ADC_CTRL_PIN);
 
   // Lo primero: la salida KEY en BAJO, para que la emisora no transmita mientras arranca la placa
   pinMode(KEY_OUT_PIN, OUTPUT);
   digitalWrite(KEY_OUT_PIN, LOW);
+  pinMode(AMP_SD_PIN, OUTPUT);  // Amplificador apagado hasta entrar en una pantalla que suene
+  digitalWrite(AMP_SD_PIN, LOW);
 
   Serial.begin(115200);
   delay(1000);
@@ -6750,6 +6773,7 @@ void procesarOrdenesSerie() {
 void loop() {
   if (depuActiva(DEPU_SERIE)) procesarOrdenesSerie();
   procesarBoton();
+  procesarAmplificador();
   procesarTonoPrueba();
   procesarTextoKeyer();
   procesarEcho();
