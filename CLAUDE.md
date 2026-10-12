@@ -55,8 +55,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.05b** (salvapantallas en todas las pantallas salvo CW, LoRa y TRX; brillo tenue en
-  todas; release del 12 oct 2026 para instalarla por OTA). v1.04b (control del amplificador, SD en GPIO38; release
+- Firmware: `src/main.cpp` **v1.06b** (opción SALVAPANTALLAS, CONFIG por bloques y expresiones de radioaficionado;
+  release del 12 oct 2026). v1.05b (salvapantallas en todas las pantallas salvo CW, LoRa y TRX; brillo tenue en
+  todas; release del 12 oct 2026). v1.04b (control del amplificador, SD en GPIO38; release
   del 12 oct 2026, instalada por OTA en la placa 1 y probada). v1.03b (sensor BME280; release del 12 oct 2026). v1.02b (refuerzo de las letras con más errores;
   silenciador y fin de palabra del decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:

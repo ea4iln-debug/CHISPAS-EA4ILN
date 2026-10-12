@@ -1,6 +1,6 @@
 # Hoja de ruta de Chispas
 
-Estado a 12 de octubre de 2026, con el firmware **v1.05b** (beta). Lo marcado ✅ está hecho y probado en placa.
+Estado a 12 de octubre de 2026, con el firmware **v1.06b** (beta). Lo marcado ✅ está hecho y probado en placa.
 
 ## 1. Pruebas pendientes
 
@@ -74,12 +74,12 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 ## 4. Documentación y publicación
 - Al montar el GPS: esquema (quitar PENDIENTE), README y capturas.
-- Próxima release (v1.06b) con el GPS.
+- Próxima release (v1.07b) con el GPS.
 
 ## Orden propuesto
 1. **Sin piezas:** QSO LIBRE en los dos sentidos; tendencia del BME280 con varias horas de datos (placa 1).
 2. **Salvapantallas y brillo:** probar la v1.05b.
-3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.06b.
+3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.07b.
 4. **Después:** POTA sin conexión, cola de spots y PCB.
 
 ## Hecho

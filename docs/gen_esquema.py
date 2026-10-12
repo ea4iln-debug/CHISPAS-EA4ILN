@@ -707,7 +707,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v1.05b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v1.06b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
