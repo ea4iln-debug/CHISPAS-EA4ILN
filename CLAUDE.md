@@ -58,8 +58,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - Firmware: `src/main.cpp` **v1.03b** (sensor BME280; release publicada el 12 oct 2026). v1.02b (refuerzo de las letras con más errores;
   silenciador y fin de palabra del decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
-  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; BME280; v1.03b desde el 12 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.02b
-  desde el 12 oct 2026, por OTA; antes la v1.01b, también por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
+  `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; BME280; v1.03b desde el 12 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.03b
+  desde el 12 oct 2026, por OTA; antes la v1.02b y la v1.01b, también por OTA desde la v1.00b: **OTA del binario sin encoder probada**). El puerto COM depende del equipo (COM16 en el primero, COM23 en el segundo desde
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
   de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
   Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
@@ -291,8 +291,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   comprobados con el polímetro en el jack (11 oct 2026: abierto en reposo, conduce con el TUNE). **Probado con la emisora**
   (uSDR, HF QRP SDR, 11 oct 2026): manipula por el **anillo**, no por la punta (con el jack a medias funcionaba y a
   fondo no), así que J4 lleva un **puente R-T** (esquema, hoja 5) y vale para emisoras de punta o de anillo; la
-  emisora, en llave recta. Xiegu X6200: sin probar (debería valer con el puente, en llave recta;
-  si sale punto-raya alternado, está en modo iámbico). Decodificador: montado y probado el 11 oct 2026 (ver DECODIFICAR).
+  emisora, en llave recta. **Xiegu X6200: probada el 12 oct 2026** (llave recta, con el puente R-T: TUNE, palas y
+  memorias bien; si sale punto-raya alternado, la emisora está en modo iámbico). Decodificador: montado y probado el 11 oct 2026 (ver DECODIFICAR).
   - **Salida KEY:** `conmutarEmisionMorse()` activa GPIO2 solo con `keyHabilitada` (OPERAR y QSO de TRX; nunca en
     Koch, Echo, TX LIBRE ni LoRa). `trxTonoLocal` (NVS `ttono`): buzzer/auriculares mientras sale por KEY. Corte de
     seguridad si KEY sigue activa más de 10 s seguidos (`KEY_MAX_CONTINUA_MS`): "KEY CORTADA (>10 s)" y por serie con
@@ -359,12 +359,12 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 ## Pendiente
 1. **Pruebas a mano** (11 oct 2026): hechas en la placa 1 (listas y menús, aceleración, corrección total del Koch,
    Echo por lección) y en la placa 2 (OTA a la v1.01b; menús, listas, edición con vuelta, páginas y práctica sin
-   encoder). Falta la X6200 con KEY. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con
+   encoder). X6200 con KEY probada el 12 oct 2026. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con
    batería y sin medidor).
 2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
    PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
    ganancia en banco; amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (opcional: enable del GPS); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
-   **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; queda comprobar que la batería se sigue leyendo después de usar DECODIFICAR o QSO. Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
+   **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; la batería se sigue leyendo bien después de usar DECODIFICAR o QSO (probado en la placa 2 el 12 oct 2026). Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Consumo, lo que queda:** vigilar la fragmentación con el `[DIAG]` tras muchas horas (y la pila del motor CW:
      2016 bytes libres de 4096 tras Duo). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
@@ -392,7 +392,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 
 | GPIO | Uso |
 |---|---|
-| 2 | Salida KEY (PC817, 330 Ω, 10 kΩ a GND, minijack J4 con puente R-T). `KEY_OUT_PIN`. **Montado y probado con la uSDR** (X6200 sin probar) |
+| 2 | Salida KEY (PC817, 330 Ω, 10 kΩ a GND, minijack J4 con puente R-T). `KEY_OUT_PIN`. **Montado y probado con la uSDR y la X6200** |
 | 4 / 5 | Pala DIT / DAH (pull-up interno; `KEYER_PADDLE_DIT/DAH`). **Montado y probado** |
 | 6 | Entrada del decodificador (ADC1): acoplo 1 µF, polarización 2×10 kΩ, trimmer, 1 kΩ y 2×1N4148 |
 | 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, buzzer piezo pasivo en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R |

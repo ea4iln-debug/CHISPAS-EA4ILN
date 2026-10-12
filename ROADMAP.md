@@ -8,13 +8,13 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 | | Prueba | Cómo |
 |---|---|---|
-| ⬜ | Batería después del decodificador | Usar DECODIFICAR o QSO (TRX) con la batería puesta, salir y ver que el porcentaje se sigue actualizando |
-| ⬜ | Xiegu X6200 con KEY | Emisora en llave recta, con el puente R-T de J4. Si salen punto y raya alternados, la emisora está en modo iámbico |
 | ⬜ | QSO del TRX con emisora real | Manipular y decodificar en la misma sesión; comprobar que no se descodifica lo propio (sordo 300 ms tras KEY) |
 | ⬜ | Keyer iámbico | Apretón de las dos palas en modo A y en modo B, y textos largos |
 | ⬜ | QSO LIBRE en los dos sentidos | Necesita palas en la placa 2 (o cambiar las palas de placa) |
 | ⬜ | Estabilidad tras muchas horas | Una noche con `[DIAG]` cada minuto en la pantalla POTA: memoria libre, mínimo, mayor bloque y pilas de las tareas |
-| ✅ | OTA del binario sin encoder a la v1.02b | Placa 2, 12 oct 2026 |
+| ✅ | OTA del binario sin encoder a la v1.02b y a la v1.03b | Placa 2, 12 oct 2026 |
+| ✅ | Batería después del decodificador | Placa 2, 12 oct 2026: la tensión se sigue leyendo bien tras DECODIFICAR y QSO |
+| ✅ | Xiegu X6200 con KEY | 12 oct 2026, en llave recta con el puente R-T de J4: TUNE, palas y memorias |
 | ✅ | Dormir y despertar en la placa 1 | 12 oct 2026 (antes solo en la placa 2) |
 | ✅ | Consumo en deep sleep | Despreciable, medido en µA (12 oct 2026) |
 
@@ -76,7 +76,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - Próxima release (v1.04b) cuando haya algo nuevo probado: previsiblemente, amplificador y GPS.
 
 ## Orden propuesto
-1. **Sin piezas:** batería después del decodificador, prueba de estabilidad de una noche, keyer iámbico y X6200.
+1. **Sin piezas:** prueba de estabilidad de una noche y keyer iámbico.
 2. **Al llegar el amplificador:** montaje, ganancia y control de SD en el firmware.
 3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.04b.
 4. **Después:** POTA sin conexión, cola de spots y PCB.

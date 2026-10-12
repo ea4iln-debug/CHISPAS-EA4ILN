@@ -112,7 +112,7 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 
 | GPIO | Conector | Uso | Estado |
 |---|---|---|---|
-| 2 | J3-13 | Salida KEY (PC817, 330 Ω, y 10 kΩ a GND). Solo la activa la pantalla TRX | ✅ (probada con una uSDR) |
+| 2 | J3-13 | Salida KEY (PC817, 330 Ω, y 10 kΩ a GND). Solo la activa la pantalla TRX | ✅ (probada con una uSDR y una Xiegu X6200) |
 | 4 | J3-15 | Pala de punto (DIT), pull-up interno | ✅ |
 | 5 | J3-16 | Pala de raya (DAH), pull-up interno | ✅ |
 | 6 | J3-17 | Entrada de audio del decodificador (ADC1, por DMA) | ✅ |
