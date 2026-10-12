@@ -18,7 +18,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 
 ## Releases y OTA
 - **Versión:** `#define FW_VERSION` (y `@version` de la cabecera de `main.cpp`). Formato `X.YYb` (b = beta; sin letra,
-  final): `compararVersiones()` ordena 1.00b < 1.01b < 1.01. Subirla en cada cambio que se cargue o se publique.
+  final): `compararVersiones()` ordena 1.00b < 1.01b < 1.01. **Preguntar siempre al usuario antes de subirla** y
+  antes de publicar una release (las releases llegan a las placas por OTA).
 - **Primera release: v1.00b (beta), 11 oct 2026**, publicada como prerelease: https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.00b
   (con `gh`, instalado en el segundo equipo: `C:\Program Files\GitHub CLI\gh.exe`, sesión de ea4iln-debug).
   **v1.01b (beta)**, 11 oct 2026, también prerelease; en el primer equipo no hay `gh`: se creó con la API REST y la
@@ -54,7 +55,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   las capturas del README: ORDENES SERIE en SI, locator genérico IN80dk (en CONFIG) y el script de capturas; luego
   volver a poner el locator de la placa y apagar la depuración.
 
-## Estado actual (11 oct 2026)
+## Estado actual (12 oct 2026)
 - Firmware: `src/main.cpp` **v1.06b** (opción SALVAPANTALLAS, CONFIG por bloques y expresiones de radioaficionado;
   release del 12 oct 2026). v1.05b (salvapantallas en todas las pantallas salvo CW, LoRa y TRX; brillo tenue en
   todas; release del 12 oct 2026). v1.04b (control del amplificador, SD en GPIO38; release
@@ -384,7 +385,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    encoder). X6200 con KEY probada el 12 oct 2026. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con
    batería y sin medidor).
 2. **Montaje** (orden de la hoja 7 del esquema; hecho: raíles, encoder, palas, tono con amplificador, altavoz y jack,
-   salida KEY con PC817 y minijack, BME280); amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (opcional: enable del GPS); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
+   salida KEY con PC817 y minijack, BME280); amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (el enable del GPS queda pendiente: falta el AO3401A; el GPS irá sin él, siempre alimentado); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
    **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; la batería se sigue leyendo bien después de usar DECODIFICAR o QSO (probado en la placa 2 el 12 oct 2026). Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Estabilidad comprobada** (placa 2, v1.03b, noche del 12 oct 2026: 8 h en POTA, 233 consultas HTTPS a pota.app, una
@@ -411,7 +412,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 
 ## Prototipo en protoboard (desde el 9 oct 2026)
 Montaje sin PCB con la lista de compra "opción A (buzzer)" (el buzzer se sustituyó por el amplificador PAM8302A y
-un altavoz el 12 oct 2026), comprada salvo el GPS (pedido), el adaptador a bornas,
+un altavoz el 12 oct 2026), comprada salvo el GPS (llega el 13 oct 2026), el transistor AO3401A de su enable, el adaptador a bornas,
 el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banco.
 
 | GPIO | Uso |
@@ -423,7 +424,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado y control de SD probado (v1.04b) |
 | 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
-| 3 (futuro) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido |
+| 3 (pendiente) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido. **Pendiente** (falta el transistor): el GPS se monta sin él, siempre alimentado |
 | 41 / 42 | BME280: I2C 0x76 en Wire1, SDA 41 (J3-8), SCL 42 (J3-7). **Montado y probado** (12 oct 2026, v1.03b) |
 
 Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, el más cercano al USB):
