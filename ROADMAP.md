@@ -59,8 +59,12 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - **Cola de spots POTA:** publicar el spot propio al activar un parque (indicativo, referencia, frecuencia, CW) y, si
   no hay cobertura, guardarlo y enviarlo en cuanto haya WiFi. Antes, revisar las condiciones de la API de POTA para
   publicar.
+- **Batería en `[DIAG]`:** añadir la tensión y el % a la línea de diagnóstico (p. ej. `| BAT 4.12V 90%`) para ver
+  en los registros largos la curva de carga y descarga, y medir la autonomía con un registro en vez de a mano.
 
 ### Por decidir
+- **Batería llena = 100 %:** tras cargar, la LiPo se relaja a ~4,10–4,15 V y la curva marca ~89–90 % con el LED de
+  carga apagado (carga terminada). Propuesta: contar 4,15 V o más como 100 %.
 - **SOTA:** las condiciones de su API exigen aprobación previa para software generado con IA.
 
 ### A estudiar (no prioritario)
