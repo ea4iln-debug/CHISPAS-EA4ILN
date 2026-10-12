@@ -4,7 +4,7 @@
  * @brief Chispas: entrenador de CW portatil para la Heltec WiFi LoRa 32 V3 (ESP32-S3). Koch, Echo, keyer
  *        iambico, practica y QSO por LoRa, manipulacion del transceptor (KEY), decodificador CW, propagacion,
  *        spots POTA, sol y linea gris, y actualizacion por OTA desde las releases de GitHub.
- * @version 1.04b - Amplificador PAM8302A: SD en GPIO38 (solo en CW, LoRa y TRX; apagado al dormir)
+ * @version 1.05b - Salvapantallas en todas las pantallas salvo CW, LoRa y TRX; brillo tenue en todas
  * @date 2026-10-11
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -19,7 +19,7 @@
 
 // Version: se ve en Inicio, en CONF > STATUS y por serie. La etiqueta de la release de GitHub es "v" + esto
 // (la actualizacion OTA las compara). Cambiarla en cada version que se cargue o se publique
-#define FW_VERSION "1.04b"
+#define FW_VERSION "1.05b"
 
 // Depuracion: se activa en CONF > CONFIG > DEPURACION (NVS "depu", un bit por opcion; todo apagado por defecto)
 #define DEPU_SERIE 0x01  // Ordenes por serie: 'p' vuelca la OLED (docs/captura_oled.py) y d/i/k/l/a simulan el encoder
@@ -288,7 +288,7 @@ String estadoLoraStr = "INICIANDO...";
 bool modoRadioRxActivo = false;
 
 bool editandoValor = false;  // Con el encoder: el valor con el foco se cambia girando (sale en video inverso)
-bool caraActiva = false;     // Se esta viendo la cara del robot (salvapantallas de Inicio)
+bool caraActiva = false;     // Se esta viendo la cara del robot (salvapantallas; ver caraPermitida())
 float ultimoPctKoch = -1;    // Ultimo resultado de leccion Koch (-1 = ninguno); la cara lo celebra
 unsigned long ultimoPctKochMs = 0;
 
@@ -5304,14 +5304,14 @@ void procesarMaquinaEstadosCW() {
 }
 
 // ============================================================================
-// CARA DEL ROBOT (SALVAPANTALLAS DE INICIO)
+// CARA DEL ROBOT (SALVAPANTALLAS)
 // ============================================================================
 // Diseno propio, dibujado con primitivas (sin imagenes): dos ojos y una boca que cambian
-// de forma con la expresion. Aparece tras CARA_ESPERA_MS sin tocar nada en Inicio y se
-// alterna con la pantalla de Inicio. Cualquier giro o pulsacion la quita sin hacer nada mas.
-#define CARA_ESPERA_MS        15000UL  // Sin tocar nada en Inicio: aparece la cara
+// de forma con la expresion. Aparece tras CARA_ESPERA_MS sin tocar nada en cualquier pantalla salvo CW, LoRa
+// y TRX, y se alterna con esa pantalla. Cualquier giro o pulsacion la quita sin hacer nada mas.
+#define CARA_ESPERA_MS        15000UL  // Sin tocar nada: aparece la cara
 #define CARA_TIEMPO_MS        45000UL  // La cara se queda este tiempo...
-#define CARA_INICIO_MS         8000UL  // ...y vuelve Inicio este tiempo, alternando
+#define CARA_INICIO_MS         8000UL  // ...y vuelve la pantalla de antes este tiempo, alternando
 #define CARA_DORMIR_MS       300000UL  // Sin tocar nada 5 min: se duerme y deja de alternar
 #define CARA_FOTOGRAMA_MS          66  // Unos 15 fotogramas/s (cada uno tarda unos 25 ms por I2C)
 #define CARA_FOTOGRAMA_DORMIDA_MS 250
@@ -5564,12 +5564,26 @@ void dibujarCara() {
   display.display();
 }
 
+// Pantallas donde puede salir la cara: todas salvo las de practicar (CW, LoRa y TRX), y nunca con los datos
+// del portal o el QR a la vista ni durante una actualizacion OTA
+bool caraPermitida() {
+  if (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA || pantallaActual == PANTALLA_TRX) return false;
+  if (pantallaActual == PANTALLA_CONFIG && (subConf == CONF_PORTAL || subConf == CONF_OTA)) return false;
+  bool pantallaDatos = pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
+                       pantallaActual == PANTALLA_SOL;
+  if (pantallaDatos && subDatos == DATOS_PORTAL) return false;
+  return true;
+}
+
 /**
- * En Inicio: saca la cara tras un rato sin tocar nada, la alterna con la pantalla de Inicio
- * y la anima (parpadeos, miradas y gestos al azar).
+ * Salvapantallas: tras un rato sin tocar nada saca la cara, la alterna con la pantalla en la que se estaba
+ * y la anima (parpadeos, miradas y gestos al azar)
  */
 void procesarCara() {
-  if (pantallaActual != PANTALLA_INICIO) return;
+  if (!caraPermitida()) {
+    if (caraActiva) desactivarCara();
+    return;
+  }
   unsigned long ahora = millis();
   bool dormir = ahora - ultimaActividadMs >= CARA_DORMIR_MS;
 
@@ -6727,17 +6741,14 @@ void procesarDiagnostico() {
 
 /**
  * Ahorro: la OLED pasa al minimo de brillo (display.dim: contraste 0) tras BRILLO_TENUE_MS sin tocar
- * nada (o con la cara dormida) y vuelve al normal con cualquier giro, pulsacion o manipulacion con las
- * palas. En CW y LoRa (y sus subpantallas) no se atenua: son las que se miran mientras se practica.
+ * nada (o con la cara dormida) en cualquier pantalla, y vuelve al normal con cualquier giro, pulsacion o
+ * manipulacion con las palas
  */
 #define BRILLO_TENUE_MS 60000UL
 
 void procesarBrillo() {
   static bool tenue = false;
-  bool pantallaDePractica = (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA ||
-                             pantallaActual == PANTALLA_TRX);
-  bool debeSerTenue = (!pantallaDePractica && millis() - ultimaActividadMs >= BRILLO_TENUE_MS) ||
-                      (caraActiva && expresionCara == EXP_DORMIDA);
+  bool debeSerTenue = millis() - ultimaActividadMs >= BRILLO_TENUE_MS || (caraActiva && expresionCara == EXP_DORMIDA);
   if (debeSerTenue != tenue) {
     tenue = debeSerTenue;
     display.dim(tenue);

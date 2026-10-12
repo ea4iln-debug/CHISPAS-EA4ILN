@@ -5,7 +5,7 @@
 ![Plataforma](https://img.shields.io/badge/plataforma-ESP32--S3-blue)
 ![Placa](https://img.shields.io/badge/placa-Heltec%20WiFi%20LoRa%2032%20V3-orange)
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2B%20PlatformIO-teal)
-![Versión](https://img.shields.io/badge/firmware-v1.04b-green)
+![Versión](https://img.shields.io/badge/firmware-v1.05b-green)
 ![Estado](https://img.shields.io/badge/estado-beta-yellow)
 ![Licencia del software](https://img.shields.io/badge/software-GPL--3.0-blue)
 ![Licencia del hardware](https://img.shields.io/badge/hardware%20y%20docs-CC%20BY--NC--SA%204.0-lightgrey)
@@ -76,7 +76,7 @@ GitHub.
 | **Configuración por WiFi** | Portal web en castellano, con QR para unirse desde el móvil: red, estación, hora y memorias. | ✅ |
 | **Actualización OTA** | Busca la última release en GitHub, avisa si hay versión nueva y la instala por WiFi (TLS validado). | ✅ |
 | **Batería** | Tensión y porcentaje. Detecta cuando no hay batería conectada. | ✅ |
-| **Cara de Chispas** | Salvapantallas animado con expresiones y gestos. | ✅ |
+| **Cara de Chispas** | Salvapantallas animado con expresiones y gestos. Sale tras unos segundos sin uso en cualquier pantalla salvo CW, LoRa y TRX. | ✅ |
 | **Tono por altavoz y auriculares** | Tono CW (400–1000 Hz, 850 por defecto) por un altavoz con amplificador PAM8302A, con volumen y silencio automático del altavoz al conectar auriculares. El amplificador solo se enciende en CW, LoRa y TRX. | ✅ |
 | **Ahorro de energía** | CPU a 80 MHz sin WiFi, radio dormida fuera de LoRa, pantalla atenuada y apagado automático (deep sleep). | ✅ |
 | **GPS** | Posición y locator automáticos. | 🚧 |
@@ -248,7 +248,7 @@ muy larga (2,5 s) = dormir.
 
 | N.º | Pantalla | Contenido |
 |---|---|---|
-| 1 | **Inicio** | Nombre, indicativo y versión. Tras unos segundos sin uso aparece la cara de Chispas. |
+| 1 | **Inicio** | Nombre, indicativo y versión. Tras unos segundos sin uso aparece la cara de Chispas (también en PROP., POTA, SOL y CONF.). |
 | 2 | **CW** | Entrenador: `KOCH (RX)`, `ECHO (TX)` y `TX LIBRE` (keyer), con ajustes, práctica y estadísticas |
 | 3 | **LoRa** | `PRÁCTICA DUO` (grupos en pareja) y `QSO LIBRE` (con las palas) |
 | 4 | **TRX** | Transceptor: `DECODIFICAR`, `OPERAR` (por KEY, con tune), `QSO` y `memorias` |

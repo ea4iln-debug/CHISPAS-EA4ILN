@@ -55,8 +55,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (11 oct 2026)
-- Firmware: `src/main.cpp` **v1.04b** (control del amplificador: SD en GPIO38; release publicada el 12 oct 2026 para
-  instalarla por OTA, sin probar antes en placa a petición del usuario). v1.03b (sensor BME280; release del 12 oct 2026). v1.02b (refuerzo de las letras con más errores;
+- Firmware: `src/main.cpp` **v1.05b** (salvapantallas en todas las pantallas salvo CW, LoRa y TRX; brillo tenue en
+  todas; release del 12 oct 2026 para instalarla por OTA). v1.04b (control del amplificador, SD en GPIO38; release
+  del 12 oct 2026, instalada por OTA en la placa 1 y probada). v1.03b (sensor BME280; release del 12 oct 2026). v1.02b (refuerzo de las letras con más errores;
   silenciador y fin de palabra del decodificador; release publicada el 11 oct 2026). El usuario decide cuándo se sube la versión y cuándo se publica;
   v1.01b (depuración desde el menú; release publicada el 11 oct 2026). Historial de cambios:
   `git log`. Placa 1 (protoboard con encoder, palas, KEY y batería; entorno normal; BME280; v1.03b desde el 12 oct 2026) y placa 2 (desnuda, sin encoder; entorno `heltec_sin_encoder`; v1.03b
@@ -88,7 +89,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   (baja NSS) antes de `startReceive()`; sin eso la placa que solo escuchaba no recibía. Duo probado entre las dos
   placas en los dos sentidos (v0.7q).
 - **Brillo** (v0.7o): la OLED pasa al mínimo (`display.dim`, contraste 0) tras 1 min sin uso (`BRILLO_TENUE_MS`) o
-  con la cara dormida, salvo en CW y LoRa y sus subpantallas; vuelve con cualquier giro, pulsación o manipulación con
+  con la cara dormida, en todas las pantallas (desde la v1.05b; antes no en CW, LoRa ni TRX); vuelve con cualquier giro, pulsación o manipulación con
   las palas (`procesarBrillo()`, la única que toca el brillo). Se probó un contraste bajo legible (0x10, v0.8a) y el
   usuario prefirió volver al 0 (v0.8b).
 
@@ -262,8 +263,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   dispersión 0,25 V frente a 0,002 V con batería): `leerBateria()` toma 200 lecturas seguidas y, si la dispersión
   supera 0,08 V (`VBAT_DISPERSION_SIN_BATERIA`), indica "sin batería" (`PWR`). Probado en las dos placas. Con USB el
   cargador sube la tensión: el % solo es fiable con batería sola.
-- **Cara de Chispas** (v0.6l/m): salvapantallas de Inicio, diseño propio inspirado en Eilik (no copiarlo). Ojos y boca
-  con primitivas (~5 KB de flash). Aparece a los 15 s sin tocar nada en Inicio, alterna 45 s de cara y 8 s de Inicio,
+- **Cara de Chispas** (v0.6l/m): salvapantallas, diseño propio inspirado en Eilik (no copiarlo). Ojos y boca
+  con primitivas (~5 KB de flash). Desde la v1.05b sale en **todas las pantallas salvo CW, LoRa y TRX**
+  (`caraPermitida()`; tampoco con el portal o el QR a la vista, `CONF_PORTAL`/`DATOS_PORTAL`, ni en `CONF_OTA`); al
+  quitarla se vuelve a la misma pantalla. Aparece a los 15 s sin tocar nada, alterna 45 s de cara y 8 s de la pantalla,
   y a los 5 min se duerme; cualquier giro o pulsación la quita sin hacer nada más (constantes `CARA_*`). Gestos al azar
   cada 6–15 s: contenta, risa, `>_<`, guiño, pícara (`ω`), nerviosa (gota), sorpresa. Cansada con batería < 20 %; más
   alegre tras una lección Koch ≥ 90 % en los últimos 15 min. Con la cara a la vista, `actualizarPantalla()` no dibuja.
@@ -361,7 +364,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   **Firmware v1.04b:** `ponerAmplificador()`/`procesarAmplificador()`: SD en ALTO solo en CW, LoRa y TRX y durante el
   pitido de prueba del TONO (`aplicarFrecTono(true)` lo enciende), en BAJO en el resto; al dormir, BAJO retenido con
   `gpio_hold_en` (se libera en `setup()`, donde arranca en BAJO). `[AMP] ENCENDIDO/APAGADO` por serie. **Control de
-  SD sin probar en placa.** Esquema (hoja 4, 5b) actualizado: montado.
+  SD probado en la placa 1 el 12 oct 2026 (OTA a la v1.04b).** Esquema (hoja 4, 5b) actualizado: montado.
 
 ## Pendiente
 1. **Pruebas a mano** (11 oct 2026): hechas en la placa 1 (listas y menús, aceleración, corrección total del Koch,
@@ -405,7 +408,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 4 / 5 | Pala DIT / DAH (pull-up interno; `KEYER_PADDLE_DIT/DAH`). **Montado y probado** |
 | 6 | Entrada del decodificador (ADC1): acoplo 1 µF, polarización 2×10 kΩ, trimmer, 1 kΩ y 2×1N4148 |
 | 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, buzzer piezo pasivo en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R |
-| 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado; control de SD de la v1.04b sin probar |
+| 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado y control de SD probado (v1.04b) |
 | 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
 | 3 (futuro) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido |

@@ -1,6 +1,6 @@
 # Hoja de ruta de Chispas
 
-Estado a 12 de octubre de 2026, con el firmware **v1.04b** (beta). Lo marcado ✅ está hecho y probado en placa.
+Estado a 12 de octubre de 2026, con el firmware **v1.05b** (beta). Lo marcado ✅ está hecho y probado en placa.
 
 ## 1. Pruebas pendientes
 
@@ -8,8 +8,9 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 | | Prueba | Cómo |
 |---|---|---|
-| ⬜ | Control del amplificador (SD en GPIO38) | Suena en CW, LoRa, TRX y el pitido de TONO; calla en el resto y dormido (`[AMP]` por serie) |
 | ⬜ | QSO LIBRE en los dos sentidos | Necesita palas en la placa 2 (o cambiar las palas de placa) |
+| ⬜ | Salvapantallas y brillo (v1.05b) | Cara a los 15 s en Inicio, PROP, POTA, SOL y CONF (no en CW, LoRa, TRX ni con el portal/QR); brillo tenue al minuto en todas |
+| ✅ | Control del amplificador (SD en GPIO38) | Placa 1, 12 oct 2026 (v1.04b por OTA): suena en CW, LoRa, TRX y el pitido de TONO; calla en el resto |
 | ✅ | Estabilidad tras muchas horas | Placa 2, noche del 12 oct 2026: 8 h en POTA (233 consultas HTTPS); heap libre ±150 B, mínimo estable tras la 1.ª hora, mayor bloque y pilas sin cambios |
 | ✅ | OTA del binario sin encoder a la v1.02b y a la v1.03b | Placa 2, 12 oct 2026 |
 | ✅ | Batería después del decodificador | Placa 2, 12 oct 2026: la tensión se sigue leyendo bien tras DECODIFICAR y QSO |
@@ -72,12 +73,12 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 ## 4. Documentación y publicación
 - Al montar el GPS: esquema (quitar PENDIENTE), README y capturas.
-- Próxima release (v1.05b) con el GPS.
+- Próxima release (v1.06b) con el GPS.
 
 ## Orden propuesto
 1. **Sin piezas:** QSO LIBRE en los dos sentidos; tendencia del BME280 con varias horas de datos (placa 1).
-2. **Amplificador:** probar el control de SD (v1.04b).
-3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.05b.
+2. **Salvapantallas y brillo:** probar la v1.05b.
+3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.06b.
 4. **Después:** POTA sin conexión, cola de spots y PCB.
 
 ## Hecho
