@@ -65,12 +65,75 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - **SOTA:** las condiciones de su API exigen aprobación previa para software generado con IA.
 
 ### A estudiar (no prioritario)
-- **Fork de bajo coste con ESP-NOW** (fuera del proyecto principal): una unidad con un ESP32 cualquiera, sin LoRa,
-  que haga Duo y QSO por ESP-NOW a corta distancia (50–200 m) y sin router; las tramas no dependen de la radio.
 - **Audio I2S:** tono senoidal con rampas (sin clics) y volumen por software con un módulo DAC + amplificador I2S
   (p. ej. MAX98357A, 3 GPIO). Sustituiría al PAM8302A y obligaría a rehacer la salida de auriculares.
 - **GPS ATGM336H** en lugar del NEO-6M: más pequeño, más barato y de menor consumo (GPS + BeiDou), con la misma
   conexión (UART a 9600 bd, NMEA). Por ahora se sigue con el NEO-6M.
+
+### Instalación y estructura del firmware (ideas)
+- **Web de instalación por USB** con **ESP Web Tools** en GitHub Pages: botón «Instalar» por Web Serial (Chrome o
+  Edge de escritorio; no Firefox ni Safari; en Windows sigue haciendo falta el driver CP210x). Dos botones (con y sin
+  encoder) y grabación por partes (bootloader, particiones, boot_app0 y app) para **conservar la NVS** al reinstalar,
+  salvo que se elija borrar; monitor serie en la misma página. GitHub no sirve los `.bin` de las releases a otra web
+  (CORS): una **GitHub Action** los copia a la página al publicar cada release.
+- **Firmware modular**, con la opción de **un solo binario con todo y módulos activados en el aparato** (la app ocupa
+  bastante menos de la mitad de sus 3,2 MB): autodetección donde se pueda (el BME280 ya se detecta; el GPS, si llegan
+  frases NMEA) y una pantalla **CONF > HARDWARE** (o un asistente al primer arranque) para lo que no se detecta
+  (encoder, amplificador, KEY…). Un solo binario simplifica la OTA y haría desaparecer la variante sin encoder. La
+  web podría llevar casillas de hardware (generando la NVS en el navegador, o mejor preguntándolo al primer arranque).
+  Descartado: compilar a la carta en un servidor (lento, necesita un token o un servidor propio) y precompilar todas
+  las combinaciones (2^N binarios).
+- **Partir `main.cpp` en módulos** (keyer, Koch, Echo, LoRa, TRX, decodificador, WiFi, BME, GPS…) con su `.h`/`.cpp`
+  y una interfaz común de disponible/activado; por fases, sin cambiar el comportamiento, compilando y probando en
+  placa en cada paso. Prepara el Lite (LoRa o ESP-NOW como transporte intercambiable).
+
+## Versiones de Chispas (ideas)
+
+### Chispas Pro (el actual, Heltec V3)
+- **Bluetooth (BLE)**: el ESP32-S3 solo tiene BLE 5 (nada de auriculares Bluetooth ni puerto serie clásico).
+  - **Teclado Bluetooth (HID):** lo manipulado con las palas se escribe en el móvil o el PC; con las teclas que espera
+    **VBand**, practicar por internet con las palas, sin cables.
+  - **Configuración y estadísticas desde el móvil** con una página **Web Bluetooth** (Chrome, sin instalar nada):
+    memorias, indicativo y locator; estadísticas de Koch y Echo con gráficas y exportación.
+  - **Hora y posición del móvil** para SOL y la línea gris en el campo, sin WiFi ni GPS.
+  - **El móvil como pasarela** en una salida POTA: spots y propagación hacia Chispas, y publicar el spot propio.
+  - Coste: unos 50–100 KB de RAM (hay ~249 KB libres), algo de flash y de consumo; mejor NimBLE que Bluedroid
+    (comprobar con el core 2.0.17 y el S3).
+- **Carcasa impresa en 3D con diseño propio:** OpenSCAD paramétrico a partir del plano de la placa perforada
+  (`docs/gen_placa.py`); logo de chispa, «CHISPAS EA4ILN» en relieve, rejilla del altavoz con «73» en Morse y rótulos
+  grabados junto a los jacks. Faltan las medidas de batería, altavoz, jacks, encoder, RV1, GPS, interruptor y SMA, el
+  uso (mesa, mano o colgado) y el estilo. Probar por piezas antes de imprimir la caja entera.
+
+### Chispas Ultimate
+- **Palas táctiles integradas** (como el Morserino-32): GPIO4 y GPIO5 son táctiles en el S3; el jack de palas pasaría
+  a GPIO39/40. Electrodos: tornillos de latón o inoxidable, chapa, trozos de PCB dorada, cinta de cobre por dentro de
+  la pared o filamento conductor; 470 Ω–2 kΩ en serie. Firmware: `touchRead()` en la tarea del keyer, calibración al
+  arrancar y sensibilidad en CONF. Pegas: humedad, guantes, sensibilidad según se sujete. Prueba previa barata: un
+  programa en `pruebas/` con dos tornillos o cinta de cobre.
+
+### Chispas Lite
+Un ESP32 cualquiera con OLED, encoder, palas y tono, **sin LoRa**. Hace casi todo lo del Pro; lo que pierde es el
+alcance de la radio.
+- **Igual que en el Pro** (no dependen de la LoRa): Koch (los dos modos de corrección, estadísticas y refuerzo), Echo,
+  TX LIBRE (keyer A/B); PROP, POTA y SOL con NTP; webconf con QR; OTA (con sus propios binarios); CONF, STATUS,
+  depuración, salvapantallas y dormir; TRX con KEY por PC817, memorias y TUNE.
+- **Duo y QSO por ESP-NOW** (el WiFi del chip, sin router), con las mismas tramas: 50–200 m (más con línea de vista y
+  el modo de largo alcance) frente a los kilómetros de la LoRa. **El Pro también tiene WiFi: podría hablar ESP-NOW y
+  practicar con un Lite.** ESP-NOW y WiFi comparten radio y canal: durante Duo o QSO no se usa el WiFi (como ahora).
+- **Según la placa:**
+  - Decodificador: el ADC por DMA está escrito para el S3; en un ESP32 clásico o un C3 hay que adaptar la captura
+    (el Goertzel y el resto sirven).
+  - Batería: muchas placas no traen cargador ni divisor; añadir un TP4056 y un divisor.
+  - Bluetooth: un ESP32 **clásico** tiene Bluetooth clásico además de BLE; se podría estudiar sacar el tono a
+    auriculares Bluetooth (A2DP), que el S3 no puede. Experimental.
+  - BME280, GPS y amplificador: opcionales, igual que en el Pro, si hay pines.
+- **No tendría:** LoRa (ni largo alcance ni Duo/QSO por radio con un Pro lejano) ni OLED integrada, salvo placa que la
+  traiga.
+- **Coste:** la Heltec V3 cuesta unos 20–25 €; un ESP32 con OLED, encoder y cargador, unos 12–15 €. El ahorro está más
+  en lo que se deja fuera (LoRa, GPS, BME280, amplificador) que en la placa: el Lite tiene sentido como versión más
+  sencilla y barata para clubes o alumnos.
+- **Firmware:** el mismo `main.cpp` con un entorno `chispas_lite` (como `heltec_sin_encoder`); lo principal, separar
+  la capa de transporte (LoRa / ESP-NOW), ya decidida como intercambiable.
 
 ## 4. Documentación y publicación
 - Al montar el GPS: esquema (quitar PENDIENTE), README y capturas.

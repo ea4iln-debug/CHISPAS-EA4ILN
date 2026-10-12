@@ -402,8 +402,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - Práctica en pareja con **tramas digitales**, no audio: un byte por carácter con bit centinela (punto = 0,
   raya = 1) y un byte reservado para el espacio entre palabras. Cabecera con magic, versión/tipo, `seq`, wpm e
   indicativo (8 caracteres). Unos 32 caracteres por trama; enviar por frase o línea, no por pulsación. Capa de
-  transporte intercambiable (LoRa; ESP-NOW descartado en el proyecto principal el 12 oct 2026: a estudiar como fork de
-  bajo coste, ver `ROADMAP.md`).
+  transporte intercambiable (LoRa; ESP-NOW descartado en el proyecto principal el 12 oct 2026: idea para un **Chispas Lite**,
+  ver `ROADMAP.md`, que también recoge las ideas de Chispas Pro (BLE, carcasa) y Ultimate (palas táctiles)).
 - Si el firmware del Morserino-32 sirve de referencia: es open source y su protocolo MOPP envía un paquete por
   palabra. Las V3 no son compatibles con los Morserino oficiales.
 - POTA/SOTA: búsqueda de parque offline con CSV guardado en LittleFS; spots online con cola si no hay cobertura.
@@ -444,6 +444,17 @@ KEY y alimentación, decodificador, componentes y montaje), generado con `docs/g
 imprime con Edge sin interfaz: `msedge --headless --no-pdf-header-footer --print-to-pdf=... archivo.html`; en el segundo equipo no hay Edge: lo mismo
 con `C:\Program Files\Google\Chrome\Application\chrome.exe`). El script recibe la ruta del HTML como argumento. Las hojas
 tienen altura fija y ocultan lo que sobra: tras cambios grandes, revisar el PDF (no basta con el HTML en pantalla). Si cambia algún pin, actualizar el script y regenerar el PDF.
+
+## Placa perforada (12 oct 2026, sin montar)
+Plano para montar el prototipo en una placa de pads a doble cara (pedidas de 7×9 cm, 24×30 agujeros; el plano ocupa
+21×26, 53×66 mm): `docs/placa_perforada.pdf` (4 páginas: componentes, soldaduras con puentes y 12 cables numerados,
+piezas y conectores, montaje), generado con `docs/gen_placa.py` (`python gen_placa.py salida.html` y luego Chrome
+headless a PDF, como el esquema). El script comprueba que cada red queda unida, que nada se pisa y nada va bajo la
+Heltec, **con y sin las reservas montadas**. Heltec en zócalos hembra con el USB en el borde; módulos y mandos en la
+carcasa con cables Dupont a las tiras P1–P10. Reservas: trafo 600:600 (P10, quitar los dos jumpers), divisor de
+detección de USB (R11/R12, cables A y B), enable del GPS (Q1/R8, quitar el cable 8) y C3 sobre las patas de D2.
+**Pendiente antes de soldar:** confirmar la orientación de la Heltec (`J3_IZQUIERDA`, supuesta sin comprobar) y el
+orden de pines del PAM8302A, el GPS y el BME280.
 
 ## PCB
 Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de KiCad en el repositorio.
