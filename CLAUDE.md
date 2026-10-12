@@ -185,6 +185,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     por serie. Desde la v0.9h: arriba `20WPM  MODO A  NORM`, el texto y el pie `> borrar  menu`; "menu" abre la
     lista (`keyerEnAjustes`): WPM 10–40, MODO A/B, PALAS NORM/INV y SALIR, con volver en el pie; en `chispas`
     (`kwpm`, `kmodob`, `kinv`). Salida por LED y tono en GPIO7; KEY aún no. Apretón iámbico (modos A y B) y texto largo probados a mano el 12 oct 2026.
+    Prueba del modo B: mantener la raya, tocar el punto y soltar las dos antes de que acabe la raya → modo A da "T",
+    modo B da "N" (salió N). Si se suelta en la pausa, los dos modos añaden el elemento (memoria de pausa).
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso
