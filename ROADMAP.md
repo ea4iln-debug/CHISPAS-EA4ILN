@@ -9,6 +9,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 | | Prueba | Cómo |
 |---|---|---|
 | ⬜ | QSO LIBRE en los dos sentidos | Necesita palas en la placa 2 (o cambiar las palas de placa) |
+| ⬜ | Expresiones de radioaficionado y SALVAPANTALLAS | Auriculares y nube de tormenta (con TORM!) sin ver aún; tiempo del salvapantallas en CONFIG |
 | ⬜ | Salvapantallas y brillo (v1.05b) | Cara a los 15 s en Inicio, PROP, POTA, SOL y CONF (no en CW, LoRa, TRX ni con el portal/QR); brillo tenue al minuto en todas |
 | ✅ | Control del amplificador (SD en GPIO38) | Placa 1, 12 oct 2026 (v1.04b por OTA): suena en CW, LoRa, TRX y el pitido de TONO; calla en el resto |
 | ✅ | Estabilidad tras muchas horas | Placa 2, noche del 12 oct 2026: 8 h en POTA (233 consultas HTTPS); heap libre ±150 B, mínimo estable tras la 1.ª hora, mayor bloque y pilas sin cambios |
@@ -85,8 +86,8 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - ✅ Entrenador Koch estilo LCWO con corrección por letra o por total, Echo y TX libre (keyer iámbico A/B).
 - ✅ Estadísticas por carácter y por lección (Koch y Echo), y refuerzo de las letras con más errores.
 - ✅ Práctica en pareja y QSO libre por LoRa.
-- ✅ Tono por buzzer y auriculares con volumen.
-- ✅ Amplificador PAM8302A y altavoz de 8 Ω en el sitio del piezo (12 oct 2026); SD en GPIO38 desde la v1.04b.
+- ✅ Tono por altavoz (amplificador PAM8302A) y auriculares, con volumen; SD del amplificador en GPIO38 desde la
+  v1.04b. El buzzer piezo del principio sonaba demasiado bajo y se descartó.
 - ✅ Salida KEY aislada con tune y memorias (probada con una uSDR).
 - ✅ Decodificador CW del audio de la emisora (probado con audio Morse real).
 - ✅ Propagación, spots POTA, sol y línea gris.

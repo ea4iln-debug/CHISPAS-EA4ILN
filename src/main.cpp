@@ -1358,6 +1358,8 @@ String textoWx() {
 // ============================================================================
 extern uint8_t apagadoAutoMin;  // Minutos del apagado automatico; definida con las opciones de CONF
 extern uint8_t aceleracionGiro;  // Aceleracion del encoder; definida con las opciones de CONF
+extern uint8_t caraEsperaIdx;   // Tiempo del salvapantallas (indice); definida con las opciones de CONF
+extern const uint8_t N_OPCIONES_CARA;
 
 void cargarDatosNVS() {
   prefs.begin(NVS_ENTRENADOR, false);  // Lectura y escritura: en el primer arranque crea el espacio (sin errores)
@@ -1387,6 +1389,7 @@ void cargarDatosNVS() {
   echoTotalAciertos = prefs.getUInt("eok", 0);
   echoSesiones = prefs.getUShort("eses", 0);
   apagadoAutoMin = prefs.getUChar("apag", 30);  // ajustarApagado(0) lo lleva a un valor de la lista si no lo es
+  caraEsperaIdx = min(prefs.getUChar("cara", 1), (uint8_t)(N_OPCIONES_CARA - 1));
   aceleracionGiro = prefs.getUChar("acel", 5);   // ACELERACION_MAX
   if (aceleracionGiro == 1 || aceleracionGiro > 5) aceleracionGiro = 5;
   frecTonoHz = constrain(prefs.getUShort("tono", FREC_AUDIO_HZ), TONO_MIN_HZ, TONO_MAX_HZ);
@@ -1432,6 +1435,12 @@ void guardarUltimaConfiguracionNVS() {
 void guardarApagadoNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("apag", apagadoAutoMin);
+  prefs.end();
+}
+
+void guardarSalvapantallasNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUChar("cara", caraEsperaIdx);
   prefs.end();
 }
 
@@ -2842,9 +2851,11 @@ uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // Menu: 0 = CONFIG, 1 = ST
 enum SubConf { CONF_MENU, CONF_CONFIG, CONF_STATUS, CONF_PORTAL, CONF_EDITOR, CONF_OTA, CONF_DEPURACION };
 SubConf subConf = CONF_MENU;
 // Lista de CONFIG (4 a la vista; "volver" en el pie)
-enum OpcionConf { OC_ID, OC_LOCATOR, OC_ALTITUD, OC_ACELERACION, OC_APAGADO, OC_TONO, OC_WEBCONF, OC_ACTUALIZAR,
-                  OC_DEPURACION, OC_FABRICA, OC_VOLVER };
-#define N_OPCIONES_CONF 11
+// Por bloques: estacion (ID, LOCATOR, ALTITUD), sonido y manejo (TONO, ACELERACION), pantalla y energia
+// (SALVAPANTALLAS, APAGADO) y sistema (WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA)
+enum OpcionConf { OC_ID, OC_LOCATOR, OC_ALTITUD, OC_TONO, OC_ACELERACION, OC_SALVAPANTALLAS, OC_APAGADO, OC_WEBCONF,
+                  OC_ACTUALIZAR, OC_DEPURACION, OC_FABRICA, OC_VOLVER };
+#define N_OPCIONES_CONF 12
 uint8_t focoConf = 0;
 // ALTITUD (con el BME280): al pulsar se edita partiendo de la altitud actual; al pulsar otra vez se calcula el QNH
 #define ALTITUD_MIN_M -400
@@ -2864,6 +2875,17 @@ uint8_t paginaStatus = 0;
 const uint8_t OPCIONES_APAGADO_MIN[] = { 0, 5, 10, 15, 30, 60, 120 };
 const uint8_t N_OPCIONES_APAGADO = sizeof(OPCIONES_APAGADO_MIN);
 uint8_t apagadoAutoMin = 30;
+
+// Salvapantallas (cara): segundos sin tocar nada antes de que salga (0 = nunca). Se elige en CONF (NVS "cara")
+const uint16_t OPCIONES_CARA_S[] = { 0, 15, 30, 60, 120, 300 };
+const uint8_t N_OPCIONES_CARA = sizeof(OPCIONES_CARA_S) / sizeof(OPCIONES_CARA_S[0]);
+uint8_t caraEsperaIdx = 1;  // 15 s
+
+String textoSalvapantallas() {
+  uint16_t s = OPCIONES_CARA_S[caraEsperaIdx];
+  if (s == 0) return String("NO");
+  return s < 60 ? String(s) + "s" : String(s / 60) + " min";
+}
 
 // Aceleracion del encoder al girar rapido: 0 = no; 2-5 = el valor avanza x2..x5 (NVS "acel")
 #define ACELERACION_MAX 5
@@ -4966,6 +4988,7 @@ String valorOpcionConf(uint8_t i) {
       if (bmeDireccion == 0 || isnan(bmePresionHpa)) return String("--");
       return String(lroundf(altitudBarometrica())) + (qnhCalibrado ? " m" : " m?");
     case OC_ACELERACION: return textoAceleracion();
+    case OC_SALVAPANTALLAS: return textoSalvapantallas();
     case OC_APAGADO:     return textoApagado();
     case OC_TONO:        return String(frecTonoHz) + " Hz";
     case OC_WEBCONF:     return estadoWifi == WIFI_PORTAL ? String("ABIERTO") : String("");
@@ -4977,14 +5000,15 @@ String valorOpcionConf(uint8_t i) {
 }
 
 const char* const NOMBRES_OPCIONES_CONF[N_OPCIONES_CONF - 1] = {
-  "ID", "LOCATOR", "ALTITUD", "ACELERACION", "APAGADO", "TONO", "WEBCONF", "ACTUALIZAR FW", "DEPURACION",
-  "FABRICA"
+  "ID", "LOCATOR", "ALTITUD", "TONO", "ACELERACION", "SALVAPANTALLAS", "APAGADO", "WEBCONF", "ACTUALIZAR FW",
+  "DEPURACION", "FABRICA"
 };
 
 // CONFIG: lista de opciones (4 a la vista, con el valor a la derecha) y "volver" en el pie
 void dibujarListaConf() {
   dibujarListaOpciones(NOMBRES_OPCIONES_CONF, N_OPCIONES_CONF - 1, focoConf, valorOpcionConf,
-                       (1UL << OC_ALTITUD) | (1UL << OC_ACELERACION) | (1UL << OC_APAGADO) | (1UL << OC_TONO));
+                       (1UL << OC_ALTITUD) | (1UL << OC_TONO) | (1UL << OC_ACELERACION) |
+                       (1UL << OC_SALVAPANTALLAS) | (1UL << OC_APAGADO));
   dibujarPieCentrado(focoConf == OC_VOLVER ? "> volver" : "  volver");
 }
 
@@ -5307,9 +5331,9 @@ void procesarMaquinaEstadosCW() {
 // CARA DEL ROBOT (SALVAPANTALLAS)
 // ============================================================================
 // Diseno propio, dibujado con primitivas (sin imagenes): dos ojos y una boca que cambian
-// de forma con la expresion. Aparece tras CARA_ESPERA_MS sin tocar nada en cualquier pantalla salvo CW, LoRa
+// de forma con la expresion. Aparece tras el tiempo elegido en CONF > CONFIG > SALVAPANTALLAS (por defecto 15 s;
+// OPCIONES_CARA_S, caraEsperaIdx) sin tocar nada en cualquier pantalla salvo CW, LoRa
 // y TRX, y se alterna con esa pantalla. Cualquier giro o pulsacion la quita sin hacer nada mas.
-#define CARA_ESPERA_MS        15000UL  // Sin tocar nada: aparece la cara
 #define CARA_TIEMPO_MS        45000UL  // La cara se queda este tiempo...
 #define CARA_INICIO_MS         8000UL  // ...y vuelve la pantalla de antes este tiempo, alternando
 #define CARA_DORMIR_MS       300000UL  // Sin tocar nada 5 min: se duerme y deja de alternar
@@ -5328,7 +5352,10 @@ void procesarMaquinaEstadosCW() {
 #define MIRADA_MAX_Y    4
 
 enum ExpresionCara { EXP_NORMAL, EXP_FELIZ, EXP_RISA, EXP_APRETADOS, EXP_GUINO, EXP_PICARA,
-                     EXP_NERVIOSA, EXP_SORPRESA, EXP_CANSADA, EXP_DORMIDA };
+                     EXP_NERVIOSA, EXP_SORPRESA, EXP_CANSADA, EXP_DORMIDA,
+                     // De radioaficionado: antena con ondas (llamando CQ), auriculares (escuchando), bocadillo
+                     // con CQ/73/88, guino en Morse con los ojos, y preocupada por el aviso de tormenta (fondo)
+                     EXP_ANTENA, EXP_AURICULARES, EXP_BOCADILLO, EXP_MORSE, EXP_TORMENTA };
 enum FormaOjo { OJO_ABIERTO, OJO_ARCO, OJO_CHEVRON, OJO_PARPADO, OJO_CAIDO };
 enum FormaBoca { BOCA_SONRISA, BOCA_ABIERTA, BOCA_GATO, BOCA_O, BOCA_RECTA, BOCA_ONDA };
 
@@ -5346,6 +5373,10 @@ unsigned long inicioParpadeoMs = 0;     // 0 = no esta parpadeando
 unsigned long proximoParpadeoMs = 0;
 unsigned long proximaMiradaMs = 0;
 unsigned long proximoGestoMs = 0;
+const char* textoBocadillo = "CQ";  // Lo que dice el bocadillo
+const char* textoMorseCara = "73";  // Lo que parpadea en Morse
+#define MORSE_CARA_DIT_MS   160      // Punto del guino en Morse (una raya, tres)
+#define MORSE_CARA_PAUSA_MS 500      // Antes de empezar y al terminar, con los ojos abiertos
 
 bool momentoLlegado(unsigned long t) {
   return (long)(millis() - t) >= 0;
@@ -5359,9 +5390,47 @@ bool leccionRecienAprobada() {
   return ultimoPctKoch >= 90 && millis() - ultimoPctKochMs < CARA_FELIZ_RECIENTE_MS;
 }
 
-// Expresion a la que vuelve la cara cuando no esta haciendo ningun gesto
+// Expresion a la que vuelve la cara cuando no esta haciendo ningun gesto: preocupada con aviso de tormenta
+// (BME280), cansada con la bateria baja
 ExpresionCara expresionDeFondo() {
+  if (avisoTormenta) return EXP_TORMENTA;
   return bateriaBaja() ? EXP_CANSADA : EXP_NORMAL;
+}
+
+// Buena propagacion: el ultimo flujo solar de hamqsl (SFI) es alto
+bool caraBuenaPropagacion() {
+  return propagacion.validos && propagacion.sfi >= 150;
+}
+
+// Linea gris en el locator de la estacion (sol entre GRIS_ELEV_MIN y GRIS_ELEV_MAX); sin hora o sin locator, no
+bool caraEnLineaGris() {
+  struct tm local;
+  float lat, lon;
+  if (!horaLocalValida(local) || !locatorALatLon(locatorEstacion, lat, lon)) return false;
+  time_t ahora = time(nullptr);
+  struct tm utc;
+  gmtime_r(&ahora, &utc);
+  DatosSol d = calcularSol(utc, lat, lon);
+  return d.elevacion >= GRIS_ELEV_MIN && d.elevacion <= GRIS_ELEV_MAX;
+}
+
+// Guino en Morse: si en el instante t (ms desde el inicio) los ojos estan cerrados; enviados = caracteres ya
+// empezados (para escribirlos debajo). Devuelve tambien, en total, lo que dura el mensaje entero
+bool ojosCerradosMorse(const char* texto, long t, uint8_t& enviados, unsigned long& total) {
+  bool cerrado = false;
+  enviados = 0;
+  long pos = MORSE_CARA_PAUSA_MS;
+  for (uint8_t i = 0; texto[i]; i++) {
+    if (t >= pos) enviados = i + 1;
+    for (const char* e = obtenerCodigoMorse(texto[i]); *e; e++) {
+      long d = (*e == '-' ? 3 : 1) * MORSE_CARA_DIT_MS;
+      if (t >= pos && t < pos + d) cerrado = true;
+      pos += d + MORSE_CARA_DIT_MS;
+    }
+    pos += 2 * MORSE_CARA_DIT_MS;
+  }
+  total = pos + MORSE_CARA_PAUSA_MS;
+  return cerrado;
 }
 
 void ponerExpresion(ExpresionCara e, unsigned long duracionMs) {
@@ -5376,26 +5445,68 @@ void ponerExpresion(ExpresionCara e, unsigned long duracionMs) {
     case EXP_CANSADA:  ojosObjetivo.alto = OJO_ALTO - 4; break;
     case EXP_DORMIDA:  ojosObjetivo.alto = 3; ojosObjetivo.dx = 0; ojosObjetivo.dy = 3; break;
     case EXP_GUINO:    guinoIzquierdo = random(2); break;
+    case EXP_TORMENTA: ojosObjetivo.alto = OJO_ALTO - 8; break;
+    case EXP_AURICULARES:
+      // Concentrado, mirando a un lado (poco: los ojos no deben tocar los auriculares)
+      ojosObjetivo.alto = OJO_ALTO - 8;
+      ojosObjetivo.dx = random(2) ? 6 : -6;
+      ojosObjetivo.dy = 0;
+      break;
+    case EXP_BOCADILLO:
+      // Mira hacia la izquierda para dejar sitio al bocadillo; en linea gris siempre dice CQ
+      ojosObjetivo.dx = -10;
+      ojosObjetivo.dy = 0;
+      if (caraEnLineaGris()) {
+        textoBocadillo = "CQ";
+      } else {
+        static const char* const TEXTOS[] = { "CQ", "73", "88" };
+        textoBocadillo = TEXTOS[random(3)];
+      }
+      break;
+    case EXP_MORSE: {
+      static const char* const TEXTOS[] = { "73", "K", "R" };
+      textoMorseCara = TEXTOS[random(3)];
+      ojosObjetivo.dx = 0;
+      ojosObjetivo.dy = 0;
+      uint8_t enviados;
+      unsigned long total;
+      ojosCerradosMorse(textoMorseCara, 0, enviados, total);
+      duracionExpresionMs = total;  // Lo que dure el mensaje
+      break;
+    }
     default: break;
   }
 }
 
+// Gestos que necesitan la mirada quieta (si no, los ojos chocan con el bocadillo o los auriculares)
+bool miradaFija() {
+  return expresionCara == EXP_AURICULARES || expresionCara == EXP_BOCADILLO || expresionCara == EXP_MORSE;
+}
+
 /**
- * Gesto al azar. Tras aprobar una leccion salen mas a menudo los alegres.
+ * Gesto al azar. Tras aprobar una leccion salen mas a menudo los alegres; en linea gris, los de llamar (antena y
+ * bocadillo con CQ); con buena propagacion, los alegres y la antena.
  */
 void hacerGestoAleatorio() {
-  // Pesos: contenta, risa, apretados, guino, picara, nerviosa, sorpresa
-  static const uint8_t PESOS_NORMAL[]  = { 18, 12, 10, 18, 16, 12, 14 };
-  static const uint8_t PESOS_ALEGRE[]  = { 30, 25, 10, 15, 10,  2,  8 };
-  static const ExpresionCara GESTOS[]  = { EXP_FELIZ, EXP_RISA, EXP_APRETADOS, EXP_GUINO,
-                                           EXP_PICARA, EXP_NERVIOSA, EXP_SORPRESA };
-  static const uint16_t DURACION_MS[]  = { 2000, 1800, 1500, 700, 2500, 2000, 1200 };
-  const uint8_t* pesos = leccionRecienAprobada() ? PESOS_ALEGRE : PESOS_NORMAL;
+  // Pesos: contenta, risa, apretados, guino, picara, nerviosa, sorpresa, antena, auriculares, bocadillo, Morse
+  static const uint8_t PESOS_NORMAL[]      = { 14, 10,  8, 14, 12, 10, 10,  8,  8,  8,  6 };
+  static const uint8_t PESOS_ALEGRE[]      = { 26, 22,  8, 12,  8,  2,  6,  6,  4,  8,  4 };
+  static const uint8_t PESOS_LINEA_GRIS[]  = { 10,  8,  6, 10,  8,  6, 10, 16,  8, 18,  8 };
+  static const uint8_t PESOS_PROPAGACION[] = { 20, 14,  6, 12, 10,  4,  8, 18,  6, 10,  6 };
+  static const ExpresionCara GESTOS[]  = { EXP_FELIZ, EXP_RISA, EXP_APRETADOS, EXP_GUINO, EXP_PICARA,
+                                           EXP_NERVIOSA, EXP_SORPRESA, EXP_ANTENA, EXP_AURICULARES,
+                                           EXP_BOCADILLO, EXP_MORSE };
+  static const uint16_t DURACION_MS[]  = { 2000, 1800, 1500, 700, 2500, 2000, 1200, 3000, 3500, 2500, 0 };
+  const uint8_t N = sizeof(GESTOS) / sizeof(GESTOS[0]);
+  const uint8_t* pesos = PESOS_NORMAL;
+  if (leccionRecienAprobada()) pesos = PESOS_ALEGRE;
+  else if (caraEnLineaGris()) pesos = PESOS_LINEA_GRIS;
+  else if (caraBuenaPropagacion()) pesos = PESOS_PROPAGACION;
 
   int total = 0;
-  for (uint8_t i = 0; i < 7; i++) total += pesos[i];
+  for (uint8_t i = 0; i < N; i++) total += pesos[i];
   int r = random(total);
-  for (uint8_t i = 0; i < 7; i++) {
+  for (uint8_t i = 0; i < N; i++) {
     if (r < pesos[i]) { ponerExpresion(GESTOS[i], DURACION_MS[i]); return; }
     r -= pesos[i];
   }
@@ -5505,6 +5616,60 @@ void dibujarBoca(int cx, int cy, FormaBoca forma) {
   }
 }
 
+// Antena en la cabeza con ondas que salen hacia los lados (llamando CQ)
+void dibujarAntena(int cx, unsigned long t) {
+  display.fillRect(cx - 1, 2, 2, 8, SSD1306_WHITE);
+  display.fillCircle(cx, 2, 2, SSD1306_WHITE);
+  uint8_t ondas = 1 + (t / 250) % 3;  // 1, 2 y 3 ondas, y vuelta a empezar
+  for (uint8_t i = 0; i < ondas; i++) {
+    int r = 6 + 4 * i;
+    dibujarArco(cx, 3, r, 1, 150, 210);  // Hacia la izquierda
+    dibujarArco(cx, 3, r, 1, 330, 390);  // Hacia la derecha
+  }
+}
+
+// Auriculares: diadema por encima de los ojos y dos almohadillas a los lados (fijos, aunque se muevan los ojos)
+void dibujarAuriculares(unsigned long t) {
+  display.drawRoundRect(17, 1, 94, 34, 10, SSD1306_WHITE);
+  display.drawRoundRect(18, 2, 92, 32, 9, SSD1306_WHITE);
+  display.fillRect(20, 12, 88, 26, SSD1306_BLACK);  // Solo queda la diadema: arriba y bajando a los lados
+  display.fillRoundRect(10, 16, 10, 20, 3, SSD1306_WHITE);
+  display.fillRoundRect(108, 16, 10, 20, 3, SSD1306_WHITE);
+  // Lo que escucha: un "-.-" que aparece y desaparece junto al auricular derecho
+  if ((t / 400) % 2 == 0) {
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(108, 42);
+    display.print(F("-.-"));
+  }
+}
+
+// Bocadillo arriba a la derecha con el texto (CQ, 73 u 88) en grande
+void dibujarBocadillo(const char* texto) {
+  display.fillRoundRect(94, 0, 34, 20, 5, SSD1306_WHITE);
+  display.fillTriangle(100, 18, 106, 18, 96, 26, SSD1306_WHITE);  // Rabito hacia la boca
+  display.fillRoundRect(96, 2, 30, 16, 4, SSD1306_BLACK);
+  display.fillTriangle(101, 17, 104, 17, 98, 23, SSD1306_BLACK);
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(2);
+  display.setCursor(111 - 6 * (int)strlen(texto), 3);
+  display.print(texto);
+  display.setTextSize(1);
+}
+
+// Nubecilla con un rayo que parpadea (aviso de tormenta), arriba a la derecha
+void dibujarTormenta(unsigned long t) {
+  display.fillCircle(110, 7, 4, SSD1306_WHITE);
+  display.fillCircle(117, 5, 5, SSD1306_WHITE);
+  display.fillCircle(123, 8, 4, SSD1306_WHITE);
+  display.fillRect(110, 8, 14, 4, SSD1306_WHITE);
+  if ((t / 500) % 2 == 0) {
+    display.drawLine(118, 13, 114, 19, SSD1306_WHITE);
+    display.drawLine(114, 19, 119, 19, SSD1306_WHITE);
+    display.drawLine(119, 19, 115, 26, SSD1306_WHITE);
+  }
+}
+
 // Gota de sudor (expresion nerviosa), junto al ojo derecho
 void dibujarGota(int x, int y) {
   display.fillCircle(x, y + 5, 3, SSD1306_WHITE);
@@ -5526,8 +5691,17 @@ void dibujarCara() {
     case EXP_SORPRESA:  boca = BOCA_O; break;
     case EXP_CANSADA:   ojoIzq = ojoDer = OJO_CAIDO; boca = BOCA_RECTA; break;
     case EXP_DORMIDA:   boca = BOCA_O; break;
+    case EXP_TORMENTA:  boca = BOCA_ONDA; break;
+    case EXP_AURICULARES: boca = BOCA_RECTA; break;
+    case EXP_ANTENA:
+    case EXP_BOCADILLO:
+      // Hablando: la boca se abre y se cierra
+      boca = ((millis() - inicioExpresionMs) / 300) % 2 ? BOCA_O : BOCA_ABIERTA;
+      break;
     default: break;
   }
+  unsigned long tExpr = millis() - inicioExpresionMs;
+  if (expresionCara == EXP_AURICULARES) dibujarAuriculares(tExpr);  // Antes que los ojos: borra por dentro
 
   // Parpadeo (solo con los ojos abiertos): el alto baja hasta casi cerrar y vuelve en 240 ms
   float alto = ojos.alto;
@@ -5535,6 +5709,11 @@ void dibujarCara() {
     unsigned long t = millis() - inicioParpadeoMs;
     if (t >= 240) inicioParpadeoMs = 0;
     else alto = max(2.0f, alto * fabsf((float)t - 120.0f) / 120.0f);
+  }
+  uint8_t morseEnviados = 0;
+  if (expresionCara == EXP_MORSE) {
+    unsigned long total;
+    if (ojosCerradosMorse(textoMorseCara, (long)tExpr, morseEnviados, total)) alto = 2;
   }
 
   int cx = 64 + (int)ojos.dx;
@@ -5560,6 +5739,16 @@ void dibujarCara() {
     dibujarBoca(cx, BOCA_Y + dy, boca);
   }
   if (expresionCara == EXP_NERVIOSA) dibujarGota(xDer + OJO_ANCHO / 2 + 4, OJOS_Y + dy - 12);
+  if (expresionCara == EXP_ANTENA) dibujarAntena(64, tExpr);
+  if (expresionCara == EXP_BOCADILLO) dibujarBocadillo(textoBocadillo);
+  if (expresionCara == EXP_TORMENTA) dibujarTormenta(millis());
+  if (expresionCara == EXP_MORSE && morseEnviados > 0) {
+    // Lo enviado hasta ahora, abajo a la derecha
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(104, 56);
+    for (uint8_t i = 0; i < morseEnviados; i++) display.print(textoMorseCara[i]);
+  }
 
   display.display();
 }
@@ -5567,6 +5756,7 @@ void dibujarCara() {
 // Pantallas donde puede salir la cara: todas salvo las de practicar (CW, LoRa y TRX), y nunca con los datos
 // del portal o el QR a la vista ni durante una actualizacion OTA
 bool caraPermitida() {
+  if (OPCIONES_CARA_S[caraEsperaIdx] == 0) return false;  // SALVAPANTALLAS = NO
   if (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA || pantallaActual == PANTALLA_TRX) return false;
   if (pantallaActual == PANTALLA_CONFIG && (subConf == CONF_PORTAL || subConf == CONF_OTA)) return false;
   bool pantallaDatos = pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
@@ -5588,7 +5778,9 @@ void procesarCara() {
   bool dormir = ahora - ultimaActividadMs >= CARA_DORMIR_MS;
 
   if (!caraActiva) {
-    if (ahora - ultimaActividadMs < CARA_ESPERA_MS || ahora - cambioCaraMs < CARA_INICIO_MS) return;
+    if (ahora - ultimaActividadMs < OPCIONES_CARA_S[caraEsperaIdx] * 1000UL || ahora - cambioCaraMs < CARA_INICIO_MS) {
+      return;
+    }
     activarCara();
   } else if (!dormir && ahora - cambioCaraMs >= CARA_TIEMPO_MS) {
     desactivarCara();  // Un rato de Inicio y vuelve
@@ -5612,7 +5804,9 @@ void procesarCara() {
       if (duracionExpresionMs == 0) inicioParpadeoMs = ahora;  // No parpadea en mitad de un gesto
       proximoParpadeoMs = ahora + random(2500, 6000);
     }
-    if (momentoLlegado(proximaMiradaMs)) {
+    if (momentoLlegado(proximaMiradaMs) && miradaFija()) {
+      proximaMiradaMs = ahora + random(1000, 3500);
+    } else if (momentoLlegado(proximaMiradaMs)) {
       if (random(100) < 35) {
         ojosObjetivo.dx = 0;
         ojosObjetivo.dy = 0;
@@ -6067,8 +6261,8 @@ void procesarBoton() {
         break;
 
       case CONF_CONFIG:
-        // Lista: ID, LOCATOR, ALTITUD, ACELERACION, APAGADO, TONO, WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA y
-        // volver (pie)
+        // Lista: ID, LOCATOR, ALTITUD, TONO, ACELERACION, SALVAPANTALLAS, APAGADO, WEBCONF, ACTUALIZAR FW,
+        // DEPURACION, FABRICA y volver (pie)
         if (atras) {
           subConf = CONF_MENU;
           confirmandoFabrica = false;
@@ -6079,6 +6273,9 @@ void procesarBoton() {
           } else if (editandoValor && focoConf == OC_APAGADO) {
             ajustarApagado(giro);
             guardarApagadoNVS();
+          } else if (editandoValor && focoConf == OC_SALVAPANTALLAS) {
+            ajustarValor(caraEsperaIdx, giro, 0, N_OPCIONES_CARA - 1);
+            guardarSalvapantallasNVS();
           } else if (editandoValor && focoConf == OC_ALTITUD) {
             ajustarValor(altitudEditada, giro, ALTITUD_MIN_M, ALTITUD_MAX_M);
           } else if (editandoValor && focoConf == OC_TONO) {
@@ -6109,6 +6306,7 @@ void procesarBoton() {
               }
               break;
             case OC_ACELERACION:
+            case OC_SALVAPANTALLAS:
             case OC_APAGADO:
               editandoValor = !editandoValor;  // Pulsar, girar y pulsar
               break;

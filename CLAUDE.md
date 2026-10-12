@@ -69,8 +69,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   firmware; programas de prueba aparte en `pruebas/` con sus entornos (`prueba_pines`, `prueba_bateria`).
 - Tono: opción TONO en CONFIG (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`, por defecto 850; pitido de
   prueba de 0,3 s al editarla).
-- Pruebas con LED, pantalla, monitor serie y **audio** (desde el 10 oct 2026: tono montado; el buzzer suena muy bajo,
-  mejor probar a oído con auriculares). Ver "Tono" en Funciones.
+- Pruebas con LED, pantalla, monitor serie y **audio** (altavoz con amplificador PAM8302A desde el 12 oct 2026, y
+  auriculares). Ver "Tono" en Funciones.
 - Pantallas (`PANTALLA_*`, recorrido con ant./sig.): 1 Inicio, 2 CW, 3 LoRa (Duo/QSO), 4 TRX (transceptor, v0.9a),
   5 PROP (propagación), 6 POTA, 7 Sol, 8 CONF. Cabecera: hora, nombre corto de la pantalla y batería (`PWR` sin batería).
 - NVS: `chispas` (`NVS_ENTRENADOR`: Koch, keyer, Echo y estadísticas), `estacion` (`NVS_ESTACION`: indicativo, locator, hora UTC; hasta la v0.7s se llamaba de otra forma y se empezó de cero);
@@ -124,7 +124,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - **CONF** (v0.9g, reestructurada; probado por serie con capturas en la placa 1): menú con título
   " CONFIGURACION ", `< CONFIG >` y `< STATUS >` (`subConf`: `CONF_MENU/CONFIG/STATUS/PORTAL/EDITOR`).
   - **CONFIG:** lista con 4 a la vista, valor a la derecha y barra de desplazamiento; "volver" en el pie
-    (`OpcionConf`: ID, LOCATOR, ACELERACION, APAGADO, TONO, WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA). ID y LOCATOR con el editor de las
+    (`OpcionConf`, por bloques desde el 12 oct 2026: ID, LOCATOR, ALTITUD · TONO, ACELERACION · SALVAPANTALLAS,
+    APAGADO · WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA). **SALVAPANTALLAS**: NO, 15 s, 30 s, 1, 2 o 5 min
+    (`OPCIONES_CARA_S`, `caraEsperaIdx`, NVS `cara` en `chispas`, por defecto 15 s; NO = la cara no sale). ID y LOCATOR con el editor de las
     memorias (`confAbrirEditor()`; destinos `EDITOR_ID_ESTACION` -2 y `EDITOR_LOCATOR` -3; solo letras y cifras, y
     `/` en el ID); OK valida con `aplicarIndicativo()`/`aplicarLocator()` (las mismas que el portal) y, si no vale,
     "NO VALIDO" y se sigue editando; guarda en `estacion`. WEBCONF abre el portal y una vista con sus datos
@@ -266,10 +268,19 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - **Cara de Chispas** (v0.6l/m): salvapantallas, diseño propio inspirado en Eilik (no copiarlo). Ojos y boca
   con primitivas (~5 KB de flash). Desde la v1.05b sale en **todas las pantallas salvo CW, LoRa y TRX**
   (`caraPermitida()`; tampoco con el portal o el QR a la vista, `CONF_PORTAL`/`DATOS_PORTAL`, ni en `CONF_OTA`); al
-  quitarla se vuelve a la misma pantalla. Aparece a los 15 s sin tocar nada, alterna 45 s de cara y 8 s de la pantalla,
+  quitarla se vuelve a la misma pantalla. Aparece tras el tiempo de CONFIG > SALVAPANTALLAS (por defecto 15 s) sin
+  tocar nada, alterna 45 s de cara y 8 s de la pantalla,
   y a los 5 min se duerme; cualquier giro o pulsación la quita sin hacer nada más (constantes `CARA_*`). Gestos al azar
-  cada 6–15 s: contenta, risa, `>_<`, guiño, pícara (`ω`), nerviosa (gota), sorpresa. Cansada con batería < 20 %; más
-  alegre tras una lección Koch ≥ 90 % en los últimos 15 min. Con la cara a la vista, `actualizarPantalla()` no dibuja.
+  cada 6–15 s: contenta, risa, `>_<`, guiño, pícara (`ω`), nerviosa (gota), sorpresa y, desde el 12 oct 2026, de
+  radioaficionado: **antena** con ondas y boca hablando (`EXP_ANTENA`), **auriculares** con `-.-` parpadeando
+  (`EXP_AURICULARES`), **bocadillo** CQ/73/88 (`EXP_BOCADILLO`) y **guiño en Morse** 73/K/R con los ojos, escrito
+  abajo a la derecha (`EXP_MORSE`, `ojosCerradosMorse()`, punto de 160 ms). Fondo: cansada con batería < 20 %;
+  **preocupada con nube y rayo con el aviso de tormenta** del BME280 (`EXP_TORMENTA`, tiene prioridad). Pesos de los
+  gestos (`hacerGestoAleatorio()`): más alegre tras una lección Koch ≥ 90 % en los últimos 15 min; en **línea gris**
+  (`caraEnLineaGris()`, con hora y locator) más antena y bocadillo, que entonces siempre dice CQ; con **buena
+  propagación** (SFI ≥ 150 en el último dato de hamqsl, `caraBuenaPropagacion()`) más alegre y más antena.
+  Los gestos de bocadillo, auriculares y Morse fijan la mirada (`miradaFija()`). Probado en la placa 2 con capturas
+  (12 oct 2026): bocadillo, antena y Morse; auriculares y tormenta sin ver aún. Con la cara a la vista, `actualizarPantalla()` no dibuja.
   Ocupa ~40 % del bucle mientras se ve.
 - **OLED negra tras reset corto** (v0.4e: tras `display.begin()` se reenvían bomba de carga `0x8D 0x14` y encendido
   `0xAF`, en `reafirmarOled()`). **Sigue pasando a veces en la placa 1** (no en la 2; nunca al despertar del deep sleep):
@@ -283,14 +294,14 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   encendió 8 de 10 veces, así que el medidor no es la causa. Aparcado por decisión del usuario. Las órdenes de diagnóstico por serie de la v0.8a (`s`, `a`, `b`, `v`)
   se quitaron en la v0.8b a petición del usuario (están en el historial de git, commit 2f61d2f, si hacen falta).
 - **Dormir** (v0.7n, probado en la placa 2: tres ciclos; y en la placa 1 el 12 oct 2026): PRG largo, o `apagadoAutoMin` sin tocar nada (v0.7o: se
-  elige en CONF → `apagado`: nunca, 5, 10, 15, 30, 60 o 120 min; por defecto 30; NVS `apag`), salvo en CW y LoRa y
-  sus subpantallas o con el portal abierto → `dormirChispas()`: aviso 1,5 s, OLED,
+  elige en CONF → `apagado`: nunca, 5, 10, 15, 30, 60 o 120 min; por defecto 30; NVS `apag`), salvo en CW, LoRa y
+  TRX (y sus subpantallas) o con el portal abierto → `dormirChispas()`: aviso 1,5 s, OLED,
   WiFi, LoRa y LED apagados; KEY en BAJO, Vext apagada y divisor de batería desactivado, retenidos con `gpio_hold_en`
   + `gpio_deep_sleep_hold_en` (se liberan al principio de `setup()`); despierta con ext0 en GPIO0 a nivel bajo.
   Despertar con PRG **no** entra en modo de carga (`boot:0x8`); arranca de nuevo (`esp_reset_reason` 8).
 - **Pantalla TRX** (v0.9a; conexión con el transceptor; nombre en la cabecera "TRX"): menú con título " TRANSCEPTOR ",
   `< DECODIFICAR >`, `< OPERAR >`, `< QSO >` y **memorias** en el centro del pie (`opcionTrx`; `subTrx`).
-  **Probado en la placa 1 (10 oct 2026):** menú, memorias, editor, envío de memorias (suenan en el buzzer) y el corte de
+  **Probado en la placa 1 (10 oct 2026):** menú, memorias, editor, envío de memorias (suenan en el buzzer, luego altavoz) y el corte de
   seguridad de KEY (dos fallos corregidos: lectura doble de `keyActivaDesdeMs` desde `loop()` y marca `millis() | 1`
   1 ms adelantada, que con la resta sin signo daba la vuelta y cortaba al manipular). GPIO2 medido con
   polímetro con el TUNE (11 oct 2026, v0.9e): ~3,3 V activa, 0 V en reposo. PC817 y minijack de KEY montados y
@@ -300,7 +311,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   emisora, en llave recta. **Xiegu X6200: probada el 12 oct 2026** (llave recta, con el puente R-T: TUNE, palas y
   memorias bien; si sale punto-raya alternado, la emisora está en modo iámbico). Decodificador: montado y probado el 11 oct 2026 (ver DECODIFICAR).
   - **Salida KEY:** `conmutarEmisionMorse()` activa GPIO2 solo con `keyHabilitada` (OPERAR y QSO de TRX; nunca en
-    Koch, Echo, TX LIBRE ni LoRa). `trxTonoLocal` (NVS `ttono`): buzzer/auriculares mientras sale por KEY. Corte de
+    Koch, Echo, TX LIBRE ni LoRa). `trxTonoLocal` (NVS `ttono`): altavoz/auriculares mientras sale por KEY. Corte de
     seguridad si KEY sigue activa más de 10 s seguidos (`KEY_MAX_CONTINUA_MS`): "KEY CORTADA (>10 s)" y por serie con
     las marcas de tiempo.
   - **OPERAR:** keyer con wpm propio (`trxWpm`, NVS `twpm`). Desde la v0.9h: arriba los ajustes a la vista
@@ -364,16 +375,15 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   **Firmware v1.04b:** `ponerAmplificador()`/`procesarAmplificador()`: SD en ALTO solo en CW, LoRa y TRX y durante el
   pitido de prueba del TONO (`aplicarFrecTono(true)` lo enciende), en BAJO en el resto; al dormir, BAJO retenido con
   `gpio_hold_en` (se libera en `setup()`, donde arranca en BAJO). `[AMP] ENCENDIDO/APAGADO` por serie. **Control de
-  SD probado en la placa 1 el 12 oct 2026 (OTA a la v1.04b).** Esquema (hoja 4, 5b) actualizado: montado.
+  SD probado en la placa 1 el 12 oct 2026 (OTA a la v1.04b).** Esquema (hoja 4): el amplificador es el montaje principal (sin buzzer).
 
 ## Pendiente
 1. **Pruebas a mano** (11 oct 2026): hechas en la placa 1 (listas y menús, aceleración, corrección total del Koch,
    Echo por lección) y en la placa 2 (OTA a la v1.01b; menús, listas, edición con vuelta, páginas y práctica sin
    encoder). X6200 con KEY probada el 12 oct 2026. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con
    batería y sin medidor).
-2. **Montaje** (orden de la hoja 6 del esquema; hecho: raíles, encoder, palas, tono con piezo y jack, salida KEY con
-   PC817 y minijack): al llegar el PAM8302A y el altavoz, montarlos en el sitio del piezo (ver "Tono") y ajustar la
-   ganancia en banco; amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (opcional: enable del GPS); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
+2. **Montaje** (orden de la hoja 7 del esquema; hecho: raíles, encoder, palas, tono con amplificador, altavoz y jack,
+   salida KEY con PC817 y minijack, BME280); amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (opcional: enable del GPS); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
    **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; la batería se sigue leyendo bien después de usar DECODIFICAR o QSO (probado en la placa 2 el 12 oct 2026). Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Estabilidad comprobada** (placa 2, v1.03b, noche del 12 oct 2026: 8 h en POTA, 233 consultas HTTPS a pota.app, una
@@ -399,7 +409,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - Expansor MCP23017 descartado: GPIO directos.
 
 ## Prototipo en protoboard (desde el 9 oct 2026)
-Montaje sin PCB con la lista de compra "opción A (buzzer)", comprada salvo el GPS (pedido), el adaptador a bornas,
+Montaje sin PCB con la lista de compra "opción A (buzzer)" (el buzzer se sustituyó por el amplificador PAM8302A y
+un altavoz el 12 oct 2026), comprada salvo el GPS (pedido), el adaptador a bornas,
 el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banco.
 
 | GPIO | Uso |
@@ -407,7 +418,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 2 | Salida KEY (PC817, 330 Ω, 10 kΩ a GND, minijack J4 con puente R-T). `KEY_OUT_PIN`. **Montado y probado con la uSDR y la X6200** |
 | 4 / 5 | Pala DIT / DAH (pull-up interno; `KEYER_PADDLE_DIT/DAH`). **Montado y probado** |
 | 6 | Entrada del decodificador (ADC1): acoplo 1 µF, polarización 2×10 kΩ, trimmer, 1 kΩ y 2×1N4148 |
-| 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, buzzer piezo pasivo en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R |
+| 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, amplificador PAM8302A con altavoz en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R. **Montado y probado** (el buzzer piezo del principio se descartó: sonaba muy bajo) |
 | 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado y control de SD probado (v1.04b) |
 | 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |

@@ -219,7 +219,7 @@ def vista_general():
         dash = "6 4" if c == C_OPT else None
         s.line([(290, y), (414, y)], c, 2, dash)
     # Derecha
-    blk(760, 70, 250, 85, "Tono CW (GPIO7, PWM)", ["R1 → volumen RV1 → C1 → 220 Ω (R2, R3)", "TN de J2: ampli U2 + altavoz LS1 (antes BZ1)", "Clavija en J2 = buzzer/altavoz en silencio"], "#c2185b")
+    blk(760, 70, 250, 85, "Tono CW (GPIO7, PWM)", ["R1 → volumen RV1 → C1 → 220 Ω (R2, R3)", "TN de J2: ampli U2 (SD → GPIO38) + altavoz LS1", "Clavija en J2 = altavoz en silencio"], "#c2185b")
     blk(760, 165, 250, 70, "Decodificador (GPIO6, ADC1)", ["← altavoz ext. de la emisora (J3)", "RV2 nivel · C2 · 1,65 V · R6 + D1/D2"], "#00838f")
     blk(760, 250, 250, 70, "Salida KEY (GPIO2)", ["R7 330 Ω → PC817 (U1) → J4 · R10 a GND", "→ toma KEY de la emisora (aislada)"], C_ISO)
     blk(760, 330, 250, 55, "Raíles de la protoboard", ["Rojo = 3V3 · Azul = GND (nada a 5 V)"], "#555")
@@ -372,7 +372,7 @@ def p_bme():
 
 
 # ----------------------------------------------------------------------------
-# Tono: buzzer, auriculares y volumen
+# Tono: volumen, auriculares y salida al amplificador (TN de J2)
 # ----------------------------------------------------------------------------
 def p_tono():
     s = S(1050, 395)
@@ -408,18 +408,14 @@ def p_tono():
     s.line([(895, 130), (965, 130), (965, 180)])
     s.text(905, 245, "RN: sin conectar", 9, "start", "italic", "#888")
     s.line([(895, 220), (902, 220)])
-    # Buzzer
-    s.rect(948, 180, 34, 40, "#fff", C_W, 1.8, None, 3)
-    s.add('<path d="M955 210 q10 -18 20 0" fill="none" stroke="#222" stroke-width="1.4"/>')
-    s.text(992, 186, "+", 12, "start", "bold")
-    s.text(992, 200, "BZ1", 10, "start", "bold")
-    s.text(992, 212, "piezo", 9, "start")
-    s.text(992, 223, "pasivo", 9, "start")
-    s.line([(965, 220), (965, 290)])
+    # Salida al amplificador (5b): sin clavija, el tono llega a A+ de U2 por TN
+    s.rect(925, 180, 95, 46, "#fff", "#c2185b", 1.8, None, 4)
+    s.text(972, 198, "a A+ de U2", 10, "middle", "bold", "#c2185b")
+    s.text(972, 213, "amplificador (5b)", 8.5, "middle", "italic", "#555")
     # Masa
     s.line([(735, 260), (720, 260), (720, 290)])
-    s.line([h["GND"], (965, 290)])
-    for x in (330, 720, 965):
+    s.line([h["GND"], (720, 290)])
+    for x in (330, 720):
         s.dot(x, 290)
     s.gnd(525, 290)
     s.dot(525, 290)
@@ -432,19 +428,19 @@ def p_tono():
     s.text(560, 192, "AUD", 9, "middle", "bold", "#c2185b")
     notes(s, 20, 342, [
         "C1: el + (patilla larga) hacia el potenciómetro. RV1: patilla 3 a R1, 1 a GND, 2 (cursor) a C1.",
-        "Sin clavija, T está unido a TN y suena el buzzer; al meter los auriculares se abre TN y el buzzer calla (sin firmware).",
-        "Montado y probado (10 oct 2026). BZ1 suena muy bajo a 3,3 V (también directo a GPIO7): ver debajo el montaje con amplificador.",
+        "Sin clavija, T está unido a TN y suena el altavoz (por U2); al meter los auriculares se abre TN y el altavoz calla.",
+        "Montado y probado. Al principio TN iba a un buzzer piezo pasivo (BZ1), pero a 3,3 V sonaba demasiado bajo: descartado.",
     ], 10)
-    s.text(530, 390, "RV1 regula a la vez buzzer y auriculares. El buzzer tiene que ser PASIVO: uno activo pita a su propio tono.", 10, "middle", "normal", "#333")
+    s.text(530, 390, "RV1 regula a la vez el altavoz y los auriculares.", 10, "middle", "normal", "#333")
     return s.svg()
 
 
 # ----------------------------------------------------------------------------
-# Tono con amplificador (montado el 12 oct 2026): sustituye a BZ1 en el contacto TN de J2
+# Amplificador y altavoz (montados el 12 oct 2026), en el contacto TN de J2
 # ----------------------------------------------------------------------------
 def p_ampli():
     s = S(1050, 365)
-    j = s.block(20, 100, 150, 80, "J2 · jack", [("TN", 140)], "right", "#fbeef3", ["contacto del buzzer"])
+    j = s.block(20, 100, 150, 80, "J2 · jack", [("TN", 140)], "right", "#fbeef3", ["contacto TN"])
     s.text(20, 205, "(R2 y el resto del circuito, como arriba)", 9, "start", "italic", "#555")
     s.line([j["TN"], (345, 140)])
     s.dot(280, 140)
@@ -478,7 +474,7 @@ def p_ampli():
     s.text(750, 167, "0,5–1 W, 28–40 mm", 9.5, "start")
     s.tag(610, 112, "salida en puente", "#c2185b")
     notes(s, 20, 300, [
-        "U2 va en el sitio de BZ1: TN → A+, R9 de A+ a GND (que la entrada no quede al aire con la clavija metida), A− a GND.",
+        "TN → A+, R9 de A+ a GND (que la entrada no quede al aire con la clavija metida), A− a GND.",
         "VIN a 3V3 (el pin 5V no tiene tensión con batería). OUT+/OUT− van en puente: ninguna de las dos a GND.",
         "RV1 sigue de volumen. Si satura con poco giro: bajar el trimmer de ganancia de U2 (si lo trae) o 47 kΩ en serie con A+.",
         "Comprobar las patillas del módulo que llegue. Con volumen alto, vigilar que la OLED no parpadee (picos en el 3V3).",
@@ -673,11 +669,11 @@ BOM = [
     ("RV2", "Trimmer multivuelta 10 kΩ (3296)", "Nivel del decodificador", ""), ("C1", "Electrolítico 10 µF 16 V", "Bloqueo de continua", ""),
     ("C2", "Poliéster / X7R 1 µF 50 V", "Acoplo de la señal", ""), ("D1, D2", "1N4148", "Protección de GPIO6", ""),
     ("U1", "PC817 DIP-4", "Salida KEY aislada", ""), ("J1, J3, J4", "Módulo jack 3,5 mm estéreo", "Palas, audio, KEY", ""),
-    ("J2", "Jack 3,5 mm estéreo conmutado (5 pat.)", "Auriculares", ""), ("BZ1", "Buzzer piezo pasivo 16 mm", "Tono (suena bajo)", ""),
+    ("J2", "Jack 3,5 mm estéreo conmutado (5 pat.)", "Auriculares", ""),
     ("ENC1", "Encoder KY-040", "Menús", ""), ("GPS1", "NEO-6M GY-GPS6MV2", "Posición / hora", "pendiente"),
     ("SW1", "Interruptor SS12D00", "On/off batería", ""), ("BAT1", "LiPo 3,7 V 3000 mAh JST 1,25", "Alimentación", ""),
     ("Q1, R8", "AO3401A + adaptador SOT-23 + 100 kΩ", "Enable del GPS", "opc"), ("BME1", "BME280 GY-BME280-3.3 (opcional)", "Sensor ambiental", ""),
-    ("U2", "Módulo amplificador PAM8302A (mono, 2,5 W)", "Altavoz, en el sitio de BZ1 (TN)", ""),
+    ("U2", "Módulo amplificador PAM8302A (mono, 2,5 W)", "Altavoz, desde el TN de J2", ""),
     ("LS1", "Altavoz 8 Ω 0,5–1 W, 28–40 mm", "Tono", ""), ("R9", "Resistencia 10 kΩ", "Pull-down de la entrada de U2", ""),
 ]
 
@@ -711,7 +707,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v1.04b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v1.05b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
@@ -761,9 +757,9 @@ def main():
 <div class="panel"><h2>4 · Sensor BME280 <span class="badge b-opc">OPCIONAL</span> (montado)</h2>{fit(p_bme(), 72)}</div>
 </div></div>''')
 
-    pages.append(f'''<div class="page">{header("Salida de audio: tono CW (buzzer, auriculares, volumen) y amplificador", 4, T)}
-<div class="panel"><h2>5 · Tono CW: buzzer, auriculares con silencio automático y volumen (montado)</h2>{fit(p_tono(), 80)}</div>
-<div class="panel" style="margin-top:3mm"><h2>5b · Amplificador y altavoz en el sitio de BZ1 (montado)</h2>{fit(p_ampli(), 66)}</div>
+    pages.append(f'''<div class="page">{header("Salida de audio: tono CW (volumen, auriculares, amplificador y altavoz)", 4, T)}
+<div class="panel"><h2>5 · Tono CW: volumen y auriculares con silencio automático del altavoz (montado)</h2>{fit(p_tono(), 80)}</div>
+<div class="panel" style="margin-top:3mm"><h2>5b · Amplificador y altavoz en el contacto TN de J2 (montado)</h2>{fit(p_ampli(), 66)}</div>
 </div>''')
 
     pages.append(f'''<div class="page">{header("Salida KEY hacia la emisora y alimentación", 5, T)}
@@ -795,13 +791,13 @@ def main():
 <li><b>1. Raíles</b>: 3V3 y GND de la Heltec a los raíles. Polímetro: 3,3 V entre raíles y ningún cortocircuito. ✔</li>
 <li><b>2. Encoder</b> y programa de prueba de pines (19, 20, 48 y reserva 38–40) por serie. ✔</li>
 <li><b>3. Palas</b>: comprobar por serie DIT/DAH antes del keyer. ✔</li>
-<li><b>4. Tono</b>: buzzer con RV1 al mínimo; luego auriculares (el buzzer debe callar). ✔ <i>El piezo sonaba muy bajo: sustituido por U2 y LS1 (hoja 4, 5b), con SD a GPIO38.</i> ✔</li>
+<li><b>4. Tono</b>: amplificador U2, R9 y altavoz LS1 en el TN de J2 (hoja 4), SD a GPIO38; RV1 al mínimo y subir. Luego auriculares (el altavoz debe callar). ✔</li>
 <li><b>5. KEY</b> con R10: pantalla TRX → OPERAR. Primero GPIO2 con el polímetro (≈ 3,3 V con cada elemento, 0 V en reposo); luego, sin emisora, continuidad entre punta y malla de J4 al manipular. ✔ <i>Con la uSDR: puente R-T en J4 (manipula por el anillo).</i></li>
 <li><b>6. Decodificador</b> (hoja 6): sin emisora, polímetro en GPIO6 ≈ 1,65 V. Luego RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra (y <code>[DECOD]</code> por serie con CONF → CONFIG → DEPURACION → DECOD en SÍ). ✔ <i>RV2 queda casi al máximo con 0,1–0,5 V de la emisora.</i></li>
 <li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional. ✔</li>
 <li><b>9. Batería</b> al final, comprobada la polaridad.</li>
 </ul>
-<p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas, tono (R1, RV1, C1, R2, R3, J2, y luego U2, R9 y LS1 en lugar de BZ1), KEY (R7, R10, U1, J4) con la uSDR, BME280 (BME1) y decodificador (C2, R4–R6, RV2, D1, D2) con audio Morse real. El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A (buzzer)».</p>
+<p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas, tono (R1, RV1, C1, R2, R3, J2, U2, R9 y LS1), KEY (R7, R10, U1, J4) con la uSDR, BME280 (BME1) y decodificador (C2, R4–R6, RV2, D1, D2) con audio Morse real. El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A», con el buzzer sustituido por el amplificador U2 y el altavoz LS1.</p>
 </div></div></div>''')
 
     doc = f'<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Chispas · esquema de conexiones</title><style>{CSS}</style></head><body>{"".join(pages)}</body></html>'

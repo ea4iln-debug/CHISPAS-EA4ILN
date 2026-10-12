@@ -76,7 +76,7 @@ GitHub.
 | **Configuración por WiFi** | Portal web en castellano, con QR para unirse desde el móvil: red, estación, hora y memorias. | ✅ |
 | **Actualización OTA** | Busca la última release en GitHub, avisa si hay versión nueva y la instala por WiFi (TLS validado). | ✅ |
 | **Batería** | Tensión y porcentaje. Detecta cuando no hay batería conectada. | ✅ |
-| **Cara de Chispas** | Salvapantallas animado con expresiones y gestos. Sale tras unos segundos sin uso en cualquier pantalla salvo CW, LoRa y TRX. | ✅ |
+| **Cara de Chispas** | Salvapantallas animado con expresiones y gestos, también de radioaficionado: antena llamando CQ, auriculares, bocadillo con CQ/73/88 y guiño en Morse. Reacciona a la línea gris, a la buena propagación y al aviso de tormenta. Sale tras el tiempo elegido sin uso en cualquier pantalla salvo CW, LoRa y TRX. | ✅ |
 | **Tono por altavoz y auriculares** | Tono CW (400–1000 Hz, 850 por defecto) por un altavoz con amplificador PAM8302A, con volumen y silencio automático del altavoz al conectar auriculares. El amplificador solo se enciende en CW, LoRa y TRX. | ✅ |
 | **Ahorro de energía** | CPU a 80 MHz sin WiFi, radio dormida fuera de LoRa, pantalla atenuada y apagado automático (deep sleep). | ✅ |
 | **GPS** | Posición y locator automáticos. | 🚧 |
@@ -116,7 +116,7 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 | 4 | J3-15 | Pala de punto (DIT), pull-up interno | ✅ |
 | 5 | J3-16 | Pala de raya (DAH), pull-up interno | ✅ |
 | 6 | J3-17 | Entrada de audio del decodificador (ADC1, por DMA) | ✅ |
-| 7 | J3-18 | Tono CW por PWM (buzzer y auriculares) | ✅ |
+| 7 | J3-18 | Tono CW por PWM (amplificador con altavoz y auriculares) | ✅ |
 | 38 | J3-11 | Apagado (SD) del amplificador PAM8302A: solo encendido en CW, LoRa y TRX | ✅ |
 | 19 / 20 | J2-18 / J2-17 | Encoder CLK / DT | ✅ |
 | 48 | J2-14 | Pulsador del encoder | ✅ |
@@ -299,11 +299,11 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 
 | | | |
 |:---:|:---:|:---:|
-| <img src="docs/img/conf.png" width="256" alt="Menú CONF"><br>Menú | <img src="docs/img/config.png" width="256" alt="CONFIG"><br>CONFIG | <img src="docs/img/config2.png" width="256" alt="CONFIG, final de la lista"><br>CONFIG (final de la lista) |
+| <img src="docs/img/conf.png" width="256" alt="Menú CONF"><br>Menú | <img src="docs/img/config.png" width="256" alt="CONFIG"><br>CONFIG | <img src="docs/img/config2.png" width="256" alt="CONFIG: sonido, salvapantallas y apagado"><br>CONFIG (sigue) |
 | <img src="docs/img/conf_editor.png" width="256" alt="Editor del indicativo"><br>Editor del indicativo | <img src="docs/img/status.png" width="256" alt="STATUS: estación"><br>STATUS: estación | <img src="docs/img/status2.png" width="256" alt="STATUS: sistema"><br>STATUS: sistema |
 | <img src="docs/img/status3.png" width="256" alt="STATUS: WiFi"><br>STATUS: WiFi | <img src="docs/img/status4.png" width="256" alt="STATUS: memoria"><br>STATUS: memoria | <img src="docs/img/status5.png" width="256" alt="STATUS: arranque"><br>STATUS: arranque |
 | <img src="docs/img/webconf.png" width="256" alt="Webconf"><br>Webconf | <img src="docs/img/webconf_qr.png" width="256" alt="QR de webconf"><br>QR para unir el móvil | <img src="docs/img/ota.png" width="256" alt="Actualizar firmware"><br>Actualizar firmware |
-| <img src="docs/img/status6.png" width="256" alt="STATUS: sensor"><br>STATUS: sensor | <img src="docs/img/depuracion.png" width="256" alt="Depuración"><br>Depuración | |
+| <img src="docs/img/status6.png" width="256" alt="STATUS: sensor"><br>STATUS: sensor | <img src="docs/img/config3.png" width="256" alt="CONFIG, final de la lista"><br>CONFIG (final de la lista) | <img src="docs/img/depuracion.png" width="256" alt="Depuración"><br>Depuración |
 
 ---
 
@@ -317,9 +317,10 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | **ID** | Tu indicativo (3 a 8 letras, cifras y `/`), con la rueda de caracteres del editor |
 | **LOCATOR** | Locator Maidenhead de 4 o 6 caracteres (para SOL); se comprueba al guardar |
 | **ALTITUD** | Con el BME280: altitud barométrica (con `?` si no está calibrada). Pulsar, girar hasta la altitud real y pulsar calibra el QNH |
-| **ACELERACION** | Salto de los valores al girar rápido: `NO` o x2 a x5 |
-| **APAGADO** | Minutos sin uso antes de dormir: nunca, 5, 10, 15, 30, 60 o 120 |
 | **TONO** | Frecuencia del tono CW (400–1000 Hz), con un pitido de prueba |
+| **ACELERACION** | Salto de los valores al girar rápido: `NO` o x2 a x5 |
+| **SALVAPANTALLAS** | Tiempo sin uso antes de que salga la cara: `NO`, 15 s, 30 s, 1, 2 o 5 min |
+| **APAGADO** | Minutos sin uso antes de dormir: nunca, 5, 10, 15, 30, 60 o 120 (nunca en CW, LoRa ni TRX) |
 | **WEBCONF** | Abre el portal WiFi (ver abajo) |
 | **ACTUALIZAR FW** | Actualización por OTA (ver [arriba](#actualizar-por-wifi-ota)) |
 | **DEPURACION** | Mensajes y órdenes por serie para pruebas: órdenes serie, diagnóstico, decodificador y retraso CW (todo en `NO` por defecto) |
