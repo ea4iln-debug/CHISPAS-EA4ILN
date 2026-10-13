@@ -63,7 +63,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
     del mar** con la altitud de cada muestra (sin falsos "TORM!" al subir: 3 hPa son solo ~25 m).
   - **STATUS > GPS** (página nueva): estado, satélites en uso, lat/lon, altitud, HDOP, locator y antigüedad del dato;
     "GPS NO DETECTADO" sin módulo.
-- **Parques POTA cercanos (después del GPS):** lista de parques de España descargada de pota.app a la placa con WiFi
+- ✅ **Parques POTA cercanos (hecho el 14 oct 2026, en POTA > VER PARQUES):** lista de parques de España descargada de pota.app a la placa con WiFi
   (LittleFS, partición de 1,5 MB reservada; **no** en el repositorio) y búsqueda sin conexión: los más cercanos con
   distancia y rumbo en la pantalla POTA; "ACTUALIZAR PARQUES" con WiFi. Antes: leer las condiciones de uso de los datos
   de POTA y averiguar la URL de la lista o de la búsqueda por zona.

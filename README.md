@@ -254,7 +254,7 @@ muy larga (2,5 s) = dormir.
 | 3 | **LoRa** | `PRÁCTICA DUO` (grupos en pareja) y `QSO LIBRE` (con las palas) |
 | 4 | **TRX** | Transceptor: `DECODIFICAR`, `OPERAR` (por KEY, con tune), `QSO` y `memorias` |
 | 5 | **PROP.** | Propagación: índices solares y condiciones por banda |
-| 6 | **POTA** | Spots de activaciones en CW |
+| 6 | **POTA** | Spots de activaciones en CW y parques POTA más cercanos (con el GPS o el locator) |
 | 7 | **SOL** | Sol y línea gris: hoy, ahora y mañana; con el BME280, también AMBIENTE |
 | 8 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización, depuración y fábrica) y `STATUS` |
 
@@ -411,8 +411,8 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 
 ## Hoja de ruta
 
-Lo pendiente (pruebas, hardware y desarrollo) está en [ROADMAP.md](ROADMAP.md). Lo siguiente: parques POTA
-cercanos con el GPS y POTA sin conexión.
+Lo pendiente (pruebas, hardware y desarrollo) está en [ROADMAP.md](ROADMAP.md). Lo siguiente: cola de spots POTA
+y la PCB.
 
 ---
 
@@ -425,7 +425,7 @@ cercanos con el GPS y POTA sin conexión.
   como este.
 - **Servicios externos:** los datos de propagación y de POTA vienen de servicios públicos. hamqsl.com pide no consultar
   su XML más de una vez por hora y Chispas lo respeta. pota.app no publica condiciones para su API: Chispas la consulta
-  cada 2 minutos, solo con la pantalla POTA abierta. La API de GitHub se consulta al pedir la actualización y, como
+  cada 2 minutos, solo con la pantalla POTA abierta, y descarga la lista de parques de España como mucho una vez al mes. La API de GitHub se consulta al pedir la actualización y, como
   mucho, una vez al día para el aviso.
 
 ---

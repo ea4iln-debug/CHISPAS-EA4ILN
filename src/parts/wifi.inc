@@ -59,11 +59,11 @@ uint8_t paginaSpots = 0;
 // pasan girando y vista del portal. Solo se ve una de las tres a la vez: comparten el estado
 #define OPCION_BARRA_DATOS 2
 #define OPCION_BARRA_PROP  OPCION_BARRA_DATOS
-#define OPCION_BARRA_SPOTS OPCION_BARRA_DATOS
+#define OPCION_BARRA_SPOTS 3                      // POTA: VER SPOTS, VER PARQUES y ACTUALIZAR
 uint8_t opcionPantallaProp = OPCION_BARRA_PROP;    // Menu: 0 = ver datos, 1 = actualizar, 2 = barra ant./sig.
 uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;
 uint8_t opcionPantallaSol = OPCION_BARRA_DATOS;
-enum SubDatos { DATOS_MENU, DATOS_PAGINAS, DATOS_PORTAL };
+enum SubDatos { DATOS_MENU, DATOS_PAGINAS, DATOS_PORTAL, DATOS_PARQUES };  // PARQUES: solo en POTA
 SubDatos subDatos = DATOS_MENU;
 uint8_t focoPortalDatos = 0;
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda

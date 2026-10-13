@@ -29,8 +29,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (14 oct 2026)
-- **v1.07b** (última release, 14 oct: GPS, HORA y RELOJ), aún sin instalar por OTA: la placa 2 lleva la v1.06b y la
-  placa 1 ese mismo código por USB con la versión 1.06b (probado el 13 oct). Placa 1: protoboard con encoder, palas, KEY, amplificador,
+- **v1.07b** (última release, 14 oct: GPS, HORA y RELOJ) en las dos placas (placa 2 por OTA); la placa 1 lleva además,
+  por USB y sin subir versión, los parques POTA cercanos (POTA > VER PARQUES, probado el 14 oct). Placa 1: protoboard con encoder, palas, KEY, amplificador,
   BME280 y batería; entorno `heltec_wifi_lora_32_V3`. Placa 2: desnuda, sin encoder; entorno `heltec_sin_encoder`
   (`-DSIN_ENCODER`), se actualiza por OTA.
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
@@ -50,6 +50,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   PRG corto = atrás, largo = dormir; despiertan PRG y el eje del encoder. Sin encoder: PRG corta = mover, larga = ejecutar, muy larga = dormir.
 - Tareas FreeRTOS: `motorCW` (núcleo 1, prio 3; API `motorCWEmitir/Detener/Ocupado/Portadora`; solo las tareas
   llaman a `conmutarEmisionMorse()`), `keyer` (palas cada 1 ms), `decod` (núcleo 0, ADC por DMA a 8 kHz, Goertzel).
+- LittleFS (partición `spiffs`): lista de parques POTA de España (`/parques.bin`), se baja sola cada 30 días.
 - NVS: `chispas` (entrenador, keyer, Echo, estadísticas, ajustes), `estacion` (indicativo, locator, UTC, QNH,
   memorias); WiFi en el NVS del ESP32. Borrar estadísticas solo borra estadísticas; el reset de fábrica, todo.
 - Consumo: CPU a 80 MHz sin WiFi y 240 con WiFi; LoRa dormida fuera de Duo/QSO. **Al despertar el SX1262 hay que
@@ -76,7 +77,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 | `estadisticas` `echo` `bme280` | Estadísticas por carácter; modo Echo; sensor |
 | `memoria_nvs` `bateria` `oled_comun` | NVS; batería; cabecera, pies, `dibujarTituloMenu`… |
 | `lora` `decodificador` `trx` | TX/RX, Duo y QSO; tarea `decod`; TRX + `procesarRecepcionLoRa`, `salirModoLoRa` |
-| `wifi` `ota` `datos_web` `gps` | WiFi, NTP, portal y QR; OTA; hamqsl, POTA, `procesarWifi`; GPS (ventanas, hora, locator, altitud) |
+| `wifi` `ota` `datos_web` `gps` `parques` | WiFi, NTP, portal y QR; OTA; hamqsl, POTA, `procesarWifi`; GPS (ventanas, hora, locator, altitud); parques POTA cercanos (LittleFS) |
 | `pant_inicio_cw` `pant_lora_trx` `pant_prop_pota` | Dibujo de Inicio y CW; de LoRa y TRX; menús y páginas de PROP y POTA |
 | `sol` `conf` `estados_cw` | SOL y ambiente; CONF, STATUS, OTA y `actualizarPantalla()`; máquina de estados CW |
 | `cara` `entrada` `eventos` | Salvapantallas; encoder, ISR y eventos de botón; `procesarBoton()` |
@@ -99,9 +100,9 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - PCB: se empezará desde cero más adelante; no hay nada de KiCad.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-1. GPS integrado y probado en la placa 1 (13 oct: fijo, hora, locator, QNH). Release v1.07b publicada (14 oct):
-   instalarla por OTA en las dos placas; luego parques POTA cercanos. Falta medir el GPS dormido en µA y capturas nuevas (CONFIG, STATUS > GPS,
-   PONER HORA).
+1. Parques POTA cercanos hechos (14 oct; lista de España en LittleFS): falta probarlos con fijo del GPS en la calle.
+   Del GPS falta medir el GPS dormido en µA y capturas nuevas (CONFIG, STATUS > GPS,
+   PONER HORA, POTA y VER PARQUES).
 2. Placa perforada: Heltec bien orientada (`J3_IZQUIERDA`, confirmado 13 oct); antes de soldar, comprobar el orden
    de pines del PAM8302A, el GPS y el BME280.
 3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; cara de tormenta sin ver

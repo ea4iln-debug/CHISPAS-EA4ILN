@@ -142,7 +142,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   WiFi en el NVS del ESP32. Borrar estadísticas solo borra estadísticas; el reset de fábrica lo borra todo. El locator por defecto es genérico (IN80dk, Madrid): cada placa
   debe poner el suyo en webconf.
 - Recursos (v0.6m): flash 1,12 MB de 3,19 MB (app0); RAM estática 51,8 KB de 320 KB; app1 (OTA) y spiffs (1,5 MB,
-  reservada para el CSV de POTA) sin usar. `[DIAG]` por serie cada minuto (v0.7m): heap libre ~317 KB con el WiFi
+  desde el 14 oct 2026 con la lista de parques POTA en LittleFS) sin usar. `[DIAG]` por serie cada minuto (v0.7m): heap libre ~317 KB con el WiFi
   apagado y mínimo ~181 KB tras usar WiFi + HTTPS; pila libre: loop ~4,3 KB (tras HTTPS), motorCW 3,3 KB de 4, keyer
   2,3 KB de 3; NVS 168/630 entradas.
 - **Consumo** (medido por USB sin batería, resolución 10 mA): v0.7l: 50 mA sin WiFi, 90 mA con WiFi (y el WiFi se
@@ -291,6 +291,24 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   HTTPS con `setInsecure()`. PROP: hamqsl.com cada 60 min (su autor pide no consultar el XML más de una vez por hora; desde la v0.9c), dos páginas (índices y condiciones por banda). POTA: spots
   solo CW cada 2 min (sin límites publicados: con moderación); línea de spot en 21 caracteres (referencia entera a la
   derecha; la frecuencia pierde el decimal y luego se recorta el indicativo si no cabe).
+- **Parques POTA cercanos** (14 oct 2026, sin versión nueva; `src/parts/parques.inc`; **probado en la placa 1**).
+  Menú de POTA (título ` POTA `) con tres opciones: `< VER SPOTS >`, `< VER PARQUES >` y `< ACTUALIZAR >` (sin
+  conexión, la primera y la última pasan a ABRIR WEBCONF y REINTENTAR; VER PARQUES no cambia: la lista está en la
+  flash). La línea de estado del menú no cabe y se quita solo en POTA (`dibujarMenuDatos(..., opMedia)`; foco 3 =
+  barra, `OPCION_BARRA_SPOTS`). **Datos:** `api.pota.app/program/parks/ES` (2497 parques activos, JSON de ~795 KB;
+  API pública sin clave y sin condiciones publicadas, igual que la de spots: se consulta lo mínimo). Se descarga sola
+  al conectar en POTA, después de los spots, si no hay lista o tiene más de 30 días (si falla, reintento a la hora);
+  ACTUALIZAR solo refresca los spots. Se lee parque a parque del flujo (`useHTTP10`, `find("[")`, `deserializeJson`
+  con filtro y `findUntil(",", "]")`) y se guarda en **LittleFS** (partición `spiffs` de 1,5 MB, montada la primera
+  vez que hace falta) en `/parques.bin`: cabecera (mágico `PAR2`, fecha, cantidad) y registros de 32 bytes
+  (número, lat/lon × 1e5, nombre de 21 caracteres en ASCII y abreviado: `Natura 2000` → `N2000`, `National Park` →
+  `NP`...); unos 80 KB. Se escribe en `/parques.tmp` y solo sustituye a la lista si llegan 1000 parques o más.
+  **Búsqueda** (sin conexión): los 20 más cercanos al último fijo del GPS o, sin él, al centro del locator
+  (equirectangular; rumbo en 8 puntos, O = oeste). **Páginas:** 2 parques por página, `ES-1078      4.5km E` y el
+  nombre debajo; pie `1/10 IM68mu  >volver` (o `GPS`). Durante la descarga, `DESCARGANDO PARQUES` y la cuenta.
+  Probado: descarga en 8–17 s con WiFi de casa, 2497 parques; 20 cercanos desde el locator IM68mu (el más cercano
+  a 4,5 km); ACTUALIZAR sigue bajando spots. **Sin probar:** búsqueda desde un fijo del GPS (dentro de casa no lo
+  tenía), el refresco a los 30 días y la descarga fallida. Flash +49 KB (38,5 %), RAM +0,7 KB.
 - **Webconf** (portal WiFiManager, `Chispas-XXXX`, clave `PORTAL_CLAVE` = `chispas73`, 192.168.4.1; v0.7f–k,
   probado): se abre con **WEBCONF** en CONF > CONFIG o desde el aviso de sin conexión, y muestra los datos (red,
   clave, web). Con el portal abierto, en esa vista está **`ver qr`**: QR de WiFi a pantalla completa
@@ -497,7 +515,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   antes), la primera orden serie solo lo quita: no es un evento perdido.
 - **Orden y contenido** (ver tabla en `CLAUDE.md`): `pines`, `morse`, `globales`, `audio`, `motor_cw`, `keyer`,
   `estadisticas`, `echo`, `bme280`, `memoria_nvs`, `bateria`, `oled_comun`, `lora`, `decodificador`, `trx`, `wifi`,
-  `ota`, `datos_web`, `gps` (13 oct 2026), `pant_inicio_cw`, `pant_lora_trx`, `pant_prop_pota`, `sol`, `conf`, `estados_cw`, `cara`,
+  `ota`, `datos_web`, `gps` (13 oct 2026), `parques` (14 oct 2026), `pant_inicio_cw`, `pant_lora_trx`, `pant_prop_pota`, `sol`, `conf`, `estados_cw`, `cara`,
   `entrada`, `eventos`. Rarezas heredadas del orden original: `procesarRecepcionLoRa`, `loraEscuchar` y
   `salirModoLoRa` están al final de `trx.inc`; `actualizarPantalla()` (el reparto del dibujo) está al final de
   `conf.inc`; el dibujo de cada pantalla está en `pant_*.inc`, lejos de su lógica.

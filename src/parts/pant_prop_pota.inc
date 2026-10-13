@@ -21,15 +21,19 @@ String textoEstadoDatosWifi() {
 
 /**
  * Menu de PROP, POTA o SOL: titulo, dos opciones (sin conexion: ABRIR WEBCONF y REINTENTAR), una linea de
- * estado y la barra ant./sig. Foco: 0 y 1 = opciones, 2 = barra
+ * estado y la barra ant./sig. Foco: 0 y 1 = opciones, 2 = barra. Con opMedia (POTA: VER PARQUES, que no necesita
+ * WiFi) son tres opciones, la media siempre igual, y la linea de estado no cabe: foco 3 = barra
  */
-void dibujarMenuDatos(const char* titulo, uint8_t opcion, const char* op0, const char* op1, const String& estado) {
+void dibujarMenuDatos(const char* titulo, uint8_t opcion, const char* op0, const char* op1, const String& estado,
+                      const char* opMedia = nullptr) {
   dibujarTituloMenu(titulo);
   bool sinConexion = (estadoWifi == WIFI_SIN_CONEXION);
+  uint8_t ultima = opMedia ? 2 : 1;
   dibujarOpcionCentrada(opcion == 0, sinConexion ? "< ABRIR WEBCONF >" : op0, 25);
-  dibujarOpcionCentrada(opcion == 1, sinConexion ? "< REINTENTAR >" : op1, 34);
-  if (estado.length() > 0) dibujarTituloCentrado(estado, 43);
-  dibujarBarraAvanzarRetroceder(opcion == OPCION_BARRA_DATOS);
+  if (opMedia) dibujarOpcionCentrada(opcion == 1, opMedia, 34);
+  dibujarOpcionCentrada(opcion == ultima, sinConexion ? "< REINTENTAR >" : op1, 25 + ultima * 9);
+  if (!opMedia && estado.length() > 0) dibujarTituloCentrado(estado, 43);
+  dibujarBarraAvanzarRetroceder(opcion == ultima + 1);
 }
 
 // Cuerpo de una pagina sin datos: el estado del WiFi o el aviso que toque
@@ -103,6 +107,8 @@ void renderizarPantallaPropagacion() {
   dibujarPiePaginas(paginaPropagacion, 2, NOMBRES_PAGINAS_PROP[paginaPropagacion]);
 }
 
+void dibujarPaginasParques();  // Definida con los parques POTA
+
 uint8_t paginasSpots() {
   return max(1, ((int)numSpotsPota + SPOTS_POR_PAGINA - 1) / SPOTS_POR_PAGINA);
 }
@@ -125,7 +131,11 @@ void renderizarPantallaSpots() {
     return;
   }
   if (subDatos == DATOS_MENU) {
-    dibujarMenuDatos(" SPOTS POTA ", opcionPantallaSpots, "< VER SPOTS >", "< ACTUALIZAR >", estado);
+    dibujarMenuDatos(" POTA ", opcionPantallaSpots, "< VER SPOTS >", "< ACTUALIZAR >", estado, "< VER PARQUES >");
+    return;
+  }
+  if (subDatos == DATOS_PARQUES) {
+    dibujarPaginasParques();
     return;
   }
 

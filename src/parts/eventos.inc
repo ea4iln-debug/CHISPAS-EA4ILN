@@ -410,28 +410,36 @@ void procesarBoton() {
   } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
              pantallaActual == PANTALLA_SOL) {
     // Menu: [sig.] -> [VER DATOS] -> [ACTUALIZAR] -> [ant.] (sin conexion: ABRIR WEBCONF y REINTENTAR).
+    // POTA tiene ademas VER PARQUES en medio, con o sin conexion (la lista esta en la flash).
     // Paginas: girar pasa pagina y pulsar (o atras) vuelve al menu
     bool esProp = (pantallaActual == PANTALLA_PROPAGACION);
     bool esSol = (pantallaActual == PANTALLA_SOL);
+    bool esPota = !esProp && !esSol;
     uint8_t& opcion = esProp ? opcionPantallaProp : (esSol ? opcionPantallaSol : opcionPantallaSpots);
+    uint8_t barra = esPota ? OPCION_BARRA_SPOTS : OPCION_BARRA_DATOS;
     uint8_t& pagina = esProp ? paginaPropagacion : (esSol ? paginaSol : paginaSpots);
     uint8_t paginas = esProp ? 2 : (esSol ? paginasSol() : paginasSpots());
     switch (subDatos) {
       case DATOS_MENU:
         if (atras) entrarEnPantalla(PANTALLA_INICIO);
-        else if (giro != 0) moverFocoAnillo(opcion, OPCION_BARRA_DATOS, giro);
+        else if (giro != 0) moverFocoAnillo(opcion, barra, giro);
         else if (pulsa) {
-          if (opcion == OPCION_BARRA_DATOS) {
+          // En POTA, la opcion 2 (ACTUALIZAR o REINTENTAR) hace lo que la 1 en PROP y SOL
+          uint8_t op = (esPota && opcion == 2) ? 1 : opcion;
+          if (opcion == barra) {
             navegarDesdeBarra();
+          } else if (esPota && opcion == 1) {
+            buscarParquesCercanos();
+            subDatos = DATOS_PARQUES;
           } else if (estadoWifi == WIFI_SIN_CONEXION) {
-            if (opcion == 0) {
+            if (op == 0) {
               abrirPortalWifi();
               subDatos = DATOS_PORTAL;
               focoPortalDatos = 0;
             } else {
               encenderWifi();  // Reintentar
             }
-          } else if (opcion == 0) {
+          } else if (op == 0) {
             subDatos = DATOS_PAGINAS;
             pagina = 0;
           } else if (esSol) {
@@ -445,6 +453,11 @@ void procesarBoton() {
       case DATOS_PAGINAS:
         if (atras || pulsa || ejeLarga) subDatos = DATOS_MENU;
         else if (giro != 0) pagina = (pagina + paginas + giro) % paginas;
+        break;
+
+      case DATOS_PARQUES:
+        if (atras || pulsa || ejeLarga) subDatos = DATOS_MENU;
+        else if (giro != 0) paginaParques = (paginaParques + paginasParques() + giro) % paginasParques();
         break;
 
       case DATOS_PORTAL:

@@ -39,6 +39,7 @@
 #include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
+#include <LittleFS.h>  // Lista de parques POTA (particion "spiffs")
 #include <time.h>
 #include <esp_sntp.h>  // Aviso de hora sincronizada por NTP y parada del NTP cuando la hora viene del GPS
 #include "qrcode.h"  // Componente qrcode de ESP-IDF, incluido en el core (esp_qrcode_generate)
@@ -73,6 +74,7 @@ inline bool depuActiva(uint8_t bit) { return (depuracion & bit) != 0; }
 #include "parts/ota.inc"
 #include "parts/datos_web.inc"
 #include "parts/gps.inc"
+#include "parts/parques.inc"
 #include "parts/pant_inicio_cw.inc"
 #include "parts/pant_lora_trx.inc"
 #include "parts/pant_prop_pota.inc"

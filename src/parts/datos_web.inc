@@ -90,6 +90,9 @@ void actualizarSpotsPota() {
   Serial.printf("[WIFI] POTA: %u SPOTS CW\n", numSpotsPota);
 }
 
+bool tocaDescargarParques();  // Definidas con los parques POTA
+void descargarParques();
+
 /**
  * Opcion "actualizar": con WiFi descarga ya; sin WiFi intenta conectar.
  */
@@ -166,6 +169,10 @@ void procesarWifi() {
         if (tocaPropagacion) actualizarPropagacion();
         if (tocaPota) actualizarSpotsPota();
         actualizandoWifi = false;
+        pantallaPendiente = true;
+      } else if (pantallaActual == PANTALLA_SPOTS && tocaDescargarParques()) {
+        // Lista de parques: si no la hay o tiene mas de un mes (despues de los spots, ya con la hora del NTP)
+        descargarParques();
         pantallaPendiente = true;
       }
       // Aviso de version nueva: una vez al dia, aprovechando el WiFi de PROP o POTA
