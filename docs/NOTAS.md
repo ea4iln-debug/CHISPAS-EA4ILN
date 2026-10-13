@@ -458,7 +458,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   imagen, que dependen de él. Código y datos, idénticos. **Probado en la placa 1 el 13 oct 2026** (carga por USB desde
   el equipo 3): NVS conservada, las 8 pantallas recorridas con órdenes serie, WiFi y NTP en PROP, sin reinicios; el
   usuario confirmó encoder, tono por el altavoz y LED. Placa 2 el mismo día (USB, `heltec_sin_encoder`): arranque en
-  modo sin encoder, las 8 pantallas, WiFi, NTP y 20 spots POTA, sin reinicios. Con el salvapantallas activo (aunque se vea la pantalla de
+  modo sin encoder, las 8 pantallas, WiFi, NTP y 20 spots POTA, sin reinicios; el usuario confirmó el manejo con PRG. Con el salvapantallas activo (aunque se vea la pantalla de
   antes), la primera orden serie solo lo quita: no es un evento perdido.
 - **Orden y contenido** (ver tabla en `CLAUDE.md`): `pines`, `morse`, `globales`, `audio`, `motor_cw`, `keyer`,
   `estadisticas`, `echo`, `bme280`, `memoria_nvs`, `bateria`, `oled_comun`, `lora`, `decodificador`, `trx`, `wifi`,
