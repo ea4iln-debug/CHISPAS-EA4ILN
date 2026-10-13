@@ -103,6 +103,15 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
     memorias, indicativo y locator; estadísticas de Koch y Echo con gráficas y exportación.
   - **Hora y posición del móvil** para SOL y la línea gris en el campo, sin WiFi ni GPS.
   - **El móvil como pasarela** en una salida POTA: spots y propagación hacia Chispas, y publicar el spot propio.
+  - **Teclado CW desde el móvil** (diseñado el 13 oct 2026, por decidir): servicio **Nordic UART (NUS)** por BLE,
+    usable con apps ya existentes (*Serial Bluetooth Terminal* en Android; *Bluefruit Connect* o *nRF Connect*, también
+    en iPhone). Opción BLUETOOTH en CONFIG, nombre `Chispas-XXXX` e indicador **BT** en la cabecera. Lo escrito sale
+    según la pantalla: por **KEY** en TRX > OPERAR/QSO (a los wpm de TRX, como una memoria), por **LoRa** en QSO LIBRE,
+    y por el **altavoz** en TX LIBRE; en el resto se ignora. `{MI}`, `{SU}` y `{WX}`; cola de ~200 caracteres; las
+    palas o `/stop` lo cortan; órdenes opcionales (`/wpm 25`, `/su EA1ABC`, `/m1`). Chispas devuelve al móvil lo
+    enviado y lo descodificado en TRX > QSO (registro del QSO). Solo transmite por KEY donde ya lo hace y con el corte
+    de 10 s. Trabajo: NimBLE + NUS (~200–300 líneas), cola hacia el motor CW (trozos de 64) o QSO LIBRE; antes, medir
+    la memoria con BLE y WiFi a la vez. Empezar por TRX y TX LIBRE.
   - Coste: unos 50–100 KB de RAM (hay ~249 KB libres), algo de flash y de consumo; mejor NimBLE que Bluedroid
     (comprobar con el core 2.0.17 y el S3).
 - **Carcasa impresa en 3D con diseño propio:** OpenSCAD paramétrico a partir del plano de la placa perforada
