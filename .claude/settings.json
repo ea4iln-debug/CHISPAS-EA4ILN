@@ -19,8 +19,10 @@
       "Bash(gh release list:*)",
       "Bash(gh release view:*)",
       "Bash(gh auth status:*)",
-      "Bash(~/.platformio/penv/Scripts/pio.exe run *)",
-      "Bash(~/.platformio/penv/Scripts/python.exe -c \"import json;json.load\\(open\\('.claude/settings.json'\\)\\)\")"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(~/.platformio/penv/Scripts/python.exe -c \"import json;json.load\\(open\\('.claude/settings.json'\\)\\)\")",
+      "Bash(git commit -qam 'Permisos: git add y git commit sin preguntar \\(push sigue preguntando\\) *)"
     ],
     "ask": [
       "Bash(./publicar.sh:*)",
