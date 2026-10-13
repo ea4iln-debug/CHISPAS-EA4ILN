@@ -36,7 +36,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     ruta aún más antigua `...-Projects-Mr--Morse-EA4ilN`. Este equipo tenía también espressif32 7.1.3 en
     `platforms/espressif32` y la 6.13.0 en `platforms/espressif32@6.13.0`: `comprobar_equipo.sh` ahora mira las dos.
     `gh` instalado el 13 oct 2026 (v2.102.0, winget) con sesión de ea4iln-debug (HTTPS, llavero de Windows); hay que
-    reabrir VS Code para que sus terminales lo encuentren en el PATH.
+    reabrir VS Code para que sus terminales lo encuentren en el PATH. Settings Sync activado (cuenta ea4iln-debug).
   - Migrado: equipo 2 (13 oct 2026). No tenía OneDrive: el clon de trabajo estaba en
     `Documents\CHISPAS-EA4ILN\CHISPAS-EA4ILN` (limpio y al día); `Documents\mrmorse` no es git (solo un proyecto
     KiCad vacío del 5 oct). Clon nuevo en `C:\proyectos` con "Equipo listo" y los dos entornos compilados (RAM 16,8 %,

@@ -15,7 +15,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   fuera de OneDrive, sincronizado solo con Git (`git pull` al empezar, `git push` al terminar). Migrados los tres
   (13 oct); las copias antiguas de OneDrive (`Documentos\mrmorse\Mr.-Morse-EA4ILN` y, en el equipo 3,
   `Documentos\PlatformIO\Projects\Chispas-EA4ilN`) ya no se usan (ver NOTAS: "Repositorio").
-  VS Code: Settings Sync con la cuenta GitHub `ea4iln-debug` (activado en los equipos 1 y 2).
+  VS Code: Settings Sync con la cuenta GitHub `ea4iln-debug` (activado en los tres equipos).
   **`./comprobar_equipo.sh [--compilar]`** dice si un equipo está listo (pasos de migración en NOTAS).
 - Software GPL-3.0-or-later (`LICENSE`); hardware y documentación CC BY-NC-SA 4.0 (`LICENSE-HARDWARE.md`).
   **Archivos de código nuevos: cabecera SPDX.** `include/wm_strings_chispas.h`: `MIT AND GPL-3.0-or-later`.
