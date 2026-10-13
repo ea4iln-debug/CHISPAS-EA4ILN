@@ -33,6 +33,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     `Documents\CHISPAS-EA4ILN\CHISPAS-EA4ILN` (limpio y al día); `Documents\mrmorse` no es git (solo un proyecto
     KiCad vacío del 5 oct). Clon nuevo en `C:\proyectos` con "Equipo listo" y los dos entornos compilados (RAM 16,8 %,
     flash 36,8 %). Memoria de Claude Code copiada de la ruta antigua a `c--proyectos-CHISPAS-EA4ILN/memory`.
+    Settings Sync activado (cuenta GitHub; primera sincronización el 13 oct 2026 a las 14:31; Settings, Keyboard
+    Shortcuts, Snippets, Extensions y Profiles, sin UI State, igual que el equipo 1). El driver CP210x está instalado.
   - **Pasos en cada equipo que falte:** 1) en la carpeta de OneDrive, `git status` y `git log origin/main..` para ver
     si hay algo sin subir; si lo hay, commit y `git push`. 2) `git clone https://github.com/ea4iln-debug/CHISPAS-EA4ILN.git
     C:\proyectos\CHISPAS-EA4ILN`. 3) Abrir esa carpeta en VS Code (PlatformIO descarga las librerías) y ejecutar
