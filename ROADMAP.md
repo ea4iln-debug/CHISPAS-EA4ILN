@@ -91,7 +91,8 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
   las combinaciones (2^N binarios).
 - **Partir `main.cpp` en módulos** (keyer, Koch, Echo, LoRa, TRX, decodificador, WiFi, BME, GPS…) con su `.h`/`.cpp`
   y una interfaz común de disponible/activado; por fases, sin cambiar el comportamiento, compilando y probando en
-  placa en cada paso. Prepara el Lite (LoRa o ESP-NOW como transporte intercambiable).
+  placa en cada paso. Prepara el Lite (LoRa o ESP-NOW como transporte intercambiable). Paso previo hecho el 13 oct
+  2026: `main.cpp` ya está repartido en `src/parts/*.inc` (mismo código, una sola unidad de compilación).
 
 ## Versiones de Chispas (ideas)
 

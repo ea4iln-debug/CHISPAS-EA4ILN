@@ -33,7 +33,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   BME280 y batería; entorno `heltec_wifi_lora_32_V3`. Placa 2: desnuda, sin encoder; entorno `heltec_sin_encoder`
   (`-DSIN_ENCODER`), se actualiza por OTA.
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
-  WiFiManager 2.0.17, ArduinoJson 7. **Un solo `.cpp` en `src/`**; `pio run` compila solo el firmware
+  WiFiManager 2.0.17, ArduinoJson 7. **Un solo `.cpp` en `src/`** (el resto en `src/parts/*.inc`, ver "Código");
+  `pio run` compila solo el firmware
   (`default_envs`); pruebas aparte en `pruebas/` (`prueba_pines`, `prueba_bateria`). Puerto COM según el equipo
   (driver CP210x).
 - Pruebas con LED, pantalla, monitor serie y audio (altavoz y auriculares).
@@ -58,6 +59,23 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Dormir (deep sleep, despierta con PRG): KEY, Vext, divisor y SD retenidos con `gpio_hold`; se liberan en `setup()`.
 - Batería: GPIO37 **HIGH** activa el divisor (Meshtastic dice LOW), 2,5 dB, factor 4,9 calibrado; "sin batería"
   por dispersión de 200 lecturas.
+
+## Código (detalle en NOTAS: "Organización del código")
+`main.cpp` (cabecera, `FW_VERSION`, includes, periféricos, dormir, `setup`, `loop`) incluye en este orden los
+`src/parts/*.inc` (trozos seguidos del antiguo `main.cpp`: cada uno usa lo de los anteriores, no compilan sueltos).
+Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
+| Archivo | Contenido |
+|---|---|
+| `pines` `morse` `globales` | Pines; diccionario, Koch y caracteres de la trama LoRa; objetos y variables globales |
+| `audio` `motor_cw` `keyer` | Tono, LED y SD; tarea `motorCW`; tarea `keyer` y palas |
+| `estadisticas` `echo` `bme280` | Estadísticas por carácter; modo Echo; sensor |
+| `memoria_nvs` `bateria` `oled_comun` | NVS; batería; cabecera, pies, `dibujarTituloMenu`… |
+| `lora` `decodificador` `trx` | TX/RX, Duo y QSO; tarea `decod`; TRX + `procesarRecepcionLoRa`, `salirModoLoRa` |
+| `wifi` `ota` `datos_web` | WiFi, NTP, portal y QR; OTA; hamqsl, POTA, `procesarWifi` |
+| `pant_inicio_cw` `pant_lora_trx` `pant_prop_pota` | Dibujo de Inicio y CW; de LoRa y TRX; menús y páginas de PROP y POTA |
+| `sol` `conf` `estados_cw` | SOL y ambiente; CONF, STATUS, OTA y `actualizarPantalla()`; máquina de estados CW |
+| `cara` `entrada` `eventos` | Salvapantallas; encoder, ISR y eventos de botón; `procesarBoton()` |
+- Archivo nuevo en `src/parts/`: extensión `.inc`, cabecera SPDX, y su `#include` en `main.cpp` detrás de lo que use.
 
 ## Hardware (detalle en NOTAS: "Prototipo en protoboard" y "Placa perforada")
 | GPIO | Uso |
@@ -85,11 +103,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; gestos de la cara de
    auriculares y tormenta sin ver.
 4. Aparcado: OLED negra a veces en la placa 1 (ver NOTAS); detección de USB y carga (divisor 5V → GPIO33).
-5. **Siguiente tarea pedida por el usuario (13 oct 2026):** preparar una *propuesta* (sin aplicarla) para dividir
-   `main.cpp` (292 KB, 7000 líneas) en archivos por área (`src/*.h`) incluidos desde `main.cpp` en el mismo orden:
-   una sola unidad de compilación y `.bin` idéntico. Objetivo: ahorrar tokens al leer y buscar. Enseñar la lista
-   de archivos antes de tocar nada. Otras ideas de ahorro: script de compilación con salida filtrada, `/clear`
-   entre tareas, fotos recortadas.
+5. Otras ideas para ahorrar tokens: script de compilación con salida filtrada, `/clear` entre tareas, fotos
+   recortadas.
 
 ## Decisiones que no hay que deshacer
 - **SOTA: no programar el cliente** (sus condiciones prohíben software generado por IA sin aprobación previa).
@@ -104,5 +119,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Leer el serie sin reiniciar la placa: pyserial con `dtr = False` y `rts = False` antes de `open()`.
 - **Heredocs de Bash:** la herramienta reduce `\\` a `\` (un `\n` acaba como salto de línea real y un `'\0'` como
   byte nulo). Código con barras invertidas: usar Edit o Write.
-- **No reescribir `main.cpp` con `Get-Content`/`Set-Content` de PowerShell 5.1** (rompe las tildes y añade BOM).
+- **No reescribir el código (`main.cpp`, `parts/*.inc`) con `Get-Content`/`Set-Content` de PowerShell 5.1** (rompe
+  las tildes y añade BOM). Desde Bash, `pio` y `python` no están en el PATH:
+  `~/.platformio/penv/Scripts/pio.exe` y `~/.platformio/penv/Scripts/python.exe`.
 - Al terminar una tarea: actualizar `CLAUDE.md` (resumen) y la sección de `docs/NOTAS.md` (detalle).

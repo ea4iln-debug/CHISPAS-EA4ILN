@@ -345,14 +345,16 @@ para actualizar. La red WiFi, la hora y las memorias se configuran desde el móv
 Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el portal por su cuenta: su menú ofrece
 **ABRIR WEBCONF** y **REINTENTAR**.
 
-> La clave del portal está definida en `PORTAL_CLAVE`, en `src/main.cpp`. Cámbiala si vas a usar Chispas en un lugar público.
+> La clave del portal está definida en `PORTAL_CLAVE`, en `src/parts/wifi.inc`. Cámbiala si vas a usar Chispas en un lugar público.
 
 ---
 
 ## Estructura del repositorio
 
 ```
-├── src/main.cpp                    Firmware completo (un solo archivo .cpp)
+├── src/
+│   ├── main.cpp                    Firmware: cabecera, setup y loop; incluye las partes en orden
+│   └── parts/*.inc                 Resto del firmware por áreas (keyer, LoRa, TRX, WiFi, pantallas…)
 ├── include/
 │   ├── wm_strings_chispas.h        Textos del portal WiFiManager en castellano
 │   └── certificados_github.h       Certificados raíz para la actualización OTA

@@ -71,7 +71,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   el 11 oct 2026; `platformio.ini` no lo fija y PlatformIO lo detecta); el CP2102 de la V3 necesita el driver CP210x
   de Silicon Labs. Arduino + PlatformIO, env `heltec_wifi_lora_32_V3`, `platform = espressif32 @ 6.13.0` (core
   Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX y SSD1306, WiFiManager 2.0.17, ArduinoJson 7.
-  **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado). `default_envs` hace que `pio run` compile solo el
+  **Un solo `.cpp` en `src/`** (si hay dos, falla el enlazado); el resto, en `src/parts/*.inc` (ver "Organización
+  del código"). `default_envs` hace que `pio run` compile solo el
   firmware; programas de prueba aparte en `pruebas/` con sus entornos (`prueba_pines`, `prueba_bateria`).
 - Tono: opción TONO en CONFIG (400–1000 Hz en pasos de 50, NVS `tono`, `frecTonoHz`, por defecto 850; pitido de
   prueba de 0,3 s al editarla).
@@ -250,7 +251,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   (`CONECTANDO WIFI...`, luego `SINCRONIZANDO HORA...`); con hora no usa el WiFi.
 - **Sensor ambiental BME280** (v1.03b; **probado en la placa 1 el 12 oct 2026**: BME280 auténtico en 0x76, lecturas,
   AMBIENTE, calibración de altitud, STATUS y {WX}). Opcional: sin sensor, todo sigue igual. Controlador propio
-  (sección "SENSOR AMBIENTAL" de `main.cpp`; fórmulas en coma flotante de la hoja de datos de Bosch) en Wire1
+  (`src/parts/bme280.inc`; fórmulas en coma flotante de la hoja de datos de Bosch) en Wire1
   (SDA 41, SCL 42, 100 kHz); `iniciarBME()` busca 0x76/0x77 y distingue BME280 (0x60) de BMP280 (0x56–0x58, sin
   humedad); sin sensor, `Wire1.end()`. Modo forzado (T x1, P x4, H x1; `bmeMedir()` bloquea ~16 ms). `procesarBME()`:
   lectura cada minuto (cada 2 s con AMBIENTE a la vista) y una muestra de presión cada 10 min en `bmeHist[19]` (3 h).
@@ -382,6 +383,32 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   pitido de prueba del TONO (`aplicarFrecTono(true)` lo enciende), en BAJO en el resto; al dormir, BAJO retenido con
   `gpio_hold_en` (se libera en `setup()`, donde arranca en BAJO). `[AMP] ENCENDIDO/APAGADO` por serie. **Control de
   SD probado en la placa 1 el 12 oct 2026 (OTA a la v1.04b).** Esquema (hoja 4): el amplificador es el montaje principal (sin buzzer).
+
+## Organización del código (13 oct 2026)
+- **Por qué:** `main.cpp` tenía 7009 líneas y 285 KB; leerlo o buscar en él gastaba muchos tokens. Se partió para
+  poder abrir solo el área que toca, sin cambiar el código.
+- **Cómo:** se cortó por las cabeceras de sección `// ====` en 27 trozos seguidos, copiados byte a byte (script en
+  Python, sin PowerShell) a `src/parts/<area>.inc`. `main.cpp` conserva la cabecera (`@version`, `FW_VERSION`,
+  `DEPU_*`), los includes de librerías, `depuActiva()`, la lista de `#include "parts/....inc"` y el final (periféricos,
+  dormir, `setup`, `loop` y lo que llaman). Cada `.inc` empieza con SPDX y una línea de qué contiene.
+- **Una sola unidad de compilación:** el preprocesador vuelve a juntar el mismo texto en el mismo orden, así que no hay
+  prototipos ni `.h` de interfaz; cada parte usa lo de las anteriores y ninguna compila suelta.
+- **Por qué `.inc` y `src/parts/`:** con `.inc` IntelliSense no los analiza como cabeceras (con `.h` marcaba errores
+  falsos). La subcarpeta evita que un `src/wifi.h` o `src/nvs.h` tape a `<WiFi.h>` o al `<nvs.h>` del IDF (PlatformIO
+  pasa `-Isrc` y Windows no distingue mayúsculas).
+- **Comprobado:** al juntar las partes sale exactamente el `main.cpp` anterior (`cmp`). Compilados los dos entornos
+  antes y después: mismos RAM y flash, y los `.bin` solo difieren en `app_elf_sha256` (0xb0–0xcf, hash del ELF, que
+  cambia con la información de depuración: nombres de archivo y líneas) y en la suma y el SHA-256 del final de la
+  imagen, que dependen de él. Código y datos, idénticos.
+- **Orden y contenido** (ver tabla en `CLAUDE.md`): `pines`, `morse`, `globales`, `audio`, `motor_cw`, `keyer`,
+  `estadisticas`, `echo`, `bme280`, `memoria_nvs`, `bateria`, `oled_comun`, `lora`, `decodificador`, `trx`, `wifi`,
+  `ota`, `datos_web`, `pant_inicio_cw`, `pant_lora_trx`, `pant_prop_pota`, `sol`, `conf`, `estados_cw`, `cara`,
+  `entrada`, `eventos`. Rarezas heredadas del orden original: `procesarRecepcionLoRa`, `loraEscuchar` y
+  `salirModoLoRa` están al final de `trx.inc`; `actualizarPantalla()` (el reparto del dibujo) está al final de
+  `conf.inc`; el dibujo de cada pantalla está en `pant_*.inc`, lejos de su lógica.
+- **Siguiente fase posible** (no hecha): agrupar por pantalla con prototipos, o los módulos `.h`/`.cpp` de
+  `ROADMAP.md`. Ahí el `.bin` ya cambiaría y habría que probar en placa.
+- `git log` de los `.inc` empieza en el corte; la historia anterior está en `git log -- src/main.cpp`.
 
 ## Pendiente
 1. **Pruebas a mano** (11 oct 2026): hechas en la placa 1 (listas y menús, aceleración, corrección total del Koch,
