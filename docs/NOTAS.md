@@ -115,7 +115,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 ## Estado actual (12 oct 2026)
 - **MAC de cada placa** (las dos tienen el mismo CP2102; `pio run -t upload` imprime `MAC: ...`; la skill `placa`
   la usa para elegir el entorno): placa 1 (encoder, `heltec_wifi_lora_32_V3`): `3c:0f:02:ee:50:74`; placa 2 (sin
-  encoder, `heltec_sin_encoder`): *por apuntar*.
+  encoder, `heltec_sin_encoder`): `3c:0f:02:ee:08:c0`.
 - Firmware: `src/main.cpp` **v1.06b** (opción SALVAPANTALLAS, CONFIG por bloques y expresiones de radioaficionado;
   release del 12 oct 2026). v1.05b (salvapantallas en todas las pantallas salvo CW, LoRa y TRX; brillo tenue en
   todas; release del 12 oct 2026). v1.04b (control del amplificador, SD en GPIO38; release
@@ -457,7 +457,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   cambia con la información de depuración: nombres de archivo y líneas) y en la suma y el SHA-256 del final de la
   imagen, que dependen de él. Código y datos, idénticos. **Probado en la placa 1 el 13 oct 2026** (carga por USB desde
   el equipo 3): NVS conservada, las 8 pantallas recorridas con órdenes serie, WiFi y NTP en PROP, sin reinicios; el
-  usuario confirmó encoder, tono por el altavoz y LED. Con el salvapantallas activo (aunque se vea la pantalla de
+  usuario confirmó encoder, tono por el altavoz y LED. Placa 2 el mismo día (USB, `heltec_sin_encoder`): arranque en
+  modo sin encoder, las 8 pantallas, WiFi, NTP y 20 spots POTA, sin reinicios. Con el salvapantallas activo (aunque se vea la pantalla de
   antes), la primera orden serie solo lo quita: no es un evento perdido.
 - **Orden y contenido** (ver tabla en `CLAUDE.md`): `pines`, `morse`, `globales`, `audio`, `motor_cw`, `keyer`,
   `estadisticas`, `echo`, `bme280`, `memoria_nvs`, `bateria`, `oled_comun`, `lora`, `decodificador`, `trx`, `wifi`,
