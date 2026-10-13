@@ -19,11 +19,8 @@
       "Bash(gh release list:*)",
       "Bash(gh release view:*)",
       "Bash(gh auth status:*)",
-      "Bash(git commit -qm 'GPS montado y probado: prueba_gps, duerme por UBX sin transistor; esquema y placa sin enable *)",
       "Bash(~/.platformio/penv/Scripts/pio.exe run *)",
-      "Bash(~/.platformio/penv/Scripts/python.exe -c \"import json;json.load\\(open\\('.claude/settings.json'\\)\\)\")",
-      "Bash(git commit -qam 'Permisos: quitar uno de un solo uso *)",
-      "Bash(git commit -qam 'GPS: diseño de la integración y de los parques POTA cercanos, en ROADMAP *)"
+      "Bash(~/.platformio/penv/Scripts/python.exe -c \"import json;json.load\\(open\\('.claude/settings.json'\\)\\)\")"
     ],
     "ask": [
       "Bash(./publicar.sh:*)",
