@@ -33,7 +33,7 @@ def heltec_y(pin):
     return Y_PIN1 + 1 - pin
 
 # Red de cada pin de la Heltec que se usa (los demas se sueldan al zocalo pero no se conectan)
-RED_J3 = {1: "GND", 2: "3V3", 3: "3V3", 7: "SCL", 8: "SDA", 11: "AMP_SD", 13: "KEY_GPIO", 14: "GPS_EN",
+RED_J3 = {1: "GND", 2: "3V3", 3: "3V3", 7: "SCL", 8: "SDA", 11: "AMP_SD", 13: "KEY_GPIO", 10: "GPS_RX",
           15: "DIT", 16: "DAH", 17: "ADC", 18: "TONO"}
 RED_J2 = {1: "GND", 2: "5V", 12: "USB_DET", 13: "GPS_TX", 14: "ENC_DT", 17: "ENC_SW", 18: "ENC_CLK"}
 
@@ -152,10 +152,9 @@ resistencia("R12", "150 kΩ", (2, 22), (6, 22), "GND", "USB_DET", "reserva: dete
 # --- Derecha: encoder y GPS ---
 tira("P1", "encoder KY-040 (CLK, SW, DT, +, GND)", 20, 8, ["CLK", "SW", "DT", "+", "GND"],
      ["ENC_CLK", "ENC_SW", "ENC_DT", "3V3", "GND"])
-tira("P9", "GPS (VCC, RX, TX, GND)", 20, 14, ["VCC", "RX", "TX", "GND"], ["GPS_VCC", "", "GPS_TX", "GND"])
+tira("P9", "GPS (VCC, RX, TX, GND)", 20, 14, ["VCC", "RX", "TX", "GND"], ["3V3", "GPS_RX", "GPS_TX", "GND"])
 
 # Zonas
-ZONA_RESERVA_Q1 = (18.6, 17.5, 19.4, 22.5)    # Q1 + R8 (enable del GPS), pendiente
 ZONA_AISLADA = (-0.5, 13.5, 2.45, 15.5)       # lado de la emisora del PC817
 
 # ----------------------------------------------------------------------------
@@ -247,7 +246,8 @@ CABLES = [
     ("3V3", (10, 22), (0, 17)),
     ("3V3", (10, 23), (0, 22)),
     ("3V3", (10, 20), (20, 11)),
-    ("GPS_VCC", (10, 24), (20, 14)),
+    ("3V3", (10, 24), (20, 14)),
+    ("GPS_RX", h3(10), (20, 15)),
     ("AMP_SD", h3(11), (0, 19)),
     ("SCL", h3(7), (0, 24)),
     ("SDA", h3(8), (0, 25)),
@@ -258,9 +258,8 @@ CABLES_RESERVA = [
     ("5V", h2(2), (3, 20), "USB"),
     ("USB_DET", h2(12), (7, 21), "USB"),
 ]
-# GPS_VCC: hoy es un cable desde 3V3 (sin enable). Para el enable: quitarlo y montar Q1 + R8 en la zona reservada.
 def red_igual(montado):
-    m = {"GPS_VCC": "3V3"}
+    m = {}
     if "TRAFO" not in montado:      # con los puentes de P10 puestos
         m.update({"TJ": "DEC_IN", "SJ": "GND"})
     return m
@@ -380,7 +379,7 @@ def comprobar(montado=frozenset()):
     # Redes que solo tienen un pin (salvo las que solo tocan la Heltec: pines sin usar o de reservas sin montar)
     for r in sorted(por_red):
         pines = [(p, n) for p in activas for n, x, y, rr in p.pines if alias(rr) == r]
-        if len(pines) < 2 and not all(p.tipo == "Z" for p, n in pines) and r != "GPS_EN":
+        if len(pines) < 2 and not all(p.tipo == "Z" for p, n in pines):
             errores.append(f"red {r}: solo la toca {[f'{p.ref}.{n}' for p, n in pines]}")
     return errores, red, duenio
 
@@ -390,12 +389,12 @@ def comprobar(montado=frozenset()):
 # ----------------------------------------------------------------------------
 P = 20.0          # pixeles por paso en el SVG
 M = 56.0          # margen
-COLOR_RED = {"GND": "#333", "3V3": "#c62828", "GPS_VCC": "#c62828", "TONO": "#c2185b", "VOL_IN": "#c2185b",
+COLOR_RED = {"GND": "#333", "3V3": "#c62828", "TONO": "#c2185b", "VOL_IN": "#c2185b",
              "VOL_CUR": "#c2185b", "AUD": "#c2185b", "AUR_T": "#c2185b", "AUR_R": "#c2185b", "TN": "#ad1457",
              "AMP_SD": "#6d4c41", "ADC": "#00838f", "BIAS": "#00838f", "DEC_IN": "#00838f", "DEC_CUR": "#00838f",
              "KEY_GPIO": "#e65100", "KEY_A": "#e65100", "KEY_C": "#e65100", "KEY_E": "#e65100",
              "DIT": "#6a1b9a", "DAH": "#6a1b9a", "ENC_CLK": "#1565c0", "ENC_DT": "#1565c0", "ENC_SW": "#1565c0",
-             "GPS_TX": "#2e7d32", "SCL": "#d08700", "SDA": "#d08700", "TJ": "#00838f", "SJ": "#00838f",
+             "GPS_TX": "#2e7d32", "GPS_RX": "#2e7d32", "SCL": "#d08700", "SDA": "#d08700", "TJ": "#00838f", "SJ": "#00838f",
              "5V": "#d08700", "USB_DET": "#d08700"}
 
 def esc(t):
@@ -446,9 +445,6 @@ def vista_superior(red):
     # Zonas
     d.rect(ZONA_AISLADA, "#ffe0c2", "#e65100", 1.2, 4, "4 3", 0.6)
     d.text(ZONA_AISLADA[0] + 0.1, ZONA_AISLADA[3] + 0.45, "aislado (emisora)", 7, "start", "bold", "#e65100")
-    d.rect(ZONA_RESERVA_Q1, "#fff3cd", "#d08700", 1.2, 3, "4 3", 0.8)
-    d.text(19, 23.15, "Q1 R8", 7, "middle", "bold", "#d08700")
-    d.text(19, 23.6, "(reserva)", 6.5, "middle", "normal", "#d08700")
     # Piezas (cuerpos)
     for p in PIEZAS:
         if p.tipo == "Z":
@@ -601,13 +597,13 @@ def vista_inferior(red):
 # Pagina
 # ----------------------------------------------------------------------------
 NOMBRE_RED = {
-    "GND": "masa", "3V3": "3,3 V", "GPS_VCC": "alimentación del GPS", "TONO": "GPIO7 (tono)", "VOL_IN": "entrada del volumen",
+    "GND": "masa", "3V3": "3,3 V", "TONO": "GPIO7 (tono)", "VOL_IN": "entrada del volumen",
     "VOL_CUR": "cursor del volumen", "AUD": "audio tras C1", "AUR_T": "auriculares T", "AUR_R": "auriculares R",
     "TN": "TN del jack → amplificador", "AMP_SD": "GPIO38 (SD del amplificador)", "ADC": "GPIO6 (ADC)",
     "BIAS": "polarización 1,65 V", "DEC_IN": "entrada del decodificador", "DEC_CUR": "cursor de RV2",
     "KEY_GPIO": "GPIO2 (KEY)", "KEY_A": "ánodo del PC817", "KEY_C": "colector (emisora)", "KEY_E": "emisor (emisora)",
     "DIT": "GPIO4 (DIT)", "DAH": "GPIO5 (DAH)", "ENC_CLK": "GPIO19 (CLK)", "ENC_SW": "GPIO20 (SW)",
-    "ENC_DT": "GPIO48 (DT)", "GPS_TX": "GPIO47 (TX del GPS)", "SCL": "GPIO42 (SCL)", "SDA": "GPIO41 (SDA)",
+    "ENC_DT": "GPIO48 (DT)", "GPS_TX": "GPIO47 (TX del GPS)", "GPS_RX": "GPIO39 (RX del GPS)", "SCL": "GPIO42 (SCL)", "SDA": "GPIO41 (SDA)",
     "TJ": "punta del jack del decodificador", "SJ": "malla del jack del decodificador", "5V": "5 V (pin 5V, solo con USB)",
     "USB_DET": "GPIO33 (detección de USB)",
 }
@@ -671,7 +667,6 @@ th { background: #eef4ee; }
 <ul>
 <li><b>Trafo de aislamiento 600:600</b> (solo si hay zumbido por lazo de masa): quitar los dos puentes de P10 y conectar el primario a 1 y 3 y el secundario a 2 y 4. El trafo va en la carcasa.</li>
 <li><b>Detección de USB</b> (R11 100 kΩ, R12 150 kΩ, en naranja): soldarlas con el puente de B23 y los cables A (5V) y B (GPIO33). Antes, medir que el pin 5V da 0 V solo con batería. Necesita firmware.</li>
-<li><span class="chip" style="background:#fff3cd;border:1px dashed #d08700"></span><b>Enable del GPS</b> (Q1 + R8): quitar el cable 8 y montarlos en la zona reservada.</li>
 <li><b>C3</b> (10 nF, ADC a masa): por la cara de soldaduras, sobre las patas de D2 (H4 y H7).</li>
 </ul>
 <h2>Antes de soldar nada</h2>
@@ -723,7 +718,7 @@ th { background: #eef4ee; }
         ("P7", "Jack del decodificador J3", "T, S", "Anillo libre."),
         ("P10", "Puentes (o trafo 600:600)", "1 T, 2 entrada · 3 S, 4 masa", "Sin trafo: puentes 1-2 y 3-4. Con trafo: primario 1-3, secundario 2-4."),
         ("P8", "BME280 (GY-BME280)", "VIN, GND, SCL, SDA", "Orden del módulo. Lejos de la Heltec (calor)."),
-        ("P9", "GPS NEO-6M (GY-GPS6MV2)", "VCC, RX, TX, GND", "Orden del módulo. RX no se conecta."),
+        ("P9", "GPS NEO-6M (GY-GPS6MV2)", "VCC, RX, TX, GND", "Orden del módulo (comprobar la serigrafía)."),
     ]
     filas_con = "".join(f"<tr><td><b>{a}</b></td><td>{esc(b)}</td><td>{esc(c)}</td><td>{esc(d)}</td></tr>" for a, b, c, d in conectores)
     p3 = f"""<div class="page">{cab("componentes y conectores")}
@@ -775,7 +770,7 @@ th { background: #eef4ee; }
 <ul>
 <li>Los pads vecinos que no se unen se tocan a 2,54 mm: revisar con lupa que no haya estaño entre ellos.</li>
 <li>Ningún hilo del lado de la emisora (P6) cerca de masa.</li>
-<li>El GPS va siempre alimentado hasta montar Q1 (enable pendiente).</li>
+<li>El GPS va siempre alimentado: se duerme por UBX con GPIO39.</li>
 </ul></div>
 <div><h2>Si cambia algo</h2>
 <ul>

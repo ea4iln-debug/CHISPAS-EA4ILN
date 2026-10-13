@@ -24,8 +24,8 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 ## 2. Hardware
 
 ### En camino
-- **GPS NEO-6M** (llega el 13 oct): TX del GPS a GPIO47 (J2-13). Apagarlo cuando no se usa, por orden de preferencia:
-  1. **Por software (a probar primero):** cable de GPIO39 (J3-10) al RX del GPS y órdenes UBX (`UBX-RXM-PMREQ` para
+- **GPS NEO-6M**: ✅ montado y probado el 13 oct 2026 (TX a GPIO47, RX a GPIO39). Apagarlo cuando no se usa:
+  1. ✅ **Por software (funciona; falta medir en µA):** cable de GPIO39 (J3-10) al RX del GPS y órdenes UBX (`UBX-RXM-PMREQ` para
      dormir; si no despierta bien, `UBX-CFG-RST` con GNSS stop/start). Medir con el polímetro en serie con el VCC del
      GPS: si dormido baja de ~0,5 mA, no hace falta transistor.
   2. ~~Interruptor en el positivo~~ (**descartado el 13 oct 2026**; GPIO3, BAJO = encendido): AO3401A, o sus equivalentes en SOT-23 IRLML6401,

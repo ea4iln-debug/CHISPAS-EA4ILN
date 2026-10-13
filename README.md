@@ -100,7 +100,7 @@ El prototipo actual se monta en protoboard, sin PCB. Componentes principales:
 - Optoacoplador **PC817** para la salida KEY, con resistencia de 10 kΩ a GND y un jack con la punta y el anillo
   unidos (vale para emisoras que manipulan por cualquiera de los dos).
 - Entrada de audio de la emisora para el decodificador: polarización a 1,65 V, trimmer de nivel y diodos de protección.
-- Módulo **GPS** NEO-6M (en camino).
+- Módulo **GPS** NEO-6M (montado; falta integrarlo en el firmware).
 - Batería **LiPo** de 3,7 V con conector JST de 1,25 mm. Comprueba la polaridad antes de conectarla.
 
 El esquema completo (7 hojas), con la lista de componentes y el orden de montaje, está en
@@ -121,7 +121,8 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 | 19 | J2-18 | Encoder CLK | ✅ |
 | 20 | J2-17 | Pulsador del encoder (también despierta la placa) | ✅ |
 | 48 | J2-14 | Encoder DT | ✅ |
-| 47 | J2-13 | RX desde el TX del GPS | 🚧 |
+| 47 | J2-13 | RX desde el TX del GPS | ✅ (con `prueba_gps`) |
+| 39 | J3-10 | TX al RX del GPS (órdenes UBX para dormirlo) | ✅ (con `prueba_gps`) |
 | 41 / 42 | J3-8 / J3-7 | I2C (Wire1) del sensor BME280 (opcional) | ✅ |
 
 Notas:

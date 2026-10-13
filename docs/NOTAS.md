@@ -478,7 +478,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    encoder). X6200 con KEY probada el 12 oct 2026. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con
    batería y sin medidor).
 2. **Montaje** (orden de la hoja 7 del esquema; hecho: raíles, encoder, palas, tono con amplificador, altavoz y jack,
-   salida KEY con PC817 y minijack, BME280); amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (enable del GPS descartado el 13 oct 2026: se dormirá por UBX con GPIO39); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
+   salida KEY con PC817 y minijack, BME280, GPS); GPS montado y probado el 13 oct 2026 con `prueba_gps` (ver la tabla de pines: GPIO39 y 47); falta integrarlo en el firmware; BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
    **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; la batería se sigue leyendo bien después de usar DECODIFICAR o QSO (probado en la placa 2 el 12 oct 2026). Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Estabilidad comprobada** (placa 2, v1.03b, noche del 12 oct 2026: 8 h en POTA, 233 consultas HTTPS a pota.app, una
@@ -516,22 +516,20 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, amplificador PAM8302A con altavoz en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R. **Montado y probado** (el buzzer piezo del principio se descartó: sonaba muy bajo) |
 | 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado y control de SD probado (v1.04b) |
 | 19 / 20 / 48 | Encoder KY-040 CLK / SW / DT. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas). El 13 oct 2026 se cambiaron SW (antes 48) y DT (antes 20): SW en un pin RTC despierta del deep sleep (ext1, pull-up del RTC; PRG sigue en ext0) y GPIO3, el único libre con ADC y RTC, queda de reserva. La ISR lee DT de `GPIO_IN1_REG`. En la placa perforada, P1 pasa a CLK, SW, DT, +, GND. **Probado en la placa 1** (13 oct 2026): giro con aceleración, pulsación corta y larga, y despertar con el eje y con PRG |
-| 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
-| 3 (libre) | Era el enable del GPS (AO3401A en el positivo): **descartado el 13 oct 2026**; el GPS se duerme por UBX (ver 39) |
-| 39 (a probar) | TX hacia el RX del GPS (UART): órdenes UBX para dormirlo (`UBX-RXM-PMREQ`) y despertarlo; si dormido gasta < ~0,5 mA, sustituye al enable de GPIO3. Alternativas al AO3401A: IRLML6401, Si2301, DMG2305UX o PNP BC327/BC557 (ver `ROADMAP.md`) |
+| 47 / 39 | GPS NEO-6M (GY-GPS6MV2, firmware 7.03, hw 00040007) en UART1 a 9600 bd: 47 recibe su TX (NMEA), 39 va a su RX (UBX). VCC a 3V3, siempre alimentado. **Montado y probado el 13 oct 2026** en la placa 1 con `pruebas/prueba_gps.cpp` (`pio run -e prueba_gps -t upload`; órdenes serie y PRG para dormir/despertar, estado en la OLED): `UBX-RXM-PMREQ` (backup, sin límite) lo duerme (0 bytes) y una ráfaga de 0xFF por su RX lo despierta; con fijo previo vuelve a 6 satélites en segundos. Consumo con medidor USB (resolución 0,01 A, toda la placa, sin batería): 0,13 A buscando, 0,09–0,13 A con fijo (6 satélites), 0,07 A con el GPS dormido (= placa sin GPS): el GPS gasta ~60 mA buscando, 20–60 mA con fijo y, dormido, menos de lo que resuelve el medidor. **Falta medirlo dormido en µA/mA** (polímetro en serie con su VCC) antes de fiarse en deep sleep. Enable con transistor (AO3401A en GPIO3) **descartado el 13 oct 2026** |
+| 3 (libre) | El único libre con ADC1 y RTC: de reserva |
 | 41 / 42 | BME280: I2C 0x76 en Wire1, SDA 41 (J3-8), SCL 42 (J3-7). **Montado y probado** (12 oct 2026, v1.03b) |
 
 Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, el más cercano al USB):
-- J3: 18 GPIO7 tono · 17 GPIO6 decod. · 16 GPIO5 DAH · 15 GPIO4 DIT · 14 GPIO3 GPS en · 13 GPIO2 KEY · 12 GPIO1 (VBAT, no)
-  · 11 GPIO38 SD del amplificador · 10/9 GPIO39/40 (libres) · 8/7 GPIO41/42 · 6/5 GPIO45/46 (no) · 4 GPIO37 (no) · 3/2 **3V3** · 1 **GND**.
+- J3: 18 GPIO7 tono · 17 GPIO6 decod. · 16 GPIO5 DAH · 15 GPIO4 DIT · 14 GPIO3 (libre) · 13 GPIO2 KEY · 12 GPIO1 (VBAT, no)
+  · 11 GPIO38 SD del amplificador · 10 GPIO39 TX al GPS · 9 GPIO40 (libre) · 8/7 GPIO41/42 · 6/5 GPIO45/46 (no) · 4 GPIO37 (no) · 3/2 **3V3** · 1 **GND**.
 - J2: 18/17 GPIO19/20 encoder CLK/SW · 16 GPIO21 (OLED_RST) · 15 GPIO26 (flash, no) · 14 GPIO48 encoder DT · 13 GPIO47 GPS RX
   · 12/11 GPIO33/34 · 10 GPIO35 (LED) · 9 GPIO36 (Vext) · 8 GPIO0 (PRG) · 7 RST · 6/5 GPIO43/44 (UART0) · 4/3 Ve · 2 5V · 1 GND.
 - `Ve` es Vext (conmutada por GPIO36, alimenta la OLED): los módulos van a 3V3 de J3. `5V` solo tiene tensión con USB.
 - GPIO17/18 (I2C de la OLED) no salen a los conectores, pero hay dos **pads de prueba "17" y "18" por detrás**
   (mismo bus; 0x76 no choca con la OLED 0x3C): solo si faltan pines, soldando hilo fino.
-- GPIO3 es pin de arranque (JTAG) solo con un eFuse grabado (de fábrica no): el 100 kΩ del enable no debería afectar
-  (razonado, sin probar).
-- Pines libres: 39–42, 33 y 34. No usar: 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46 (arranque).
+- GPIO3 es pin de arranque (JTAG) solo con un eFuse grabado (de fábrica no).
+- Pines libres: 3, 33, 34 y 40. No usar: 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46 (arranque).
 
 Esquema de conexiones: `docs/esquema_protoboard.pdf` (7 hojas: vista general, pines, entradas, tono y amplificador,
 KEY y alimentación, decodificador, componentes y montaje), generado con `docs/gen_esquema.py` (HTML/SVG; el PDF se
@@ -548,7 +546,7 @@ Heltec, **con y sin las reservas montadas**. Heltec en zócalos hembra con el US
 carcasa con cables Dupont a las tiras P1–P10. Reservas: trafo 600:600 (P10, quitar los dos jumpers), divisor de
 detección de USB (R11/R12, cables A y B), enable del GPS (Q1/R8, quitar el cable 8) y C3 sobre las patas de D2.
 **Pendiente antes de soldar:** comprobar el orden de pines del PAM8302A, el GPS y el BME280. La orientación de la
-Heltec (`J3_IZQUIERDA`) quedó confirmada el 13 oct 2026. La reserva del enable del GPS (Q1/R8) sobra: enable descartado.
+Heltec (`J3_IZQUIERDA`) quedó confirmada el 13 oct 2026. La reserva del enable del GPS (Q1/R8) se quitó del plano; el RX del GPS va con el cable 9 desde J3-10 (GPIO39).
 
 ## PCB
 Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de KiCad en el repositorio.

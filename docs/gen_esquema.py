@@ -193,7 +193,7 @@ def vista_general():
 
     L = [("GPIO19", 105, "#1565c0"), ("GPIO20", 130, "#1565c0"), ("GPIO48", 155, "#1565c0"),
          ("GPIO4", 220, "#6a1b9a"), ("GPIO5", 245, "#6a1b9a"),
-         ("GPIO47", 310, "#2e7d32"), ("GPIO3", 335, C_OPT),
+         ("GPIO47", 310, "#2e7d32"), ("GPIO39", 335, "#2e7d32"),
          ("GPIO41", 405, C_OPT), ("GPIO42", 430, C_OPT)]
     R = [("GPIO7", 105, "#c2185b"), ("GPIO6", 190, "#00838f"), ("GPIO2", 275, C_ISO),
          ("3V3", 345, C_3V3), ("GND", 370, "#333"), ("BAT (JST)", 440, "#555")]
@@ -213,7 +213,7 @@ def vista_general():
     # Izquierda
     blk(40, 75, 250, 100, "Encoder KY-040 (ENC1)", ["Menús: girar + pulsar", "CLK→19 · SW→20 · DT→48", "+ a 3V3 (nunca a 5 V)"], "#1565c0")
     blk(40, 195, 250, 70, "Palas (J1, jack estéreo)", ["Punta → DIT (4) · Anillo → DAH (5)", "Malla → GND · pull-up interno"], "#6a1b9a")
-    blk(40, 285, 250, 70, "GPS NEO-6M (GPS1)", ["TX del GPS → GPIO47 (pendiente de llegar)", "Enable con P-MOSFET en GPIO3: opcional"], "#2e7d32")
+    blk(40, 285, 250, 70, "GPS NEO-6M (GPS1)", ["TX del GPS → GPIO47 · RX del GPS ← GPIO39", "Siempre alimentado; se duerme por UBX"], "#2e7d32")
     blk(40, 385, 250, 70, "BME280 (BME1, opcional)", ["I2C: SDA→41 · SCL→42 (Wire1), 0x76", "Montado y probado (v1.03b)"], C_OPT)
     for n, y, c in L:
         dash = "6 4" if c == C_OPT else None
@@ -300,52 +300,20 @@ def p_palas():
 # ----------------------------------------------------------------------------
 def p_gps():
     s = S(520, 345)
-    h = s.heltec(20, 40, 230, [("3V3", 70), ("GPIO3", 135), ("GPIO47", 205), ("GND", 245)])
-    s.text(75, 150, "(opcional)", 8.5, "middle", "italic", C_OPT)
-    g = s.block(395, 40, 105, 230, "GPS1", [("VCC", 70), ("TX", 205), ("RX", 225), ("GND", 245)], "left", "#eef7ee",
+    h = s.heltec(20, 40, 230, [("3V3", 70), ("GPIO47", 170), ("GPIO39", 210), ("GND", 245)])
+    g = s.block(395, 40, 105, 230, "GPS1", [("VCC", 70), ("TX", 170), ("RX", 210), ("GND", 245)], "left", "#eef7ee",
                 ["NEO-6M", "GY-GPS6MV2"])
-    s.text(447, 130, "(pendiente", 9, "middle", "italic", "#2e7d32")
-    s.text(447, 142, "de llegar)", 9, "middle", "italic", "#2e7d32")
-    # Region opcional
-    s.opt_region(160, 42, 218, 128, "OPCIONAL: enable del GPS", bottom=True)
-    # Q1
-    sx, dx, gy = 255, 325, 112
-    s.line([h["3V3"], (sx, 70)], C_3V3, 1.8)
-    s.line([(sx, 70), (268, 70), (268, 92)])
-    s.line([(dx, 70), (312, 70), (312, 92)])
-    s.line([(260, 92), (320, 92)], C_W, 3)
-    s.line([(260, 101), (320, 101)], C_W, 2.2)
-    s.line([(290, 101), (290, gy + 20)])
-    s.add('<polygon points="290,93 285,84 295,84" fill="#222"/>')  # flecha canal P (hacia fuera)
-    s.line([(290, 84), (290, 70)], "#222", 1)
-    s.text(258, 64, "S", 10, "middle", "bold")
-    s.text(322, 64, "D", 10, "middle", "bold")
-    s.text(296, 128, "G", 10, "start", "bold")
-    s.text(335, 108, "Q1", 10, "start", "bold", C_OPT)
-    s.text(335, 120, "AO3401A", 9, "start", "normal", C_OPT)
-    s.text(335, 131, "canal P", 9, "start", "normal", C_OPT)
-    s.line([(dx, 70), g["VCC"]], C_3V3, 1.8)
-    # R8 de puerta a 3V3
-    s.res(205, 70, 205, 135, "R8", "100 kΩ", C_OPT, lab_side=-1)
-    s.dot(205, 70)
-    s.line([h["GPIO3"], (290, 135), (290, gy + 20)], C_OPT, 1.8)
-    s.dot(205, 135, C_OPT)
-    # Puente sin Q1
-    s.line([(185, 70), (185, 26), (360, 26), (360, 70)], "#888", 1.4, "4 3")
-    s.dot(185, 70)
-    s.dot(360, 70)
-    s.text(272, 20, "sin Q1: puente directo 3V3 → VCC", 9, "middle", "italic", "#666")
+    s.line([h["3V3"], g["VCC"]], C_3V3, 1.8)
     s.line([h["GPIO47"], g["TX"]])
-    s.tag(240, 200, "NMEA 9600 bd", "#2e7d32")
-    s.line([g["RX"], (365, 225)])
-    s.text(362, 229, "×", 13, "end", "bold", "#c00")
-    s.text(347, 229, "sin conectar", 9, "end", "italic", "#888")
+    s.tag(270, 165, "NMEA 9600 bd", "#2e7d32")
+    s.line([h["GPIO39"], g["RX"]])
+    s.tag(270, 205, "UBX: dormir / despertar", "#2e7d32")
     s.line([h["GND"], g["GND"]])
     notes(s, 20, 287, [
-        "Q1 en SOT-23: 1 = G, 2 = S, 3 = D (comprobar la serigrafía del adaptador DIP).",
-        "GPIO3 en BAJO = GPS encendido. R8 lo deja apagado al arrancar.",
-        "Si la placa se reinicia al encender el GPS: 1 kΩ en serie con G y 100 nF de G a 3V3 (no comprados).",
-        "Al apagarlo: Serial1.end() para no alimentar el GPS por su TX.",
+        "Siempre alimentado (sin transistor de enable): se duerme por UBX-RXM-PMREQ y despierta con",
+        "cualquier byte por su RX (probado el 13 oct 2026). Con fijo vuelve en segundos (arranque en caliente).",
+        "Consumo medido: ~60 mA buscando, 20–60 mA con fijo; dormido, por debajo de 10 mA (sin medir en µA).",
+        "Orden de pines del módulo: comprobar la serigrafía (suele ser VCC, RX, TX, GND).",
     ])
     return s.svg()
 
@@ -648,7 +616,6 @@ def p_alim():
 # ----------------------------------------------------------------------------
 PINES = [
     ("2", "Salida KEY", "R7 330 Ω → PC817 (U1); R10 10 kΩ a GND", "Salida, en BAJO desde el arranque; solo la activa la pantalla TRX", ""),
-    ("3", "Enable del GPS", "Puerta de Q1 AO3401A + R8 100 kΩ a 3V3", "Salida, BAJO = encendido", "opc"),
     ("4", "Pala DIT", "Punta de J1", "Entrada con pull-up interno", ""),
     ("5", "Pala DAH", "Anillo de J1", "Entrada con pull-up interno", ""),
     ("6", "Entrada del decodificador", "R6 1 kΩ, D1/D2, polarización 1,65 V", "ADC1 por DMA a 8 kHz (pantalla TRX)", ""),
@@ -656,6 +623,7 @@ PINES = [
     ("19", "Encoder CLK", "KY-040 CLK", "Entrada (pull-up en el módulo)", ""),
     ("20", "Pulsador del encoder", "KY-040 SW", "Entrada con pull-up interno; despierta del deep sleep", ""),
     ("38", "Apagado del amplificador", "SD de U2 (PAM8302A)", "Salida, BAJO = apagado (fuera de CW/LoRa/TRX y al dormir)", ""),
+    ("39", "TX al GPS", "RX del NEO-6M", "UART1 TX, 9600 bd: órdenes UBX", ""),
     ("41", "BME280 SDA", "Wire1", "I2C, 0x76 (opcional; montado)", ""),
     ("42", "BME280 SCL", "Wire1", "I2C (opcional; montado)", ""),
     ("47", "RX del GPS", "TX del NEO-6M", "UART1 RX, 9600 bd", ""),
@@ -671,9 +639,9 @@ BOM = [
     ("C2", "Poliéster / X7R 1 µF 50 V", "Acoplo de la señal", ""), ("D1, D2", "1N4148", "Protección de GPIO6", ""),
     ("U1", "PC817 DIP-4", "Salida KEY aislada", ""), ("J1, J3, J4", "Módulo jack 3,5 mm estéreo", "Palas, audio, KEY", ""),
     ("J2", "Jack 3,5 mm estéreo conmutado (5 pat.)", "Auriculares", ""),
-    ("ENC1", "Encoder KY-040", "Menús", ""), ("GPS1", "NEO-6M GY-GPS6MV2", "Posición / hora", "pendiente"),
+    ("ENC1", "Encoder KY-040", "Menús", ""), ("GPS1", "NEO-6M GY-GPS6MV2", "Posición / hora", ""),
     ("SW1", "Interruptor SS12D00", "On/off batería", ""), ("BAT1", "LiPo 3,7 V 3000 mAh JST 1,25", "Alimentación", ""),
-    ("Q1, R8", "AO3401A + adaptador SOT-23 + 100 kΩ", "Enable del GPS", "opc"), ("BME1", "BME280 GY-BME280-3.3 (opcional)", "Sensor ambiental", ""),
+    ("BME1", "BME280 GY-BME280-3.3 (opcional)", "Sensor ambiental", ""),
     ("U2", "Módulo amplificador PAM8302A (mono, 2,5 W)", "Altavoz, desde el TN de J2", ""),
     ("LS1", "Altavoz 8 Ω 0,5–1 W, 28–40 mm", "Tono", ""), ("R9", "Resistencia 10 kΩ", "Pull-down de la entrada de U2", ""),
 ]
@@ -708,7 +676,7 @@ ul { margin: 1mm 0 0 0; padding-left: 5mm; font-size: 9pt; } li { margin-bottom:
 
 def header(titulo, n, total):
     return (f'<header><h1>{esc(titulo)}</h1><div class="r">Chispas EA4ILN · prototipo en protoboard · '
-            f'firmware v1.06b<br>12 oct 2026 · hoja {n} de {total}</div></header>')
+            f'firmware v1.06b<br>13 oct 2026 · hoja {n} de {total}</div></header>')
 
 
 def badge(k):
@@ -742,10 +710,10 @@ def main():
 <div><table><tr><th>GPIO</th><th>Función</th><th>Conecta a</th><th>Modo</th></tr>{filas}</table></div>
 <div><h2>Reglas</h2><ul>
 <li><b>No usar</b>: 0 (PRG), 1 (lectura de batería), 8–14 (LoRa), 17/18/21 (OLED), 26–32 (flash), 35 (LED), 36 (Vext), 37 (control de batería), 43/44 (USB serie), 45/46 (arranque).</li>
-<li><b>Libres de reserva</b> (según el pinout publicado de la V3, sin probar en tu placa): 33, 34, 39, 40 (38 queda para el SD del amplificador).</li>
-<li><b>GPIO19/20</b> son USB D−/D+ del S3, pero funcionan como entradas del encoder (probado con <code>prueba_pines</code>). Plan B: 39/40 o 33/34.</li>
+<li><b>Libres de reserva</b>: 3 (el único con ADC y RTC: guardarlo), 33, 34 y 40 (solo digitales).</li>
+<li><b>GPIO19/20</b> son USB D−/D+ del S3, pero funcionan como entradas del encoder (probado con <code>prueba_pines</code>).</li>
 <li><b>GPIO41/42</b> para el BME280 (Wire1, J3-8/7). No usar el bus del OLED (17/18).</li>
-<li><b>GPIO3</b> es pin de arranque (origen del JTAG) pero solo cuenta con el eFuse grabado: la R8 de 100 kΩ a 3V3 no molesta. <b>GPIO45</b> nunca con pull-up: cambia la tensión de la flash y la placa no arranca.</li>
+<li><b>GPIO3</b> es pin de arranque (origen del JTAG) pero solo cuenta con el eFuse grabado. <b>GPIO45</b> nunca con pull-up: cambia la tensión de la flash y la placa no arranca.</li>
 <li><b>GPIO2</b> maneja la emisora: en BAJO desde el arranque y con R10 a GND. El firmware solo la activa en la pantalla TRX (OPERAR y QSO), con corte de seguridad a los 10 s.</li>
 <li>La Heltec V3 tapa casi toda una protoboard: mejor dejarla fuera y unirla con cables Dupont M-H.</li>
 </ul></div></div></div>''')
@@ -754,7 +722,7 @@ def main():
 <div class="grid2">
 <div class="panel"><h2>1 · Encoder KY-040</h2>{fit(p_encoder(), 72)}</div>
 <div class="panel"><h2>2 · Entrada del manipulador (palas)</h2>{fit(p_palas(), 72)}</div>
-<div class="panel"><h2>3 · GPS NEO-6M <span class="badge b-pend">PENDIENTE</span> + enable <span class="badge b-opc">OPCIONAL</span></h2>{fit(p_gps(), 72)}</div>
+<div class="panel"><h2>3 · GPS NEO-6M (montado)</h2>{fit(p_gps(), 72)}</div>
 <div class="panel"><h2>4 · Sensor BME280 <span class="badge b-opc">OPCIONAL</span> (montado)</h2>{fit(p_bme(), 72)}</div>
 </div></div>''')
 
@@ -785,7 +753,7 @@ def main():
 <div><h2>No está en la lista y conviene tener</h2><ul>
 <li><b>Soldador y estaño</b>: J2 (5 patillas), SW1 en el cable de la batería y, si hace falta, las tiras de pines de la Heltec.</li>
 <li><b>Divisor minijack 1 → 2</b>: para seguir oyendo la emisora con J3 conectado.</li>
-<li>Opcionales sin comprar: C3 10 nF (filtro del ADC), trafo 600:600 (lazo de masa), 1 kΩ + 100 nF (arranque suave de Q1).</li>
+<li>Opcionales sin comprar: C3 10 nF (filtro del ADC) y trafo 600:600 (lazo de masa).</li>
 </ul>
 <h2 style="margin-top:3mm">Orden de montaje (un bloque cada vez)</h2><ul>
 <li><b>0. Firmware</b> antes de cablear: palas a GPIO4/5 y GPIO2 como salida en BAJO desde el arranque. ✔</li>
@@ -795,7 +763,7 @@ def main():
 <li><b>4. Tono</b>: amplificador U2, R9 y altavoz LS1 en el TN de J2 (hoja 4), SD a GPIO38; RV1 al mínimo y subir. Luego auriculares (el altavoz debe callar). ✔</li>
 <li><b>5. KEY</b> con R10: pantalla TRX → OPERAR. Primero GPIO2 con el polímetro (≈ 3,3 V con cada elemento, 0 V en reposo); luego, sin emisora, continuidad entre punta y malla de J4 al manipular. ✔ <i>Con la uSDR: puente R-T en J4 (manipula por el anillo).</i></li>
 <li><b>6. Decodificador</b> (hoja 6): sin emisora, polímetro en GPIO6 ≈ 1,65 V. Luego RV2 al mínimo y volumen de la emisora bajo; pantalla TRX → DECODIFICAR: subir RV2 mirando la barra (y <code>[DECOD]</code> por serie con CONF → CONFIG → DEPURACION → DECOD en SÍ). ✔ <i>RV2 queda casi al máximo con 0,1–0,5 V de la emisora.</i></li>
-<li><b>7. GPS</b> cuando llegue (y Q1/R8 si se monta el enable). <b>8. BME280</b> opcional. ✔</li>
+<li><b>7. GPS</b>: VCC a 3V3, TX a GPIO47, RX a GPIO39; probar con <code>prueba_gps</code>. <b>8. BME280</b> opcional. ✔</li>
 <li><b>9. Batería</b> al final, comprobada la polaridad.</li>
 </ul>
 <p style="font-size:8pt;color:#777;margin-top:2mm">Probados en banco: encoder, palas, tono (R1, RV1, C1, R2, R3, J2, U2, R9 y LS1), KEY (R7, R10, U1, J4) con la uSDR, BME280 (BME1) y decodificador (C2, R4–R6, RV2, D1, D2) con audio Morse real. El resto son valores de partida sin probar. Esquema hecho a partir de la lista de la compra «opción A», con el buzzer sustituido por el amplificador U2 y el altavoz LS1.</p>

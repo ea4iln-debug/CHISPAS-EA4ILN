@@ -18,7 +18,9 @@
       "Bash(git tag)",
       "Bash(gh release list:*)",
       "Bash(gh release view:*)",
-      "Bash(gh auth status:*)"
+      "Bash(gh auth status:*)",
+      "Bash(git commit -qm 'GPS montado y probado: prueba_gps, duerme por UBX sin transistor; esquema y placa sin enable *)",
+      "Bash(~/.platformio/penv/Scripts/pio.exe run *)"
     ],
     "ask": [
       "Bash(./publicar.sh:*)",

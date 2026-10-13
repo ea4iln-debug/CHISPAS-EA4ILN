@@ -35,7 +35,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
   WiFiManager 2.0.17, ArduinoJson 7. **Un solo `.cpp` en `src/`** (el resto en `src/parts/*.inc`, ver "Código");
   `pio run` compila solo el firmware
-  (`default_envs`); pruebas aparte en `pruebas/` (`prueba_pines`, `prueba_bateria`). Puerto COM según el equipo
+  (`default_envs`); pruebas aparte en `pruebas/` (`prueba_pines`, `prueba_bateria`, `prueba_gps`). Puerto COM según el equipo
   (driver CP210x).
 - Pruebas con LED, pantalla, monitor serie y audio (altavoz y auriculares).
 
@@ -87,15 +87,15 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 | 38 | SD del PAM8302A (BAJO = apagado) |
 | 19 / 20 / 48 | Encoder CLK / SW / DT (SW en pin RTC: despierta del deep sleep; cambiado el 13 oct) |
 | 41 / 42 | BME280 en Wire1 (SDA / SCL), 0x76 |
-| 47 | RX desde el TX del GPS |
-| 39 (a probar) | TX al GPS (dormirlo por UBX; el enable por transistor queda descartado) |
-- Libres: 40, 33, 34. **No usar:** 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46.
+| 47 / 39 | GPS NEO-6M en UART1 9600 bd: RX desde su TX / TX a su RX (UBX: dormir con PMREQ, despertar con 0xFF) |
+- Libres: 3 (único con ADC y RTC: reserva), 33, 34, 40. **No usar:** 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46.
 - Módulos a **3V3 de J3** (pines 2/3; GND en el 1). `Ve` es Vext (OLED). `5V` solo con USB.
 - Esquema (`docs/gen_esquema.py`) y placa perforada (`docs/gen_placa.py`) → PDF: skill **`esquema`**.
 - PCB: se empezará desde cero más adelante; no hay nada de KiCad.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-1. GPS (llega el 13 oct): montarlo sin enable (descartado), con TX→GPIO47 y RX←GPIO39 para dormirlo por UBX.
+1. GPS: montado y probado con `prueba_gps` (13 oct; duerme y despierta por UBX, sin transistor). Falta integrarlo
+   en el firmware (locator, hora, altitud; dormirlo con Chispas) y medir su consumo dormido en µA.
 2. Placa perforada: Heltec bien orientada (`J3_IZQUIERDA`, confirmado 13 oct); antes de soldar, comprobar el orden
    de pines del PAM8302A, el GPS y el BME280.
 3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; cara de tormenta sin ver
