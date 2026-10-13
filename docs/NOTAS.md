@@ -29,6 +29,13 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   falta `.code-workspace`: Git lleva `platformio.ini` y `.vscode/extensions.json`. Ajustes propios de un equipo (rutas,
   puerto) en `platformio.ini` o en los ajustes de la carpeta, no en los de usuario (Settings Sync los copiaría).
   - Migrado: equipo 1 (13 oct 2026; clon compilado, mismos RAM y flash).
+  - Migrado: equipo 3 (13 oct 2026). La copia de trabajo estaba en OneDrive, pero en
+    `Documentos\PlatformIO\Projects\Chispas-EA4ilN` (no en `mrmorse`, que aquí no existe); limpia y al día. Clon en
+    `C:\proyectos` con "Equipo listo", los dos entornos compilados (RAM 16,8 %, flash 36,8 %) y la placa en COM16.
+    Memoria de Claude Code copiada a `c--proyectos-CHISPAS-EA4ILN/memory`, junto con `usuario-aprendiendo-cw` de la
+    ruta aún más antigua `...-Projects-Mr--Morse-EA4ilN`. Este equipo tenía también espressif32 7.1.3 en
+    `platforms/espressif32` y la 6.13.0 en `platforms/espressif32@6.13.0`: `comprobar_equipo.sh` ahora mira las dos.
+    Sin `gh` (solo hace falta para publicar releases desde aquí).
   - Migrado: equipo 2 (13 oct 2026). No tenía OneDrive: el clon de trabajo estaba en
     `Documents\CHISPAS-EA4ILN\CHISPAS-EA4ILN` (limpio y al día); `Documents\mrmorse` no es git (solo un proyecto
     KiCad vacío del 5 oct). Clon nuevo en `C:\proyectos` con "Equipo listo" y los dos entornos compilados (RAM 16,8 %,

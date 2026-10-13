@@ -54,8 +54,10 @@ fi
 
 echo "== PlatformIO y Python"
 [ -x "$PIO" ] && ok "pio: $("$PIO" --version 2>/dev/null)" || falta "PlatformIO (extension de VS Code) no instalado"
-VERPLAT=$(grep -m1 '"version"' "$HOME/.platformio/platforms/espressif32/platform.json" 2>/dev/null | grep -oE '[0-9.]+')
-[ "$VERPLAT" = "6.13.0" ] && ok "plataforma espressif32 6.13.0" \
+# PlatformIO puede tenerla en espressif32/ o, si alli hay otra version, en espressif32@6.13.0/
+VERPLAT=$(grep -h -m1 '"version"' "$HOME"/.platformio/platforms/espressif32*/platform.json 2>/dev/null \
+  | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -u | tr '\n' ' ')
+[[ " $VERPLAT" == *" 6.13.0 "* ]] && ok "plataforma espressif32 6.13.0" \
   || falta "plataforma espressif32 6.13.0 (hay: ${VERPLAT:-ninguna}; se instala al compilar)"
 [ -f "$PKG/framework-arduinoespressif32/tools/partitions/boot_app0.bin" ] && ok "framework Arduino (boot_app0.bin)" \
   || falta "framework-arduinoespressif32 (se instala al compilar)"
