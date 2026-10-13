@@ -20,8 +20,7 @@
       "Bash(gh release view:*)",
       "Bash(gh auth status:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git commit -qam 'Permisos: quitar los de un solo uso *)"
+      "Bash(git commit:*)"
     ],
     "ask": [
       "Bash(./publicar.sh:*)",
