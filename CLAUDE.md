@@ -424,7 +424,8 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado y control de SD probado (v1.04b) |
 | 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
-| 3 (pendiente) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido. **Pendiente** (falta el transistor): el GPS se monta sin él, siempre alimentado |
+| 3 (pendiente) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido. **Pendiente** (falta el transistor): el GPS se monta sin él, siempre alimentado. Antes se probará apagarlo por software (ver 39) |
+| 39 (a probar) | TX hacia el RX del GPS (UART): órdenes UBX para dormirlo (`UBX-RXM-PMREQ`) y despertarlo; si dormido gasta < ~0,5 mA, sustituye al enable de GPIO3. Alternativas al AO3401A: IRLML6401, Si2301, DMG2305UX o PNP BC327/BC557 (ver `ROADMAP.md`) |
 | 41 / 42 | BME280: I2C 0x76 en Wire1, SDA 41 (J3-8), SCL 42 (J3-7). **Montado y probado** (12 oct 2026, v1.03b) |
 
 Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, el más cercano al USB):

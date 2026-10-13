@@ -24,7 +24,13 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 ## 2. Hardware
 
 ### En camino
-- **GPS NEO-6M** (llega el 13 oct): TX del GPS a GPIO47 (J2-13). Opcional: alimentación conmutada con AO3401A (Q1) y R8 en GPIO3.
+- **GPS NEO-6M** (llega el 13 oct): TX del GPS a GPIO47 (J2-13). Apagarlo cuando no se usa, por orden de preferencia:
+  1. **Por software (a probar primero):** cable de GPIO39 (J3-10) al RX del GPS y órdenes UBX (`UBX-RXM-PMREQ` para
+     dormir; si no despierta bien, `UBX-CFG-RST` con GNSS stop/start). Medir con el polímetro en serie con el VCC del
+     GPS: si dormido baja de ~0,5 mA, no hace falta transistor.
+  2. **Interruptor en el positivo** (GPIO3, BAJO = encendido): AO3401A, o sus equivalentes en SOT-23 IRLML6401,
+     Si2301 o DMG2305UX, con R8 de 100 kΩ; o un PNP de patillas (BC327 o BC557) con 1 kΩ en la base y 10 kΩ de base a
+     emisor, que resta ~0,1–0,2 V. No valen el BSS84 ni el BS250 (no conducen bien con 3,3 V).
 
 ### Por comprar
 - Divisor de minijack 1 → 2, para seguir oyendo la emisora con el decodificador conectado.
