@@ -57,6 +57,17 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `framework-arduinoespressif32/tools/partitions/`). Más `docs/LICENCIAS_TERCEROS.txt`.
 - **Antes de publicar:** compilar los dos entornos, probar en placa y pedir al usuario
   que confirme. Publicar con `gh release create v<ver> ... --prerelease` (beta) y las notas en castellano.
+- **`publicar.sh` (13 oct 2026)** automatiza lo anterior en tres pasos. Sin argumentos: comprueba que no hay cambios
+  sin commit, que HEAD es `origin/main`, que no existe la etiqueta y que `@version` coincide con `FW_VERSION`;
+  compila con `./compilar.sh`, copia los `firmware.bin`, une los `-usb` con el `esptool.py` de PlatformIO (v4.11) y
+  `boot_app0.bin` del framework, copia `LICENCIAS_TERCEROS.txt`, guarda el commit en `dist/<ver>/commit` y escribe
+  `notas.md` con los commits desde la última etiqueta (para reescribirlas en castellano). `--subir`: comprueba que
+  HEAD sigue siendo ese commit y crea la release como borrador (`--draft`, `--target` el commit; prerelease si la
+  versión acaba en letra). Un borrador no aparece en la API sin autenticar, así que el OTA no lo ve. `--publicar`:
+  `gh release edit --draft=false` (GitHub crea entonces la etiqueta) y `git fetch --tags`. Probado el paso 1 con la
+  v1.06b (sin las comprobaciones de git): mismos nombres; `-usb` = firmware + 64 KB. `dist/` está en `.gitignore`.
+- **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0); falta
+  `gh auth login` con la cuenta ea4iln-debug. Desde entonces ya no hace falta la vía de la API REST.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >
   ACTUALIZAR FW (`CONF_OTA`, `confEntrarOta()`, `procesarOta()`, `buscarActualizacion()`, `instalarActualizacion()`):
   enciende el WiFi, consulta `api.github.com/repos/.../releases?per_page=1` (incluye prereleases), compara, y con
@@ -522,6 +533,13 @@ Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de 
 - Antes de afirmar algo sobre RadioLib, WiFiManager o el core de Espressif, comprobar la versión instalada.
 - Separar lo que se ha probado en la placa de lo que solo se ha razonado.
 - Grabar el puerto serie sin reiniciar la placa: pyserial con `dtr = False` y `rts = False` antes de `open()`.
+  Desde el 13 oct 2026, `serie.py` en la raíz: busca el CP210x (VID 10C4, PID EA60; con varias placas pide
+  `--puerto`), pone la hora a cada línea, guarda todo en `.pio/serie-AAAAMMDD-HHMMSS.log` aunque se filtre, y si la
+  placa se reinicia vuelve a abrir el puerto. `-f "DIAG|DECOD"`, `-f "^\$G"` (NMEA), `-s 30`, `-e d` (orden serie).
+- Permisos compartidos de Claude Code en `.claude/settings.json` (13 oct 2026): permitidos sin preguntar
+  `compilar.sh`, `pio run`, `serie.py`, los scripts de `docs/`, git de lectura y `gh release list/view`; piden
+  confirmación `publicar.sh`, `gh release create/edit/delete` y `git push`. Lo personal de cada equipo, en
+  `.claude/settings.local.json` (no se sube).
 - Ojo con los heredocs de Bash: la herramienta reduce las barras invertidas dobles a una (un `'\0'` acabó como
   byte nulo en el archivo). Para código con barras invertidas, editar con la herramienta Edit o Write.
 - No reescribir `main.cpp` con `Get-Content`/`Set-Content` de PowerShell 5.1: lee el UTF-8 sin BOM como ANSI y

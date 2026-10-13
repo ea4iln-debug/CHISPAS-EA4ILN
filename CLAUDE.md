@@ -22,11 +22,11 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 ## Versiones, releases y OTA (detalle en NOTAS: "Releases y OTA")
 - `#define FW_VERSION` y `@version` en la cabecera de `main.cpp`. Formato `X.YYb` (b = beta; sin letra, final).
   **Preguntar siempre al usuario antes de subir la versión y antes de publicar una release** (llegan por OTA).
-- Release: compilar los dos entornos, probar en placa, confirmación del usuario, etiqueta `v<ver>`, prerelease con
-  notas en castellano. Binarios con estos nombres exactos (el OTA busca el suyo): `chispas-<ver>.bin`,
-  `chispas-<ver>-sin-encoder.bin`, `chispas-<ver>-usb.bin`, `chispas-<ver>-sin-encoder-usb.bin` (los `-usb`:
-  `esptool.py --chip esp32s3 merge_bin ... 0x0 bootloader 0x8000 partitions 0xe000 boot_app0 0x10000 firmware`)
-  y `docs/LICENCIAS_TERCEROS.txt`. Con `gh` (segundo equipo) o API REST con la credencial de git (primero).
+- Release con **`./publicar.sh`** (tres pasos, cada uno con confirmación del usuario): sin argumentos compila,
+  deja en `dist/<ver>/` los binarios con los nombres exactos que busca el OTA (`chispas-<ver>.bin`,
+  `-sin-encoder.bin`, `-usb.bin`, `-sin-encoder-usb.bin`), `LICENCIAS_TERCEROS.txt` y un borrador `notas.md`
+  (castellano); probar en placa; `--subir` crea la release como **borrador** (las placas no la ven); `--publicar`
+  la publica (etiqueta `v<ver>`, prerelease si es beta). Necesita `gh` con sesión (equipos 1 y 2).
 - OTA: CONF > CONFIG > ACTUALIZAR FW; TLS con `include/certificados_github.h`. Probar sin publicar: compilar con
   `FW_VERSION "0.99"`, cargar e instalar la última release.
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
@@ -120,7 +120,10 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - Compilar antes de dar un cambio por bueno, con **`./compilar.sh`** (los dos entornos; `enc` o `sin` para uno):
   solo saca errores, avisos de `src/`, RAM, flash y OK/FALLO; la salida completa queda en `.pio/compilar.log`. Cambios con diff claro; no reestructurar sin avisar.
 - Antes de afirmar algo sobre RadioLib, WiFiManager o el core de Espressif, comprobar la versión instalada.
-- Leer el serie sin reiniciar la placa: pyserial con `dtr = False` y `rts = False` antes de `open()`.
+- Leer el serie sin reiniciar la placa: **`serie.py`** (busca el CP210x, DTR/RTS a False, hora y log en
+  `.pio/serie-*.log`; `-f REGEX` filtra, `-s N` segundos, `-e TEXTO` envía órdenes serie).
+- Permisos de Claude Code compartidos en `.claude/settings.json` (viaja por Git): compilar, serie, git de lectura
+  sin preguntar; `publicar.sh`, `gh release create/edit/delete` y `git push` siempre preguntan.
 - **Heredocs de Bash:** la herramienta reduce `\\` a `\` (un `\n` acaba como salto de línea real y un `'\0'` como
   byte nulo). Código con barras invertidas: usar Edit o Write.
 - **No reescribir el código (`main.cpp`, `parts/*.inc`) con `Get-Content`/`Set-Content` de PowerShell 5.1** (rompe
