@@ -48,8 +48,24 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 ## 3. Desarrollo del firmware
 
 ### Con el hardware nuevo
-- **GPS:** locator y hora automáticos (UART por la matriz GPIO, NMEA a 9600 bd); el locator alimenta SOL y la hora
-  sustituye al NTP cuando no hay WiFi.
+- **GPS en el firmware (diseño decidido el 13 oct 2026, siguiente tarea):**
+  - **Estados:** AUSENTE (sin módulo: todo como hoy) · DORMIDO (por defecto) · BUSCANDO · CON FIJO. Se despierta solo
+    cuando algo necesita un dato y vuelve a dormir al tenerlo; mientras, se usa el último dato bueno.
+  - **Cuándo se despierta:** al arrancar o despertar Chispas (antes un 0xFF por si quedó dormido de la sesión anterior:
+    sigue alimentado aunque el ESP32 se reinicie; tope ~5 min sin fijo); **cada 10 min**, con la muestra de presión del
+    BME280 (tope ~60 s); **mientras se ve STATUS > GPS**; antes del deep sleep, PMREQ y GPIO39 retenido en ALTO
+    (reposo de la UART). Consumo medio estimado ~2 mA (razonado).
+  - **Hora:** UTC del GPS en el reloj del sistema; SOL ya no enciende el WiFi si hay hora del GPS (NTP sin GPS).
+  - **Locator:** CONFIG > LOCATOR con opción **AUTO (GPS)** / manual; el manual queda de respaldo. Guardar en NVS solo si
+    cambia la cuadrícula.
+  - **Altitud y BME280:** QNH recalibrado con la media de la altitud del GPS; historial de presión **corregido a nivel
+    del mar** con la altitud de cada muestra (sin falsos "TORM!" al subir: 3 hPa son solo ~25 m).
+  - **STATUS > GPS** (página nueva): estado, satélites en uso, lat/lon, altitud, HDOP, locator y antigüedad del dato;
+    "GPS NO DETECTADO" sin módulo.
+- **Parques POTA cercanos (después del GPS):** lista de parques de España descargada de pota.app a la placa con WiFi
+  (LittleFS, partición de 1,5 MB reservada; **no** en el repositorio) y búsqueda sin conexión: los más cercanos con
+  distancia y rumbo en la pantalla POTA; "ACTUALIZAR PARQUES" con WiFi. Antes: leer las condiciones de uso de los datos
+  de POTA y averiguar la URL de la lista o de la búsqueda por zona.
 - **BME280, lo que queda** (lo básico está hecho en la v1.03b):
   - Comprobar la tendencia y el aviso de tormenta con datos de varias horas.
   - Con el GPS: calibrar la altitud con la del GPS y reiniciar el historial de presión al cambiar de altitud

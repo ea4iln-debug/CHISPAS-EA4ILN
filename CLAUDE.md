@@ -94,8 +94,9 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - PCB: se empezará desde cero más adelante; no hay nada de KiCad.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-1. GPS: montado y probado con `prueba_gps` (13 oct; duerme y despierta por UBX, sin transistor). Falta integrarlo
-   en el firmware (locator, hora, altitud; dormirlo con Chispas) y medir su consumo dormido en µA.
+1. GPS: montado y probado con `prueba_gps` (13 oct; duerme y despierta por UBX, sin transistor). **Siguiente tarea:
+   integrarlo en el firmware con el diseño decidido en `ROADMAP.md` ("GPS en el firmware")**; luego parques POTA
+   cercanos y release v1.07b. Falta medir su consumo dormido en µA.
 2. Placa perforada: Heltec bien orientada (`J3_IZQUIERDA`, confirmado 13 oct); antes de soldar, comprobar el orden
    de pines del PAM8302A, el GPS y el BME280.
 3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; cara de tormenta sin ver
