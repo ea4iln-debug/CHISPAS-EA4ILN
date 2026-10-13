@@ -19,6 +19,17 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   lista de componentes, diseño, README) con **CC BY-NC-SA 4.0** (`LICENSE-HARDWARE.md`). `include/wm_strings_chispas.h`
   conserva el aviso MIT de WiFiManager (SPDX `MIT AND GPL-3.0-or-later`). Archivos nuevos: añadir la cabecera SPDX.
   Los `.bin` de las releases van con `docs/LICENCIAS_TERCEROS.txt` (avisos de las librerías; regenerarlo si cambian).
+- **Carpeta de trabajo (13 oct 2026):** el repositorio estaba en OneDrive (`Documentos\mrmorse\Mr.-Morse-EA4ILN`), con
+  lo que se sincronizaba dos veces (OneDrive y Git) y OneDrive copiaba también `.git` y `.pio`: riesgo de corromper
+  `.git` y cientos de MB inútiles. Ahora, en cada uno de los tres equipos, clon en `C:\proyectos\CHISPAS-EA4ILN` y
+  sincronización solo con Git. Lo que no viaja y no debe viajar: `.pio/` (lo regenera PlatformIO), `.vscode/` generado,
+  el puerto COM, la memoria y los permisos locales de Claude Code. Ajustes y extensiones de VS Code: Settings Sync.
+  - Migrado: equipo 1 (13 oct 2026; clon compilado, mismos RAM y flash).
+  - **Pasos en cada equipo que falte:** 1) en la carpeta de OneDrive, `git status` y `git log origin/main..` para ver
+    si hay algo sin subir; si lo hay, commit y `git push`. 2) `git clone https://github.com/ea4iln-debug/CHISPAS-EA4ILN.git
+    C:\proyectos\CHISPAS-EA4ILN`. 3) Abrir esa carpeta en VS Code (PlatformIO descarga las librerías) y compilar con
+    `./compilar.sh`. 4) Trabajar ya solo ahí; anotar aquí el equipo migrado.
+  - Cuando estén los tres: borrar la carpeta de OneDrive (desde un equipo basta; OneDrive la borra en todos).
 
 ## Releases y OTA
 - **Versión:** `#define FW_VERSION` (y `@version` de la cabecera de `main.cpp`). Formato `X.YYb` (b = beta; sin letra,
