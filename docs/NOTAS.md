@@ -313,13 +313,44 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   lectura cada minuto (cada 2 s con AMBIENTE a la vista) y una muestra de presión cada 10 min en `bmeHist[19]` (3 h).
   `bmeTendencia3h()`: cambio escalado a 3 h, desde 60 min de historial; ±1 hPa = BAJANDO/SUBIENDO; ≤ -3 hPa =
   `avisoTormenta` (la cabecera pone "TORM!" en vez del nombre; `[BME] AVISO DE TORMENTA` por serie). Ojo: al
-  cambiar de altitud (subir a un monte) la presión baja y puede dar un falso aviso; con el GPS, reiniciar el historial.
+  cambiar de altitud (subir a un monte) la presión baja y puede dar un falso aviso; con el GPS, el historial va a nivel del mar (ver GPS).
   Página **AMBIENTE** (4/4 de SOL, solo con sensor, `paginasSol()`; no necesita hora ni locator). **CONFIG > ALTITUD**
   (`OC_ALTITUD`): muestra la altitud ("?" sin calibrar); pulsar, girar hasta la altitud real y pulsar calcula el QNH
   (`qnhParaAltitud()`, NVS `qnh` en `estacion`; sin él, 1013,25). STATUS página 6 **SENSOR**. Macro **{WX}**
   (`textoWx()`): "WX 18C", "WX MINUS 3C" bajo cero (el guion no está en la tabla Morse), vacío sin sensor; en la
   rueda del editor, en el portal y en `trxLimpiarTexto()`. Por serie cada 10 min: `[BME] T ... P ... TEND ...`.
   La temperatura sale alta por el calor de la placa (en la primera lectura, 25,8 °C dentro de casa).
+- **GPS NEO-6M** (13 oct 2026, sin versión nueva; `src/parts/gps.inc`; **probado en la placa 1 el 13 oct 2026**):
+  UART1 a 9600 bd (47 recibe su TX, 39 va a su RX), siempre alimentado. Estados `GPS_DETECTANDO` → `AUSENTE` (sin
+  NMEA con checksum bueno en 6 s: `Serial1.end()` y todo como sin GPS) o `BUSCANDO` / `CON_FIJO` / `DORMIDO`.
+  Duerme con `UBX-RXM-PMREQ` (backup) y se despierta con 16 × 0xFF; si sigue mandando NMEA 1,5 s después del PMREQ,
+  lo repite (hasta 3). **Ventanas:** al arrancar o despertar Chispas (tope 5 min), cada 10 min desde el final de la
+  anterior (tope 60 s), mientras se ve STATUS > GPS y con ACTUALIZAR de SOL. En cada ventana: hora con la primera RMC
+  `A`; 30 altitudes (solo fijos con ≥ 5 satélites y HDOP < 3); al cerrarla (30 muestras o tope), el locator si está
+  en AUTO (NVS solo si cambia) y, con ≥ 5 muestras, la **altitud de referencia** `gpsAltRef`, que solo cambia si la
+  media se aparta más de 30 m (el NEO-6M varía ±15 m, casi 2 hPa: daría falsos avisos de tormenta; razonado) y el
+  **QNH** recalibrado con ella (NVS solo cuando cambia la referencia). El **historial de presión** guarda la presión
+  reducida a nivel del mar con `gpsAltRef` (`bmeHistNivelMar`); al pasar de un tipo de muestra al otro, empieza de
+  nuevo. Antes del deep sleep (`dormirGpsAntesDeSueno()`, dentro del 1,5 s del mensaje): PMREQ comprobando que se
+  calla, y GPIO39 a GPIO en ALTO **sin** `Serial1.end()` (un flanco lo despertaría) y retenido con `gpio_hold_en`;
+  se libera en `iniciarGps()`. Buffer de RX de 1 KB (las descargas de PROP y POTA bloquean el loop 1–3 s).
+  **CONFIG > LOCATOR** con GPS: pulsar, girar entre `AUTO (GPS)` y `MANUAL` y pulsar (MANUAL abre el editor); en la
+  lista sale `GPS IM68mu` en AUTO (NVS `locgps` en `estacion`, por defecto sí). **STATUS > GPS** (página 7/7): estado y
+  satélites, lat/lon, altitud y HDOP, locator calculado y antigüedad del último fijo; sin módulo, "GPS NO DETECTADO".
+  Probado: detección en menos de 1 s desde el arranque; dentro de casa, sin fijo en la ventana de arranque y a dormir
+  a los 5 min (bien); junto a la ventana, el usuario vio CON FIJO en STATUS > GPS, RELOJ en GPS, LOCATOR correcto y
+  QNH CALIBRADO en STATUS > SENSOR. **Falta:** medir su consumo dormido en µA y comprobar que no se despierta durante
+  el deep sleep de Chispas.
+- **Hora: fuente y CONFIG > HORA / RELOJ** (13 oct 2026, **probado en la placa 1**). `fuenteHora` (`RTC_DATA_ATTR`,
+  sigue tras el deep sleep): `SIN HORA` < `MANUAL` < `WIFI` < `GPS`. `ponerHora()` solo deja cambiar la hora a una
+  fuente igual o más exacta que la actual, salvo la manual (CONFIG > RELOJ o la hora del webconf), que se aplica
+  siempre y luego la sustituyen el WiFi o el GPS. El NTP avisa con `sntp_set_time_sync_notification_cb`
+  (→ `WIFI`); con hora del GPS se para (`sntp_stop()`) y `iniciarNtp()` no lo arranca. **HORA** (`OC_HORA`):
+  `UTC` / `LOCAL` en la cabecera (la misma `horaUtcCabecera` que la casilla del webconf). **RELOJ** (`OC_RELOJ`):
+  muestra la fuente; pulsar abre **PONER HORA** (`CONF_RELOJ`): `14:05  13/10/2026`, girar cambia el campo en vídeo
+  inverso (da la vuelta), pulsar pasa al siguiente y en el año la pone; larga, ya; PRG, sale sin cambiarla. Se escribe en
+  UTC o local según HORA; sin hora parte de las 12:00 del día de compilación (`__DATE__`). Probado con órdenes serie:
+  hora manual (cabecera 23:44, RELOJ `MANUAL`), HORA UTC (`21:44Z`) y vuelta a LOCAL; el paso a `GPS` lo vio el usuario.
 - **SOTA: no programar el cliente.** Sus condiciones (api-db2.sota.org.uk/docs) exigen unirse al grupo
   "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Decisión pendiente del autor.
 - **Batería**: divisor activado con GPIO37 **HIGH** en estas placas (Meshtastic declara LOW). Atenuación 2,5 dB,
@@ -464,7 +495,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   antes), la primera orden serie solo lo quita: no es un evento perdido.
 - **Orden y contenido** (ver tabla en `CLAUDE.md`): `pines`, `morse`, `globales`, `audio`, `motor_cw`, `keyer`,
   `estadisticas`, `echo`, `bme280`, `memoria_nvs`, `bateria`, `oled_comun`, `lora`, `decodificador`, `trx`, `wifi`,
-  `ota`, `datos_web`, `pant_inicio_cw`, `pant_lora_trx`, `pant_prop_pota`, `sol`, `conf`, `estados_cw`, `cara`,
+  `ota`, `datos_web`, `gps` (13 oct 2026), `pant_inicio_cw`, `pant_lora_trx`, `pant_prop_pota`, `sol`, `conf`, `estados_cw`, `cara`,
   `entrada`, `eventos`. Rarezas heredadas del orden original: `procesarRecepcionLoRa`, `loraEscuchar` y
   `salirModoLoRa` están al final de `trx.inc`; `actualizarPantalla()` (el reparto del dibujo) está al final de
   `conf.inc`; el dibujo de cada pantalla está en `pant_*.inc`, lejos de su lógica.
@@ -478,7 +509,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    encoder). X6200 con KEY probada el 12 oct 2026. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con
    batería y sin medidor).
 2. **Montaje** (orden de la hoja 7 del esquema; hecho: raíles, encoder, palas, tono con amplificador, altavoz y jack,
-   salida KEY con PC817 y minijack, BME280, GPS); GPS montado y probado el 13 oct 2026 con `prueba_gps` (ver la tabla de pines: GPIO39 y 47); falta integrarlo en el firmware; BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
+   salida KEY con PC817 y minijack, BME280, GPS); GPS montado y probado el 13 oct 2026 con `prueba_gps` (ver la tabla de pines: GPIO39 y 47) e integrado en el firmware el mismo día (ver Funciones); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
    **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; la batería se sigue leyendo bien después de usar DECODIFICAR o QSO (probado en la placa 2 el 12 oct 2026). Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Estabilidad comprobada** (placa 2, v1.03b, noche del 12 oct 2026: 8 h en POTA, 233 consultas HTTPS a pota.app, una

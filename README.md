@@ -79,7 +79,7 @@ GitHub.
 | **Cara de Chispas** | Salvapantallas animado con expresiones y gestos, también de radioaficionado: antena llamando CQ, auriculares, bocadillo con CQ/73/88 y guiño en Morse. Reacciona a la línea gris, a la buena propagación y al aviso de tormenta. Sale tras el tiempo elegido sin uso en cualquier pantalla salvo CW, LoRa y TRX. | ✅ |
 | **Tono por altavoz y auriculares** | Tono CW (400–1000 Hz, 850 por defecto) por un altavoz con amplificador PAM8302A, con volumen y silencio automático del altavoz al conectar auriculares. El amplificador solo se enciende en CW, LoRa y TRX. | ✅ |
 | **Ahorro de energía** | CPU a 80 MHz sin WiFi, radio dormida fuera de LoRa, pantalla atenuada y apagado automático (deep sleep). | ✅ |
-| **GPS** | Posición y locator automáticos. | 🚧 |
+| **GPS** | Hora, locator y altitud automáticos (QNH del BME280 e historial de presión a nivel del mar). Duerme casi siempre para ahorrar. Opcional. | ✅ |
 
 ---
 
@@ -100,7 +100,7 @@ El prototipo actual se monta en protoboard, sin PCB. Componentes principales:
 - Optoacoplador **PC817** para la salida KEY, con resistencia de 10 kΩ a GND y un jack con la punta y el anillo
   unidos (vale para emisoras que manipulan por cualquiera de los dos).
 - Entrada de audio de la emisora para el decodificador: polarización a 1,65 V, trimmer de nivel y diodos de protección.
-- Módulo **GPS** NEO-6M (montado; falta integrarlo en el firmware).
+- Módulo **GPS** NEO-6M (opcional): hora, locator y altitud. Se duerme por software entre lecturas.
 - Batería **LiPo** de 3,7 V con conector JST de 1,25 mm. Comprueba la polaridad antes de conectarla.
 
 El esquema completo (7 hojas), con la lista de componentes y el orden de montaje, está en
@@ -121,8 +121,8 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 | 19 | J2-18 | Encoder CLK | ✅ |
 | 20 | J2-17 | Pulsador del encoder (también despierta la placa) | ✅ |
 | 48 | J2-14 | Encoder DT | ✅ |
-| 47 | J2-13 | RX desde el TX del GPS | ✅ (con `prueba_gps`) |
-| 39 | J3-10 | TX al RX del GPS (órdenes UBX para dormirlo) | ✅ (con `prueba_gps`) |
+| 47 | J2-13 | RX desde el TX del GPS | ✅ |
+| 39 | J3-10 | TX al RX del GPS (órdenes UBX para dormirlo) | ✅ |
 | 41 / 42 | J3-8 / J3-7 | I2C (Wire1) del sensor BME280 (opcional) | ✅ |
 
 Notas:
@@ -316,8 +316,10 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | Opción | Qué hace |
 |---|---|
 | **ID** | Tu indicativo (3 a 8 letras, cifras y `/`), con la rueda de caracteres del editor |
-| **LOCATOR** | Locator Maidenhead de 4 o 6 caracteres (para SOL); se comprueba al guardar |
-| **ALTITUD** | Con el BME280: altitud barométrica (con `?` si no está calibrada). Pulsar, girar hasta la altitud real y pulsar calibra el QNH |
+| **LOCATOR** | Locator Maidenhead de 4 o 6 caracteres (para SOL); se comprueba al guardar. Con GPS: pulsar, girar entre `AUTO (GPS)` y `MANUAL` y pulsar (MANUAL abre el editor) |
+| **ALTITUD** | Con el BME280: altitud barométrica (con `?` si no está calibrada). Pulsar, girar hasta la altitud real y pulsar calibra el QNH (con GPS se calibra solo) |
+| **HORA** | Hora de la cabecera: `LOCAL` o `UTC` (`12:05Z`) |
+| **RELOJ** | De dónde viene la hora: `GPS`, `WIFI`, `MANUAL` o `SIN HORA`; si hay varias, se queda la más exacta. Pulsar abre **PONER HORA**: girar cambia el campo, pulsar pasa al siguiente y, en el año, la pone |
 | **TONO** | Frecuencia del tono CW (400–1000 Hz), con un pitido de prueba |
 | **ACELERACION** | Salto de los valores al girar rápido: `NO` o x2 a x5 |
 | **SALVAPANTALLAS** | Tiempo sin uso antes de que salga la cara: `NO`, 15 s, 30 s, 1, 2 o 5 min |
@@ -327,9 +329,10 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | **DEPURACION** | Mensajes y órdenes por serie para pruebas: órdenes serie, diagnóstico, decodificador y retraso CW (todo en `NO` por defecto) |
 | **FABRICA** | Borra todo (pide confirmar) y reinicia |
 
-**CONF. > STATUS** muestra, en seis páginas, la estación (ID, locator, hora y versión), el sistema (batería, LoRa,
+**CONF. > STATUS** muestra, en siete páginas, la estación (ID, locator, hora y versión), el sistema (batería, LoRa,
 apagado, tono y aceleración), el WiFi (red guardada, estado, IP y nombre del portal), la memoria, el arranque
-(tiempo encendido y motivo del último reinicio) y el sensor ambiental (chip, QNH e historial).
+(tiempo encendido y motivo del último reinicio), el sensor ambiental (chip, QNH e historial) y el GPS (estado,
+satélites, posición, altitud, HDOP, locator y antigüedad del dato; mientras se ve, el GPS está despierto).
 
 ### Por WiFi (webconf)
 Chispas solo enciende el WiFi cuando lo necesita: en PROP. y POTA, en SOL si aún no tiene hora, para el portal y
@@ -408,8 +411,8 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 
 ## Hoja de ruta
 
-Lo pendiente (pruebas, hardware y desarrollo) está en [ROADMAP.md](ROADMAP.md). Lo siguiente: GPS para el locator
-y la hora automáticos, y POTA sin conexión.
+Lo pendiente (pruebas, hardware y desarrollo) está en [ROADMAP.md](ROADMAP.md). Lo siguiente: parques POTA
+cercanos con el GPS y POTA sin conexión.
 
 ---
 

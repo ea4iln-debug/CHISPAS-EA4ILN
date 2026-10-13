@@ -48,7 +48,8 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 ## 3. Desarrollo del firmware
 
 ### Con el hardware nuevo
-- **GPS en el firmware (diseño decidido el 13 oct 2026, siguiente tarea):**
+- ✅ **GPS en el firmware (hecho y probado en la placa 1 el 13 oct 2026**; detalle en NOTAS, "Funciones"; añadido:
+  CONFIG > HORA (UTC/LOCAL) y RELOJ (fuente GPS > WIFI > MANUAL y hora a mano). Diseño con el que se hizo:
   - **Estados:** AUSENTE (sin módulo: todo como hoy) · DORMIDO (por defecto) · BUSCANDO · CON FIJO. Se despierta solo
     cuando algo necesita un dato y vuelve a dormir al tenerlo; mientras, se usa el último dato bueno.
   - **Cuándo se despierta:** al arrancar o despertar Chispas (antes un 0xFF por si quedó dormido de la sesión anterior:
@@ -169,7 +170,8 @@ alcance de la radio.
 
 ## 4. Documentación y publicación
 - Al montar el GPS: esquema (quitar PENDIENTE), README y capturas.
-- Próxima release (v1.07b) con el GPS.
+- Próxima release (v1.07b) con el GPS, HORA y RELOJ (preguntar antes). Capturas nuevas: CONFIG, STATUS > GPS y
+  PONER HORA.
 
 ## Orden propuesto
 1. **Sin piezas:** QSO LIBRE en los dos sentidos; tendencia del BME280 con varias horas de datos (placa 1).
@@ -190,4 +192,5 @@ alcance de la radio.
 - ✅ Sensor ambiental BME280 (v1.03b): página AMBIENTE en SOL, tendencia y aviso de tormenta, altitud barométrica
   calibrable y macro {WX}.
 - ✅ Actualización por WiFi desde las releases de GitHub.
+- ✅ GPS (13 oct 2026): hora, locator y altitud automáticos; hora con fuente (GPS > WIFI > MANUAL) y puesta a mano.
 - ✅ Consumo en reposo despreciable.

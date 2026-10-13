@@ -29,7 +29,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (13 oct 2026)
-- **v1.06b** (última release, 12 oct) en las dos placas. Placa 1: protoboard con encoder, palas, KEY, amplificador,
+- **v1.06b** (última release, 12 oct) en las dos placas; la placa 1 lleva además, por USB y sin subir versión, el GPS y
+  CONFIG > HORA / RELOJ (probados el 13 oct). Placa 1: protoboard con encoder, palas, KEY, amplificador,
   BME280 y batería; entorno `heltec_wifi_lora_32_V3`. Placa 2: desnuda, sin encoder; entorno `heltec_sin_encoder`
   (`-DSIN_ENCODER`), se actualiza por OTA.
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
@@ -53,6 +54,10 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   memorias); WiFi en el NVS del ESP32. Borrar estadísticas solo borra estadísticas; el reset de fábrica, todo.
 - Consumo: CPU a 80 MHz sin WiFi y 240 con WiFi; LoRa dormida fuera de Duo/QSO. **Al despertar el SX1262 hay que
   llamar a `radio.standby(RADIOLIB_SX126X_STANDBY_RC, true)` antes de `startReceive()`** (si no, no recibe).
+- Hora: `ponerHora()` con fuente `fuenteHora` (GPS > WIFI > MANUAL: se queda la más exacta; la manual se aplica siempre).
+  NTP solo si la hora no viene del GPS.
+- GPS (opcional, AUSENTE si no contesta al arrancar): duerme por UBX; se despierta al arrancar, cada 10 min y en
+  STATUS > GPS; antes del deep sleep, PMREQ y GPIO39 retenido en ALTO. Historial de presión a nivel del mar con su altitud.
 - WiFi solo en PROP y POTA (y SOL si falta la hora); el portal (`Chispas-XXXX`, clave `chispas73`) no se abre solo.
 - KEY (GPIO2) solo con `keyHabilitada` (OPERAR y QSO de TRX); corte de seguridad a los 10 s.
 - Amplificador: SD (GPIO38) en ALTO solo en CW, LoRa, TRX y pitido de prueba; en BAJO retenido al dormir.
@@ -71,7 +76,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 | `estadisticas` `echo` `bme280` | Estadísticas por carácter; modo Echo; sensor |
 | `memoria_nvs` `bateria` `oled_comun` | NVS; batería; cabecera, pies, `dibujarTituloMenu`… |
 | `lora` `decodificador` `trx` | TX/RX, Duo y QSO; tarea `decod`; TRX + `procesarRecepcionLoRa`, `salirModoLoRa` |
-| `wifi` `ota` `datos_web` | WiFi, NTP, portal y QR; OTA; hamqsl, POTA, `procesarWifi` |
+| `wifi` `ota` `datos_web` `gps` | WiFi, NTP, portal y QR; OTA; hamqsl, POTA, `procesarWifi`; GPS (ventanas, hora, locator, altitud) |
 | `pant_inicio_cw` `pant_lora_trx` `pant_prop_pota` | Dibujo de Inicio y CW; de LoRa y TRX; menús y páginas de PROP y POTA |
 | `sol` `conf` `estados_cw` | SOL y ambiente; CONF, STATUS, OTA y `actualizarPantalla()`; máquina de estados CW |
 | `cara` `entrada` `eventos` | Salvapantallas; encoder, ISR y eventos de botón; `procesarBoton()` |
@@ -94,9 +99,9 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - PCB: se empezará desde cero más adelante; no hay nada de KiCad.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-1. GPS: montado y probado con `prueba_gps` (13 oct; duerme y despierta por UBX, sin transistor). **Siguiente tarea:
-   integrarlo en el firmware con el diseño decidido en `ROADMAP.md` ("GPS en el firmware")**; luego parques POTA
-   cercanos y release v1.07b. Falta medir su consumo dormido en µA.
+1. GPS integrado y probado en la placa 1 (13 oct: fijo, hora, locator, QNH). **Siguiente: release v1.07b** (preguntar
+   antes) y luego parques POTA cercanos. Falta medir el GPS dormido en µA y capturas nuevas (CONFIG, STATUS > GPS,
+   PONER HORA).
 2. Placa perforada: Heltec bien orientada (`J3_IZQUIERDA`, confirmado 13 oct); antes de soldar, comprobar el orden
    de pines del PAM8302A, el GPS y el BME280.
 3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; cara de tormenta sin ver
