@@ -86,6 +86,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   volver a poner el locator de la placa y apagar la depuración.
 
 ## Estado actual (12 oct 2026)
+- **MAC de cada placa** (las dos tienen el mismo CP2102; `pio run -t upload` imprime `MAC: ...`; la skill `placa`
+  la usa para elegir el entorno): placa 1 (encoder, `heltec_wifi_lora_32_V3`): *por apuntar*; placa 2 (sin
+  encoder, `heltec_sin_encoder`): *por apuntar*.
 - Firmware: `src/main.cpp` **v1.06b** (opción SALVAPANTALLAS, CONFIG por bloques y expresiones de radioaficionado;
   release del 12 oct 2026). v1.05b (salvapantallas en todas las pantallas salvo CW, LoRa y TRX; brillo tenue en
   todas; release del 12 oct 2026). v1.04b (control del amplificador, SD en GPIO38; release
@@ -540,6 +543,13 @@ Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de 
   `compilar.sh`, `pio run`, `serie.py`, los scripts de `docs/`, git de lectura y `gh release list/view`; piden
   confirmación `publicar.sh`, `gh release create/edit/delete` y `git push`. Lo personal de cada equipo, en
   `.claude/settings.local.json` (no se sube).
+- Skills del proyecto en `.claude/skills/` (13 oct 2026; viajan por Git; en cada sesión solo se carga su
+  descripción, y el texto entero cuando hace falta o con `/nombre`): `cerrar-tarea` (compilar, revisar diff,
+  NOTAS + CLAUDE.md, commit, push, resumen probado/razonado), `placa` (identificar la placa por la MAC, cargar el
+  entorno correcto, `serie.py`, captura de la OLED), `release` (versión y `publicar.sh`; las notas de la release se
+  reescriben para el usuario final) y `esquema` (gen_esquema/gen_placa → PDF con Edge o Chrome; probado el 13 oct
+  generando la placa en una carpeta temporal: mismo tamaño que el PDF del repositorio). Con ellas salen de
+  CLAUDE.md los procedimientos de release y de PDF.
 - Ojo con los heredocs de Bash: la herramienta reduce las barras invertidas dobles a una (un `'\0'` acabó como
   byte nulo en el archivo). Para código con barras invertidas, editar con la herramienta Edit o Write.
 - No reescribir `main.cpp` con `Get-Content`/`Set-Content` de PowerShell 5.1: lee el UTF-8 sin BOM como ANSI y

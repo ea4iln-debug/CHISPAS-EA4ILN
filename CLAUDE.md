@@ -22,13 +22,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 ## Versiones, releases y OTA (detalle en NOTAS: "Releases y OTA")
 - `#define FW_VERSION` y `@version` en la cabecera de `main.cpp`. Formato `X.YYb` (b = beta; sin letra, final).
   **Preguntar siempre al usuario antes de subir la versión y antes de publicar una release** (llegan por OTA).
-- Release con **`./publicar.sh`** (tres pasos, cada uno con confirmación del usuario): sin argumentos compila,
-  deja en `dist/<ver>/` los binarios con los nombres exactos que busca el OTA (`chispas-<ver>.bin`,
-  `-sin-encoder.bin`, `-usb.bin`, `-sin-encoder-usb.bin`), `LICENCIAS_TERCEROS.txt` y un borrador `notas.md`
-  (castellano); probar en placa; `--subir` crea la release como **borrador** (las placas no la ven); `--publicar`
-  la publica (etiqueta `v<ver>`, prerelease si es beta). Necesita `gh` con sesión (equipos 1 y 2).
-- OTA: CONF > CONFIG > ACTUALIZAR FW; TLS con `include/certificados_github.h`. Probar sin publicar: compilar con
-  `FW_VERSION "0.99"`, cargar e instalar la última release.
+  Procedimiento: skill **`release`** (`./publicar.sh` en tres pasos, borrador antes de publicar).
+- OTA: CONF > CONFIG > ACTUALIZAR FW; TLS con `include/certificados_github.h`.
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (13 oct 2026)
@@ -95,8 +90,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 | 3 (pendiente) | Enable del GPS con AO3401A (falta el transistor) |
 - Libres: 40, 33, 34. **No usar:** 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46.
 - Módulos a **3V3 de J3** (pines 2/3; GND en el 1). `Ve` es Vext (OLED). `5V` solo con USB.
-- Esquema: `docs/gen_esquema.py` → HTML → PDF con Edge o Chrome headless (`--no-pdf-header-footer
-  --print-to-pdf=...`); revisar el PDF tras cambios grandes. Placa perforada: `docs/gen_placa.py`, igual.
+- Esquema (`docs/gen_esquema.py`) y placa perforada (`docs/gen_placa.py`) → PDF: skill **`esquema`**.
 - PCB: se empezará desde cero más adelante; no hay nada de KiCad.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
@@ -129,4 +123,6 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - **No reescribir el código (`main.cpp`, `parts/*.inc`) con `Get-Content`/`Set-Content` de PowerShell 5.1** (rompe
   las tildes y añade BOM). Desde Bash, `pio` y `python` no están en el PATH:
   `~/.platformio/penv/Scripts/pio.exe` y `~/.platformio/penv/Scripts/python.exe`.
-- Al terminar una tarea: actualizar `CLAUDE.md` (resumen) y la sección de `docs/NOTAS.md` (detalle).
+- Skills del proyecto (`.claude/skills/`): **`cerrar-tarea`** al terminar cada tarea (compilar, CLAUDE.md
+  resumen + NOTAS detalle, commit, push); **`placa`** para cargar y probar en placa (elige el entorno según la
+  placa); **`release`**; **`esquema`**.
