@@ -114,7 +114,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 
 ## Estado actual (12 oct 2026)
 - **MAC de cada placa** (las dos tienen el mismo CP2102; `pio run -t upload` imprime `MAC: ...`; la skill `placa`
-  la usa para elegir el entorno): placa 1 (encoder, `heltec_wifi_lora_32_V3`): *por apuntar*; placa 2 (sin
+  la usa para elegir el entorno): placa 1 (encoder, `heltec_wifi_lora_32_V3`): `3c:0f:02:ee:50:74`; placa 2 (sin
   encoder, `heltec_sin_encoder`): *por apuntar*.
 - Firmware: `src/main.cpp` **v1.06b** (opción SALVAPANTALLAS, CONFIG por bloques y expresiones de radioaficionado;
   release del 12 oct 2026). v1.05b (salvapantallas en todas las pantallas salvo CW, LoRa y TRX; brillo tenue en
@@ -455,7 +455,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - **Comprobado:** al juntar las partes sale exactamente el `main.cpp` anterior (`cmp`). Compilados los dos entornos
   antes y después: mismos RAM y flash, y los `.bin` solo difieren en `app_elf_sha256` (0xb0–0xcf, hash del ELF, que
   cambia con la información de depuración: nombres de archivo y líneas) y en la suma y el SHA-256 del final de la
-  imagen, que dependen de él. Código y datos, idénticos.
+  imagen, que dependen de él. Código y datos, idénticos. **Probado en la placa 1 el 13 oct 2026** (carga por USB desde
+  el equipo 3): NVS conservada, las 8 pantallas recorridas con órdenes serie, WiFi y NTP en PROP, sin reinicios; el
+  usuario confirmó encoder, tono por el altavoz y LED. Con el salvapantallas activo (aunque se vea la pantalla de
+  antes), la primera orden serie solo lo quita: no es un evento perdido.
 - **Orden y contenido** (ver tabla en `CLAUDE.md`): `pines`, `morse`, `globales`, `audio`, `motor_cw`, `keyer`,
   `estadisticas`, `echo`, `bme280`, `memoria_nvs`, `bateria`, `oled_comun`, `lora`, `decodificador`, `trx`, `wifi`,
   `ota`, `datos_web`, `pant_inicio_cw`, `pant_lora_trx`, `pant_prop_pota`, `sol`, `conf`, `estados_cw`, `cara`,
