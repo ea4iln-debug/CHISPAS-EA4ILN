@@ -1,6 +1,6 @@
 # Hoja de ruta de Chispas
 
-Estado a 12 de octubre de 2026, con el firmware **v1.06b** (beta). Lo marcado ✅ está hecho y probado en placa.
+Estado a 14 de octubre de 2026, con el firmware **v1.07b** (beta). Lo marcado ✅ está hecho y probado en placa.
 
 ## 1. Pruebas pendientes
 
@@ -8,6 +8,10 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 | | Prueba | Cómo |
 |---|---|---|
+| ⬜ | Parques POTA cercanos con fijo del GPS | En la calle: POTA > VER PARQUES con la posición del GPS (en casa, probado con el locator) |
+| ⬜ | Consumo del GPS dormido | Polímetro en µA en serie con el VCC del GPS; si baja de ~0,5 mA, no hace falta transistor |
+| ⬜ | Tendencia del BME280 y aviso de tormenta | Placa 1 con varias horas de datos |
+| ⬜ | Pila del motor CW tras Duo | Repetir la medida (la antigua daba 2016 bytes libres de 4096) |
 | ⬜ | QSO LIBRE en los dos sentidos | Necesita palas en la placa 2 (o cambiar las palas de placa) |
 | ⬜ | Expresiones de radioaficionado y SALVAPANTALLAS | Nube de tormenta (con TORM!) sin ver aún (auriculares vista); tiempo del salvapantallas en CONFIG |
 | ⬜ | Salvapantallas y brillo (v1.05b) | Cara a los 15 s en Inicio, PROP, POTA, SOL y CONF (no en CW, LoRa, TRX ni con el portal/QR); brillo tenue al minuto en todas |
@@ -23,7 +27,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 ## 2. Hardware
 
-### En camino
+### Montado
 - **GPS NEO-6M**: ✅ montado y probado el 13 oct 2026 (TX a GPIO47, RX a GPIO39). Apagarlo cuando no se usa:
   1. ✅ **Por software (funciona; falta medir en µA):** cable de GPIO39 (J3-10) al RX del GPS y órdenes UBX (`UBX-RXM-PMREQ` para
      dormir; si no despierta bien, `UBX-CFG-RST` con GNSS stop/start). Medir con el polímetro en serie con el VCC del
@@ -69,13 +73,13 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
   de POTA y averiguar la URL de la lista o de la búsqueda por zona.
 - **BME280, lo que queda** (lo básico está hecho en la v1.03b):
   - Comprobar la tendencia y el aviso de tormenta con datos de varias horas.
-  - Con el GPS: calibrar la altitud con la del GPS y reiniciar el historial de presión al cambiar de altitud
-    (subiendo a un monte la presión baja y puede dar un falso aviso de tormenta).
+  - ✅ Con el GPS (v1.07b): QNH calibrado con la altitud del GPS e historial de presión a nivel del mar (sin falsos
+    avisos de tormenta al subir a un monte).
   - Por decidir: mantener el historial de presión con Chispas dormido (despertar cada 15 min).
 
 ### Ideas decididas
-- **POTA sin conexión:** lista de parques en un CSV guardado en la placa (partición de 1,5 MB reservada, LittleFS);
-  buscar por referencia y, con GPS, el parque más cercano.
+- ✅ **POTA sin conexión** (14 oct 2026): lista de parques de España en LittleFS y los más cercanos en POTA > VER
+  PARQUES. Queda, si se quiere, buscar un parque por referencia.
 - **Cola de spots POTA:** publicar el spot propio al activar un parque (indicativo, referencia, frecuencia, CW) y, si
   no hay cobertura, guardarlo y enviarlo en cuanto haya WiFi. Antes, revisar las condiciones de la API de POTA para
   publicar.
@@ -85,7 +89,8 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 ### Por decidir
 - **Batería llena = 100 %:** tras cargar, la LiPo se relaja a ~4,10–4,15 V y la curva marca ~89–90 % con el LED de
   carga apagado (carga terminada). Propuesta: contar 4,15 V o más como 100 %.
-- **SOTA:** las condiciones de su API exigen aprobación previa para software generado con IA.
+- ~~**SOTA**~~ (**descartado**): las condiciones de su API exigen aprobación previa para software generado con IA;
+  no se programa el cliente.
 
 ### A estudiar (no prioritario)
 - **Audio I2S:** tono senoidal con rampas (sin clics) y volumen por software con un módulo DAC + amplificador I2S
@@ -169,15 +174,17 @@ alcance de la radio.
   la capa de transporte (LoRa / ESP-NOW), ya decidida como intercambiable.
 
 ## 4. Documentación y publicación
-- Al montar el GPS: esquema (quitar PENDIENTE), README y capturas.
-- Próxima release (v1.07b) con el GPS, HORA y RELOJ (preguntar antes). Capturas nuevas: CONFIG, STATUS > GPS y
-  PONER HORA.
+- ✅ GPS en el esquema (montado) y en el README; release v1.07b publicada (14 oct 2026).
+- Capturas nuevas: CONFIG, STATUS > GPS, PONER HORA, POTA y VER PARQUES.
+- Los parques cercanos van en la placa 1 sin versión nueva: entrarán en la próxima release (preguntar antes).
 
 ## Orden propuesto
-1. **Sin piezas:** QSO LIBRE en los dos sentidos; tendencia del BME280 con varias horas de datos (placa 1).
-2. **Salvapantallas y brillo:** probar la v1.05b.
-3. **Al llegar el GPS:** montaje, locator y hora automáticos; release v1.07b.
-4. **Después:** POTA sin conexión, cola de spots y PCB.
+1. **En la calle:** parques cercanos con fijo del GPS; medir el GPS dormido en µA.
+2. **Sin piezas:** capturas; tendencia del BME280 con varias horas de datos; salvapantallas y brillo (v1.05b); pila
+   del motor CW tras Duo.
+3. **Con palas en la placa 2:** QSO LIBRE en los dos sentidos.
+4. **Después:** placa perforada (comprobar antes los pines del PAM8302A, el GPS y el BME280), cola de spots POTA y
+   PCB.
 
 ## Hecho
 - ✅ Entrenador Koch estilo LCWO con corrección por letra o por total, Echo y TX libre (keyer iámbico A/B).
@@ -193,4 +200,5 @@ alcance de la radio.
   calibrable y macro {WX}.
 - ✅ Actualización por WiFi desde las releases de GitHub.
 - ✅ GPS (13 oct 2026): hora, locator y altitud automáticos; hora con fuente (GPS > WIFI > MANUAL) y puesta a mano.
+- ✅ Parques POTA cercanos sin conexión (14 oct 2026): lista de España en LittleFS, distancia y rumbo.
 - ✅ Consumo en reposo despreciable.
