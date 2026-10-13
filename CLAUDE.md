@@ -46,7 +46,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   listas (`dibujarListaOpciones()`); datos en páginas (`dibujarPiePaginas()`); pantallas de manipular/escuchar con
   pie corto y "menu". Inicio es una portada fija. **Mantener este estilo (fuente 5×7, sin imitar Meshtastic).**
 - Entrada: encoder KY-040 por interrupción (`isrEncoder`), eventos `BOTON_*`/`ENC_*` en `procesarBoton()`.
-  PRG corto = atrás, largo = dormir. Sin encoder: PRG corta = mover, larga = ejecutar, muy larga = dormir.
+  PRG corto = atrás, largo = dormir; despiertan PRG y el eje del encoder. Sin encoder: PRG corta = mover, larga = ejecutar, muy larga = dormir.
 - Tareas FreeRTOS: `motorCW` (núcleo 1, prio 3; API `motorCWEmitir/Detener/Ocupado/Portadora`; solo las tareas
   llaman a `conmutarEmisionMorse()`), `keyer` (palas cada 1 ms), `decod` (núcleo 0, ADC por DMA a 8 kHz, Goertzel).
 - NVS: `chispas` (entrenador, keyer, Echo, estadísticas, ajustes), `estacion` (indicativo, locator, UTC, QNH,
@@ -85,7 +85,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 | 6 | Entrada del decodificador (ADC1) |
 | 7 | Tono PWM → RV1 → PAM8302A + altavoz (TN del jack) y auriculares |
 | 38 | SD del PAM8302A (BAJO = apagado) |
-| 19 / 20 / 48 | Encoder CLK / DT / SW |
+| 19 / 20 / 48 | Encoder CLK / SW / DT (SW en pin RTC: despierta del deep sleep; cambiado el 13 oct) |
 | 41 / 42 | BME280 en Wire1 (SDA / SCL), 0x76 |
 | 47 | RX desde el TX del GPS |
 | 39 (a probar) | TX al GPS (dormirlo por UBX; el enable por transistor queda descartado) |

@@ -121,11 +121,15 @@ void reafirmarOled() {
 // DORMIR (DEEP SLEEP) Y APAGADO AUTOMATICO
 // ============================================================================
 // PRG largo, o apagadoAutoMin minutos sin tocar nada (se elige en CONF), pone la placa en deep sleep: OLED, Vext, LoRa, WiFi
-// y LED apagados. Se despierta pulsando PRG (GPIO0, pin RTC: wakeup ext0 a nivel bajo) y arranca de
-// nuevo como al encenderla (la configuracion esta en NVS).
+// y LED apagados. Se despierta pulsando PRG (GPIO0, pin RTC: wakeup ext0 a nivel bajo) o el eje del encoder
+// (GPIO20, pin RTC: wakeup ext1 a nivel bajo) y arranca de nuevo como al encenderla (la configuracion esta en NVS).
 
 void dormirChispas(const char* motivo) {
+#ifdef SIN_ENCODER
   Serial.printf("[SUENO] %s: a dormir. PRG para despertar\n", motivo);
+#else
+  Serial.printf("[SUENO] %s: a dormir. PRG o el eje del encoder para despertar\n", motivo);
+#endif
   motorCWDetener();
   keyerActivo = false;
   if (estadoWifi != WIFI_APAGADO) apagarWifi();
@@ -136,8 +140,13 @@ void dormirChispas(const char* motivo) {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(22, 16); display.print(F("CHISPAS DUERME"));
+#ifdef SIN_ENCODER
   display.setCursor(10, 34); display.print(F("PULSA PRG PARA"));
   display.setCursor(10, 44); display.print(F("DESPERTARLO"));
+#else
+  display.setCursor(4, 34); display.print(F("PULSA PRG O EL MANDO"));
+  display.setCursor(16, 44); display.print(F("PARA DESPERTARLO"));
+#endif
   display.display();
   delay(1500);
   display.ssd1306_command(SSD1306_DISPLAYOFF);
@@ -160,6 +169,12 @@ void dormirChispas(const char* motivo) {
   rtc_gpio_pullup_en(GPIO_NUM_0);
   rtc_gpio_pulldown_dis(GPIO_NUM_0);
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0);
+#ifndef SIN_ENCODER
+  // Y con el eje del encoder (sin pull-up en el modulo: el del RTC, que sigue alimentado por ext0)
+  rtc_gpio_pullup_en((gpio_num_t)ENC_SW_PIN);
+  rtc_gpio_pulldown_dis((gpio_num_t)ENC_SW_PIN);
+  esp_sleep_enable_ext1_wakeup(1ULL << ENC_SW_PIN, ESP_EXT1_WAKEUP_ANY_LOW);
+#endif
 
   Serial.flush();
   esp_deep_sleep_start();
@@ -185,6 +200,9 @@ void setup() {
   gpio_hold_dis((gpio_num_t)AMP_SD_PIN);
   gpio_hold_dis((gpio_num_t)VEXT_CTRL);
   gpio_hold_dis((gpio_num_t)ADC_CTRL_PIN);
+#ifndef SIN_ENCODER
+  rtc_gpio_deinit((gpio_num_t)ENC_SW_PIN);  // Tras despertar por ext1 sigue en el RTC: se devuelve a GPIO
+#endif
 
   // Lo primero: la salida KEY en BAJO, para que la emisora no transmita mientras arranca la placa
   pinMode(KEY_OUT_PIN, OUTPUT);
@@ -209,7 +227,8 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   Serial.printf("[INIT] MOTIVO DEL REINICIO: %d%s\n", (int)esp_reset_reason(),
-                esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0 ? " (despierta con PRG)" : "");
+                esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0 ? " (despierta con PRG)" :
+                esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1 ? " (despierta con el encoder)" : "");
 
   // display.begin() no comprueba que la OLED responda (solo falla si no hay memoria).
   // Se comprueba el ACK en I2C tras un pulso de reset y, si no contesta, se corta Vext y se reintenta.

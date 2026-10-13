@@ -360,7 +360,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   elige en CONF → `apagado`: nunca, 5, 10, 15, 30, 60 o 120 min; por defecto 30; NVS `apag`), salvo en CW, LoRa y
   TRX (y sus subpantallas) o con el portal abierto → `dormirChispas()`: aviso 1,5 s, OLED,
   WiFi, LoRa y LED apagados; KEY en BAJO, Vext apagada y divisor de batería desactivado, retenidos con `gpio_hold_en`
-  + `gpio_deep_sleep_hold_en` (se liberan al principio de `setup()`); despierta con ext0 en GPIO0 a nivel bajo.
+  + `gpio_deep_sleep_hold_en` (se liberan al principio de `setup()`); despierta con ext0 en GPIO0 a nivel bajo y, con encoder, con ext1 (`ESP_EXT1_WAKEUP_ANY_LOW`) en GPIO20, el eje,
+  con su pull-up del RTC (13 oct 2026; el pin se devuelve a GPIO con `rtc_gpio_deinit` en `setup()`). El serie dice
+  "(despierta con PRG)" o "(despierta con el encoder)".
   Despertar con PRG **no** entra en modo de carga (`boot:0x8`); arranca de nuevo (`esp_reset_reason` 8).
 - **Pantalla TRX** (v0.9a; conexión con el transceptor; nombre en la cabecera "TRX"): menú con título " TRANSCEPTOR ",
   `< DECODIFICAR >`, `< OPERAR >`, `< QSO >` y **memorias** en el centro del pie (`opcionTrx`; `subTrx`).
@@ -513,7 +515,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 6 | Entrada del decodificador (ADC1): acoplo 1 µF, polarización 2×10 kΩ, trimmer, 1 kΩ y 2×1N4148 |
 | 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, amplificador PAM8302A con altavoz en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R. **Montado y probado** (el buzzer piezo del principio se descartó: sonaba muy bajo) |
 | 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado y control de SD probado (v1.04b) |
-| 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
+| 19 / 20 / 48 | Encoder KY-040 CLK / SW / DT. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas). El 13 oct 2026 se cambiaron SW (antes 48) y DT (antes 20): SW en un pin RTC despierta del deep sleep (ext1, pull-up del RTC; PRG sigue en ext0) y GPIO3, el único libre con ADC y RTC, queda de reserva. La ISR lee DT de `GPIO_IN1_REG`. En la placa perforada, P1 pasa a CLK, SW, DT, +, GND. **Probado en la placa 1** (13 oct 2026): giro con aceleración, pulsación corta y larga, y despertar con el eje y con PRG |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
 | 3 (libre) | Era el enable del GPS (AO3401A en el positivo): **descartado el 13 oct 2026**; el GPS se duerme por UBX (ver 39) |
 | 39 (a probar) | TX hacia el RX del GPS (UART): órdenes UBX para dormirlo (`UBX-RXM-PMREQ`) y despertarlo; si dormido gasta < ~0,5 mA, sustituye al enable de GPIO3. Alternativas al AO3401A: IRLML6401, Si2301, DMG2305UX o PNP BC327/BC557 (ver `ROADMAP.md`) |
@@ -522,7 +524,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 Posición física (comprobada con fotos de la placa; pin 1 = GND, pad cuadrado, el más cercano al USB):
 - J3: 18 GPIO7 tono · 17 GPIO6 decod. · 16 GPIO5 DAH · 15 GPIO4 DIT · 14 GPIO3 GPS en · 13 GPIO2 KEY · 12 GPIO1 (VBAT, no)
   · 11 GPIO38 SD del amplificador · 10/9 GPIO39/40 (libres) · 8/7 GPIO41/42 · 6/5 GPIO45/46 (no) · 4 GPIO37 (no) · 3/2 **3V3** · 1 **GND**.
-- J2: 18/17 GPIO19/20 encoder CLK/DT · 16 GPIO21 (OLED_RST) · 15 GPIO26 (flash, no) · 14 GPIO48 encoder SW · 13 GPIO47 GPS RX
+- J2: 18/17 GPIO19/20 encoder CLK/SW · 16 GPIO21 (OLED_RST) · 15 GPIO26 (flash, no) · 14 GPIO48 encoder DT · 13 GPIO47 GPS RX
   · 12/11 GPIO33/34 · 10 GPIO35 (LED) · 9 GPIO36 (Vext) · 8 GPIO0 (PRG) · 7 RST · 6/5 GPIO43/44 (UART0) · 4/3 Ve · 2 5V · 1 GND.
 - `Ve` es Vext (conmutada por GPIO36, alimenta la OLED): los módulos van a 3V3 de J3. `5V` solo tiene tensión con USB.
 - GPIO17/18 (I2C de la OLED) no salen a los conectores, pero hay dos **pads de prueba "17" y "18" por detrás**

@@ -41,8 +41,8 @@
 #define KEY_OUT_PIN      2  // Salida KEY a la emisora por el PC817: ALTO = manipulando. En BAJO desde el arranque
 // Encoder KY-040. 19/20 son USB D-/D+ del S3, pero probados en placa como entradas: funcionan
 #define ENC_CLK_PIN     19  // Pull-up de 10 kOhm en el modulo
-#define ENC_DT_PIN      20  // Pull-up de 10 kOhm en el modulo
-#define ENC_SW_PIN      48  // Pulsador del eje, sin pull-up en el modulo: INPUT_PULLUP
+#define ENC_SW_PIN      20  // Pulsador del eje, sin pull-up en el modulo: INPUT_PULLUP. Pin RTC: despierta del deep sleep
+#define ENC_DT_PIN      48  // Pull-up de 10 kOhm en el modulo
 #define SPEAKER_PWM_PIN  7  // Tono CW por PWM (J3-18): volumen, auriculares y buzzer (ver esquema, hoja 4)
 #define AMP_SD_PIN      38  // SD del amplificador PAM8302A (J3-11): ALTO = encendido. Solo en CW, LoRa y TRX
 

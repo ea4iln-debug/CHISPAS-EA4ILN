@@ -118,10 +118,10 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 | 6 | J3-17 | Entrada de audio del decodificador (ADC1, por DMA) | ✅ |
 | 7 | J3-18 | Tono CW por PWM (amplificador con altavoz y auriculares) | ✅ |
 | 38 | J3-11 | Apagado (SD) del amplificador PAM8302A: solo encendido en CW, LoRa y TRX | ✅ |
-| 19 / 20 | J2-18 / J2-17 | Encoder CLK / DT | ✅ |
-| 48 | J2-14 | Pulsador del encoder | ✅ |
+| 19 | J2-18 | Encoder CLK | ✅ |
+| 20 | J2-17 | Pulsador del encoder (también despierta la placa) | ✅ |
+| 48 | J2-14 | Encoder DT | ✅ |
 | 47 | J2-13 | RX desde el TX del GPS | 🚧 |
-| 3 | J3-14 | Enable del GPS (opcional) | 🚧 |
 | 41 / 42 | J3-8 / J3-7 | I2C (Wire1) del sensor BME280 (opcional) | ✅ |
 
 Notas:
@@ -226,7 +226,7 @@ Todo se hace con el **encoder**:
 | **Pulsar sobre un valor** | Entra en edición (el valor sale en vídeo inverso): girar lo cambia y pulsar otra vez lo confirma. Al girar rápido, los valores largos avanzan de varios en varios (aceleración, ajustable en CONFIG) |
 | **Pulsación larga** | Atajo en algunas pantallas, como salir de la práctica o repetir |
 | **Botón PRG** (corto) | *Atrás*: sale de la edición o del submenú y, en las pantallas principales, vuelve a Inicio |
-| **Botón PRG** (largo) | Duerme Chispas (deep sleep); se despierta pulsando PRG |
+| **Botón PRG** (largo) | Duerme Chispas (deep sleep); se despierta pulsando PRG o el eje del encoder |
 
 Todas las pantallas siguen el mismo esquema:
 - **Menú:** título en negativo, opciones `< ... >` y `ant.`/`sig.` abajo.

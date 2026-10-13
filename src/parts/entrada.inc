@@ -55,7 +55,8 @@ uint8_t leerPulsador(Pulsador& p) {
 // Encoder por interrupcion: un cambio en CLK o DT avanza un decodificador de cuadratura por tabla.
 // El KY-040 da 4 transiciones por paso y reposa con CLK = DT = 1. Los rebotes van y vuelven
 // en la tabla y no suman pasos. Sentido horario = positivo (probado en placa).
-static_assert(ENC_CLK_PIN < 32 && ENC_DT_PIN < 32, "La ISR lee CLK y DT de GPIO_IN_REG (GPIO 0-31)");
+// GPIO 0-31 en GPIO_IN_REG y 32-48 en GPIO_IN1_REG (el pin es constante: el compilador elige el registro)
+#define LEER_GPIO_ISR(pin) ((pin) < 32 ? (REG_READ(GPIO_IN_REG) >> (pin)) & 1 : (REG_READ(GPIO_IN1_REG) >> ((pin) - 32)) & 1)
 DRAM_ATTR const int8_t TABLA_CUADRATURA[16] = { 0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0 };
 volatile uint8_t encEstado = 3;
 volatile int8_t encAcumulado = 0;
@@ -72,8 +73,7 @@ portMUX_TYPE muxEncoder = portMUX_INITIALIZER_UNLOCKED;
 
 // Solo registros y datos en RAM: puede ejecutarse mientras se escribe la flash (NVS)
 void IRAM_ATTR isrEncoder() {
-  uint32_t entradas = REG_READ(GPIO_IN_REG);
-  uint8_t nuevo = (((entradas >> ENC_CLK_PIN) & 1) << 1) | ((entradas >> ENC_DT_PIN) & 1);
+  uint8_t nuevo = (LEER_GPIO_ISR(ENC_CLK_PIN) << 1) | LEER_GPIO_ISR(ENC_DT_PIN);
   portENTER_CRITICAL_ISR(&muxEncoder);
   if (nuevo != encEstado) {
     encAcumulado += TABLA_CUADRATURA[(encEstado << 2) | nuevo];

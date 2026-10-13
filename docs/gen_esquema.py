@@ -211,7 +211,7 @@ def vista_general():
             s.text(x + 10, y + 34 + 13 * i, t, 9.5, "start", "normal", "#444")
 
     # Izquierda
-    blk(40, 75, 250, 100, "Encoder KY-040 (ENC1)", ["Menús: girar + pulsar", "CLK→19 · DT→20 · SW→48", "+ a 3V3 (nunca a 5 V)"], "#1565c0")
+    blk(40, 75, 250, 100, "Encoder KY-040 (ENC1)", ["Menús: girar + pulsar", "CLK→19 · SW→20 · DT→48", "+ a 3V3 (nunca a 5 V)"], "#1565c0")
     blk(40, 195, 250, 70, "Palas (J1, jack estéreo)", ["Punta → DIT (4) · Anillo → DAH (5)", "Malla → GND · pull-up interno"], "#6a1b9a")
     blk(40, 285, 250, 70, "GPS NEO-6M (GPS1)", ["TX del GPS → GPIO47 (pendiente de llegar)", "Enable con P-MOSFET en GPIO3: opcional"], "#2e7d32")
     blk(40, 385, 250, 70, "BME280 (BME1, opcional)", ["I2C: SDA→41 · SCL→42 (Wire1), 0x76", "Montado y probado (v1.03b)"], C_OPT)
@@ -238,21 +238,22 @@ def vista_general():
 def p_encoder():
     s = S(520, 330)
     h = s.heltec(20, 40, 210, [("3V3", 75), ("GPIO19", 110), ("GPIO20", 145), ("GPIO48", 180), ("GND", 215)])
-    k = s.block(345, 40, 145, 210, "ENC1 · KY-040", [("+", 75), ("CLK", 110), ("DT", 145), ("SW", 180), ("GND", 215)], "left", "#eef3fb")
+    k = s.block(345, 40, 145, 210, "ENC1 · KY-040", [("+", 75), ("CLK", 110), ("SW", 145), ("DT", 180), ("GND", 215)], "left", "#eef3fb")
     s.add('<circle cx="447" cy="140" r="24" fill="#ddd" stroke="#555" stroke-width="1.5"/>')
     s.add('<circle cx="447" cy="140" r="12" fill="#bbb" stroke="#555" stroke-width="1.2"/>')
     s.line([(447, 140), (447, 118)], "#555", 2)
     for n, c in (("3V3", C_3V3), ("GPIO19", "#1565c0"), ("GPIO20", "#1565c0"), ("GPIO48", "#1565c0"), ("GND", C_GND)):
         pass
-    pairs = [("3V3", "+", C_3V3), ("GPIO19", "CLK", C_W), ("GPIO20", "DT", C_W), ("GPIO48", "SW", C_W), ("GND", "GND", C_W)]
+    pairs = [("3V3", "+", C_3V3), ("GPIO19", "CLK", C_W), ("GPIO20", "SW", C_W), ("GPIO48", "DT", C_W), ("GND", "GND", C_W)]
     for a, b, c in pairs:
         s.line([h[a], k[b]], c, 1.8)
     s.tag(240, 70, "3V3", C_3V3)
     s.tag(240, 105, "CLK", "#1565c0")
-    s.tag(240, 140, "DT", "#1565c0")
-    s.tag(240, 175, "SW", "#1565c0")
+    s.tag(240, 140, "SW", "#1565c0")
+    s.tag(240, 175, "DT", "#1565c0")
     notes(s, 20, 272, [
-        "CLK y DT llevan pull-up de 10 kΩ en el módulo; SW no: INPUT_PULLUP en GPIO48.",
+        "CLK y DT llevan pull-up de 10 kΩ en el módulo; SW no: INPUT_PULLUP en GPIO20 (y el del RTC al dormir).",
+        "SW en GPIO20 (pin RTC): pulsar el eje despierta la placa, como PRG.",
         "Orden físico de los pines del KY-040: CLK, DT, SW, +, GND.",
         "GPIO19/20 son USB D−/D+ del S3, pero funcionan como entradas (probado en placa).",
     ])
@@ -653,12 +654,12 @@ PINES = [
     ("6", "Entrada del decodificador", "R6 1 kΩ, D1/D2, polarización 1,65 V", "ADC1 por DMA a 8 kHz (pantalla TRX)", ""),
     ("7", "Tono CW", "R1 1 kΩ → RV1 → ampli U2 + altavoz / auriculares", "PWM (LEDC) 850 Hz (CONF: 400–1000)", ""),
     ("19", "Encoder CLK", "KY-040 CLK", "Entrada (pull-up en el módulo)", ""),
-    ("20", "Encoder DT", "KY-040 DT", "Entrada (pull-up en el módulo)", ""),
+    ("20", "Pulsador del encoder", "KY-040 SW", "Entrada con pull-up interno; despierta del deep sleep", ""),
     ("38", "Apagado del amplificador", "SD de U2 (PAM8302A)", "Salida, BAJO = apagado (fuera de CW/LoRa/TRX y al dormir)", ""),
     ("41", "BME280 SDA", "Wire1", "I2C, 0x76 (opcional; montado)", ""),
     ("42", "BME280 SCL", "Wire1", "I2C (opcional; montado)", ""),
     ("47", "RX del GPS", "TX del NEO-6M", "UART1 RX, 9600 bd", ""),
-    ("48", "Pulsador del encoder", "KY-040 SW", "Entrada con pull-up interno", ""),
+    ("48", "Encoder DT", "KY-040 DT", "Entrada (pull-up en el módulo)", ""),
 ]
 
 BOM = [

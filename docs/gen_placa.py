@@ -35,7 +35,7 @@ def heltec_y(pin):
 # Red de cada pin de la Heltec que se usa (los demas se sueldan al zocalo pero no se conectan)
 RED_J3 = {1: "GND", 2: "3V3", 3: "3V3", 7: "SCL", 8: "SDA", 11: "AMP_SD", 13: "KEY_GPIO", 14: "GPS_EN",
           15: "DIT", 16: "DAH", 17: "ADC", 18: "TONO"}
-RED_J2 = {1: "GND", 2: "5V", 12: "USB_DET", 13: "GPS_TX", 14: "ENC_SW", 17: "ENC_DT", 18: "ENC_CLK"}
+RED_J2 = {1: "GND", 2: "5V", 12: "USB_DET", 13: "GPS_TX", 14: "ENC_DT", 17: "ENC_SW", 18: "ENC_CLK"}
 
 # ----------------------------------------------------------------------------
 # Piezas
@@ -150,8 +150,8 @@ resistencia("R11", "100 kΩ", (3, 20), (7, 20), "5V", "USB_DET", "reserva: detec
 resistencia("R12", "150 kΩ", (2, 22), (6, 22), "GND", "USB_DET", "reserva: detección de USB", reserva="USB")
 
 # --- Derecha: encoder y GPS ---
-tira("P1", "encoder KY-040 (CLK, DT, SW, +, GND)", 20, 8, ["CLK", "DT", "SW", "+", "GND"],
-     ["ENC_CLK", "ENC_DT", "ENC_SW", "3V3", "GND"])
+tira("P1", "encoder KY-040 (CLK, SW, DT, +, GND)", 20, 8, ["CLK", "SW", "DT", "+", "GND"],
+     ["ENC_CLK", "ENC_SW", "ENC_DT", "3V3", "GND"])
 tira("P9", "GPS (VCC, RX, TX, GND)", 20, 14, ["VCC", "RX", "TX", "GND"], ["GPS_VCC", "", "GPS_TX", "GND"])
 
 # Zonas
@@ -224,8 +224,8 @@ PUENTES = [
     ("KEY_E", [(0, 15), (1, 15)]),
     # Encoder y GPS
     ("ENC_CLK", tramo(h2(18), (20, heltec_y(18)))),
-    ("ENC_DT", tramo(h2(17), (20, heltec_y(17)))),
-    ("ENC_SW", tramo(h2(14), (19, heltec_y(14)), (19, 10), (20, 10))),
+    ("ENC_SW", tramo(h2(17), (20, heltec_y(17)))),
+    ("ENC_DT", tramo(h2(14), (19, heltec_y(14)), (19, 10), (20, 10))),
     ("GPS_TX", tramo(h2(13), (19, heltec_y(13)), (19, 16), (20, 16))),
     # Reserva USB (solo al montar R11 y R12)
     ("USB_DET", tramo((7, 20), (7, 22), (6, 22)), "USB"),
@@ -606,8 +606,8 @@ NOMBRE_RED = {
     "TN": "TN del jack → amplificador", "AMP_SD": "GPIO38 (SD del amplificador)", "ADC": "GPIO6 (ADC)",
     "BIAS": "polarización 1,65 V", "DEC_IN": "entrada del decodificador", "DEC_CUR": "cursor de RV2",
     "KEY_GPIO": "GPIO2 (KEY)", "KEY_A": "ánodo del PC817", "KEY_C": "colector (emisora)", "KEY_E": "emisor (emisora)",
-    "DIT": "GPIO4 (DIT)", "DAH": "GPIO5 (DAH)", "ENC_CLK": "GPIO19 (CLK)", "ENC_DT": "GPIO20 (DT)",
-    "ENC_SW": "GPIO48 (SW)", "GPS_TX": "GPIO47 (TX del GPS)", "SCL": "GPIO42 (SCL)", "SDA": "GPIO41 (SDA)",
+    "DIT": "GPIO4 (DIT)", "DAH": "GPIO5 (DAH)", "ENC_CLK": "GPIO19 (CLK)", "ENC_SW": "GPIO20 (SW)",
+    "ENC_DT": "GPIO48 (DT)", "GPS_TX": "GPIO47 (TX del GPS)", "SCL": "GPIO42 (SCL)", "SDA": "GPIO41 (SDA)",
     "TJ": "punta del jack del decodificador", "SJ": "malla del jack del decodificador", "5V": "5 V (pin 5V, solo con USB)",
     "USB_DET": "GPIO33 (detección de USB)",
 }
