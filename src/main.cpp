@@ -6715,7 +6715,7 @@ void encenderPerifericos() {
 /**
  * Reenvia a la OLED bomba de carga (0x8D 0x14) y encendido (0xAF), una vez, tras display.begin()
  * (arreglo de la v0.4e). Tras algunos reinicios cortos la OLED contesta por I2C y dice estar encendida,
- * pero el panel se queda negro. En la placa 1 aun pasa a veces: ver CLAUDE.md (pruebas de las v0.7u-z).
+ * pero el panel se queda negro. En la placa 1 aun pasa a veces: ver docs/NOTAS.md (pruebas de las v0.7u-z).
  */
 void reafirmarOled() {
   const uint8_t cmdsOled[][2] = { {0x8D, 0x14}, {0xAF, 0x00} };  // Bomba de carga on, pantalla on
@@ -6829,7 +6829,7 @@ void setup() {
   // controlador contesta y dice estar encendido. Se probaron reenvios periodicos (parpadeaban), cortar
   // Vext al arrancar (seguia fallando a veces) y otras variantes; se mantiene esta secuencia (la de la
   // v0.4e). Sospecha: caidas de 3,3 V (la OLED parpadea al arrancar la LoRa); sin comprobar con otra
-  // alimentacion. Detalles en CLAUDE.md.
+  // alimentacion. Detalles en docs/NOTAS.md.
   Wire.begin(OLED_SDA, OLED_SCL);
   bool oledResponde = false;
   pinMode(OLED_RST, OUTPUT);

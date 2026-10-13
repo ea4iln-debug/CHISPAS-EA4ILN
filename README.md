@@ -362,11 +362,12 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 │   ├── gen_esquema.py              Generador del esquema (HTML/SVG → PDF)
 │   ├── captura_oled.py             Captura de la pantalla por serie (PNG)
 │   ├── LICENCIAS_TERCEROS.txt      Avisos de licencia de las librerías incluidas en el firmware
+│   ├── NOTAS.md                    Notas de desarrollo detalladas: historial de pruebas y decisiones
 │   └── img/                        Capturas de las pantallas y foto del prototipo
 ├── platformio.ini                  Configuración de PlatformIO y dependencias
 ├── LICENSE                         Licencia del software (GPL-3.0)
 ├── LICENSE-HARDWARE.md             Licencia del hardware y la documentación (CC BY-NC-SA 4.0)
-└── CLAUDE.md                       Notas de desarrollo: estado, decisiones y pendientes
+└── CLAUDE.md                       Resumen de desarrollo: estado, decisiones y pendientes
 ```
 
 ---
