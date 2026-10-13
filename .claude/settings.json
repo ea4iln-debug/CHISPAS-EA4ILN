@@ -20,7 +20,8 @@
       "Bash(gh release view:*)",
       "Bash(gh auth status:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git commit -qam 'v1.07b: GPS, HORA UTC/LOCAL y RELOJ en CONFIG *)"
     ],
     "ask": [
       "Bash(./publicar.sh:*)",
