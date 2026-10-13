@@ -28,9 +28,9 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - OTA: CONF > CONFIG > ACTUALIZAR FW; TLS con `include/certificados_github.h`.
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
-## Estado actual (13 oct 2026)
-- **v1.06b** (última release, 12 oct) en las dos placas; la placa 1 lleva además, por USB y sin subir versión, el GPS y
-  CONFIG > HORA / RELOJ (probados el 13 oct). Placa 1: protoboard con encoder, palas, KEY, amplificador,
+## Estado actual (14 oct 2026)
+- **v1.07b** (última release, 14 oct: GPS, HORA y RELOJ), aún sin instalar por OTA: la placa 2 lleva la v1.06b y la
+  placa 1 ese mismo código por USB con la versión 1.06b (probado el 13 oct). Placa 1: protoboard con encoder, palas, KEY, amplificador,
   BME280 y batería; entorno `heltec_wifi_lora_32_V3`. Placa 2: desnuda, sin encoder; entorno `heltec_sin_encoder`
   (`-DSIN_ENCODER`), se actualiza por OTA.
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
@@ -99,8 +99,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - PCB: se empezará desde cero más adelante; no hay nada de KiCad.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-1. GPS integrado y probado en la placa 1 (13 oct: fijo, hora, locator, QNH). **Siguiente: release v1.07b** (preguntar
-   antes) y luego parques POTA cercanos. Falta medir el GPS dormido en µA y capturas nuevas (CONFIG, STATUS > GPS,
+1. GPS integrado y probado en la placa 1 (13 oct: fijo, hora, locator, QNH). Release v1.07b publicada (14 oct):
+   instalarla por OTA en las dos placas; luego parques POTA cercanos. Falta medir el GPS dormido en µA y capturas nuevas (CONFIG, STATUS > GPS,
    PONER HORA).
 2. Placa perforada: Heltec bien orientada (`J3_IZQUIERDA`, confirmado 13 oct); antes de soldar, comprobar el orden
    de pines del PAM8302A, el GPS y el BME280.
