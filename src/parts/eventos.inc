@@ -244,7 +244,7 @@ void procesarBoton() {
         break;
 
       case CONF_CONFIG:
-        // Lista: ID, LOCATOR, ALTITUD, TONO, ACELERACION, SALVAPANTALLAS, APAGADO, WEBCONF, ACTUALIZAR FW,
+        // Lista: ID, LOCATOR, ALTITUD, HORA, RELOJ, TONO, ACELERACION, SALVAPANTALLAS, APAGADO, WEBCONF, ACTUALIZAR FW,
         // DEPURACION, FABRICA y volver (pie)
         if (atras) {
           subConf = CONF_MENU;
@@ -259,6 +259,11 @@ void procesarBoton() {
           } else if (editandoValor && focoConf == OC_SALVAPANTALLAS) {
             ajustarValor(caraEsperaIdx, giro, 0, N_OPCIONES_CARA - 1);
             guardarSalvapantallasNVS();
+          } else if (editandoValor && focoConf == OC_LOCATOR) {
+            locatorEditAuto = !locatorEditAuto;
+          } else if (editandoValor && focoConf == OC_HORA) {
+            horaUtcCabecera = !horaUtcCabecera;
+            guardarEstacionNVS();
           } else if (editandoValor && focoConf == OC_ALTITUD) {
             ajustarValor(altitudEditada, giro, ALTITUD_MIN_M, ALTITUD_MAX_M);
           } else if (editandoValor && focoConf == OC_TONO) {
@@ -272,7 +277,23 @@ void procesarBoton() {
         } else if (pulsa) {
           switch (focoConf) {
             case OC_ID:      confAbrirEditor(EDITOR_ID_ESTACION); break;
-            case OC_LOCATOR: confAbrirEditor(EDITOR_LOCATOR); break;
+            case OC_LOCATOR:
+              // Con GPS: pulsar, girar entre AUTO (GPS) y MANUAL y pulsar (MANUAL abre el editor). Sin GPS, el editor
+              if (editandoValor) {
+                editandoValor = false;
+                locatorAuto = locatorEditAuto;
+                guardarEstacionNVS();
+                Serial.printf("[CONFIG] LOCATOR %s\n", locatorAuto ? "AUTO (GPS)" : "MANUAL");
+                if (!locatorAuto) confAbrirEditor(EDITOR_LOCATOR);
+                else if (gpsDespierto()) gpsVentanaHecha = false;  // Que lo ponga al cerrar esta ventana
+                else if (estadoGps == GPS_DORMIDO) despertarGps(GPS_TOPE_PERIODICO_MS, "LOCATOR AUTO");
+              } else if (gpsDetectado()) {
+                locatorEditAuto = locatorAuto;
+                editandoValor = true;
+              } else {
+                confAbrirEditor(EDITOR_LOCATOR);
+              }
+              break;
             case OC_ALTITUD:
               // Pulsar, girar hasta la altitud conocida y pulsar: el QNH sale de la presion actual
               if (editandoValor) {
@@ -288,6 +309,10 @@ void procesarBoton() {
                 editandoValor = true;
               }
               break;
+            case OC_RELOJ:
+              confAbrirReloj();
+              break;
+            case OC_HORA:
             case OC_ACELERACION:
             case OC_SALVAPANTALLAS:
             case OC_APAGADO:
@@ -342,6 +367,22 @@ void procesarBoton() {
           }
         }
         break;
+
+      case CONF_RELOJ: {
+        // Girar cambia el campo (da la vuelta); pulsar pasa al siguiente y, en el ultimo, pone la hora. La larga del
+        // eje la pone ya; atras sale sin cambiarla
+        if (atras) {
+          subConf = CONF_CONFIG;
+        } else if (giro != 0) {
+          int16_t minimo = RELOJ_MIN[relojCampo], rango = RELOJ_MAX[relojCampo] - minimo + 1;
+          relojCampos[relojCampo] = (relojCampos[relojCampo] - minimo + giro % rango + rango) % rango + minimo;
+        } else if (pulsa && relojCampo < RELOJ_N_CAMPOS - 1) {
+          relojCampo++;
+        } else if (pulsa || ejeLarga) {
+          confAplicarReloj();
+        }
+        break;
+      }
 
       case CONF_STATUS:
         // Girar pasa pagina; pulsar (o atras) vuelve al menu

@@ -126,7 +126,16 @@ void procesarBME() {
     memmove(bmeHist, bmeHist + 1, (BME_HIST_N - 1) * sizeof(float));
     bmeHistN--;
   }
-  bmeHist[bmeHistN++] = bmePresionHpa;
+  // Con la altitud del GPS, la muestra va reducida a nivel del mar: subir a un monte no parece una bajada de
+  // presion (3 hPa son unos 25 m). Al pasar de un tipo de muestra al otro, el historial empieza de nuevo
+  bool nivelMar = !isnan(gpsAltRef);
+  if (nivelMar != bmeHistNivelMar) {
+    if (bmeHistN > 0) Serial.println(nivelMar ? F("[BME] HISTORIAL A NIVEL DEL MAR (ALTITUD DEL GPS): EMPIEZA DE NUEVO")
+                                              : F("[BME] HISTORIAL SIN ALTITUD: EMPIEZA DE NUEVO"));
+    bmeHistN = 0;
+    bmeHistNivelMar = nivelMar;
+  }
+  bmeHist[bmeHistN++] = nivelMar ? qnhParaAltitud(gpsAltRef) : bmePresionHpa;
   float tend = bmeTendencia3h();
   bool aviso = !isnan(tend) && tend <= -BME_TORMENTA_HPA;
   if (aviso != avisoTormenta) {
@@ -173,9 +182,14 @@ void dibujarPaginaAmbiente() {
   display.print(linea);
 }
 
-// SOL: "actualizar" sincroniza la hora por NTP (enciende el WiFi si hace falta)
+// SOL: "actualizar" despierta el GPS (si lo hay) y, si la hora no viene de el, la sincroniza por NTP (enciende el
+// WiFi si hace falta)
 void actualizarHoraSol() {
-  if (estadoWifi == WIFI_CONECTADO) configTzTime(ZONA_HORARIA, "pool.ntp.org", "time.cloudflare.com");
+  if (gpsDetectado()) {
+    despertarGps(GPS_TOPE_PERIODICO_MS, "SOL");
+    if (fuenteHoraActual() == HORA_GPS) return;
+  }
+  if (estadoWifi == WIFI_CONECTADO) iniciarNtp();
   else if (estadoWifi == WIFI_APAGADO) encenderWifi();
 }
 

@@ -40,6 +40,7 @@
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include <esp_sntp.h>  // Aviso de hora sincronizada por NTP y parada del NTP cuando la hora viene del GPS
 #include "qrcode.h"  // Componente qrcode de ESP-IDF, incluido en el core (esp_qrcode_generate)
 #include <nvs.h>
 #include <esp_sleep.h>
@@ -71,6 +72,7 @@ inline bool depuActiva(uint8_t bit) { return (depuracion & bit) != 0; }
 #include "parts/wifi.inc"
 #include "parts/ota.inc"
 #include "parts/datos_web.inc"
+#include "parts/gps.inc"
 #include "parts/pant_inicio_cw.inc"
 #include "parts/pant_lora_trx.inc"
 #include "parts/pant_prop_pota.inc"
@@ -148,7 +150,10 @@ void dormirChispas(const char* motivo) {
   display.setCursor(16, 44); display.print(F("PARA DESPERTARLO"));
 #endif
   display.display();
-  delay(1500);
+  unsigned long inicioMensaje = millis();
+  dormirGpsAntesDeSueno();  // Hasta ~1,5 s, mientras se lee el mensaje
+  unsigned long transcurrido = millis() - inicioMensaje;
+  if (transcurrido < 1500) delay(1500 - transcurrido);
   display.ssd1306_command(SSD1306_DISPLAYOFF);
 
   // Salidas en reposo y retenidas durante el sueno (si no, quedan al aire): KEY en BAJO, Vext
@@ -269,6 +274,7 @@ void setup() {
   aplicarFrecTono(false);
   cargarEstacionNVS();
   iniciarBME();  // Sensor ambiental opcional en Wire1 (GPIO41/42)
+  iniciarGps();  // GPS opcional en UART1 (GPIO47/39): se detecta en unos segundos en procesarGps()
   setenv("TZ", ZONA_HORARIA, 1);  // Para que la hora manual del portal se interprete como local
   tzset();
   bateriaActual = leerBateria();
@@ -402,6 +408,7 @@ void loop() {
   procesarTrx();
   procesarWifi();
   procesarOta();
+  procesarGps();
   procesarBME();
   procesarBateriaYPantalla();
   if (depuActiva(DEPU_DIAG)) procesarDiagnostico();

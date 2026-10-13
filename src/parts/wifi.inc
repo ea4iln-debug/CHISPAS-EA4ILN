@@ -74,19 +74,27 @@ bool procesarVistaPortal(uint8_t& foco, int8_t giro, bool pulsa, bool atras);
 // CONF: menu con CONFIG (opciones) y STATUS (informacion, en paginas)
 #define OPCION_BARRA_CONFIG 2
 uint8_t opcionPantallaConfig = OPCION_BARRA_CONFIG;  // Menu: 0 = CONFIG, 1 = STATUS, 2 = barra ant./sig.
-enum SubConf { CONF_MENU, CONF_CONFIG, CONF_STATUS, CONF_PORTAL, CONF_EDITOR, CONF_OTA, CONF_DEPURACION };
+enum SubConf { CONF_MENU, CONF_CONFIG, CONF_STATUS, CONF_PORTAL, CONF_EDITOR, CONF_OTA, CONF_DEPURACION, CONF_RELOJ };
 SubConf subConf = CONF_MENU;
 // Lista de CONFIG (4 a la vista; "volver" en el pie)
-// Por bloques: estacion (ID, LOCATOR, ALTITUD), sonido y manejo (TONO, ACELERACION), pantalla y energia
-// (SALVAPANTALLAS, APAGADO) y sistema (WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA)
-enum OpcionConf { OC_ID, OC_LOCATOR, OC_ALTITUD, OC_TONO, OC_ACELERACION, OC_SALVAPANTALLAS, OC_APAGADO, OC_WEBCONF,
-                  OC_ACTUALIZAR, OC_DEPURACION, OC_FABRICA, OC_VOLVER };
-#define N_OPCIONES_CONF 12
+// Por bloques: estacion (ID, LOCATOR, ALTITUD, HORA, RELOJ), sonido y manejo (TONO, ACELERACION), pantalla y
+// energia (SALVAPANTALLAS, APAGADO) y sistema (WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA)
+enum OpcionConf { OC_ID, OC_LOCATOR, OC_ALTITUD, OC_HORA, OC_RELOJ, OC_TONO, OC_ACELERACION, OC_SALVAPANTALLAS,
+                  OC_APAGADO, OC_WEBCONF, OC_ACTUALIZAR, OC_DEPURACION, OC_FABRICA, OC_VOLVER };
+#define N_OPCIONES_CONF 14
 uint8_t focoConf = 0;
 // ALTITUD (con el BME280): al pulsar se edita partiendo de la altitud actual; al pulsar otra vez se calcula el QNH
 #define ALTITUD_MIN_M -400
 #define ALTITUD_MAX_M 8848
 int16_t altitudEditada = 0;
+// LOCATOR con GPS: al pulsar se elige AUTO (GPS) o MANUAL girando; al pulsar otra vez, MANUAL abre el editor
+bool locatorEditAuto = true;
+// RELOJ: poner la hora a mano (UTC o local, como la cabecera), campo a campo: hora, minutos, dia, mes y ano
+#define RELOJ_N_CAMPOS 5
+const int16_t RELOJ_MIN[RELOJ_N_CAMPOS] = { 0, 0, 1, 1, 2024 };
+const int16_t RELOJ_MAX[RELOJ_N_CAMPOS] = { 23, 59, 31, 12, 2099 };
+int16_t relojCampos[RELOJ_N_CAMPOS];
+uint8_t relojCampo = 0;
 // Lista de DEPURACION: una opcion SI/NO por bit DEPU_* y "volver" en el pie (foco N_OPCIONES_DEPU)
 #define N_OPCIONES_DEPU 4
 const uint8_t BITS_DEPU[N_OPCIONES_DEPU] = { DEPU_SERIE, DEPU_DIAG, DEPU_DECOD, DEPU_CW };
@@ -95,7 +103,8 @@ const char* const NOMBRES_OPCIONES_DEPU[N_OPCIONES_DEPU] = { "ORDENES SERIE", "D
 uint8_t focoDepu = 0;
 uint8_t focoPortalConf = 0;  // Vista del portal: 0 = ver qr, 1 = volver
 uint8_t paginaStatus = 0;
-#define N_PAGINAS_STATUS 6
+#define N_PAGINAS_STATUS 7
+#define PAGINA_STATUS_GPS 6
 
 // Apagado automatico: minutos sin tocar nada antes de dormir (0 = nunca). Se elige en CONF y se guarda en NVS
 const uint8_t OPCIONES_APAGADO_MIN[] = { 0, 5, 10, 15, 30, 60, 120 };
@@ -256,8 +265,7 @@ void guardarParametrosPortal() {
       struct tm t = {};
       t.tm_year = a - 1900; t.tm_mon = me - 1; t.tm_mday = d;
       t.tm_hour = h; t.tm_min = mi; t.tm_isdst = -1;  // Hora local: mktime aplica CET/CEST
-      struct timeval tv = { mktime(&t), 0 };
-      settimeofday(&tv, nullptr);
+      ponerHora(mktime(&t), HORA_MANUAL);
       Serial.printf("[PORTAL] HORA MANUAL: %s\n", hora.c_str());
     } else {
       Serial.printf("[PORTAL] HORA NO VALIDA: %s\n", hora.c_str());
@@ -443,11 +451,18 @@ void apagarWifi() {
   Serial.println(F("[WIFI] APAGADO"));
 }
 
+// NTP en segundo plano, salvo que la hora venga del GPS (mas exacto)
+void iniciarNtp() {
+  if (fuenteHoraActual() == HORA_GPS) return;
+  sntp_set_time_sync_notification_cb(horaSincronizadaNtp);
+  configTzTime(ZONA_HORARIA, "pool.ntp.org", "time.cloudflare.com");
+}
+
 void wifiConectado() {
   estadoWifi = WIFI_CONECTADO;
   Serial.print(F("[WIFI] CONECTADO, IP "));
   Serial.println(WiFi.localIP());
-  configTzTime(ZONA_HORARIA, "pool.ntp.org", "time.cloudflare.com");  // Sincroniza en segundo plano
+  iniciarNtp();
   pantallaPendiente = true;
 }
 

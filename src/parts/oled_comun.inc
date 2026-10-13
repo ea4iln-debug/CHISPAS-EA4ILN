@@ -10,6 +10,46 @@ bool horaLocalValida(struct tm& t) {
   return getLocalTime(&t, 0) && t.tm_year > 120;  // Sin sincronizar el reloj empieza en 1970
 }
 
+// Fuente de la hora del reloj del sistema, de menos a mas exacta. Si concurren varias, se queda la mas exacta: GPS
+// y WiFi (NTP) solo la cambian si son igual o mas exactos que la actual; la manual (CONFIG > RELOJ o webconf)
+// siempre, porque se pone a proposito, y luego la sustituyen el WiFi o el GPS en cuanto la tengan. En memoria RTC:
+// sigue valiendo tras el deep sleep (el reloj tambien sigue)
+enum FuenteHora : uint8_t { HORA_NINGUNA, HORA_MANUAL, HORA_WIFI, HORA_GPS };
+RTC_DATA_ATTR uint8_t fuenteHora = HORA_NINGUNA;
+const char* const NOMBRES_FUENTE_HORA[] = { "SIN HORA", "MANUAL", "WIFI", "GPS" };
+
+FuenteHora fuenteHoraActual() {
+  struct tm t;
+  return horaLocalValida(t) ? (FuenteHora)fuenteHora : HORA_NINGUNA;
+}
+
+// Llamada por el NTP (desde la tarea de red) al sincronizar
+void horaSincronizadaNtp(struct timeval* tv) {
+  fuenteHora = HORA_WIFI;
+}
+
+// Pone el reloj del sistema (UTC) si la fuente lo permite. Con la hora del GPS se para el NTP (menos exacto)
+bool ponerHora(time_t t, FuenteHora fuente) {
+  if (fuente != HORA_MANUAL && fuente < fuenteHoraActual()) return false;
+  if (fuente == HORA_GPS && sntp_enabled()) sntp_stop();
+  struct timeval tv = { t, 0 };
+  settimeofday(&tv, nullptr);
+  fuenteHora = fuente;
+  pantallaPendiente = true;
+  return true;
+}
+
+// Segundos desde 1970 de una fecha UTC (no hay timegm en el core)
+time_t epochUtc(int anio, int mes, int dia, int h, int m, int s) {
+  anio -= mes <= 2;
+  int era = anio / 400;
+  int ade = anio - era * 400;
+  int ddi = (153 * (mes + (mes > 2 ? -3 : 9)) + 2) / 5 + dia - 1;
+  int dde = ade * 365 + ade / 4 - ade / 100 + ddi;
+  long dias = (long)era * 146097 + dde - 719468;
+  return (time_t)dias * 86400 + h * 3600 + m * 60 + s;
+}
+
 void dibujarEncabezado() {
   BateriaInfo bat = bateriaActual;
   display.setTextSize(1);

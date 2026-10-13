@@ -110,6 +110,7 @@ const char* obtenerCodigoMorse(char c) {
 #define LOCATOR_POR_DEFECTO    "IN80dk"  // Madrid (generico): cada estacion pone el suyo
 char indicativoEstacion[TRAMA_LONG_INDICATIVO + 1] = INDICATIVO_POR_DEFECTO;
 char locatorEstacion[7] = LOCATOR_POR_DEFECTO;
+bool locatorAuto = true;       // Con GPS, el locator sale de su posicion (CONFIG > LOCATOR: AUTO o MANUAL)
 bool horaUtcCabecera = false;  // Hora de la cabecera en UTC ("12:05Z") en vez de local; se elige en webconf
 uint8_t seqTx = 0;                   // Se inicializa al azar en setup()
 

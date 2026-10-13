@@ -31,6 +31,7 @@ float bmeTempC = NAN, bmeHumedad = NAN, bmePresionHpa = NAN;  // NAN = sin lectu
 unsigned long bmeUltimaLecturaMs = 0;
 float bmeHist[BME_HIST_N];  // Presion (hPa), de la muestra mas antigua a la mas reciente
 uint8_t bmeHistN = 0;
+bool bmeHistNivelMar = false;  // Muestras reducidas a nivel del mar con la altitud del GPS (sin GPS, presion local)
 unsigned long bmeUltimaMuestraMs = 0;
 float qnhHpa = QNH_ESTANDAR_HPA;  // Presion a nivel del mar para la altitud (NVS "qnh" en estacion)
 bool qnhCalibrado = false;

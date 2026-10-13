@@ -88,7 +88,7 @@ String textoEstadoWifi() {
 }
 
 const char* const NOMBRES_PAGINAS_STATUS[N_PAGINAS_STATUS] = { "ESTACION", "SISTEMA", "WIFI", "MEMORIA", "ARRANQUE",
-                                                                "SENSOR" };
+                                                                "SENSOR", "GPS" };
 
 // STATUS: cuatro lineas por pagina (21 caracteres) y, en el pie, la pagina y "volver"
 void dibujarPaginaStatus() {
@@ -155,6 +155,28 @@ void dibujarPaginaStatus() {
       snprintf(l[2], sizeof(l[2]), "QNH %.1f %s", qnhHpa, qnhCalibrado ? "CALIBRADO" : "ESTANDAR");
       snprintf(l[3], sizeof(l[3]), "HISTORIAL %u MIN", bmeHistN > 0 ? (bmeHistN - 1) * 10 : 0);
       break;
+    case PAGINA_STATUS_GPS:
+      if (!gpsDetectado()) {
+        snprintf(l[0], sizeof(l[0]), estadoGps == GPS_DETECTANDO ? "BUSCANDO EL GPS..." : "GPS NO DETECTADO");
+        snprintf(l[1], sizeof(l[1]), "TX DEL GPS A GPIO47");
+        snprintf(l[2], sizeof(l[2]), "RX DEL GPS A GPIO39");
+        break;
+      }
+      snprintf(l[0], sizeof(l[0]), "%-11s%2u SAT", estadoGps == GPS_CON_FIJO ? "CON FIJO" :
+               estadoGps == GPS_BUSCANDO ? "BUSCANDO" : "DORMIDO", gpsSatelites);
+      if (!gpsHayPosicion) {
+        snprintf(l[1], sizeof(l[1]), "SIN POSICION");
+        break;
+      }
+      snprintf(l[1], sizeof(l[1]), "%.5f%c %.5f%c", fabsf(gpsLat), gpsLat < 0 ? 'S' : 'N', fabsf(gpsLon),
+               gpsLon < 0 ? 'W' : 'E');
+      snprintf(l[2], sizeof(l[2]), "ALT %.0fM  HDOP %.1f", gpsAltitud, gpsHdop);
+      {
+        char loc[7];
+        latLonALocator(gpsLat, gpsLon, loc);
+        snprintf(l[3], sizeof(l[3]), "%s  %s", loc, textoAntiguedadGps().c_str());
+      }
+      break;
     case 4:  // Arranque
       snprintf(l[0], sizeof(l[0]), "ENCENDIDO %s", textoTiempoEncendido().c_str());
       snprintf(l[1], sizeof(l[1]), "REINICIO  %s", textoMotivoReinicio().c_str());
@@ -172,11 +194,15 @@ void dibujarPaginaStatus() {
 String valorOpcionConf(uint8_t i) {
   switch (i) {
     case OC_ID:          return String(indicativoEstacion);
-    case OC_LOCATOR:     return String(locatorEstacion);
+    case OC_LOCATOR:
+      if (editandoValor && focoConf == OC_LOCATOR) return locatorEditAuto ? String("AUTO (GPS)") : String("MANUAL");
+      return gpsDetectado() && locatorAuto ? "GPS " + String(locatorEstacion) : String(locatorEstacion);
     case OC_ALTITUD:
       if (editandoValor && focoConf == OC_ALTITUD) return String(altitudEditada) + " m";
       if (bmeDireccion == 0 || isnan(bmePresionHpa)) return String("--");
       return String(lroundf(altitudBarometrica())) + (qnhCalibrado ? " m" : " m?");
+    case OC_HORA:        return horaUtcCabecera ? String("UTC") : String("LOCAL");
+    case OC_RELOJ:       return String(NOMBRES_FUENTE_HORA[fuenteHoraActual()]);
     case OC_ACELERACION: return textoAceleracion();
     case OC_SALVAPANTALLAS: return textoSalvapantallas();
     case OC_APAGADO:     return textoApagado();
@@ -190,14 +216,14 @@ String valorOpcionConf(uint8_t i) {
 }
 
 const char* const NOMBRES_OPCIONES_CONF[N_OPCIONES_CONF - 1] = {
-  "ID", "LOCATOR", "ALTITUD", "TONO", "ACELERACION", "SALVAPANTALLAS", "APAGADO", "WEBCONF", "ACTUALIZAR FW",
+  "ID", "LOCATOR", "ALTITUD", "HORA", "RELOJ", "TONO", "ACELERACION", "SALVAPANTALLAS", "APAGADO", "WEBCONF", "ACTUALIZAR FW",
   "DEPURACION", "FABRICA"
 };
 
 // CONFIG: lista de opciones (4 a la vista, con el valor a la derecha) y "volver" en el pie
 void dibujarListaConf() {
   dibujarListaOpciones(NOMBRES_OPCIONES_CONF, N_OPCIONES_CONF - 1, focoConf, valorOpcionConf,
-                       (1UL << OC_ALTITUD) | (1UL << OC_TONO) | (1UL << OC_ACELERACION) |
+                       (1UL << OC_LOCATOR) | (1UL << OC_ALTITUD) | (1UL << OC_HORA) | (1UL << OC_TONO) | (1UL << OC_ACELERACION) |
                        (1UL << OC_SALVAPANTALLAS) | (1UL << OC_APAGADO));
   dibujarPieCentrado(focoConf == OC_VOLVER ? "> volver" : "  volver");
 }
@@ -239,6 +265,68 @@ bool procesarVistaPortal(uint8_t& foco, int8_t giro, bool pulsa, bool atras) {
 
 void dibujarPantallaOta();  // Definida justo debajo, con la logica de la actualizacion
 
+// CONFIG > RELOJ: parte de la hora actual (UTC o local, como la cabecera) o, sin hora, de las 12:00 del dia en que
+// se compilo el firmware
+void confAbrirReloj() {
+  struct tm t;
+  if (horaLocalValida(t)) {
+    if (horaUtcCabecera) {
+      time_t ahora = time(nullptr);
+      gmtime_r(&ahora, &t);
+    }
+    relojCampos[0] = t.tm_hour; relojCampos[1] = t.tm_min;
+    relojCampos[2] = t.tm_mday; relojCampos[3] = t.tm_mon + 1; relojCampos[4] = t.tm_year + 1900;
+  } else {
+    const char* meses = "JanFebMarAprMayJunJulAugSepOctNovDec";
+    char mes[4] = "";
+    int dia = 1, anio = 2026;
+    sscanf(__DATE__, "%3s %d %d", mes, &dia, &anio);
+    const char* p = strstr(meses, mes);
+    relojCampos[0] = 12; relojCampos[1] = 0;
+    relojCampos[2] = dia; relojCampos[3] = p ? (p - meses) / 3 + 1 : 1; relojCampos[4] = anio;
+  }
+  relojCampo = 0;
+  subConf = CONF_RELOJ;
+}
+
+void confAplicarReloj() {
+  int16_t* c = relojCampos;
+  const uint8_t diasMes[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  bool bisiesto = (c[4] % 4 == 0 && c[4] % 100 != 0) || c[4] % 400 == 0;
+  uint8_t maxDia = diasMes[c[3] - 1] + (c[3] == 2 && bisiesto);
+  if (c[2] > maxDia) c[2] = maxDia;
+  time_t t;
+  if (horaUtcCabecera) {
+    t = epochUtc(c[4], c[3], c[2], c[0], c[1], 0);
+  } else {
+    struct tm tm = {};
+    tm.tm_year = c[4] - 1900; tm.tm_mon = c[3] - 1; tm.tm_mday = c[2];
+    tm.tm_hour = c[0]; tm.tm_min = c[1]; tm.tm_isdst = -1;  // Hora local: mktime aplica CET/CEST
+    t = mktime(&tm);
+  }
+  ponerHora(t, HORA_MANUAL);
+  Serial.printf("[CONFIG] RELOJ MANUAL %02d:%02d%s %02d/%02d/%04d\n", c[0], c[1], horaUtcCabecera ? "Z" : "", c[2],
+                c[3], c[4]);
+  subConf = CONF_CONFIG;
+}
+
+// PONER HORA: "14:05  13/10/2026" con el campo que se cambia en video inverso
+void dibujarReloj() {
+  dibujarTituloCentrado(F("- PONER HORA -"));
+  dibujarTituloCentrado(horaUtcCabecera ? F("UTC") : F("LOCAL"), 22);
+  const char* seps[RELOJ_N_CAMPOS] = { ":", "  ", "/", "/", "" };
+  display.setCursor(13, 35);
+  for (uint8_t i = 0; i < RELOJ_N_CAMPOS; i++) {
+    char txt[6];
+    snprintf(txt, sizeof(txt), i == 4 ? "%04d" : "%02d", relojCampos[i]);
+    if (i == relojCampo) display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.print(txt);
+    display.setTextColor(SSD1306_WHITE);
+    display.print(seps[i]);
+  }
+  dibujarPieCentrado(relojCampo < RELOJ_N_CAMPOS - 1 ? "pulsar: siguiente" : "pulsar: poner hora");
+}
+
 void renderizarPantallaConfig() {
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
@@ -273,6 +361,10 @@ void renderizarPantallaConfig() {
 
     case CONF_DEPURACION:
       dibujarListaDepuracion();
+      break;
+
+    case CONF_RELOJ:
+      dibujarReloj();
       break;
   }
 }

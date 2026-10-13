@@ -211,6 +211,7 @@ void cargarEstacionNVS() {
   strlcpy(locatorEstacion, prefs.isKey("loc") ? prefs.getString("loc").c_str() : LOCATOR_POR_DEFECTO,
           sizeof(locatorEstacion));
   horaUtcCabecera = prefs.getBool("utc", false);
+  locatorAuto = prefs.getBool("locgps", true);
   qnhHpa = prefs.getFloat("qnh", 0);  // Sin calibrar: atmosfera estandar
   qnhCalibrado = qnhHpa > 850 && qnhHpa < 1100;
   if (!qnhCalibrado) qnhHpa = QNH_ESTANDAR_HPA;
@@ -240,6 +241,7 @@ void guardarEstacionNVS() {
   prefs.putString("call", indicativoEstacion);
   prefs.putString("loc", locatorEstacion);
   prefs.putBool("utc", horaUtcCabecera);
+  prefs.putBool("locgps", locatorAuto);
   prefs.end();
 }
 
