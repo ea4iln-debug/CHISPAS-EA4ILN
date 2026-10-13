@@ -103,8 +103,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; gestos de la cara de
    auriculares y tormenta sin ver.
 4. Aparcado: OLED negra a veces en la placa 1 (ver NOTAS); detección de USB y carga (divisor 5V → GPIO33).
-5. Otras ideas para ahorrar tokens: script de compilación con salida filtrada, `/clear` entre tareas, fotos
-   recortadas.
+5. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
+   no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
 
 ## Decisiones que no hay que deshacer
 - **SOTA: no programar el cliente** (sus condiciones prohíben software generado por IA sin aprobación previa).
@@ -114,7 +114,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno. Separar lo probado en placa de lo razonado.
-- Compilar con `pio run` antes de dar un cambio por bueno. Cambios con diff claro; no reestructurar sin avisar.
+- Compilar antes de dar un cambio por bueno, con **`./compilar.sh`** (los dos entornos; `enc` o `sin` para uno):
+  solo saca errores, avisos de `src/`, RAM, flash y OK/FALLO; la salida completa queda en `.pio/compilar.log`. Cambios con diff claro; no reestructurar sin avisar.
 - Antes de afirmar algo sobre RadioLib, WiFiManager o el core de Espressif, comprobar la versión instalada.
 - Leer el serie sin reiniciar la placa: pyserial con `dtr = False` y `rts = False` antes de `open()`.
 - **Heredocs de Bash:** la herramienta reduce `\\` a `\` (un `\n` acaba como salto de línea real y un `'\0'` como

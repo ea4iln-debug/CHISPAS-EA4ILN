@@ -359,6 +359,7 @@ Si en PROP., POTA o SOL no hay red guardada o no conecta, Chispas no abre el por
 │   ├── wm_strings_chispas.h        Textos del portal WiFiManager en castellano
 │   └── certificados_github.h       Certificados raíz para la actualización OTA
 ├── pruebas/                        Programas de prueba del hardware (entornos aparte)
+├── compilar.sh                     Compila los dos entornos y resume errores, avisos, RAM y flash
 ├── docs/
 │   ├── esquema_protoboard.pdf      Esquema de conexiones del prototipo (7 hojas)
 │   ├── gen_esquema.py              Generador del esquema (HTML/SVG → PDF)

@@ -493,7 +493,16 @@ Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de 
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno.
-- Compilar con `pio run` antes de dar un cambio por bueno. No fiarse de comprobaciones de sintaxis simuladas.
+- Compilar antes de dar un cambio por bueno. No fiarse de comprobaciones de sintaxis simuladas.
+- `compilar.sh` (13 oct 2026): compila los dos entornos del firmware (o uno: `enc`, `sin`) y saca solo el resultado,
+  RAM y flash, los errores con 3 líneas de contexto y los avisos de `src/` e `include/`; de las librerías, solo
+  cuántos avisos hay. La salida completa queda en `.pio/compilar.log`. Sale con 1 si algún entorno falla. Busca `pio`
+  en el PATH y, si no está (Bash de Claude Code), usa `~/.platformio/penv/Scripts/pio.exe`. Probado con un error
+  metido a propósito.
+- Extensiones de VS Code (revisadas el 13 oct 2026): PlatformIO IDE (necesaria; trae C/C++), Python y Pylance (para
+  los scripts de `docs/`) y Claude Code. No hace falta ninguna más: clangd chocaría con el IntelliSense de PlatformIO,
+  los monitores serie sobran (PlatformIO y pyserial 3.5 del Python de PlatformIO), y GitLens o Error Lens no ayudan
+  a Claude. pioarduino sigue como no deseada en `.vscode/extensions.json`.
 - Hacer los cambios sobre copia o con diff claro; no reestructurar sin avisar. No sobrescribir el original.
 - Antes de afirmar algo sobre RadioLib, WiFiManager o el core de Espressif, comprobar la versión instalada.
 - Separar lo que se ha probado en la placa de lo que solo se ha razonado.
