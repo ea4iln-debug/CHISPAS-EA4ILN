@@ -343,7 +343,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   (`caraEnLineaGris()`, con hora y locator) más antena y bocadillo, que entonces siempre dice CQ; con **buena
   propagación** (SFI ≥ 150 en el último dato de hamqsl, `caraBuenaPropagacion()`) más alegre y más antena.
   Los gestos de bocadillo, auriculares y Morse fijan la mirada (`miradaFija()`). Probado en la placa 2 con capturas
-  (12 oct 2026): bocadillo, antena y Morse; auriculares y tormenta sin ver aún. Con la cara a la vista, `actualizarPantalla()` no dibuja.
+  (12 oct 2026): bocadillo, antena y Morse; auriculares vista el 13 oct 2026; tormenta sin ver aún. Con la cara a la vista, `actualizarPantalla()` no dibuja.
   Ocupa ~40 % del bucle mientras se ve.
 - **OLED negra tras reset corto** (v0.4e: tras `display.begin()` se reenvían bomba de carga `0x8D 0x14` y encendido
   `0xAF`, en `reafirmarOled()`). **Sigue pasando a veces en la placa 1** (no en la 2; nunca al despertar del deep sleep):
@@ -476,7 +476,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    encoder). X6200 con KEY probada el 12 oct 2026. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con
    batería y sin medidor).
 2. **Montaje** (orden de la hoja 7 del esquema; hecho: raíles, encoder, palas, tono con amplificador, altavoz y jack,
-   salida KEY con PC817 y minijack, BME280); amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (el enable del GPS queda pendiente: falta el AO3401A; el GPS irá sin él, siempre alimentado); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
+   salida KEY con PC817 y minijack, BME280); amplificador y altavoz llegan el 12 oct y GPS el 13 oct 2026 (enable del GPS descartado el 13 oct 2026: se dormirá por UBX con GPIO39); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
    **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; la batería se sigue leyendo bien después de usar DECODIFICAR o QSO (probado en la placa 2 el 12 oct 2026). Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
 3. **Ideas aparcadas** (para repensar más adelante):
    - **Estabilidad comprobada** (placa 2, v1.03b, noche del 12 oct 2026: 8 h en POTA, 233 consultas HTTPS a pota.app, una
@@ -515,7 +515,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado y control de SD probado (v1.04b) |
 | 19 / 20 / 48 | Encoder KY-040 CLK / DT / SW. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas) |
 | 47 | RX desde el TX del GPS (UART por la matriz GPIO) |
-| 3 (pendiente) | Enable del GPS: AO3401A en el positivo, 100 kΩ puerta-3V3, BAJO = encendido. **Pendiente** (falta el transistor): el GPS se monta sin él, siempre alimentado. Antes se probará apagarlo por software (ver 39) |
+| 3 (libre) | Era el enable del GPS (AO3401A en el positivo): **descartado el 13 oct 2026**; el GPS se duerme por UBX (ver 39) |
 | 39 (a probar) | TX hacia el RX del GPS (UART): órdenes UBX para dormirlo (`UBX-RXM-PMREQ`) y despertarlo; si dormido gasta < ~0,5 mA, sustituye al enable de GPIO3. Alternativas al AO3401A: IRLML6401, Si2301, DMG2305UX o PNP BC327/BC557 (ver `ROADMAP.md`) |
 | 41 / 42 | BME280: I2C 0x76 en Wire1, SDA 41 (J3-8), SCL 42 (J3-7). **Montado y probado** (12 oct 2026, v1.03b) |
 
@@ -545,8 +545,8 @@ headless a PDF, como el esquema). El script comprueba que cada red queda unida, 
 Heltec, **con y sin las reservas montadas**. Heltec en zócalos hembra con el USB en el borde; módulos y mandos en la
 carcasa con cables Dupont a las tiras P1–P10. Reservas: trafo 600:600 (P10, quitar los dos jumpers), divisor de
 detección de USB (R11/R12, cables A y B), enable del GPS (Q1/R8, quitar el cable 8) y C3 sobre las patas de D2.
-**Pendiente antes de soldar:** confirmar la orientación de la Heltec (`J3_IZQUIERDA`, supuesta sin comprobar) y el
-orden de pines del PAM8302A, el GPS y el BME280.
+**Pendiente antes de soldar:** comprobar el orden de pines del PAM8302A, el GPS y el BME280. La orientación de la
+Heltec (`J3_IZQUIERDA`) quedó confirmada el 13 oct 2026. La reserva del enable del GPS (Q1/R8) sobra: enable descartado.
 
 ## PCB
 Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de KiCad en el repositorio.

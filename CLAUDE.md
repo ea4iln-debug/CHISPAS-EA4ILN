@@ -88,19 +88,18 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 | 19 / 20 / 48 | Encoder CLK / DT / SW |
 | 41 / 42 | BME280 en Wire1 (SDA / SCL), 0x76 |
 | 47 | RX desde el TX del GPS |
-| 39 (a probar) | TX al GPS (dormirlo por UBX) |
-| 3 (pendiente) | Enable del GPS con AO3401A (falta el transistor) |
+| 39 (a probar) | TX al GPS (dormirlo por UBX; el enable por transistor queda descartado) |
 - Libres: 40, 33, 34. **No usar:** 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46.
 - Módulos a **3V3 de J3** (pines 2/3; GND en el 1). `Ve` es Vext (OLED). `5V` solo con USB.
 - Esquema (`docs/gen_esquema.py`) y placa perforada (`docs/gen_placa.py`) → PDF: skill **`esquema`**.
 - PCB: se empezará desde cero más adelante; no hay nada de KiCad.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-1. GPS (llega el 13 oct): montarlo sin enable, leer NMEA por GPIO47; probar dormirlo por UBX (GPIO39).
-2. Placa perforada: antes de soldar, confirmar la orientación de la Heltec (`J3_IZQUIERDA`) y el orden de pines del
-   PAM8302A, el GPS y el BME280.
-3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; gestos de la cara de
-   auriculares y tormenta sin ver.
+1. GPS (llega el 13 oct): montarlo sin enable (descartado), con TX→GPIO47 y RX←GPIO39 para dormirlo por UBX.
+2. Placa perforada: Heltec bien orientada (`J3_IZQUIERDA`, confirmado 13 oct); antes de soldar, comprobar el orden
+   de pines del PAM8302A, el GPS y el BME280.
+3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; cara de tormenta sin ver
+   (la de auriculares, vista el 13 oct).
 4. Aparcado: OLED negra a veces en la placa 1 (ver NOTAS); detección de USB y carga (divisor 5V → GPIO33).
 5. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
