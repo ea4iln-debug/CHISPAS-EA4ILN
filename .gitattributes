@@ -1,2 +1,5 @@
+# Finales de linea normalizados a LF en el repositorio, sea cual sea el core.autocrlf de cada equipo
+* text=auto
+
 # Los scripts de Bash, siempre con LF (con CRLF Bash no los ejecuta)
 *.sh text eol=lf

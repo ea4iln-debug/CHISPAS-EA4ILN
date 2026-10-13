@@ -31,8 +31,21 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   - Migrado: equipo 1 (13 oct 2026; clon compilado, mismos RAM y flash).
   - **Pasos en cada equipo que falte:** 1) en la carpeta de OneDrive, `git status` y `git log origin/main..` para ver
     si hay algo sin subir; si lo hay, commit y `git push`. 2) `git clone https://github.com/ea4iln-debug/CHISPAS-EA4ILN.git
-    C:\proyectos\CHISPAS-EA4ILN`. 3) Abrir esa carpeta en VS Code (PlatformIO descarga las librerías) y compilar con
-    `./compilar.sh`. 4) Trabajar ya solo ahí; anotar aquí el equipo migrado.
+    C:\proyectos\CHISPAS-EA4ILN`. 3) Abrir esa carpeta en VS Code (PlatformIO descarga las librerías) y ejecutar
+    `./comprobar_equipo.sh --compilar` hasta que diga "Equipo listo". 4) Memoria de Claude Code: no viaja sola
+    (está en `~/.claude/projects/<ruta>/memory`, por ruta de carpeta); mirar si hay algo en la de la ruta antigua
+    (`c--Users-<usuario>-OneDrive-Documentos-mrmorse-Mr--Morse-EA4ILN/memory`) y pasar lo útil a NOTAS o CLAUDE.md
+    (en el equipo 1 estaba vacía). Lo mismo con `.claude/settings.local.json` de la carpeta antigua: lo que valga
+    para todos, a `.claude/settings.json`. 5) `gh`: en el equipo 2 ya está (comprobar la sesión); en el 3,
+    `winget install GitHub.cli` y `gh auth login` si se van a publicar releases desde él. 6) Settings Sync de VS Code
+    con la cuenta ea4iln-debug y "Merge". 7) Trabajar ya solo ahí; anotar aquí el equipo migrado.
+  - `comprobar_equipo.sh` (13 oct 2026): carpeta fuera de OneDrive, remoto y usuario de git, al día con
+    `origin/main`, copia antigua sin nada pendiente, PlatformIO con espressif32 6.13.0, framework y esptool, pyserial,
+    `gh` con sesión, Edge o Chrome, placa CP210x; con `--compilar`, además `./compilar.sh`. OK / AVISO / FALTA; el
+    código de salida es el número de FALTA. Probado en el equipo 1: listo (sin placa conectada).
+  - **Finales de línea** (13 oct 2026): `.gitattributes` con `* text=auto` (además de `*.sh eol=lf`), para que el
+    repositorio guarde LF sea cual sea el `core.autocrlf` de cada equipo (en el equipo 1 es `true`, del instalador de
+    Git). `git add --renormalize .` no cambió nada: ya estaba todo en LF.
   - Cuando estén los tres: borrar la carpeta de OneDrive (desde un equipo basta; OneDrive la borra en todos).
 
 ## Releases y OTA

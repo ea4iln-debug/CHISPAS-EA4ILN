@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(./compilar.sh:*)",
+      "Bash(./comprobar_equipo.sh:*)",
       "Bash(~/.platformio/penv/Scripts/pio.exe run:*)",
       "Bash(~/.platformio/penv/Scripts/pio.exe device list:*)",
       "Bash(~/.platformio/penv/Scripts/python.exe serie.py:*)",
