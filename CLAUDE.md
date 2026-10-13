@@ -11,7 +11,9 @@ Echo, keyer iámbico, práctica y QSO por LoRa, conexión con el transceptor (KE
 propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el aparato y OTA desde GitHub.
 
 ## Repositorio y licencias
-- `https://github.com/ea4iln-debug/CHISPAS-EA4ILN`. La carpeta local puede seguir llamándose `Mr.-Morse-EA4ILN`.
+- `https://github.com/ea4iln-debug/CHISPAS-EA4ILN`. Tres equipos; en cada uno, clon en **`C:\proyectos\CHISPAS-EA4ILN`**,
+  fuera de OneDrive, sincronizado solo con Git (`git pull` al empezar, `git push` al terminar). La copia antigua de
+  OneDrive (`Documentos\mrmorse\Mr.-Morse-EA4ILN`) no se usa ni se borra hasta migrar los tres (ver NOTAS: "Repositorio").
 - Software GPL-3.0-or-later (`LICENSE`); hardware y documentación CC BY-NC-SA 4.0 (`LICENSE-HARDWARE.md`).
   **Archivos de código nuevos: cabecera SPDX.** `include/wm_strings_chispas.h`: `MIT AND GPL-3.0-or-later`.
   Los `.bin` de las releases van con `docs/LICENCIAS_TERCEROS.txt` (regenerarlo si cambian las librerías).
