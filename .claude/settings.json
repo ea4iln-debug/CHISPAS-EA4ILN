@@ -21,8 +21,7 @@
       "Bash(gh auth status:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(~/.platformio/penv/Scripts/python.exe -c \"import json;json.load\\(open\\('.claude/settings.json'\\)\\)\")",
-      "Bash(git commit -qam 'Permisos: git add y git commit sin preguntar \\(push sigue preguntando\\) *)"
+      "Bash(git commit -qam 'Permisos: quitar los de un solo uso *)"
     ],
     "ask": [
       "Bash(./publicar.sh:*)",
