@@ -19,8 +19,9 @@
       "Bash(gh release list:*)",
       "Bash(gh release view:*)",
       "Bash(gh auth status:*)",
-      "Bash(git commit -qm 'GPS montado y probado: prueba_gps, duerme por UBX sin transistor; esquema y placa sin enable *)",
-      "Bash(~/.platformio/penv/Scripts/pio.exe run *)"
+      "Bash(~/.platformio/penv/Scripts/pio.exe run *)",
+      "Bash(~/.platformio/penv/Scripts/python.exe -c \"import json;json.load\\(open\\('.claude/settings.json'\\)\\)\")",
+      "Bash(git commit -qam 'Permisos: quitar uno de un solo uso *)"
     ],
     "ask": [
       "Bash(./publicar.sh:*)",
