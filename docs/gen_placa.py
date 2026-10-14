@@ -138,12 +138,13 @@ resistencia("R9", "10 kΩ", (16, 1), (16, 2), "TN", "GND", de_pie=(16, 2))
 
 # --- Izquierda: palas, KEY, amplificador y BME280 ---
 tira("P2", "palas J1 (DAH, DIT, GND)", 0, 10, ["DAH", "DIT", "GND"], ["DAH", "DIT", "GND"])
-tira("P6", "KEY J4 (C, E) · aislado", 0, 14, ["C", "E"], ["KEY_C", "KEY_E"])
+tira("P6", "KEY J4 (E, C) · aislado", 0, 14, ["E", "C"], ["KEY_E", "KEY_C"])
 tira("P5", "amplificador U2 (A+, A−, SD, VIN, GND)", 0, 17, ["A+", "A−", "SD", "VIN", "GND"],
      ["TN", "GND", "AMP_SD", "3V3", "GND"])
 tira("P8", "BME280 (VIN, GND, SCL, SDA)", 0, 22, ["VIN", "GND", "SCL", "SDA"], ["3V3", "GND", "SCL", "SDA"])
-pieza("U1", "U", "PC817 (DIP-4)", [("1", 4, 14, "KEY_A"), ("2", 4, 15, "GND"), ("3", 1, 15, "KEY_E"), ("4", 1, 14, "KEY_C")],
-      (1.22, 13.6, 3.78, 15.4), 4, "punto (pat. 1) arriba a la derecha")
+# Patas en sentido antihorario vistas desde arriba: 1 (E16) y 2 (E15) a la derecha, 3 (B15) y 4 (B16) a la izquierda.
+pieza("U1", "U", "PC817 (DIP-4)", [("1", 4, 15, "KEY_A"), ("2", 4, 14, "GND"), ("3", 1, 14, "KEY_E"), ("4", 1, 15, "KEY_C")],
+      (1.22, 13.6, 3.78, 15.4), 4, "punto (pat. 1) abajo a la derecha")
 resistencia("R7", "330 Ω", (8, 13), (4, 13), "KEY_GPIO", "KEY_A")
 resistencia("R10", "10 kΩ", (8, 12), (4, 12), "KEY_GPIO", "GND")
 # Reserva USB: divisor del pin 5V (con USB, 4,94 V -> 2,92 V en GPIO33; sin USB, 0,7 V: el pin 5V no queda a 0)
@@ -189,7 +190,7 @@ PUENTES = [
     ("GND", tramo((2, 2), (7, 2), (7, 3))),
     ("GND", [(4, 2), (4, 3)]),
     ("GND", tramo((4, 12), (0, 12))),
-    ("GND", tramo((4, 15), (4, 17), (1, 17))),
+    ("GND", tramo((4, 14), (5, 14), (5, 17), (1, 17))),
     ("GND", [(0, 18), (1, 18)]),
     ("GND", [(0, 21), (1, 21)]),
     ("GND", [(0, 23), (1, 23)]),
@@ -220,9 +221,9 @@ PUENTES = [
     ("DIT", tramo(h3(15), (0, heltec_y(15)))),
     ("KEY_GPIO", [h3(13), (8, 13)]),
     ("KEY_GPIO", [(8, 12), (8, 13)]),
-    ("KEY_A", [(4, 13), (4, 14)]),
-    ("KEY_C", [(0, 14), (1, 14)]),
-    ("KEY_E", [(0, 15), (1, 15)]),
+    ("KEY_A", tramo((4, 13), (3, 13), (3, 15), (4, 15))),
+    ("KEY_E", [(0, 14), (1, 14)]),
+    ("KEY_C", [(0, 15), (1, 15)]),
     # Encoder y GPS
     ("ENC_CLK", tramo(h2(18), (20, heltec_y(18)))),
     ("ENC_SW", tramo(h2(17), (20, heltec_y(17)))),
@@ -545,7 +546,7 @@ def vista_superior(red):
     d.text(2.15, 2.05, "trafo", 6.5, "start", "normal", "#1565c0")
     d.text(4.3, 18.95, "reserva USB", 7, "start", "bold", "#d08700")
     # Marca de la pata 1 de U1
-    d.add(f'<circle cx="{d.X(3.45):.1f}" cy="{d.Y(13.95):.1f}" r="2.2" fill="#fff"/>')
+    d.add(f'<circle cx="{d.X(3.45):.1f}" cy="{d.Y(15.05):.1f}" r="2.2" fill="#fff"/>')
     # Polaridad de C1
     d.text(12.0, 0.9, "+", 10, "middle", "bold", "#fff")
     return d.svg()
@@ -660,7 +661,7 @@ th { background: #eef4ee; }
 <li>Bajo la Heltec no hay piezas: solo cables por la otra cara (el conector de la batería está debajo de la Heltec).</li>
 <li>Los conectores <b>P1–P9</b> son tiras de pines macho: de ellos salen cables Dupont a los jacks, el encoder, el volumen, el amplificador, el BME280 y el GPS, que van en la carcasa.</li>
 <li>Resistencias tumbadas a 4 pasos (10,16 mm), salvo R9, de pie. Diodos a 3 pasos con la <b>banda</b> donde se dibuja.</li>
-<li><b>C1</b>: el + hacia P4 (fila 2). <b>U1</b>: el punto (pata 1) en E15, arriba a la derecha del chip.</li>
+<li><b>C1</b>: el + hacia P4 (fila 2). <b>U1</b>: el punto (pata 1) en E16, <b>abajo a la derecha</b> del chip.</li>
 <li><b>RV2</b> con el tornillo de ajuste accesible (dejar un agujero en la tapa encima o ajustarlo antes de cerrar).</li>
 <li><span class="chip" style="background:#ffe0c2;border:1px dashed #e65100"></span>Zona de la emisora (salida del PC817): nada de esta placa se une a ella.</li>
 <li><span class="chip" style="background:#1565c0"></span><b>P10</b> lleva dos <b>puentes de quitar y poner</b> (jumper caps): sin trafo, unen la punta del jack con la entrada (1-2) y la malla con masa (3-4).</li>

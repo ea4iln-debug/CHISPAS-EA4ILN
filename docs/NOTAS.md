@@ -638,6 +638,11 @@ Orden de pines de los módulos comprobado con fotos el 14 oct 2026: GPS GY-GPS6M
 GYBMEP (VIN, GND, SCL, SDA) coinciden con P9 y P8; el PAM8302A (WCMCU-8302) tiene 5 pines A+, A−, SD, Vin, Gnd y
 P5 pasó de 4 pines (VIN, GND, SD, A+) a 5 en ese orden (A17–A21; A− y GND a masa por la placa, cable recto de 5
 hilos; tiras macho: 32 pines). La orientación de la Heltec (`J3_IZQUIERDA`) quedó confirmada el 13 oct 2026. La reserva del enable del GPS (Q1/R8) se quitó del plano; el RX del GPS va con el cable 9 desde J3-10 (GPIO39).
+14 oct 2026, soldando (zócalos y resistencias ya puestos): U1 estaba dibujado en espejo (pata 1 en E15 con la 2
+debajo, en sentido horario visto desde arriba; un DIP va en antihorario). Corregido sin mover zócalos ni resistencias:
+punto en **E16** (abajo a la derecha), pata 2 (cátodo) en E15, 3 (emisor) en B15, 4 (colector) en B16. KEY_A va de
+E14 (R7) a E16 rodeando por D14–D16; la masa del cátodo sale de E15 por F15–F18 a E18; P6 pasa a ser (E, C) en
+A15/A16 (solo cambia qué hilo va a la punta del jack J4).
 
 ## PCB
 Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de KiCad en el repositorio.
