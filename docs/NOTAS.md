@@ -122,7 +122,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   la usa para elegir el entorno): placa 1 (encoder, `heltec_wifi_lora_32_V3`): `3c:0f:02:ee:50:74`; placa 2 (sin
   encoder, `heltec_sin_encoder`): `3c:0f:02:ee:08:c0`.
 - Firmware: `src/main.cpp` **v1.09b** (el reset de fábrica borra también `/parques.bin`; release del 14 oct 2026,
-  probado antes por USB en la placa 2; aún no instalada por OTA). v1.08b (parques POTA cercanos, POTA > VER PARQUES; release del 14 oct 2026 con
+  probado antes por USB en la placa 2; instalada por OTA en las dos placas el 14 oct; en la placa 1 la primera
+  descarga se colgó en el 8 % y la segunda fue bien, ver "Pendiente"). v1.08b (parques POTA cercanos, POTA > VER PARQUES; release del 14 oct 2026 con
   `publicar.sh`, sin cambios de código respecto a lo probado en la placa 1; instalada por OTA en las dos placas el
   14 oct; después la placa 2 lleva por USB el borrado de los parques en el reset de fábrica, sin subir versión). v1.07b (GPS,
   CONFIG > HORA UTC/LOCAL y RELOJ; release del 14 oct 2026, instalada por OTA en la placa 2). v1.06b (opción SALVAPANTALLAS, CONFIG por bloques y expresiones de radioaficionado;
@@ -570,6 +571,13 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
      perforada queda con 47k/68k. (Nota del montaje: en la protoboard de la placa 1 el carril de masa está partido
      en el centro.)
 4. QSO LIBRE: probar en los dos sentidos cuando la placa 2 tenga palas. A estudiar, no prioritarios: audio I2S y GPS ATGM336H en lugar del NEO-6M (ver `ROADMAP.md`).
+5. **OTA: timeout de descarga sin avance** (para la próxima release). 14 oct 2026: la placa 1 se quedó parada en
+   el 8 % al actualizar a la v1.09b (la placa 2, bien con la misma release); con RST arrancó en la v1.08b y al
+   repetir actualizó. Causa razonada (core 2.0.17): si la conexión se corta, `Update.writeStream()` reintenta
+   `readBytes()` hasta 300 veces y cada lectura espera el timeout del cliente (8 s de `HTTPUpdate`), así que
+   puede tardar muchos minutos en dar error y PRG no responde (bucle bloqueante). Idea: vigilar el avance (p. ej.
+   un temporizador que mire `otaProgreso`) y, si pasan 20–30 s sin avanzar, cortar con `cliente.stop()` para que
+   salga "ERROR"; o bajar el timeout del cliente y de `HTTPUpdate`. Comprobar en el core qué corta antes.
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).

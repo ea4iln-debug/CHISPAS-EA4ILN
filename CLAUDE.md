@@ -29,8 +29,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (14 oct 2026)
-- **v1.09b** (última release, 14 oct: el reset de fábrica borra también la lista de parques), aún no instalada por
-  OTA; las dos placas en v1.08b (parques POTA cercanos, POTA > VER PARQUES; la placa 2 con ese arreglo por USB). Placa 1: protoboard con encoder, palas, KEY, amplificador,
+- **v1.09b** (última release, 14 oct: el reset de fábrica borra también la lista de parques; antes, v1.08b con los
+  parques POTA cercanos, POTA > VER PARQUES) en las dos placas por OTA. Placa 1: protoboard con encoder, palas, KEY, amplificador,
   BME280 y batería; entorno `heltec_wifi_lora_32_V3`. Placa 2: desnuda, sin encoder; entorno `heltec_sin_encoder`
   (`-DSIN_ENCODER`), se actualiza por OTA.
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
@@ -109,7 +109,9 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 4. OLED negra a veces en la placa 1: **defecto de hardware de esa Heltec** (14 oct: falla desnuda, la placa 2 nunca;
    ver NOTAS); para la placa perforada, la Heltec de la placa 2 o una nueva. Aparcado: detección de USB (probada el 14 oct con 47k/68k → GPIO33:
    funciona, pero sin USB el pin 5V da 1,3 V y quedan 0,7 V, poco margen; si se retoma, GPIO3 con ADC).
-5. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
+5. **Próxima release:** timeout de la OTA si la descarga no avanza en 20–30 s (14 oct la placa 1 se colgó en el 8 %;
+   con RST y otro intento, bien). Detalle en NOTAS, "Pendiente".
+6. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
 
 ## Decisiones que no hay que deshacer
