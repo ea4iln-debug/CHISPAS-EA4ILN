@@ -643,6 +643,8 @@ debajo, en sentido horario visto desde arriba; un DIP va en antihorario). Correg
 punto en **E16** (abajo a la derecha), pata 2 (cátodo) en E15, 3 (emisor) en B15, 4 (colector) en B16. KEY_A va de
 E14 (R7) a E16 rodeando por D14–D16; la masa del cátodo sale de E15 por F15–F18 a E18; P6 pasa a ser (E, C) en
 A15/A16 (solo cambia qué hilo va a la punta del jack J4).
+C2 resultó ser un EPCOS de poliéster 1 µF 100 V de paso 15 mm (18 × 5 × 11 mm), no de 5 mm: va en vertical en
+C8 (DEC_CUR, puente B8–C8) y C14 (BIAS, cable aislado 14 hasta D9), pegado por arriba al zócalo de U1.
 
 ## PCB
 Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de KiCad en el repositorio.

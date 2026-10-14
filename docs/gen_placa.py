@@ -118,7 +118,9 @@ pieza("P10", "P", "2×2 pines con 2 puentes (trafo 600:600)",
 pieza("RV2", "RV", "trimmer 10 kΩ multivuelta (3296W)",
       [("3", 0, 4, "DEC_IN"), ("2", 1, 4, "DEC_CUR"), ("1", 2, 4, "GND")], (-0.87, 3.5, 2.87, 5.4), 10,
       "tornillo de ajuste arriba")
-pieza("C2", "C", "1 µF film (paso 5 mm)", [("1", 1, 7, "DEC_CUR"), ("2", 3, 7, "BIAS")], (0.57, 6.0, 3.43, 8.0), 9)
+# C2: EPCOS de poliéster 1 µF 100 V, paso 15 mm (6 pasos), cuerpo 18 × 5 × 11 mm: en vertical en la columna C
+pieza("C2", "C", "1 µF poliéster 100 V (paso 15 mm)", [("1", 2, 7, "DEC_CUR"), ("2", 2, 13, "BIAS")], (1.05, 6.45, 2.95, 13.55), 11,
+      "en vertical, C8–C14")
 resistencia("R5", "10 kΩ", (4, 3), (4, 7), "GND", "BIAS")
 resistencia("R4", "10 kΩ", (5, 3), (5, 7), "3V3", "BIAS")
 resistencia("R6", "1 kΩ", (3, 9), (7, 9), "BIAS", "ADC")
@@ -203,7 +205,7 @@ PUENTES = [
     ("TJ", [(0, 0), (0, 1)]),
     ("SJ", [(1, 0), (1, 1)]),
     ("DEC_IN", tramo((0, 2), (0, 4))),
-    ("DEC_CUR", tramo((1, 4), (1, 7))),
+    ("DEC_CUR", tramo((1, 4), (1, 7), (2, 7))),
     ("BIAS", tramo((5, 7), (3, 7), (3, 9))),
     ("ADC", tramo((7, 6), (7, 9))),
     ("ADC", tramo((7, 8), (8, 8), (8, 9), h3(17))),
@@ -255,6 +257,7 @@ CABLES = [
     ("SCL", h3(7), (0, 24)),
     ("SDA", h3(8), (0, 25)),
     ("TN", (16, 1), (0, 17)),
+    ("BIAS", (2, 13), (3, 8)),
 ]
 # Cables de las reservas (letras en el plano): red, desde, hasta, reserva
 CABLES_RESERVA = [
@@ -513,7 +516,7 @@ def vista_superior(red):
                     d.add(f'<rect x="{d.X(x) - 4:.1f}" y="{d.Y(y) - 4:.1f}" width="8" height="8" fill="none" stroke="#ff0" stroke-width="1.5"/>')
     # Etiquetas
     etiquetas = {
-        "P7": (0.5, -0.95, "P7 DECOD"), "RV2": (1.0, 5.05, "RV2"), "C2": (2.0, 7.35, "C2 1µ"),
+        "P7": (0.5, -0.95, "P7 DECOD"), "RV2": (1.0, 5.05, "RV2"), "C2": (2.0, 10.25, "C2 1µ"),
         "R5": (4.0, 5.2, "R5"), "R4": (5.0, 5.2, "R4"), "R6": (5.0, 9.3, "R6 1k"), "D1": (8.0, 6.7, "D1"),
         "D2": (7.0, 4.7, "D2"),
         "P4": (12.0, -0.95, "P4 VOL"), "P3": (16.5, -0.95, "P3 AURIC."), "R1": (10.0, 4.2, "R1 1k"),
