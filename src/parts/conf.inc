@@ -8,10 +8,14 @@
 // ============================================================================
 /**
  * Reset de fabrica: borra estadisticas, configuracion del entrenador, datos de la estacion
- * y la red WiFi guardada, y reinicia.
+ * la red WiFi guardada y la lista de parques POTA, y reinicia.
  */
 void resetFabrica() {
   Serial.println(F("[CONFIG] RESET DE FABRICA"));
+  if (montarParques()) {  // Lista de parques en LittleFS: se vuelve a bajar al entrar en POTA con WiFi
+    LittleFS.remove(FICHERO_PARQUES);
+    LittleFS.remove(FICHERO_PARQUES_TMP);
+  }
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.clear();
   prefs.end();

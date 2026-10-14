@@ -122,7 +122,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   la usa para elegir el entorno): placa 1 (encoder, `heltec_wifi_lora_32_V3`): `3c:0f:02:ee:50:74`; placa 2 (sin
   encoder, `heltec_sin_encoder`): `3c:0f:02:ee:08:c0`.
 - Firmware: `src/main.cpp` **v1.08b** (parques POTA cercanos, POTA > VER PARQUES; release del 14 oct 2026 con
-  `publicar.sh`, sin cambios de código respecto a lo probado en la placa 1; aún no instalada por OTA). v1.07b (GPS,
+  `publicar.sh`, sin cambios de código respecto a lo probado en la placa 1; instalada por OTA en las dos placas el
+  14 oct; después la placa 2 lleva por USB el borrado de los parques en el reset de fábrica, sin subir versión). v1.07b (GPS,
   CONFIG > HORA UTC/LOCAL y RELOJ; release del 14 oct 2026, instalada por OTA en la placa 2). v1.06b (opción SALVAPANTALLAS, CONFIG por bloques y expresiones de radioaficionado;
   release del 12 oct 2026). v1.05b (salvapantallas en todas las pantallas salvo CW, LoRa y TRX; brillo tenue en
   todas; release del 12 oct 2026). v1.04b (control del amplificador, SD en GPIO38; release
@@ -314,6 +315,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   Probado: descarga en 8–17 s con WiFi de casa, 2497 parques; 20 cercanos desde el locator IM68mu (el más cercano
   a 4,5 km); ACTUALIZAR sigue bajando spots. **Sin probar:** búsqueda desde un fijo del GPS (dentro de casa no lo
   tenía), el refresco a los 30 días y la descarga fallida. Flash +49 KB (38,5 %), RAM +0,7 KB.
+  **Reset de fábrica** (14 oct 2026, después de la v1.08b): `resetFabrica()` monta LittleFS y borra también
+  `/parques.bin` y `/parques.tmp` (antes los dejaba). Probado en la placa 2 por USB: tras el reset, sin lista; al
+  configurar el WiFi y entrar en POTA la vuelve a bajar (2497 parques en 8 s).
 - **Webconf** (portal WiFiManager, `Chispas-XXXX`, clave `PORTAL_CLAVE` = `chispas73`, 192.168.4.1; v0.7f–k,
   probado): se abre con **WEBCONF** en CONF > CONFIG o desde el aviso de sin conexión, y muestra los datos (red,
   clave, web). Con el portal abierto, en esa vista está **`ver qr`**: QR de WiFi a pantalla completa
