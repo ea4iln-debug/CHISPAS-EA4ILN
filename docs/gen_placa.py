@@ -50,7 +50,7 @@ class Pieza:
 
 # Reservas: huecos para piezas que no se montan de entrada. La placa funciona sin ellas.
 #   TRAFO: trafo de aislamiento 600:600 en la entrada del decodificador (quitar los 2 puentes de P10)
-#   USB:   divisor 100k/150k del pin 5V a GPIO33 para detectar el USB (soldar R11, R12 y los cables A y B)
+#   USB:   divisor 47k/68k del pin 5V a GPIO33 para detectar el USB (soldar R11, R12 y los cables A y B)
 RESERVAS = ("TRAFO", "USB")
 
 def activo(cond, montado):
@@ -145,9 +145,9 @@ pieza("U1", "U", "PC817 (DIP-4)", [("1", 4, 14, "KEY_A"), ("2", 4, 15, "GND"), (
       (1.22, 13.6, 3.78, 15.4), 4, "punto (pat. 1) arriba a la derecha")
 resistencia("R7", "330 Ω", (8, 13), (4, 13), "KEY_GPIO", "KEY_A")
 resistencia("R10", "10 kΩ", (8, 12), (4, 12), "KEY_GPIO", "GND")
-# Reserva USB: divisor del pin 5V (con USB, 5 V -> 3 V en GPIO33; sin USB, 0 V)
-resistencia("R11", "100 kΩ", (3, 20), (7, 20), "5V", "USB_DET", "reserva: detección de USB", reserva="USB")
-resistencia("R12", "150 kΩ", (2, 22), (6, 22), "GND", "USB_DET", "reserva: detección de USB", reserva="USB")
+# Reserva USB: divisor del pin 5V (con USB, 4,94 V -> 2,92 V en GPIO33; sin USB, 0,7 V: el pin 5V no queda a 0)
+resistencia("R11", "47 kΩ", (3, 20), (7, 20), "5V", "USB_DET", "reserva: detección de USB", reserva="USB")
+resistencia("R12", "68 kΩ", (2, 22), (6, 22), "GND", "USB_DET", "reserva: detección de USB", reserva="USB")
 
 # --- Derecha: encoder y GPS ---
 tira("P1", "encoder KY-040 (CLK, SW, DT, +, GND)", 20, 8, ["CLK", "SW", "DT", "+", "GND"],
@@ -519,7 +519,7 @@ def vista_superior(red):
         "P2": (-0.45, 11.0, "P2 PALAS"), "P6": (-0.45, 14.5, "P6 KEY"), "P5": (-0.45, 18.5, "P5 AMPLI"),
         "P8": (-0.45, 23.5, "P8 BME280"), "U1": (2.5, 14.75, "U1"), "R7": (6.0, 13.3, "R7 330"),
         "R10": (6.0, 12.3, "R10 10k"), "P1": (20.45, 10.0, "P1 ENCODER"), "P9": (20.45, 15.5, "P9 GPS"),
-        "R11": (5.0, 20.3, "R11 100k"), "R12": (4.0, 22.3, "R12 150k"),
+        "R11": (5.0, 20.3, "R11 47k"), "R12": (4.0, 22.3, "R12 68k"),
     }
     for ref, (x, y, t) in etiquetas.items():
         rot = -90 if ref in ("P2", "P6", "P5", "P8") else (90 if ref in ("P1", "P9") else 0)
@@ -666,7 +666,7 @@ th { background: #eef4ee; }
 <h2>Reservas (la placa funciona sin ellas)</h2>
 <ul>
 <li><b>Trafo de aislamiento 600:600</b> (solo si hay zumbido por lazo de masa): quitar los dos puentes de P10 y conectar el primario a 1 y 3 y el secundario a 2 y 4. El trafo va en la carcasa.</li>
-<li><b>Detección de USB</b> (R11 100 kΩ, R12 150 kΩ, en naranja): soldarlas con el puente de B23 y los cables A (5V) y B (GPIO33). Antes, medir que el pin 5V da 0 V solo con batería. Necesita firmware.</li>
+<li><b>Detección de USB</b> (R11 47 kΩ, R12 68 kΩ, en naranja): soldarlas con el puente de B23 y los cables A (5V) y B (GPIO33). Aparcada: sin USB quedan 0,7 V en GPIO33, poco margen (ver NOTAS). Necesita firmware.</li>
 <li><b>C3</b> (10 nF, ADC a masa): por la cara de soldaduras, sobre las patas de D2 (H4 y H7).</li>
 </ul>
 <h2>Antes de soldar nada</h2>

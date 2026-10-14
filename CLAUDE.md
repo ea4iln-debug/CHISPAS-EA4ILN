@@ -107,7 +107,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
    de pines del PAM8302A, el GPS y el BME280.
 3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; cara de tormenta sin ver
    (la de auriculares, vista el 13 oct).
-4. Aparcado: OLED negra a veces en la placa 1 (ver NOTAS); detección de USB y carga (divisor 5V → GPIO33).
+4. Aparcado: OLED negra a veces en la placa 1 (ver NOTAS); detección de USB (probada el 14 oct con 47k/68k → GPIO33:
+   funciona, pero sin USB el pin 5V da 1,3 V y quedan 0,7 V, poco margen; si se retoma, GPIO3 con ADC).
 5. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
 

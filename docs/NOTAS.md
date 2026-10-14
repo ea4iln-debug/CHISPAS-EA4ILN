@@ -537,8 +537,17 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
      primera hora y luego fijo, mayor bloque 180 212 B fijo (sin fragmentación), pila libre loop 2568, motorCW 3292,
      keyer 2304 sin cambios. Pendiente solo la pila del motor CW tras Duo (2016 bytes libres de 4096, medida antigua). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
      resolución del aparato) y después en µA (12 oct 2026): **despreciable**.
-   - Detectar USB y carga: la V3 no lo permite por software. Propuesta sin decidir: divisor 100k/150k del pin 5V
-     (J2-2) a GPIO33 (J2-12); comprobar antes que el pin 5V da 0 V solo con batería.
+   - **Detectar USB y carga: aparcado (14 oct 2026).** La V3 no lo permite por software; "cargando" tampoco se puede
+     leer (la salida del cargador solo va a su LED). Probado en la placa 1 con un divisor del pin 5V (J2-2) a GPIO33
+     (J2-12): el pin 5V **no queda a 0 V con batería sola**: 1,3 V en vacío (polímetro) y unos 11 kΩ de impedancia
+     (origen desconocido sin el esquema de la V3). Con 47k arriba / 68k abajo: **2,92 V con USB y 0,7 V sin USB** en
+     el punto medio. Con una lectura digital de prueba (sin commit) `USB` aparecía y desaparecía bien en STATUS, pero
+     se aparcó: 0,7 V está a 0,12 V del BAJO garantizado (0,825 V), el divisor podría gastar ~10 µA de batería sin USB
+     (sin medir en deep sleep), la placa 2 no lo tiene y la ganancia es poca (rayo en la cabecera, no apagarse con USB).
+     Si se retoma: **GPIO3 con ADC** y umbral por software (~1,8 V), que además despierta del deep sleep (pero gasta
+     la única reserva con ADC y RTC); medir antes el deep sleep con el divisor. La reserva R11/R12 de la placa
+     perforada queda con 47k/68k. (Nota del montaje: en la protoboard de la placa 1 el carril de masa está partido
+     en el centro.)
 4. QSO LIBRE: probar en los dos sentidos cuando la placa 2 tenga palas. A estudiar, no prioritarios: audio I2S y GPS ATGM336H en lugar del NEO-6M (ver `ROADMAP.md`).
 
 ## Decisiones tomadas
