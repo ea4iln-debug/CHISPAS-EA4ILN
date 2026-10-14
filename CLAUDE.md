@@ -29,8 +29,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (14 oct 2026)
-- **v1.07b** (última release, 14 oct: GPS, HORA y RELOJ) en las dos placas (placa 2 por OTA); la placa 1 lleva además,
-  por USB y sin subir versión, los parques POTA cercanos (POTA > VER PARQUES, probado el 14 oct). Placa 1: protoboard con encoder, palas, KEY, amplificador,
+- **v1.08b** (última release, 14 oct: parques POTA cercanos, POTA > VER PARQUES), aún no instalada por OTA; las dos
+  placas siguen en v1.07b (GPS, HORA y RELOJ), y la placa 1 lleva por USB el código de los parques ya probado. Placa 1: protoboard con encoder, palas, KEY, amplificador,
   BME280 y batería; entorno `heltec_wifi_lora_32_V3`. Placa 2: desnuda, sin encoder; entorno `heltec_sin_encoder`
   (`-DSIN_ENCODER`), se actualiza por OTA.
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
