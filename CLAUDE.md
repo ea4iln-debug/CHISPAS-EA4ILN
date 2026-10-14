@@ -101,8 +101,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. Parques POTA cercanos hechos (14 oct; lista de España en LittleFS): falta probarlos con fijo del GPS en la calle.
-   Del GPS falta medir el GPS dormido en µA y capturas nuevas (CONFIG, STATUS > GPS,
-   PONER HORA, POTA y VER PARQUES).
+   Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).
 2. Placa perforada: Heltec bien orientada (`J3_IZQUIERDA`, confirmado 13 oct); antes de soldar, comprobar el orden
    de pines del PAM8302A, el GPS y el BME280.
 3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; cara de tormenta sin ver

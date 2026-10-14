@@ -294,17 +294,18 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | <img src="docs/img/prop_menu.png" width="256" alt="Menú de propagación"><br>Propagación: menú | <img src="docs/img/prop.png" width="256" alt="Índices"><br>Índices | <img src="docs/img/prop2.png" width="256" alt="Condiciones por banda"><br>Condiciones por banda |
 | <img src="docs/img/pota_menu.png" width="256" alt="Menú POTA"><br>POTA: menú | <img src="docs/img/pota.png" width="256" alt="Spots POTA"><br>Spots POTA | <img src="docs/img/sol_menu.png" width="256" alt="Menú del sol"><br>Sol: menú |
 | <img src="docs/img/sol.png" width="256" alt="Sol hoy"><br>Sol: hoy | <img src="docs/img/sol_ahora.png" width="256" alt="Sol ahora"><br>Sol: ahora | <img src="docs/img/sol_manana.png" width="256" alt="Sol mañana"><br>Sol: mañana |
-| <img src="docs/img/ambiente.png" width="256" alt="Ambiente: temperatura, humedad, presión, tendencia y altitud"><br>Ambiente (BME280) | | |
+| <img src="docs/img/ambiente.png" width="256" alt="Ambiente: temperatura, humedad, presión, tendencia y altitud"><br>Ambiente (BME280) | <img src="docs/img/parques.png" width="256" alt="Parques POTA cercanos"><br>POTA: parques cercanos | |
 
 ### Configuración
 
 | | | |
 |:---:|:---:|:---:|
-| <img src="docs/img/conf.png" width="256" alt="Menú CONF"><br>Menú | <img src="docs/img/config.png" width="256" alt="CONFIG"><br>CONFIG | <img src="docs/img/config2.png" width="256" alt="CONFIG: sonido, salvapantallas y apagado"><br>CONFIG (sigue) |
+| <img src="docs/img/conf.png" width="256" alt="Menú CONF"><br>Menú | <img src="docs/img/config.png" width="256" alt="CONFIG: ID, locator, altitud y hora"><br>CONFIG | <img src="docs/img/config2.png" width="256" alt="CONFIG: reloj, tono, aceleración y salvapantallas"><br>CONFIG (sigue) |
 | <img src="docs/img/conf_editor.png" width="256" alt="Editor del indicativo"><br>Editor del indicativo | <img src="docs/img/status.png" width="256" alt="STATUS: estación"><br>STATUS: estación | <img src="docs/img/status2.png" width="256" alt="STATUS: sistema"><br>STATUS: sistema |
 | <img src="docs/img/status3.png" width="256" alt="STATUS: WiFi"><br>STATUS: WiFi | <img src="docs/img/status4.png" width="256" alt="STATUS: memoria"><br>STATUS: memoria | <img src="docs/img/status5.png" width="256" alt="STATUS: arranque"><br>STATUS: arranque |
 | <img src="docs/img/webconf.png" width="256" alt="Webconf"><br>Webconf | <img src="docs/img/webconf_qr.png" width="256" alt="QR de webconf"><br>QR para unir el móvil | <img src="docs/img/ota.png" width="256" alt="Actualizar firmware"><br>Actualizar firmware |
-| <img src="docs/img/status6.png" width="256" alt="STATUS: sensor"><br>STATUS: sensor | <img src="docs/img/config3.png" width="256" alt="CONFIG, final de la lista"><br>CONFIG (final de la lista) | <img src="docs/img/depuracion.png" width="256" alt="Depuración"><br>Depuración |
+| <img src="docs/img/status6.png" width="256" alt="STATUS: sensor"><br>STATUS: sensor | <img src="docs/img/config3.png" width="256" alt="CONFIG: apagado, webconf, actualizar y depuración"><br>CONFIG (sigue) | <img src="docs/img/depuracion.png" width="256" alt="Depuración"><br>Depuración |
+| <img src="docs/img/poner_hora.png" width="256" alt="Poner la hora a mano"><br>Poner hora (RELOJ) | <img src="docs/img/status7.png" width="256" alt="STATUS: GPS"><br>STATUS: GPS (sin fijo) | |
 
 ---
 

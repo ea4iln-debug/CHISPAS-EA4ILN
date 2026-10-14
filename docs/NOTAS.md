@@ -111,7 +111,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `depuActiva()`), NVS `depu` en `chispas`, todo apagado por defecto; sobrevive al reinicio (el script de capturas
   reinicia la placa) y el reset de fábrica lo apaga. En CONFIG la opción muestra SI si hay alguna activa. Para rehacer
   las capturas del README: ORDENES SERIE en SI, locator genérico IN80dk (en CONFIG) y el script de capturas; luego
-  volver a poner el locator de la placa y apagar la depuración.
+  volver a poner el locator de la placa y apagar la depuración. 14 oct 2026 (placa 1, v1.07b + parques): capturas
+  nuevas de CONFIG (tres páginas: ID–HORA, RELOJ–SALVAPANTALLAS, APAGADO–DEPURACION; FABRICA queda fuera), PONER
+  HORA, STATUS > GPS (sin fijo, en interior: así no salen coordenadas), menú POTA y VER PARQUES (desde IN80dk). Con
+  GPS el locator va en AUTO: para las capturas se pasa a MANUAL con IN80dk y luego a AUTO (hasta el siguiente fijo
+  muestra "GPS IN80dk"). Las órdenes serie se pierden a veces si van seguidas: dejar ~0,7 s entre teclas.
 
 ## Estado actual (12 oct 2026)
 - **MAC de cada placa** (las dos tienen el mismo CP2102; `pio run -t upload` imprime `MAC: ...`; la skill `placa`
