@@ -4,7 +4,7 @@
  * @brief Chispas: entrenador de CW portatil para la Heltec WiFi LoRa 32 V3 (ESP32-S3). Koch, Echo, keyer
  *        iambico, practica y QSO por LoRa, manipulacion del transceptor (KEY), decodificador CW, propagacion,
  *        spots POTA, sol y linea gris, y actualizacion por OTA desde las releases de GitHub.
- * @version 1.07b - GPS (hora, locator y QNH con altitud), HORA UTC/LOCAL y RELOJ en CONFIG
+ * @version 1.08b - Parques POTA cercanos (POTA > VER PARQUES, lista de España en LittleFS)
  * @date 2026-10-11
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -19,7 +19,7 @@
 
 // Version: se ve en Inicio, en CONF > STATUS y por serie. La etiqueta de la release de GitHub es "v" + esto
 // (la actualizacion OTA las compara). Cambiarla en cada version que se cargue o se publique
-#define FW_VERSION "1.07b"
+#define FW_VERSION "1.08b"
 
 // Depuracion: se activa en CONF > CONFIG > DEPURACION (NVS "depu", un bit por opcion; todo apagado por defecto)
 #define DEPU_SERIE 0x01  // Ordenes por serie: 'p' vuelca la OLED (docs/captura_oled.py) y d/i/k/l/a simulan el encoder
