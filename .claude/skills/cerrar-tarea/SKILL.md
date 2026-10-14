@@ -21,7 +21,7 @@ Pasos, en este orden. Si uno falla, parar y decirlo; no saltarlo.
    - Si cambia el manejo visible del aparato, también `README.md`.
 4. **Commit** en castellano, una línea que diga qué cambia (estilo de `git log`), con la línea de coautoría que
    indique el sistema. Un commit por tarea; no mezclar tareas distintas.
-5. **Push**: `git push` (pide confirmación). No subir `FW_VERSION` ni publicar release sin preguntar (ver la skill
+5. **Push**: `git push`, sin preguntar al usuario. No subir `FW_VERSION` ni publicar release sin preguntar (ver la skill
    `release`).
 6. **Resumen al usuario**, separando:
    - **Probado en placa:** lo que se ha visto funcionar (serie, pantalla, audio, LED), con qué placa.

@@ -128,7 +128,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - Leer el serie sin reiniciar la placa: **`serie.py`** (busca el CP210x, DTR/RTS a False, hora y log en
   `.pio/serie-*.log`; `-f REGEX` filtra, `-s N` segundos, `-e TEXTO` envía órdenes serie).
 - Permisos de Claude Code compartidos en `.claude/settings.json` (viaja por Git): compilar, serie, git de lectura
-  sin preguntar; `publicar.sh`, `gh release create/edit/delete` y `git push` siempre preguntan.
+  sin preguntar; también commit y push (los hace Claude cuando le parezca, sin preguntar; 14 oct). `publicar.sh`,
+  `gh release create/edit/delete` y `git push --force` siempre preguntan: **solo las releases se consultan**.
 - **Heredocs de Bash:** la herramienta reduce `\\` a `\` (un `\n` acaba como salto de línea real y un `'\0'` como
   byte nulo). Código con barras invertidas: usar Edit o Write.
 - **No reescribir el código (`main.cpp`, `parts/*.inc`) con `Get-Content`/`Set-Content` de PowerShell 5.1** (rompe
