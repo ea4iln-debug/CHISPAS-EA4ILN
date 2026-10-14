@@ -139,7 +139,8 @@ resistencia("R9", "10 kΩ", (16, 1), (16, 2), "TN", "GND", de_pie=(16, 2))
 # --- Izquierda: palas, KEY, amplificador y BME280 ---
 tira("P2", "palas J1 (DAH, DIT, GND)", 0, 10, ["DAH", "DIT", "GND"], ["DAH", "DIT", "GND"])
 tira("P6", "KEY J4 (C, E) · aislado", 0, 14, ["C", "E"], ["KEY_C", "KEY_E"])
-tira("P5", "amplificador U2 (VIN, GND, SD, A+)", 0, 17, ["VIN", "GND", "SD", "A+"], ["3V3", "GND", "AMP_SD", "TN"])
+tira("P5", "amplificador U2 (A+, A−, SD, VIN, GND)", 0, 17, ["A+", "A−", "SD", "VIN", "GND"],
+     ["TN", "GND", "AMP_SD", "3V3", "GND"])
 tira("P8", "BME280 (VIN, GND, SCL, SDA)", 0, 22, ["VIN", "GND", "SCL", "SDA"], ["3V3", "GND", "SCL", "SDA"])
 pieza("U1", "U", "PC817 (DIP-4)", [("1", 4, 14, "KEY_A"), ("2", 4, 15, "GND"), ("3", 1, 15, "KEY_E"), ("4", 1, 14, "KEY_C")],
       (1.22, 13.6, 3.78, 15.4), 4, "punto (pat. 1) arriba a la derecha")
@@ -190,6 +191,7 @@ PUENTES = [
     ("GND", tramo((4, 12), (0, 12))),
     ("GND", tramo((4, 15), (4, 17), (1, 17))),
     ("GND", [(0, 18), (1, 18)]),
+    ("GND", [(0, 21), (1, 21)]),
     ("GND", [(0, 23), (1, 23)]),
     ("GND", tramo((20, 17), (20, 25))),
     # 3V3: barra junto a los pines 2 y 3 de J3 (col. K), bajo la Heltec
@@ -243,7 +245,7 @@ CABLES = [
     ("GND", (3, 12), (1, 19)),
     ("GND", (20, 12), (20, 18)),
     ("3V3", (10, 21), (6, 3)),
-    ("3V3", (10, 22), (0, 17)),
+    ("3V3", (10, 22), (0, 20)),
     ("3V3", (10, 23), (0, 22)),
     ("3V3", (10, 20), (20, 11)),
     ("3V3", (10, 24), (20, 14)),
@@ -251,7 +253,7 @@ CABLES = [
     ("AMP_SD", h3(11), (0, 19)),
     ("SCL", h3(7), (0, 24)),
     ("SDA", h3(8), (0, 25)),
-    ("TN", (16, 1), (0, 20)),
+    ("TN", (16, 1), (0, 17)),
 ]
 # Cables de las reservas (letras en el plano): red, desde, hasta, reserva
 CABLES_RESERVA = [
@@ -516,7 +518,7 @@ def vista_superior(red):
         "P4": (12.0, -0.95, "P4 VOL"), "P3": (16.5, -0.95, "P3 AURIC."), "R1": (10.0, 4.2, "R1 1k"),
         "C1": (12.0, 1.75, "C1"), "R2": (15.0, 4.3, "R2 220"), "R3": (15.0, 5.3, "R3 220"),
         "R9": (16.85, 2.3, "R9"),
-        "P2": (-0.45, 11.0, "P2 PALAS"), "P6": (-0.45, 14.5, "P6 KEY"), "P5": (-0.45, 18.5, "P5 AMPLI"),
+        "P2": (-0.45, 11.0, "P2 PALAS"), "P6": (-0.45, 14.5, "P6 KEY"), "P5": (-0.45, 19.0, "P5 AMPLI"),
         "P8": (-0.45, 23.5, "P8 BME280"), "U1": (2.5, 14.75, "U1"), "R7": (6.0, 13.3, "R7 330"),
         "R10": (6.0, 12.3, "R10 10k"), "P1": (20.45, 10.0, "P1 ENCODER"), "P9": (20.45, 15.5, "P9 GPS"),
         "R11": (5.0, 20.3, "R11 47k"), "R12": (4.0, 22.3, "R12 68k"),
@@ -713,7 +715,7 @@ th { background: #eef4ee; }
         ("P2", "Jack de palas J1", "DAH, DIT, GND", "DIT = punta, DAH = anillo, GND = malla (módulo: L, R, G)."),
         ("P3", "Jack de auriculares J2 (5 patillas)", "S, TN, T, R", "TN: contacto que se abre al meter la clavija. RN libre."),
         ("P4", "Potenciómetro de volumen RV1", "3, 2, 1", "Pata 3 a R1, 2 (cursor) a C1, 1 a masa."),
-        ("P5", "Amplificador PAM8302A (U2)", "VIN, GND, SD, A+", "A− a GND en el propio módulo; altavoz en sus bornas."),
+        ("P5", "Amplificador PAM8302A (U2)", "A+, A−, SD, VIN, GND", "Orden del módulo (cable recto de 5 hilos); A− a GND por la placa; altavoz en sus bornas."),
         ("P6", "Jack KEY J4", "C, E", "C → punta y anillo (puente R-T en el jack); E → malla. Aislado."),
         ("P7", "Jack del decodificador J3", "T, S", "Anillo libre."),
         ("P10", "Puentes (o trafo 600:600)", "1 T, 2 entrada · 3 S, 4 masa", "Sin trafo: puentes 1-2 y 3-4. Con trafo: primario 1-3, secundario 2-4."),
@@ -738,7 +740,7 @@ th { background: #eef4ee; }
 <h2>Material</h2>
 <ul>
 <li>Placa de pads a doble cara, cortada a {COLS}×{ROWS} agujeros (de una de 7×9 cm).</li>
-<li>2 zócalos hembra 1×18; tiras macho: 5 + 3 + 4 + 3 + 4 + 2 + 2 + 4 + 4 pines (31) y una de 2×2 (P10) con 2 puentes (jumper caps).</li>
+<li>2 zócalos hembra 1×18; tiras macho: 5 + 3 + 4 + 3 + 5 + 2 + 2 + 4 + 4 pines (32) y una de 2×2 (P10) con 2 puentes (jumper caps).</li>
 <li>Hilo estañado desnudo (0,4–0,5 mm) e hilo fino aislado; cables Dupont hembra para la carcasa.</li>
 </ul></div></div></div>"""
 

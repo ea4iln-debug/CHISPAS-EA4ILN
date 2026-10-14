@@ -609,8 +609,10 @@ headless a PDF, como el esquema). El script comprueba que cada red queda unida, 
 Heltec, **con y sin las reservas montadas**. Heltec en zócalos hembra con el USB en el borde; módulos y mandos en la
 carcasa con cables Dupont a las tiras P1–P10. Reservas: trafo 600:600 (P10, quitar los dos jumpers), divisor de
 detección de USB (R11/R12, cables A y B), enable del GPS (Q1/R8, quitar el cable 8) y C3 sobre las patas de D2.
-**Pendiente antes de soldar:** comprobar el orden de pines del PAM8302A, el GPS y el BME280. La orientación de la
-Heltec (`J3_IZQUIERDA`) quedó confirmada el 13 oct 2026. La reserva del enable del GPS (Q1/R8) se quitó del plano; el RX del GPS va con el cable 9 desde J3-10 (GPIO39).
+Orden de pines de los módulos comprobado con fotos el 14 oct 2026: GPS GY-GPS6MV2 (VCC, RX, TX, GND) y BME280
+GYBMEP (VIN, GND, SCL, SDA) coinciden con P9 y P8; el PAM8302A (WCMCU-8302) tiene 5 pines A+, A−, SD, Vin, Gnd y
+P5 pasó de 4 pines (VIN, GND, SD, A+) a 5 en ese orden (A17–A21; A− y GND a masa por la placa, cable recto de 5
+hilos; tiras macho: 32 pines). La orientación de la Heltec (`J3_IZQUIERDA`) quedó confirmada el 13 oct 2026. La reserva del enable del GPS (Q1/R8) se quitó del plano; el RX del GPS va con el cable 9 desde J3-10 (GPIO39).
 
 ## PCB
 Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de KiCad en el repositorio.

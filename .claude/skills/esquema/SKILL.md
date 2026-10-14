@@ -30,5 +30,5 @@ NAV="/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
 - Las hojas tienen altura fija y ocultan lo que no cabe: **mirar el PDF**, no basta con el HTML. Leerlo con Read
   (páginas cambiadas) y comprobar que no hay nada cortado ni solapado.
 - Si cambia un pin: actualizar también la tabla de GPIO de `CLAUDE.md`, `src/parts/pines.inc` y NOTAS.
-- Antes de soldar la placa perforada: confirmar con el usuario la orientación de la Heltec (`J3_IZQUIERDA`) y el
-  orden de pines del PAM8302A, el GPS y el BME280.
+- Antes de soldar la placa perforada: orientación de la Heltec (`J3_IZQUIERDA`) y orden de pines de los módulos
+  confirmados (fotos del 14 oct en NOTAS: PAM8302A de 5 pines A+, A−, SD, Vin, Gnd). Si cambia un módulo, revisarlo.

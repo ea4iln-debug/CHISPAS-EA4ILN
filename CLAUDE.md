@@ -102,8 +102,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. Parques POTA cercanos hechos (14 oct; lista de España en LittleFS): falta probarlos con fijo del GPS en la calle.
    Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).
-2. Placa perforada: Heltec bien orientada (`J3_IZQUIERDA`, confirmado 13 oct); antes de soldar, comprobar el orden
-   de pines del PAM8302A, el GPS y el BME280.
+2. Placa perforada: Heltec bien orientada (`J3_IZQUIERDA`, 13 oct) y orden de pines de los módulos comprobado (14 oct;
+   P5 del PAM8302A ahora de 5 pines A+, A−, SD, VIN, GND): lista para soldar.
 3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; cara de tormenta sin ver
    (la de auriculares, vista el 13 oct).
 4. Aparcado: OLED negra a veces en la placa 1 (ver NOTAS); detección de USB (probada el 14 oct con 47k/68k → GPIO33:
