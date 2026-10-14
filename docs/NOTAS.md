@@ -411,6 +411,17 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   placa 1 (alimentada a través del medidor USB); probado sin medidor y con batería (10 oct 2026):
   encendió 8 de 10 veces, así que el medidor no es la causa. Aparcado por decisión del usuario. Las órdenes de diagnóstico por serie de la v0.8a (`s`, `a`, `b`, `v`)
   se quitaron en la v0.8b a petición del usuario (están en el historial de git, commit 2f61d2f, si hacen falta).
+  **Diagnóstico del 14 oct 2026: defecto de hardware de la Heltec de la placa 1.** Método: 20 resets por RTS del
+  CP210x (pulso de 50 ms, uno cada 6–7 s; script de un solo uso, sin guardar) y el usuario cuenta las pantallas negras.
+  Placa 1 montada: firmware normal ~2–4/20; cortar Vext 1 s al arrancar (SDA/SCL como entradas, RST en BAJO) 3/20;
+  OLED iniciada después de `radio.begin()` 4/20; reset de 1 s 7/20 (la pista de "mantener RST un poco más" no se
+  confirmó con RTS); repetir al final de `setup()` lo de la orden `v` (Vext 500 ms, reset, `begin`) **11/20**: encendía
+  bien y se apagaba en el segundo encendido; igual sin GPS 9/20; poner a cero la GDDRAM antes de `begin` 6/20.
+  **Placa 2: 0/20 con el firmware normal y 0/20 con el doble encendido.** Placa 1 desnuda (fuera de la protoboard,
+  solo USB) con el doble encendido: **4/20**. Conclusión: cada encendido de la OLED de esa placa tiene bastante
+  probabilidad de dejar el panel negro (posible bomba de carga o condensadores justos); el montaje lo empeora (carga en
+  el 3,3 V) pero no es la causa, y no depende del firmware. Todos los cambios de prueba se descartaron (código como
+  estaba). Para la placa perforada: usar la Heltec de la placa 2 o una nueva.
 - **Dormir** (v0.7n, probado en la placa 2: tres ciclos; y en la placa 1 el 12 oct 2026): PRG largo, o `apagadoAutoMin` sin tocar nada (v0.7o: se
   elige en CONF → `apagado`: nunca, 5, 10, 15, 30, 60 o 120 min; por defecto 30; NVS `apag`), salvo en CW, LoRa y
   TRX (y sus subpantallas) o con el portal abierto → `dormirChispas()`: aviso 1,5 s, OLED,
@@ -530,8 +541,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 ## Pendiente
 1. **Pruebas a mano** (11 oct 2026): hechas en la placa 1 (listas y menús, aceleración, corrección total del Koch,
    Echo por lección) y en la placa 2 (OTA a la v1.01b; menús, listas, edición con vuelta, páginas y práctica sin
-   encoder). X6200 con KEY probada el 12 oct 2026. OLED negra de la placa 1: aparcada (falla ~2 de 10 arranques también con
-   batería y sin medidor).
+   encoder). X6200 con KEY probada el 12 oct 2026. OLED negra de la placa 1: **defecto de hardware de esa Heltec** (14 oct 2026:
+   falla también desnuda y la placa 2 no falla con ningún firmware; ver "OLED negra tras reset corto").
 2. **Montaje** (orden de la hoja 7 del esquema; hecho: raíles, encoder, palas, tono con amplificador, altavoz y jack,
    salida KEY con PC817 y minijack, BME280, GPS); GPS montado y probado el 13 oct 2026 con `prueba_gps` (ver la tabla de pines: GPIO39 y 47) e integrado en el firmware el mismo día (ver Funciones); BME280 montado y probado (v1.03b). Entrada del decodificador en GPIO6:
    **montada y probada el 11 oct 2026** (ver DECODIFICAR): comprobado con audio Morse real, letras y separación de palabras bien; la batería se sigue leyendo bien después de usar DECODIFICAR o QSO (probado en la placa 2 el 12 oct 2026). Falta comprar: divisor minijack 1→2. El buzzer magnético de 16 Ω no se usa.
