@@ -104,7 +104,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - Módulos a **3V3 de J3** (pines 2/3; GND en el 1). `Ve` es Vext (OLED). `5V` solo con USB.
 - Esquema (`docs/gen_esquema.py`) y placa perforada (`docs/gen_placa.py`) → PDF: skill **`esquema`**.
 - **PCB en curso (15 oct)**: KiCad 10, `hardware/` (5 placas JLCPCB, el mínimo; SMD montado; ver NOTAS: "PCB"). Esquema
-  completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Siguiente: pedido y rotaciones en la vista previa de JLCPCB. Skill **`pcb`** (scripts en `hardware/herramientas/`).
+  completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Pedido a JLCPCB pagado (15 oct, 5 placas, vista previa bien); siguiente: pedido de LCSC (`compra_lcsc.csv`) combinado con él. Skill **`pcb`** (scripts en `hardware/herramientas/`).
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. Parques POTA cercanos: probados con fijo del GPS en la calle (15 oct). Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).

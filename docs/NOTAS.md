@@ -789,8 +789,11 @@ usuario, para 5 placas, `fabricar.py [placas]`, defecto 5; + 2 zócalos 1×18 po
 CPL sin correcciones de giro: D1/D2, U2 y U3 salen bien en la vista previa (comprobado por la raya del cátodo y el
 punto del cuerpo; el punto rosa de JLCPCB no es el cátodo: girarlos por él los dejó al revés).
 No incluidos en la compra: carcasas y contactos de los JST (o cables ya hechos), altavoz, botones, separadores M3.
-**Siguiente:** subir a JLCPCB y comprobar en la vista previa del montaje la rotación de cada pieza (sobre todo
-D1/D2, U2 y U3).
+**Pedido a JLCPCB hecho y pagado (15 oct 2026):** 5 placas con montaje Economic, 23,26 de placas y montaje (sin el
+envío); vista previa del montaje revisada por el usuario: todas las piezas bien, CPL sin cambios. Para combinar con
+LCSC en un solo envío, el pedido de JLCPCB va a la dirección de LCSC en Hong Kong (Kwai Chung) y, en el pago de LCSC,
+se elige el pedido de JLCPCB (misma moneda y cuenta; ver la FAQ "combine LCSC JLCPCB orders").
+**Siguiente:** pedido de LCSC con `compra_lcsc.csv`, combinado con el de JLCPCB.
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno.
