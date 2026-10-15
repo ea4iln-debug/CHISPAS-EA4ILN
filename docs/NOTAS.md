@@ -675,6 +675,8 @@ amplificador + altavoz + RV1 + auriculares (el altavoz calla al meter la clavija
 J3, TRX > DECODIFICAR) y GPS. Notas del montaje: **sin el jack de auriculares en P3 el amplificador no suena** (A+
 recibe la señal por el contacto T–TN del jack; para probar sin jack, puente T–TN). RV1: patas 1-2-3 de izquierda a
 derecha con el eje hacia uno y las patas abajo (3 a R1, 2 a C1, 1 a masa).
+**Montaje completo (15 oct 2026, más tarde):** con todos los componentes, jack de auriculares incluido, todo funciona:
+el circuito de la placa perforada está bien.
 
 Plano para montar el prototipo en una placa de pads a doble cara (pedidas de 7×9 cm, 24×30 agujeros; el plano ocupa
 21×26, 53×66 mm): `docs/placa_perforada.pdf` (4 páginas: componentes, soldaduras con puentes y 12 cables numerados,

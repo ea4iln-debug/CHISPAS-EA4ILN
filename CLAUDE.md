@@ -41,6 +41,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   (`default_envs`); pruebas aparte en `pruebas/` (`prueba_pines`, `prueba_bateria`, `prueba_gps`). Puerto COM según el equipo
   (driver CP210x).
 - Pruebas con LED, pantalla, monitor serie y audio (altavoz y auriculares).
+- Placa perforada (placa 1) montada completa el 15 oct, con el jack de auriculares: todo bien, circuito correcto.
 
 ## Arquitectura (detalle en NOTAS: "Funciones" y "Manejo")
 - Pantallas `PANTALLA_*`: 1 Inicio, 2 CW, 3 LoRa, 4 TRX, 5 PROP, 6 POTA, 7 Sol, 8 CONF. Cabecera: hora, nombre corto,
@@ -106,19 +107,17 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. Parques POTA cercanos hechos (14 oct; lista de España en LittleFS): falta probarlos con fijo del GPS en la calle.
    Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).
-2. Placa perforada (placa 1) **montada y probada el 15 oct**: encoder, audio, palas, BME280, KEY, decodificador y
-   GPS bien (sin el jack de auriculares el ampli no suena: va por T–TN).
-3. QSO LIBRE en los dos sentidos (las dos placas tienen palas); pila del motor CW tras Duo; cara de tormenta sin ver
+2. QSO LIBRE en los dos sentidos (las dos placas tienen palas); pila del motor CW tras Duo; cara de tormenta sin ver
    (la de auriculares, vista el 13 oct).
-4. OLED negra a veces en la placa 2 (protoboard; era la "placa 1" hasta el 15 oct): **defecto de hardware de esa
+3. OLED negra a veces en la placa 2 (protoboard; era la "placa 1" hasta el 15 oct): **defecto de hardware de esa
    Heltec** (ver NOTAS). Aparcado: detección de USB (probada el 14 oct con 47k/68k → GPIO33:
    funciona, pero sin USB el pin 5V da 1,3 V y quedan 0,7 V, poco margen; si se retoma, GPIO3 con ADC).
-5. Reinicio de la OTA si la descarga no avanza en 30 s: compila, sin probar (se verá al instalar la v1.10 por OTA).
-6. Desde la 1.11: quitar `heltec_sin_encoder` de `platformio.ini`, `compilar.sh` y `publicar.sh` (¿y el código
+4. Reinicio de la OTA si la descarga no avanza en 30 s: compila, sin probar (la OTA de la v1.10 fue limpia y no saltó; forzarlo cortando la WiFi a mitad).
+5. Desde la 1.11: quitar `heltec_sin_encoder` de `platformio.ini`, `compilar.sh` y `publicar.sh` (¿y el código
    `#ifdef SIN_ENCODER`? preguntar).
-7. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
+6. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
-8. Batería de la placa 1 (perforada): marca 90 % con la carga terminada (15 oct). Comprobar con polímetro si el
+7. Batería de la placa 1 (perforada): marca 90 % con la carga terminada (15 oct). Comprobar con polímetro si el
    factor 4,9 (calibrado en la otra Heltec) vale para esta; si no, factor por placa según la MAC (ver NOTAS).
 
 ## Decisiones que no hay que deshacer
