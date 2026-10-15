@@ -6,16 +6,16 @@
 ![Placa](https://img.shields.io/badge/placa-Heltec%20WiFi%20LoRa%2032%20V3-orange)
 ![Framework](https://img.shields.io/badge/framework-Arduino%20%2B%20PlatformIO-teal)
 ![Versión](https://img.shields.io/badge/firmware-v1.06b-green)
-![Estado](https://img.shields.io/badge/estado-beta-yellow)
+![Estado](https://img.shields.io/badge/estado-v1.10-green)
 ![Licencia del software](https://img.shields.io/badge/software-GPL--3.0-blue)
 ![Licencia del hardware](https://img.shields.io/badge/hardware%20y%20docs-CC%20BY--NC--SA%204.0-lightgrey)
 
 > *"Chispas"* era el apodo que se daba al radiotelegrafista de a bordo.
 
 > [!WARNING]
-> **Versión beta.** Chispas es todavía un prototipo en protoboard: la salida KEY solo se ha probado con un
-> transceptor y varios valores del circuito son de partida. Úsalo bajo tu responsabilidad: lee el
-> [descargo de responsabilidad](#descargo-de-responsabilidad).
+> **Desde la v1.10 Chispas ya no es beta**, pero sigue siendo un proyecto personal montado en placa perforada: la
+> salida KEY se ha probado con dos transceptores y algunos valores del circuito son de partida. Úsalo bajo tu
+> responsabilidad: lee el [descargo de responsabilidad](#descargo-de-responsabilidad).
 
 <p align="center">
   <img src="docs/img/prototipo.jpg" width="800" alt="Prototipo de Chispas en protoboard: Heltec V3 con antena LoRa, encoder, buzzer, manipulador de palas, jacks de auriculares, KEY y audio de la emisora, y sensor BME280">
@@ -137,7 +137,8 @@ Notas:
 ## Instalar el firmware
 
 Hay dos compilaciones: la normal, para la placa con **encoder**, y la `sin-encoder`, para una placa desnuda que se
-maneja solo con el botón PRG.
+maneja solo con el botón PRG. **La v1.10 es la última con la compilación `sin-encoder`**: desde la 1.11 solo habrá la
+de encoder (una placa sin encoder se queda en la v1.10; el OTA dirá que no hay binario para ella).
 
 ### Sin compilar (desde la release)
 En [Releases](https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases) están las imágenes listas:
@@ -241,7 +242,7 @@ Todas las pantallas siguen el mismo esquema:
 Al cambiar de pantalla, el foco se queda en la flecha que has usado, así que basta con pulsar varias veces seguidas
 para recorrer las pantallas en un sentido.
 
-Sin encoder (compilación `sin-encoder`), todo se hace con el botón PRG: corta = mover el foco, larga = ejecutar y
+Sin encoder (compilación `sin-encoder`, solo hasta la v1.10), todo se hace con el botón PRG: corta = mover el foco, larga = ejecutar y
 muy larga (2,5 s) = dormir.
 
 ---
@@ -435,7 +436,7 @@ y la PCB.
 
 ## Descargo de responsabilidad
 
-Chispas es un proyecto personal de radioafición, sin ánimo de lucro, en fase beta. Se ofrece **tal cual, sin
+Chispas es un proyecto personal de radioafición, sin ánimo de lucro. Se ofrece **tal cual, sin
 garantía de ningún tipo**: ni de que funcione, ni de que sirva para un fin concreto, ni de que esté libre de errores
 (ver las licencias GPL-3.0 y CC BY-NC-SA 4.0).
 
