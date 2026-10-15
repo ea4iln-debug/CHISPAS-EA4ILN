@@ -63,7 +63,9 @@
 #define VBAT_SIN_BATERIA            2.6f
 #define VBAT_DISPERSION_SIN_BATERIA 0.08f  // V: por encima, no hay bateria
 #define VBAT_LECTURAS               200    // Lecturas seguidas por medida (unos 18 ms)
-#define VBAT_MULTIPLIER 4.9f   // Divisor 390k/100k de la V3. Calibrado con polimetro: 4,10 V reales / 836,7 mV en el pin (2,5 dB)
+// Divisor 390k/100k de la V3 (2,5 dB). Calibrado con polimetro en la placa 1 (perforada, 15 oct 2026): con 4,9
+// marcaba 4,03 V y la bateria tenia 4,10 V; con 4,985 marca 4,12 V. Antes, 4,9 (calibrado en la placa 2)
+#define VBAT_MULTIPLIER 4.985f
 #define TIEMPO_PULSACION_LARGA 600 // Umbral en ms para detectar pulsacion larga del boton PRG
 #define TIEMPO_ANTIRREBOTE_MS  30  // Pulsaciones mas cortas se ignoran (rebotes)
 #define TIEMPO_PULSACION_DORMIR 2500  // Solo sin encoder: PRG tan largo = dormir (la larga normal = ejecutar)

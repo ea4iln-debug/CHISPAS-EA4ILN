@@ -69,7 +69,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - KEY (GPIO2) solo con `keyHabilitada` (OPERAR y QSO de TRX); corte de seguridad a los 10 s.
 - Amplificador: SD (GPIO38) en ALTO solo en CW, LoRa, TRX y pitido de prueba; en BAJO retenido al dormir.
 - Dormir (deep sleep, despierta con PRG): KEY, Vext, divisor y SD retenidos con `gpio_hold`; se liberan en `setup()`.
-- Batería: GPIO37 **HIGH** activa el divisor (Meshtastic dice LOW), 2,5 dB, factor 4,9 calibrado; "sin batería"
+- Batería: GPIO37 **HIGH** activa el divisor (Meshtastic dice LOW), 2,5 dB, factor 4,985 para todas (calibrado en la placa 1 el 15 oct; antes 4,9); "sin batería"
   por dispersión de 200 lecturas.
 
 ## Código (detalle en NOTAS: "Organización del código")
@@ -118,8 +118,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
    `#ifdef SIN_ENCODER`? preguntar).
 6. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
-7. Batería de la placa 1 (perforada): marca 90 % con la carga terminada (15 oct). Comprobar con polímetro si el
-   factor 4,9 (calibrado en la otra Heltec) vale para esta; si no, factor por placa según la MAC (ver NOTAS).
+7. Batería: factor único 4,985 (15 oct, polímetro en la placa 1: 4,10 V reales, marca 4,12). La placa 2 marcará
+   ~+0,07 V (estaba calibrada con 4,9): comprobar con polímetro si se quiere.
 
 ## Decisiones que no hay que deshacer
 - **SOTA: no programar el cliente** (sus condiciones prohíben software generado por IA sin aprobación previa).

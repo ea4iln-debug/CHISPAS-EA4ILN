@@ -35,7 +35,7 @@ BateriaInfo leerBateria() {
   digitalWrite(ADC_CTRL_PIN, HIGH);
   delay(10);
 
-  // Al pin llegan como mucho 4.2 V / 4.9 = 0.86 V: 2.5 dB (rango hasta unos 1.25 V) es mas preciso que 11 dB
+  // Al pin llegan como mucho 4.2 V / 4.985 = 0.84 V: 2.5 dB (rango hasta unos 1.25 V) es mas preciso que 11 dB
   analogReadResolution(12);
   analogSetPinAttenuation(VBAT_ADC_PIN, ADC_2_5db);
 

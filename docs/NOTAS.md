@@ -415,7 +415,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - **SOTA: no programar el cliente.** Sus condiciones (api-db2.sota.org.uk/docs) exigen unirse al grupo
   "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Decisión pendiente del autor.
 - **Batería**: divisor activado con GPIO37 **HIGH** en estas placas (Meshtastic declara LOW). Atenuación 2,5 dB,
-  factor 4,9 calibrado con polímetro (4,10 V reales / 836,7 mV en el pin; un solo punto), curva Li-ion y suavizado al
+  factor **4,985** para todas las placas (15 oct 2026, calibrado con polímetro en la placa 1 perforada: con 4,9 marcaba 4,03 V y la batería tenía 4,10 V; con 4,985, 4,12 V; antes, 4,9 calibrado en la placa 2 con 4,10 V reales / 836,7 mV en el pin; un solo punto en cada una), curva Li-ion y suavizado al
   50 %. **Sin batería y con USB** el cargador deja ~4,17 V de media pero oscila (medido con `prueba_bateria`:
   dispersión 0,25 V frente a 0,002 V con batería): `leerBateria()` toma 200 lecturas seguidas y, si la dispersión
   supera 0,08 V (`VBAT_DISPERSION_SIN_BATERIA`), indica "sin batería" (`PWR`). Probado en las dos placas. Con USB el
@@ -612,14 +612,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    puede tardar muchos minutos en dar error y PRG no responde (bucle bloqueante). Idea: vigilar el avance (p. ej.
    un temporizador que mire `otaProgreso`) y, si pasan 20–30 s sin avanzar, cortar con `cliente.stop()` para que
    salga "ERROR"; o bajar el timeout del cliente y de `HTTPUpdate`. Comprobar en el core qué corta antes.
-6. **Batería de la placa 1 (perforada)** (15 oct 2026): con el cargador ya parado marca 90 % (unos 4,10 V en la
-   curva). Razonado, sin medir: tras cortar la carga la celda baja a 4,10–4,15 V, y el factor 4,9 se calibró en un
-   solo punto con la Heltec que entonces era la placa 1 (ahora la protoboard, placa 2); la perforada lleva la otra
-   Heltec, y un 1 % de tolerancia del divisor son ~0,04 V (4–5 puntos). Prueba: comparar `BAT x.xxV` de STATUS >
-   SISTEMA con el polímetro en el mismo momento. Si difiere, factor por placa según la MAC.
-   Sin USB, después de la carga, marca **4,08 V** (lo esperado en reposo: 4,15–4,18 V). Puede leer bajo (factor ~1,5–2 %
-   corto) o la celda quedarse ahí (corte pronto del cargador o celda gastada): hace falta el polímetro. Si da ~4,16 V,
-   el factor de esta placa sería 4,9 × 4,16 / 4,08 ≈ 5,0.
+6. **Batería de la placa 1 (perforada)**: hecho el 15 oct 2026. Polímetro en los bornes 4,10 V, STATUS 4,03 V con el
+   factor 4,9 (1,7 % bajo). Se probó un factor por placa según la MAC (4,985 solo para la 08:c0: marcó 4,12 V) y el
+   usuario prefirió **un solo factor para todas: 4,985** (`VBAT_MULTIPLIER`). Razonado, sin medir: la placa 2
+   (protoboard, calibrada con 4,9) marcará ahora ~1,7 % alto (unos +0,07 V a 4,1 V).
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).
