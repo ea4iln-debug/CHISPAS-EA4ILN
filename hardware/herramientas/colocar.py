@@ -1,14 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Primera colocacion de las piezas en chispas.kicad_pcb y contorno de la placa.
 # Ejecutar con el Python de KiCad y el editor de placas CERRADO:
-#   "C:/Program Files/KiCad/10.0/bin/python.exe" colocar.py
+#   "C:/Program Files/KiCad/10.0/bin/python.exe" colocar.py [carpeta_del_proyecto]
 # Vista desde arriba: borde superior = DETRAS (KEY y decodificador, al transceptor), inferior = DELANTE (palas,
 # auriculares y volumen), izquierdo = USB de la Heltec (en horizontal: asi la OLED se lee derecha).
 # Coordenadas en mm; esquina superior izquierda de la placa en (X0, Y0).
 from pathlib import Path
 import pcbnew
 
-PCB = Path(__file__).resolve().parent.parent / "chispas.kicad_pcb"
+import sys
+PCB = (Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent) / "chispas.kicad_pcb"
 X0, Y0, ANCHO, ALTO = 100.0, 100.0, 90.0, 60.0
 
 # Jack PJ-307: la clavija entra por el lado -X de la huella. Cuerpo hasta -7,33 mm del centro (escalon) y cañon
@@ -31,7 +32,8 @@ COLOCACION = {
     "H3": (X0 + 4, Y0 + ALTO - 4, 0), "H4": (X0 + ANCHO - 4, Y0 + ALTO - 4, 0),
     # DETRAS: KEY (PJ1) con su optoacoplador, decodificador (PJ4) con trimmer, puentes y trafo
     "PJ1": (115, Y0 + D_JACK, JACK_DETRAS),
-    "U2": (128, 106, 0), "R1": (125, 111.5, 0), "R2": (131, 111.5, 0),
+    # PC817 girado 180: patas aisladas (3, 4) hacia el jack KEY; lado de la Heltec (1, 2) hacia la derecha
+    "U2": (128, 106, 180), "R1": (128.5, 111.5, 0), "R2": (132.5, 111.5, 0),
     "PJ4": (141, Y0 + D_JACK, JACK_DETRAS),
     "R8": (157, 104.5, 0), "J6": (166, 110, 90), "JP1": (172, 114, 0), "JP2": (172, 118, 0),
     "C8": (153, 114, 0), "R9": (157.5, 114, 0), "R10": (162, 114, 0), "R11": (166.5, 114, 0),
