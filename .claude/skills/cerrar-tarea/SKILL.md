@@ -1,14 +1,14 @@
 ---
 name: cerrar-tarea
-description: Rutina de fin de tarea en Chispas - compilar los dos entornos, resumir lo probado en placa y lo razonado, actualizar CLAUDE.md y docs/NOTAS.md, commit y push. Usar al terminar cualquier cambio de código o documentación, o cuando el usuario diga que la tarea está acabada.
+description: Rutina de fin de tarea en Chispas - compilar, resumir lo probado en placa y lo razonado, actualizar CLAUDE.md y docs/NOTAS.md, commit y push. Usar al terminar cualquier cambio de código o documentación, o cuando el usuario diga que la tarea está acabada.
 ---
 
 # Cerrar una tarea de Chispas
 
 Pasos, en este orden. Si uno falla, parar y decirlo; no saltarlo.
 
-1. **Compilar** (solo si se ha tocado código, `include/` o `platformio.ini`): `./compilar.sh`. Tiene que salir OK en
-   los dos entornos y sin avisos nuevos de `src/`. Anotar RAM y flash si cambian de forma notable (más de ~1 %).
+1. **Compilar** (solo si se ha tocado código, `include/` o `platformio.ini`): `./compilar.sh`. Tiene que salir OK
+   y sin avisos nuevos de `src/`. Anotar RAM y flash si cambian de forma notable (más de ~1 %).
 2. **Revisar el diff** con `git diff` (y `git status` para archivos nuevos): solo lo que pedía la tarea, sin cambios
    de formato sueltos, tildes intactas, archivos de código nuevos con cabecera SPDX
    (`// SPDX-License-Identifier: GPL-3.0-or-later` y `// Copyright (C) 2026 EA4ILN`), y cada `.inc` nuevo con su

@@ -5,7 +5,7 @@
 # Prepara y sube una release de Chispas con los nombres exactos que busca el OTA. Tres pasos, y entre
 # ellos la prueba en placa y la confirmacion del usuario:
 #
-#   ./publicar.sh             1) compila los dos entornos (./compilar.sh) y deja en dist/<ver>/ los cuatro
+#   ./publicar.sh             1) compila (./compilar.sh) y deja en dist/<ver>/ los dos
 #                                binarios, LICENCIAS_TERCEROS.txt y un borrador de notas (notas.md) con los
 #                                commits desde la ultima etiqueta. Editar notas.md en castellano.
 #   ./publicar.sh --subir     2) crea la release en GitHub como BORRADOR (las placas no la ven por OTA)
@@ -45,7 +45,7 @@ case "$1" in
   ./compilar.sh || falla "no compila"
 
   rm -rf "$DIST"; mkdir -p "$DIST"
-  for E in heltec_wifi_lora_32_V3:"" heltec_sin_encoder:"-sin-encoder"; do
+  for E in heltec_wifi_lora_32_V3:""; do
     ENV=${E%%:*}; SUF=${E#*:}; B=.pio/build/$ENV
     cp "$B/firmware.bin" "$DIST/chispas-$VER$SUF.bin"
     "$PY" "$ESPTOOL" --chip esp32s3 merge_bin -o "$DIST/chispas-$VER$SUF-usb.bin" \
@@ -67,7 +67,7 @@ case "$1" in
     echo "## Instalación"
     echo
     echo "- Por OTA: CONF > CONFIG > ACTUALIZAR FW."
-    echo "- Por USB (imagen completa en 0x0): \`chispas-$VER-usb.bin\` (con encoder) o \`chispas-$VER-sin-encoder-usb.bin\`."
+    echo "- Por USB (imagen completa en 0x0): \`chispas-$VER-usb.bin\`."
   } > "$DIST/notas.md"
 
   echo
@@ -82,8 +82,7 @@ case "$1" in
   "$GH" auth status >/dev/null 2>&1 || falla "gh sin sesion: gh auth login"
   "$GH" release create "$ETIQUETA" --draft $PRE --target "$(cat "$DIST/commit")" \
     --title "Chispas $ETIQUETA" --notes-file "$DIST/notas.md" \
-    "$DIST/chispas-$VER.bin" "$DIST/chispas-$VER-sin-encoder.bin" \
-    "$DIST/chispas-$VER-usb.bin" "$DIST/chispas-$VER-sin-encoder-usb.bin" \
+    "$DIST/chispas-$VER.bin" "$DIST/chispas-$VER-usb.bin" \
     "$DIST/LICENCIAS_TERCEROS.txt" || falla "gh release create"
   echo "Borrador creado. Revisarlo en GitHub y, si esta bien: ./publicar.sh --publicar"
   ;;

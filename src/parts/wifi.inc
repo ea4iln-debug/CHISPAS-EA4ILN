@@ -143,11 +143,7 @@ void ajustarAceleracion(int8_t paso) {
   int v = aceleracionGiro + paso;
   if (aceleracionGiro == 0 && paso > 0) v = 2;
   else if (v < 2) v = 0;
-#ifdef SIN_ENCODER
-  if (v > ACELERACION_MAX) v = 0;  // Sin encoder: da la vuelta
-#else
   if (v > ACELERACION_MAX) v = ACELERACION_MAX;
-#endif
   aceleracionGiro = v;
 }
 
@@ -159,11 +155,7 @@ String textoApagado() {
 void ajustarApagado(int8_t paso) {
   int i = 0;
   while (i < N_OPCIONES_APAGADO - 1 && OPCIONES_APAGADO_MIN[i] != apagadoAutoMin) i++;
-#ifdef SIN_ENCODER
-  i = (i + N_OPCIONES_APAGADO + paso) % N_OPCIONES_APAGADO;  // Sin encoder: da la vuelta
-#else
   i = constrain(i + paso, 0, N_OPCIONES_APAGADO - 1);
-#endif
   apagadoAutoMin = OPCIONES_APAGADO_MIN[i];
 }
 bool confirmandoFabrica = false;

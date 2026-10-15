@@ -13,7 +13,7 @@ description: Cargar el firmware de Chispas en una placa por USB y comprobarlo - 
   **preguntar al usuario qué placa es** antes de cargar y, tras cargar, apuntar la MAC.
 - Entornos: las dos placas llevan encoder → `heltec_wifi_lora_32_V3`. Nombres desde el 15 oct 2026: **placa 1 =
   placa perforada** (MAC `3c:0f:02:ee:08:c0`), **placa 2 = protoboard** (MAC `3c:0f:02:ee:50:74`, OLED con defecto).
-  `heltec_sin_encoder` solo existe hasta la v1.10 (Heltec desnuda): **el entorno equivocado deja la placa sin manejo**.
+  `heltec_sin_encoder` existio hasta la v1.10; desde la 1.20 hay un solo entorno.
 
 ## 2. Cargar
 - Cerrar antes cualquier `serie.py` o monitor abierto (el puerto no se comparte).

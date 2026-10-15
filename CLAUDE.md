@@ -29,12 +29,13 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (15 oct 2026)
-- **v1.10** (release del 15 oct, primera final; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance); instalada por OTA en las dos placas el 15 oct (placa 1 vista por serie: 27 s, sin cortes). Antes,
-  v1.09b (14 oct). **Nombres de las placas desde el 15 oct** (antes, al revés; lo anterior en NOTAS usa los viejos):
+- **v1.20** en preparación (16 oct): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`).
+  Última release: **v1.10** (15 oct, primera final; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance),
+  instalada por OTA en las dos placas el 15 oct (placa 1 vista por serie: 27 s, sin cortes). **Nombres de las placas desde el 15 oct** (antes, al revés; lo anterior en NOTAS usa los viejos):
   **placa 1 = placa perforada** (MAC `08:c0`, montada y probada el 15 oct) y **placa 2 = protoboard** (MAC `50:74`,
   OLED con defecto de hardware). Las dos con encoder, entorno `heltec_wifi_lora_32_V3`.
-- **Fin del soporte sin encoder:** la v1.10 es la última con `heltec_sin_encoder` (`-DSIN_ENCODER`); desde la 1.11
-  no se compila ni se publica su binario.
+- **Sin soporte sin encoder** desde la 1.20: un solo entorno (`heltec_wifi_lora_32_V3`); la v1.10 fue la última con
+  `heltec_sin_encoder`. **Versiones X.YY con dos cifras** (la OTA compara números: "1.2" sería menor que "1.10").
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
   WiFiManager 2.0.17, ArduinoJson 7. **Un solo `.cpp` en `src/`** (el resto en `src/parts/*.inc`, ver "Código");
   `pio run` compila solo el firmware
@@ -51,7 +52,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   listas (`dibujarListaOpciones()`); datos en páginas (`dibujarPiePaginas()`); pantallas de manipular/escuchar con
   pie corto y "menu". Inicio es una portada fija. **Mantener este estilo (fuente 5×7, sin imitar Meshtastic).**
 - Entrada: encoder KY-040 por interrupción (`isrEncoder`), eventos `BOTON_*`/`ENC_*` en `procesarBoton()`.
-  PRG corto = atrás, largo = dormir; despiertan PRG y el eje del encoder. Sin encoder: PRG corta = mover, larga = ejecutar, muy larga = dormir.
+  PRG corto = atrás, largo = dormir; despiertan PRG y el eje del encoder.
 - Tareas FreeRTOS: `motorCW` (núcleo 1, prio 3; API `motorCWEmitir/Detener/Ocupado/Portadora`; solo las tareas
   llaman a `conmutarEmisionMorse()`), `keyer` (palas cada 1 ms), `decod` (núcleo 0, ADC por DMA a 8 kHz, Goertzel).
 - LittleFS (partición `spiffs`): lista de parques POTA de España (`/parques.bin`), se baja sola cada 30 días.
@@ -107,19 +108,14 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Pedidos a JLCPCB (5 placas) y LCSC hechos y combinados (15 oct); R7 cambiado al CTR C18213426 (el ALPS, sin stock; lineal, encaje sin comprobar). Siguiente: recibir y montar. Skill **`pcb`** (scripts en `hardware/herramientas/`).
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-1. Parques POTA cercanos: probados con fijo del GPS en la calle (15 oct). Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).
-2. Cara de tormenta sin ver
-   (la de auriculares, vista el 13 oct).
-3. OLED negra a veces en la placa 2 (protoboard; era la "placa 1" hasta el 15 oct): **defecto de hardware de esa
-   Heltec** (ver NOTAS). Aparcado: detección de USB (probada el 14 oct con 47k/68k → GPIO33:
-   funciona, pero sin USB el pin 5V da 1,3 V y quedan 0,7 V, poco margen; si se retoma, GPIO3 con ADC).
-4. Reinicio de la OTA si la descarga no avanza en 30 s: compila, sin probar (la OTA de la v1.10 fue limpia y no saltó; forzarlo cortando la WiFi a mitad).
-5. Desde la 1.11: quitar `heltec_sin_encoder` de `platformio.ini`, `compilar.sh` y `publicar.sh` (¿y el código
-   `#ifdef SIN_ENCODER`? preguntar).
-6. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
-   no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
-7. Batería: factor único 4,985 (15 oct, polímetro en la placa 1: 4,10 V reales, marca 4,12). La placa 2 marcará
-   ~+0,07 V (estaba calibrada con 4,9): comprobar con polímetro si se quiere.
+1. Reinicio de la OTA si la descarga no avanza en 30 s: compila, sin probar (la OTA de la v1.10 fue limpia y no
+   saltó; forzarlo cortando la WiFi a mitad, p. ej. con la OTA a la v1.20).
+2. PCB: recibir y montar (ver "Hardware").
+
+Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
+no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se
+desvía mucho), ahorro de tokens (hábito; Claude avisa de tareas caras y de cuándo hacer `/clear`) y versión sin
+encoder (quitada en la 1.20).
 
 ## Decisiones que no hay que deshacer
 - **SOTA: no programar el cliente** (sus condiciones prohíben software generado por IA sin aprobación previa).
@@ -129,7 +125,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno. Separar lo probado en placa de lo razonado.
-- Compilar antes de dar un cambio por bueno, con **`./compilar.sh`** (los dos entornos; `enc` o `sin` para uno):
+- Compilar antes de dar un cambio por bueno, con **`./compilar.sh`**:
   solo saca errores, avisos de `src/`, RAM, flash y OK/FALLO; la salida completa queda en `.pio/compilar.log`. Cambios con diff claro; no reestructurar sin avisar.
 - Antes de afirmar algo sobre RadioLib, WiFiManager o el core de Espressif, comprobar la versión instalada.
 - Leer el serie sin reiniciar la placa: **`serie.py`** (busca el CP210x, DTR/RTS a False, hora y log en

@@ -14,9 +14,8 @@ de publicación.** Detalle e historial en `docs/NOTAS.md`, sección "Releases y 
   cabecera. Commit y push antes de preparar la release (`publicar.sh` exige HEAD = `origin/main`).
 
 ## Publicar con `./publicar.sh` (necesita `gh` con sesión; equipos 1 y 2)
-1. `./publicar.sh`: comprueba git y versión, compila los dos entornos y deja en `dist/<ver>/` los binarios
-   (`chispas-<ver>.bin`, `-sin-encoder.bin`, `-usb.bin`, `-sin-encoder-usb.bin`; nombres exactos que busca el
-   OTA), `LICENCIAS_TERCEROS.txt` y `notas.md`.
+1. `./publicar.sh`: comprueba git y versión, compila y deja en `dist/<ver>/` los binarios
+   (`chispas-<ver>.bin` y `chispas-<ver>-usb.bin`; el primero, nombre exacto que busca el OTA), `LICENCIAS_TERCEROS.txt` y `notas.md`.
 2. **Probar en placa** (skill `placa`) y reescribir `dist/<ver>/notas.md` en castellano para el usuario final:
    novedades agrupadas por pantalla o función, sin jerga de código ni nombres de commits; la sección de
    instalación se deja. Enseñar las notas al usuario.

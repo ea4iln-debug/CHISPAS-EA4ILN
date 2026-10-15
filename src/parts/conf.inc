@@ -450,7 +450,7 @@ void dibujarPantallaOta() {
     case OTA_AL_DIA:
       display.print(F("ULTIMA     v")); display.print(otaVersionNueva);
       display.setCursor(0, 42);
-      // Mas nueva pero sin binario para esta placa (con o sin encoder): no se puede instalar
+      // Mas nueva pero sin binario para esta placa: no se puede instalar
       display.print(compararVersiones(otaVersionNueva, FW_VERSION) > 0 ? F("SIN BINARIO PARA ESTA") : F("YA ESTA AL DIA"));
       break;
     case OTA_HAY_NUEVA:

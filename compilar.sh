@@ -5,9 +5,7 @@
 # Compila Chispas y muestra solo lo importante: errores (con contexto), avisos de nuestro codigo (src/),
 # cuantos avisos vienen de librerias, RAM, flash y el resultado de cada entorno.
 #
-# Uso:  ./compilar.sh            los dos entornos del firmware
-#       ./compilar.sh enc        solo heltec_wifi_lora_32_V3 (placa 1, con encoder)
-#       ./compilar.sh sin        solo heltec_sin_encoder (placa 2)
+# Uso:  ./compilar.sh            el firmware (heltec_wifi_lora_32_V3)
 #       ./compilar.sh -v ...     ademas, la salida completa en .pio/compilar.log (siempre se guarda)
 # Codigo de salida: 0 si todos compilan, 1 si alguno falla.
 
@@ -20,9 +18,7 @@ VERBOSO=0
 if [ "$1" = "-v" ]; then VERBOSO=1; shift; fi
 
 case "$1" in
-  ""|todos) ENTORNOS="heltec_wifi_lora_32_V3 heltec_sin_encoder" ;;
-  enc)      ENTORNOS="heltec_wifi_lora_32_V3" ;;
-  sin)      ENTORNOS="heltec_sin_encoder" ;;
+  ""|todos|enc) ENTORNOS="heltec_wifi_lora_32_V3" ;;
   *)        ENTORNOS="$*" ;;
 esac
 

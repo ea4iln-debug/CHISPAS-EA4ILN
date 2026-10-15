@@ -190,7 +190,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - Entradas: encoder por interrupción en CLK/DT con tabla de cuadratura (`isrEncoder`, en IRAM, lee `GPIO_IN_REG`);
   PRG y pulsador del eje con `leerPulsador()` (antirrebote: el eje rebota al soltar). Eventos `BOTON_CORTA/LARGA` y
   `ENC_DERECHA/IZQUIERDA/PULSA/LARGA`, todos tratados en `procesarBoton()`.
-- **Sin encoder** (v0.7p; con las pantallas de la v0.9h, probado a mano en la placa 2 el 11 oct 2026): entorno `heltec_sin_encoder` (`-DSIN_ENCODER`, mismo `main.cpp`).
+- **Sin encoder** (histórico: de la v0.7p a la v1.10; quitado en la 1.20): entorno `heltec_sin_encoder` (`-DSIN_ENCODER`, mismo `main.cpp`).
   `leerEventoBoton()` traduce el PRG: corta = `ENC_DERECHA` (mover), larga = `ENC_PULSA` (ejecutar), muy larga
   (≥ `TIEMPO_PULSACION_DORMIR`, 2,5 s) = dormir. No hay "atrás" (todas las pantallas tienen volver o ant./sig.).
   Al editar, los valores dan la vuelta (`ajustarValor`, `ajustarApagado`).
@@ -615,7 +615,17 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 6. **Batería de la placa 1 (perforada)**: hecho el 15 oct 2026. Polímetro en los bornes 4,10 V, STATUS 4,03 V con el
    factor 4,9 (1,7 % bajo). Se probó un factor por placa según la MAC (4,985 solo para la 08:c0: marcó 4,12 V) y el
    usuario prefirió **un solo factor para todas: 4,985** (`VBAT_MULTIPLIER`). Razonado, sin medir: la placa 2
-   (protoboard, calibrada con 4,9) marcará ahora ~1,7 % alto (unos +0,07 V a 4,1 V).
+   (protoboard, calibrada con 4,9) marcará ahora ~1,7 % alto (unos +0,07 V a 4,1 V). 16 oct 2026: se da por cerrado;
+   el usuario la mirará con la placa 2 actualizada y, si se desvía mucho, se reajusta.
+7. **Cerrados el 16 oct 2026** (decisión del usuario): consumo del GPS dormido sin medir (despreciable); cara de
+   tormenta sin ver (en Badajoz hay pocas; descartada como prueba); OLED negra de la placa 2: placa averiada, nada
+   más que hacer; ahorro de tokens: hábito del usuario (Claude avisa si una tarea va a gastar mucho y cuándo
+   conviene `/clear`).
+8. **Versión sin encoder quitada en la 1.20** (16 oct 2026): fuera el entorno `heltec_sin_encoder` de
+   `platformio.ini`, `compilar.sh` y `publicar.sh`, y todo el código `#ifdef SIN_ENCODER` (dormir, despertar,
+   `leerEventoBoton`, valores con vuelta, binario de la OTA, `TIEMPO_PULSACION_DORMIR`, `ultimaDuracion`). Una placa
+   sin encoder se queda en la v1.10. La versión es **1.20 y no 1.2**: `compararVersiones()` compara cada número por
+   separado y "1.2" (1, 2) sería menor que "1.10" (1, 10). Compila: RAM 17,1 %, flash 38,6 %.
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).

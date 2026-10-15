@@ -226,11 +226,7 @@ void ajustarTonoDecod(int8_t giro) {
   int v = trxTonoDecodHz;
   if (giro > 0) v = (v == 0) ? TONO_MIN_HZ : v + TONO_PASO_HZ;
   else v = (v <= TONO_MIN_HZ) ? 0 : v - TONO_PASO_HZ;
-#ifdef SIN_ENCODER
-  if (v > TONO_MAX_HZ) v = 0;  // Sin encoder: da la vuelta
-#else
   if (v > TONO_MAX_HZ) v = TONO_MAX_HZ;
-#endif
   trxTonoDecodHz = v;
 }
 

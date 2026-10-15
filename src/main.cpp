@@ -4,7 +4,7 @@
  * @brief Chispas: entrenador de CW portatil para la Heltec WiFi LoRa 32 V3 (ESP32-S3). Koch, Echo, keyer
  *        iambico, practica y QSO por LoRa, manipulacion del transceptor (KEY), decodificador CW, propagacion,
  *        spots POTA, sol y linea gris, y actualizacion por OTA desde las releases de GitHub.
- * @version 1.10 - Primera final: WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance (ultima con binario sin encoder)
+ * @version 1.20 - Sin la version sin encoder (codigo y binario): solo placas con encoder
  * @date 2026-10-11
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -19,7 +19,7 @@
 
 // Version: se ve en Inicio, en CONF > STATUS y por serie. La etiqueta de la release de GitHub es "v" + esto
 // (la actualizacion OTA las compara). Cambiarla en cada version que se cargue o se publique
-#define FW_VERSION "1.10"
+#define FW_VERSION "1.20"
 
 // Depuracion: se activa en CONF > CONFIG > DEPURACION (NVS "depu", un bit por opcion; todo apagado por defecto)
 #define DEPU_SERIE 0x01  // Ordenes por serie: 'p' vuelca la OLED (docs/captura_oled.py) y d/i/k/l/a simulan el encoder
@@ -129,11 +129,7 @@ void reafirmarOled() {
 // (GPIO20, pin RTC: wakeup ext1 a nivel bajo) y arranca de nuevo como al encenderla (la configuracion esta en NVS).
 
 void dormirChispas(const char* motivo) {
-#ifdef SIN_ENCODER
-  Serial.printf("[SUENO] %s: a dormir. PRG para despertar\n", motivo);
-#else
   Serial.printf("[SUENO] %s: a dormir. PRG o el eje del encoder para despertar\n", motivo);
-#endif
   motorCWDetener();
   keyerActivo = false;
   if (estadoWifi != WIFI_APAGADO) apagarWifi();
@@ -144,13 +140,8 @@ void dormirChispas(const char* motivo) {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(22, 16); display.print(F("CHISPAS DUERME"));
-#ifdef SIN_ENCODER
-  display.setCursor(10, 34); display.print(F("PULSA PRG PARA"));
-  display.setCursor(10, 44); display.print(F("DESPERTARLO"));
-#else
   display.setCursor(4, 34); display.print(F("PULSA PRG O EL MANDO"));
   display.setCursor(16, 44); display.print(F("PARA DESPERTARLO"));
-#endif
   display.display();
   unsigned long inicioMensaje = millis();
   dormirGpsAntesDeSueno();  // Hasta ~1,5 s, mientras se lee el mensaje
@@ -176,12 +167,10 @@ void dormirChispas(const char* motivo) {
   rtc_gpio_pullup_en(GPIO_NUM_0);
   rtc_gpio_pulldown_dis(GPIO_NUM_0);
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0);
-#ifndef SIN_ENCODER
   // Y con el eje del encoder (sin pull-up en el modulo: el del RTC, que sigue alimentado por ext0)
   rtc_gpio_pullup_en((gpio_num_t)ENC_SW_PIN);
   rtc_gpio_pulldown_dis((gpio_num_t)ENC_SW_PIN);
   esp_sleep_enable_ext1_wakeup(1ULL << ENC_SW_PIN, ESP_EXT1_WAKEUP_ANY_LOW);
-#endif
 
   Serial.flush();
   esp_deep_sleep_start();
@@ -207,9 +196,7 @@ void setup() {
   gpio_hold_dis((gpio_num_t)AMP_SD_PIN);
   gpio_hold_dis((gpio_num_t)VEXT_CTRL);
   gpio_hold_dis((gpio_num_t)ADC_CTRL_PIN);
-#ifndef SIN_ENCODER
   rtc_gpio_deinit((gpio_num_t)ENC_SW_PIN);  // Tras despertar por ext1 sigue en el RTC: se devuelve a GPIO
-#endif
 
   // Lo primero: la salida KEY en BAJO, para que la emisora no transmita mientras arranca la placa
   pinMode(KEY_OUT_PIN, OUTPUT);
@@ -221,9 +208,6 @@ void setup() {
   delay(1000);
   Serial.println(F("\n[INIT] Chispas EA4ILN v" FW_VERSION "..."));
   cpuSegunWifi(false);  // Ahorro: 80 MHz mientras el WiFi este apagado
-#ifdef SIN_ENCODER
-  Serial.println(F("[INIT] MODO SIN ENCODER: PRG corto = mover, largo = ejecutar, muy largo = dormir"));
-#endif
   
   encenderPerifericos();
   iniciarMotorCW();

@@ -19,10 +19,9 @@ struct Pulsador {
   bool ultimoEstado;
   unsigned long inicio;
   bool pulsando;
-  unsigned long ultimaDuracion;  // De la ultima pulsacion (para la muy larga del modo sin encoder)
 };
-Pulsador pulsadorPrg = { BUTTON_PIN, HIGH, 0, false, 0 };
-Pulsador pulsadorEje = { ENC_SW_PIN, HIGH, 0, false, 0 };
+Pulsador pulsadorPrg = { BUTTON_PIN, HIGH, 0, false };
+Pulsador pulsadorEje = { ENC_SW_PIN, HIGH, 0, false };
 
 /**
  * Lee un pulsador sin bloquear y da el evento al SOLTARLO: 1 = corta (mas de
@@ -42,7 +41,6 @@ uint8_t leerPulsador(Pulsador& p) {
   if (p.ultimoEstado == LOW && estadoActual == HIGH && p.pulsando) {
     unsigned long duracion = millis() - p.inicio;
     p.pulsando = false;
-    p.ultimaDuracion = duracion;
 
     if (duracion >= TIEMPO_PULSACION_LARGA) ev = 2;
     else if (duracion > TIEMPO_ANTIRREBOTE_MS) ev = 1;
@@ -107,14 +105,6 @@ void iniciarEncoder() {
  */
 EventoBoton leerEventoBoton() {
   uint8_t prg = leerPulsador(pulsadorPrg);
-#ifdef SIN_ENCODER
-  // Placa sin encoder (entorno heltec_sin_encoder): el PRG hace de encoder. Corta = girar a la
-  // derecha (mover el foco), larga = pulsar el eje (ejecutar), muy larga = PRG largo (dormir).
-  // No hay atras: todas las pantallas tienen volver o ant./sig.
-  if (prg == 1) return ENC_DERECHA;
-  if (prg == 2) return (pulsadorPrg.ultimaDuracion >= TIEMPO_PULSACION_DORMIR) ? BOTON_LARGA : ENC_PULSA;
-  return BOTON_NINGUNO;
-#endif
   if (prg == 1) return BOTON_CORTA;
   if (prg == 2) return BOTON_LARGA;
 
@@ -153,16 +143,10 @@ void moverFocoAnillo(uint8_t& opcion, uint8_t barra, int8_t paso) {
 // con muchos pasos (fallos, wpm, leccion...) avanzan de ENC_FACTOR_RAPIDO en ENC_FACTOR_RAPIDO
 template <typename T>
 void ajustarValor(T& valor, int paso, int minimo, int maximo) {
-#ifdef SIN_ENCODER
-  // Sin encoder solo se avanza en un sentido: al pasar del maximo se vuelve al minimo
-  int v = (int)valor + paso;
-  valor = (T)(v > maximo ? minimo : (v < minimo ? maximo : v));
-#else
   if (giroRapido && aceleracionGiro > 1 && paso != 0 && (maximo - minimo) / abs(paso) >= ENC_MIN_PASOS_ACELERAR) {
     paso *= aceleracionGiro;
   }
   valor = (T)constrain((int)valor + paso, minimo, maximo);
-#endif
 }
 
 /**

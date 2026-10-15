@@ -6,7 +6,7 @@
 # navegador para los PDF y placa conectada. Dice OK, AVISO o FALTA en cada punto.
 #
 # Uso:  ./comprobar_equipo.sh              comprobaciones rapidas
-#       ./comprobar_equipo.sh --compilar   ademas, compila los dos entornos (./compilar.sh)
+#       ./comprobar_equipo.sh --compilar   ademas, compila (./compilar.sh)
 # Codigo de salida: el numero de FALTA (0 = todo listo).
 
 cd "$(dirname "$0")" || exit 1

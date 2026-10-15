@@ -58,7 +58,7 @@ bool hayActualizacion() {
 
 /**
  * Consulta la ultima release en la API de GitHub (con el WiFi conectado). Deja la version y la URL del binario
- * de esta placa: "chispas-<version>.bin" o, sin encoder, "chispas-<version>-sin-encoder.bin". Bloquea 1-3 s
+ * de esta placa ("chispas-<version>.bin"). Bloquea 1-3 s
  */
 bool buscarActualizacion() {
   WiFiClientSecure cliente;
@@ -101,11 +101,7 @@ bool buscarActualizacion() {
   otaVersionNueva = etiqueta;
   otaUrlBinario = "";
   // Nombre exacto: la release lleva tambien las imagenes completas para grabar por USB ("...-usb.bin")
-#ifdef SIN_ENCODER
-  String binario = "chispas-" + etiqueta + "-sin-encoder.bin";
-#else
   String binario = "chispas-" + etiqueta + ".bin";
-#endif
   for (JsonObject a : doc[0]["assets"].as<JsonArray>()) {
     if (binario.equalsIgnoreCase(a["name"] | "")) otaUrlBinario = a["browser_download_url"] | "";
   }

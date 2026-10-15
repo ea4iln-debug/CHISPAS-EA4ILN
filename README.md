@@ -136,18 +136,17 @@ Notas:
 
 ## Instalar el firmware
 
-Hay dos compilaciones: la normal, para la placa con **encoder**, y la `sin-encoder`, para una placa desnuda que se
-maneja solo con el botón PRG. **La v1.10 es la última con la compilación `sin-encoder`**: desde la 1.11 solo habrá la
-de encoder (una placa sin encoder se queda en la v1.10; el OTA dirá que no hay binario para ella).
+El firmware es para la placa con **encoder**. Hasta la v1.10 hubo también una compilación `sin-encoder`, para una
+placa desnuda que se manejaba solo con el botón PRG; desde la 1.20 ya no existe (una placa sin encoder se queda en la
+v1.10; el OTA dirá que no hay binario para ella).
 
 ### Sin compilar (desde la release)
 En [Releases](https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases) están las imágenes listas:
 
 | Archivo | Para qué |
 |---|---|
-| `chispas-<versión>-usb.bin` | Primera instalación por USB, placa con encoder (imagen completa, se graba en `0x0`) |
-| `chispas-<versión>-sin-encoder-usb.bin` | Lo mismo para la placa sin encoder |
-| `chispas-<versión>.bin` / `chispas-<versión>-sin-encoder.bin` | Solo la aplicación: las usa la actualización OTA |
+| `chispas-<versión>-usb.bin` | Primera instalación por USB (imagen completa, se graba en `0x0`) |
+| `chispas-<versión>.bin` | Solo la aplicación: la usa la actualización OTA |
 
 Para grabar la imagen completa basta con [ESP Tool web](https://espressif.github.io/esptool-js/) (en Chrome o Edge:
 *Connect*, dirección `0x0`, el archivo `-usb.bin` y *Program*) o, con Python:
@@ -178,9 +177,8 @@ Las dependencias se instalan solas al compilar. Están fijadas en [`platformio.i
 ```bash
 git clone https://github.com/ea4iln-debug/CHISPAS-EA4ILN.git
 cd CHISPAS-EA4ILN
-pio run                                         # compila el firmware (placa con encoder)
+pio run                                         # compila el firmware
 pio run -t upload --upload-port COMx            # lo carga (en Linux/macOS, /dev/ttyUSB0 o similar)
-pio run -e heltec_sin_encoder -t upload         # o la versión sin encoder
 pio device monitor                              # monitor serie a 115200 baudios
 ```
 
@@ -203,7 +201,7 @@ Con una red WiFi guardada (ver [Configuración](#configuración)):
 1. Ve a **CONF. > CONFIG > ACTUALIZAR FW**. Chispas se conecta, consulta la última release de este repositorio
    (también las beta) y la compara con la instalada.
 2. Si hay una más nueva, la enseña (`NUEVA v1.01b`) y pide confirmar con **instalar**. Descarga el binario de su
-   placa (con o sin encoder), lo instala en la otra partición de la flash y reinicia. Si algo falla, la versión
+   placa, lo instala en la otra partición de la flash y reinicia. Si algo falla, la versión
    instalada sigue intacta.
 3. Además, cuando Chispas enciende el WiFi en PROP. o POTA, mira una vez al día si hay versión nueva y lo
    avisa en el menú (`FW NUEVO: v1.01b`).
