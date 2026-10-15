@@ -13501,7 +13501,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://lcsc.com/product-detail/Potentiometers-Variable-Resistors_ALPS_RK097111080J_RK097111080J_C97444.html"
+		(property "Datasheet" "https://www.lcsc.com/product-detail/C18213426.html"
 			(at 250.19 148.59 0)
 			(hide yes)
 			(show_name no)
@@ -13534,7 +13534,7 @@
 				)
 			)
 		)
-		(property "MPN" "RK097111080J"
+		(property "MPN" "R09710NS-FB15D7.0-B103-0044"
 			(at 250.19 153.67 0)
 			(hide yes)
 			(show_name no)
@@ -13545,7 +13545,7 @@
 				)
 			)
 		)
-		(property "LCSC Part" "C97444"
+		(property "LCSC Part" "C18213426"
 			(at 250.19 156.21 0)
 			(hide yes)
 			(show_name no)

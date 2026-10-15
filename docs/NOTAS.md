@@ -793,7 +793,15 @@ No incluidos en la compra: carcasas y contactos de los JST (o cables ya hechos),
 envío); vista previa del montaje revisada por el usuario: todas las piezas bien, CPL sin cambios. Para combinar con
 LCSC en un solo envío, el pedido de JLCPCB va a la dirección de LCSC en Hong Kong (Kwai Chung) y, en el pago de LCSC,
 se elige el pedido de JLCPCB (misma moneda y cuenta; ver la FAQ "combine LCSC JLCPCB orders").
-**Siguiente:** pedido de LCSC con `compra_lcsc.csv`, combinado con el de JLCPCB.
+**Pedido a LCSC hecho (15 oct 2026)**, combinado con el de JLCPCB. Sin la Heltec ni las tiras de pines J4/J6 (sin código
+LCSC). **R7 cambiado:** el ALPS RK097111080J (C97444) estaba sin stock; se compró el CTR **R09710NS-FB15D7.0-B103-0044**
+(C18213426, 10 kΩ, "similar" según LCSC; por la referencia, eje de 15 mm y rosca de 7 mm). **Sin comprobar** que
+encaje en la huella (3 pines en línea a 2,5 mm, sin patillas de sujeción): si trae patillas, cortarlas. Es de curva
+**lineal** (B103), no logarítmica: el volumen cambia sobre todo al principio del giro. En el esquema solo cambian el
+MPN, el `LCSC Part` y el enlace de R7; el valor, el símbolo y la huella siguen con el nombre del ALPS.
+Fuera de LCSC (Amazon o AliExpress): Heltec V3, BME280 (no BMP280), GPS NEO-6M, LiPo con conector SH1.25, altavoz de
+8 Ω, cables XH 4P a Dupont hembra, tiras de pines, separadores M3 y mandos.
+**Siguiente:** recibir las placas, comprobar R7 en la huella y montar la primera.
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno.
