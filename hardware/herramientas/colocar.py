@@ -30,11 +30,18 @@ COLOCACION = {
     "PJ1": (115, Y0 + D_JACK, JACK_DETRAS),
     "U2": (128, 106, 0), "R1": (125, 111.5, 0), "R2": (131, 111.5, 0),
     "PJ4": (141, Y0 + D_JACK, JACK_DETRAS),
-    "R8": (157, 104.5, 0), "J6": (166, 110, 90), "JP1": (179, 113, 0), "JP2": (179, 117, 0),
+    "R8": (157, 104.5, 0), "J6": (166, 110, 90), "JP1": (172, 114, 0), "JP2": (172, 118, 0),
     "C8": (153, 114, 0), "R9": (157.5, 114, 0), "R10": (162, 114, 0), "R11": (166.5, 114, 0),
     "D1": (154.5, 119, 0), "D2": (160.5, 119, 0), "C9": (166, 119, 0),
-    # Conectores internos (cables): encoder, GPS, BME280 y tira de pines libres
-    "J1": (156, 128, 0), "J2": (174, 128, 0), "J3": (156, 138, 0), "J4": (171, 139, 90),
+    # Encoder PEC11R (U4) a la derecha de la Heltec, eje vertical (sale por la tapa junto a la OLED; la OLED queda
+    # a 17 mm de la placa, medido en la placa 1). Filtros RC (R12-R15, C10, C11) en fila bajo sus patas A y B.
+    "U4": (162, 130, 0),
+    "R12": (153.5, 140.5, 0), "R13": (157.5, 140.5, 0), "C10": (161.5, 140.5, 0),
+    "R14": (165.5, 140.5, 0), "R15": (169.5, 140.5, 0), "C11": (173.5, 140.5, 0),
+    # Conectores internos (cables) en el borde derecho: BME280 (J3) y GPS (J2), pines hacia arriba
+    "J3": (182, 121.5, 90), "J2": (182, 138, 90),
+    # Tira de pines libres (J4) delante, entre los auriculares y el volumen
+    "J4": (142, 145, 0),
     # DELANTE: palas (PJ2) con filtros, auriculares (PJ3), volumen (R7) y amplificador
     "PJ2": (115, Y0 + ALTO - D_JACK, JACK_DELANTE), "C1": (124, 150, 90), "C2": (124, 155, 90),
     "PJ3": (133, Y0 + ALTO - D_JACK, JACK_DELANTE),
