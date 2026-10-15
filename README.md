@@ -62,9 +62,9 @@ GitHub.
 
 | Función | Descripción | Estado |
 |---|---|---|
-| **Koch (RX)** | Orden de caracteres de LCWO (lecciones 1–40), grupos aleatorios configurables (wpm, espaciado, caracteres y grupos). La letra nueva de cada lección sale el 25 % de las veces y, con el **refuerzo**, las letras que más fallas salen más (hasta el doble o el triple). Al terminar se corrige **letra a letra** (marcando cada fallo) o con el **total de fallos**; estadísticas por lección y por carácter. | ✅ |
+| **Koch (RX)** | Orden de caracteres de LCWO (lecciones 1–40), grupos aleatorios configurables (wpm, espaciado, caracteres y grupos), o **indicativos** al azar y **frases de QSO POTA**. La letra nueva de cada lección sale el 25 % de las veces y, con el **refuerzo**, las letras que más fallas salen más (hasta el doble o el triple). Al terminar se corrige **letra a letra** (marcando cada fallo) o con el **total de fallos**; estadísticas por lección y por carácter. | ✅ |
 | **Echo (TX)** | Chispas emite letras y hay que repetirlas con las palas. Ajustes propios (wpm, espaciado, lección, letras por reto, número de retos, refuerzo de las letras con más errores), resultado al terminar y estadísticas por lección y por carácter. | ✅ |
-| **TX libre (keyer iámbico)** | Modos A y B, 10–40 wpm, palas normales o invertidas. Descodifica en pantalla lo que se manipula. | ✅ |
+| **TX libre (keyer iámbico)** | Modos A y B, 10–40 wpm, palas normales o invertidas. Descodifica en pantalla lo que se manipula y mide tu **ritmo** (espacios entre letras y palabras, titubeos, velocidad real) con un consejo. | ✅ |
 | **Práctica Duo por LoRa** | Práctica en pareja entre dos Chispas: uno envía grupos y el otro los recibe y los copia. Tramas digitales a 868 MHz, sin audio. | ✅ |
 | **QSO libre por LoRa** | QSO con las palas entre dos Chispas: cada palabra se envía al terminarla y lo recibido suena cuando dejas de manipular (si manipulas mientras suena, se corta). | ✅ |
 | **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`, `{WX}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez. | ✅ |

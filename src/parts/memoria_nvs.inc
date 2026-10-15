@@ -36,6 +36,7 @@ void cargarDatosNVS() {
   echoRetos = constrain(prefs.getUChar("eretos", 20), 10, 50);
   echoRefuerzo = min(prefs.getUChar("eref", REFUERZO_SUAVE), (uint8_t)REFUERZO_FUERTE);
   refuerzoKoch = min(prefs.getUChar("kref", REFUERZO_SUAVE), (uint8_t)REFUERZO_FUERTE);
+  textoKoch = min(prefs.getUChar("ktexto", TEXTO_GRUPOS), (uint8_t)TEXTO_QSO);
   echoTotalIntentos = prefs.getUInt("eint", 0);
   echoTotalAciertos = prefs.getUInt("eok", 0);
   echoSesiones = prefs.getUShort("eses", 0);
@@ -76,6 +77,7 @@ void cargarDatosNVS() {
 void guardarUltimaConfiguracionNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("kref", refuerzoKoch);
+  prefs.putUChar("ktexto", textoKoch);
   prefs.putUChar("wpm", wpmCW);
   prefs.putUShort("sp", espaciadoCW);
   prefs.putUChar("leccion", leccionCW);

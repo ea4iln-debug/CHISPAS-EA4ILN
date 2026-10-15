@@ -169,9 +169,110 @@ void dibujarPaginaBorrado(const __FlashStringHelper* que) {
   dibujarPieCentrado(confirmandoBorrado ? "> confirmar" : "> borrar");
 }
 
-// Ajustes de TX LIBRE (lista): 0 wpm (se edita girando), 1 modo, 2 palas, 3 salir; pie: 4 volver
-#define N_AJUSTES_KEYER 4
-const char* const NOMBRES_AJUSTES_KEYER[N_AJUSTES_KEYER] = { "WPM", "MODO", "PALAS", "SALIR" };
+// Ajustes de TX LIBRE (lista): 0 wpm (se edita girando), 1 modo, 2 palas, 3 ritmo (abre sus paginas), 4 salir;
+// pie: 5 volver
+#define N_AJUSTES_KEYER 5
+const char* const NOMBRES_AJUSTES_KEYER[N_AJUSTES_KEYER] = { "WPM", "MODO", "PALAS", "RITMO", "SALIR" };
+
+// ----------------------------------------------------------------------------
+// RITMO DE TX LIBRE: tres paginas con lo medido por la tarea del keyer (ritmoKeyer) desde que se entro o se
+// borro. Los espacios, en puntos (ideal 3 entre letras y 7 entre palabras)
+// ----------------------------------------------------------------------------
+#define PAGINAS_RITMO 3
+#define RITMO_MIN_LETRAS 5   // Espacios entre letras necesarios para opinar
+
+// Media en decimas de punto (0 si no hay datos)
+uint32_t mediaRitmo10(uint32_t suma, uint32_t n) {
+  return n ? (suma + n / 2) / n : 0;
+}
+
+// Desviacion tipica de los espacios entre letras, en decimas de punto
+uint32_t dispersionLetras10() {
+  const RitmoKeyer& r = ritmoKeyer;
+  if (r.letras < 2) return 0;
+  float m = (float)r.sumaLetra10 / r.letras;
+  float v = (float)r.sumaLetra10Cuad / r.letras - m * m;
+  return (uint32_t)lroundf(sqrtf(max(v, 0.0f)));
+}
+
+// "LETRAS   2.6/3  BIEN": media, ideal y juicio (CORTO, BIEN, LARGO); "--" sin datos
+void lineaEspacioRitmo(int16_t y, const char* nombre, uint32_t n, uint32_t media10, uint8_t ideal,
+                       uint32_t corto10, uint32_t largo10) {
+  char linea[22];
+  if (n == 0) {
+    snprintf(linea, sizeof(linea), "%-8s --/%u", nombre, ideal);
+  } else {
+    const char* juicio = media10 < corto10 ? "CORTO" : (media10 > largo10 ? "LARGO" : "BIEN");
+    snprintf(linea, sizeof(linea), "%-8s %lu.%lu/%u %s", nombre, (unsigned long)(media10 / 10),
+             (unsigned long)(media10 % 10), ideal, juicio);
+  }
+  display.setCursor(0, y);
+  display.print(linea);
+}
+
+// Consejo segun lo que mas falle (en orden de importancia): tres lineas de hasta 21 caracteres
+void consejoRitmo(const char*& l1, const char*& l2, const char*& l3) {
+  const RitmoKeyer& r = ritmoKeyer;
+  uint32_t letra10 = mediaRitmo10(r.sumaLetra10, r.letras);
+  l3 = "";
+  if (r.letras < RITMO_MIN_LETRAS) {
+    l1 = "AUN HAY POCOS DATOS:"; l2 = "MANIPULA UN RATO Y"; l3 = "VUELVE AQUI";
+  } else if (r.desconocidos * 10 > r.caracteres) {
+    l1 = "MUCHOS NO LEIDOS (*):"; l2 = "REPASA ESAS LETRAS"; l3 = "MAS DESPACIO";
+  } else if (letra10 < 25) {
+    l1 = "LETRAS MUY JUNTAS:"; l2 = "DEJA 3 PUNTOS ENTRE"; l3 = "UNA LETRA Y OTRA";
+  } else if (letra10 > 40) {
+    l1 = "LETRAS SEPARADAS:"; l2 = "A 6 PUNTOS SE PARTE"; l3 = "LA PALABRA";
+  } else if (r.titubeos * 10 > r.caracteres) {
+    l1 = "TITUBEAS DENTRO DE"; l2 = "LAS LETRAS: PIENSA"; l3 = "LA LETRA ENTERA";
+  } else if (r.palabras > 0 && mediaRitmo10(r.sumaPalabra10, r.palabras) > 95) {
+    l1 = "ESPACIO ENTRE"; l2 = "PALABRAS LARGO:"; l3 = "UNOS 7 PUNTOS";
+  } else if (dispersionLetras10() > 8) {
+    l1 = "RITMO IRREGULAR:"; l2 = "BUSCA ESPACIOS"; l3 = "SIEMPRE IGUALES";
+  } else {
+    l1 = "BUEN RITMO!"; l2 = "PRUEBA A SUBIR"; l3 = "LOS WPM";
+  }
+}
+
+void dibujarPaginaRitmo() {
+  const RitmoKeyer& r = ritmoKeyer;
+  char linea[22];
+  if (paginaRitmo == 0) {
+    // Espacios: entre letras se cierra a los 2 puntos y entre palabras a los 6 (no pueden salir menos)
+    lineaEspacioRitmo(12, "LETRAS", r.letras, mediaRitmo10(r.sumaLetra10, r.letras), 3, 25, 40);
+    lineaEspacioRitmo(22, "PALABRAS", r.palabras, mediaRitmo10(r.sumaPalabra10, r.palabras), 7, 0, 95);
+    uint32_t disp = dispersionLetras10();
+    snprintf(linea, sizeof(linea), "REGULAR. +-%lu.%lu", (unsigned long)(disp / 10), (unsigned long)(disp % 10));
+    display.setCursor(0, 32);
+    display.print(r.letras >= 2 ? linea : "REGULAR. --");
+    display.setCursor(0, 42);
+    display.print(F("(EN PUNTOS/IDEAL)"));
+    dibujarPiePaginas(0, PAGINAS_RITMO, "ESPACIOS");
+  } else if (paginaRitmo == 1) {
+    snprintf(linea, sizeof(linea), "CARACTERES %10lu", (unsigned long)r.caracteres);
+    display.setCursor(0, 12); display.print(linea);
+    snprintf(linea, sizeof(linea), "NO LEIDOS (*) %7lu", (unsigned long)r.desconocidos);
+    display.setCursor(0, 22); display.print(linea);
+    snprintf(linea, sizeof(linea), "TITUBEOS %12lu", (unsigned long)r.titubeos);
+    display.setCursor(0, 32); display.print(linea);
+    // Velocidad con los espacios de verdad: la del keyer por lo ideal entre lo real
+    if (r.msReal > 0) {
+      uint32_t wpmReal = (uint32_t)lroundf((float)keyerWpm * r.msIdeal / r.msReal);
+      snprintf(linea, sizeof(linea), "VELOCIDAD %2lu DE %2u", (unsigned long)wpmReal, keyerWpm);
+    } else {
+      snprintf(linea, sizeof(linea), "VELOCIDAD -- DE %2u", keyerWpm);
+    }
+    display.setCursor(0, 42); display.print(linea);
+    dibujarPiePaginas(1, PAGINAS_RITMO, "RESUMEN");
+  } else {
+    const char *l1, *l2, *l3;
+    consejoRitmo(l1, l2, l3);
+    dibujarTituloCentrado(l1, 14);
+    dibujarTituloCentrado(l2, 26);
+    dibujarTituloCentrado(l3, 36);
+    dibujarPiePaginas(2, PAGINAS_RITMO, "CONSEJO");
+  }
+}
 
 String valorAjusteKeyer(uint8_t i) {
   switch (i) {
@@ -206,20 +307,33 @@ uint8_t siguienteRefuerzo(uint8_t refuerzo) {
   return (refuerzo + 1) % (REFUERZO_FUERTE + 1);
 }
 
-// Ajustes del Koch (lista): 0-4 se editan girando, 5 refuerzo (pulsar), 6 abre ESTAD.; pie: 7 iniciar, 8 volver
-#define N_AJUSTES_KOCH 7
+// Ajustes del Koch (lista): 0-4 se editan girando, 5 texto y 6 refuerzo (pulsar), 7 abre ESTAD.;
+// pie: 8 iniciar, 9 volver
+#define N_AJUSTES_KOCH 8
 const char* const NOMBRES_AJUSTES_KOCH[N_AJUSTES_KOCH] = {
-  "WPM", "ESPACIADO", "LECCION", "CARACTERES", "GRUPOS", "REFUERZO", "ESTADISTICAS"
+  "WPM", "ESPACIADO", "LECCION", "CARACTERES", "GRUPOS", "TEXTO", "REFUERZO", "ESTADISTICAS"
 };
 
+// Nombre del texto del Koch: en la lista y en la practica
+const char* nombreTextoKoch() {
+  switch (textoKoch) {
+    case TEXTO_INDICATIVOS: return "INDICAT.";
+    case TEXTO_QSO:         return "QSO POTA";
+    default:                return "GRUPOS";
+  }
+}
+
 String valorAjusteKoch(uint8_t i) {
+  // Con indicativos o QSO no cuentan la leccion, los caracteres ni el refuerzo: "-"
+  bool grupos = textoKoch == TEXTO_GRUPOS;
   switch (i) {
     case 0: return String(wpmCW);
     case 1: return String(espaciadoCW) + "%";
-    case 2: return String(leccionCW);
-    case 3: return String(caracteresCW);
+    case 2: return grupos ? String(leccionCW) : String("-");
+    case 3: return grupos ? String(caracteresCW) : String("-");
     case 4: return String(gruposCW);
-    case 5: return textoRefuerzo(refuerzoKoch, leccionCW);
+    case 5: return String(nombreTextoKoch());
+    case 6: return grupos ? textoRefuerzo(refuerzoKoch, leccionCW) : String("-");
     default: return String("");
   }
 }
@@ -247,7 +361,12 @@ String valorAjusteEcho(uint8_t i) {
 void renderizarPantallaCW() {
   display.setTextColor(SSD1306_WHITE);
 
-  if (enKeyer && keyerEnAjustes) {
+  if (enKeyer && keyerEnRitmo) {
+    // Paginas de RITMO: se actualizan solas al manipular (las palas siguen funcionando)
+    display.setTextSize(1);
+    dibujarPaginaRitmo();
+
+  } else if (enKeyer && keyerEnAjustes) {
     // Ajustes de TX LIBRE (lista como CONF > CONFIG). Las palas siguen manipulando
     display.setTextSize(1);
     dibujarListaOpciones(NOMBRES_AJUSTES_KEYER, N_AJUSTES_KEYER, opcionAjustesKeyer, valorAjusteKeyer, 0x1);
@@ -385,8 +504,7 @@ void renderizarPantallaCW() {
     display.setTextSize(1);
 
     if (estadoCW == CW_PANTALLA_3_3_LISTADO) {
-      display.setCursor(0, 11);
-      display.print(F("- GRUPOS EMITIDOS -"));
+      dibujarTituloCentrado(textoKoch == TEXTO_GRUPOS ? F("- GRUPOS EMITIDOS -") : F("- TEXTO EMITIDO -"));
 
       int charPorPagina = 63; 
       int inicioChar = paginaListado3_3 * charPorPagina;
@@ -403,7 +521,7 @@ void renderizarPantallaCW() {
 
       if (hayMasPaginas) {
         int paginas = (totalChars + charPorPagina - 1) / charPorPagina;
-        dibujarPieCentrado(String(paginaListado3_3 + 1) + "/" + String(paginas) + " GRUPOS   > mas");
+        dibujarPieCentrado(String(paginaListado3_3 + 1) + "/" + String(paginas) + (textoKoch == TEXTO_GRUPOS ? " GRUPOS   > mas" : " TEXTO   > mas"));
       } else {
         // Corregir marcando cada fallo (x letra) o solo con el numero de fallos (total)
         String txtPie = (opcionFinListado3_3 == 0 ? ">" : " ") + String("x letra ") +
@@ -475,12 +593,27 @@ void renderizarPantallaCW() {
 
     } else {
       display.setCursor(0, 12);
-      display.print(F("GRUPO: "));
+      if (textoKoch == TEXTO_INDICATIVOS) display.print(F("INDICATIVO: "));
+      else if (textoKoch == TEXTO_QSO) display.print(F("FRASE: "));
+      else display.print(F("GRUPO: "));
       display.print(grupoActualNum);
       display.print(F(" / "));
-      display.print(gruposCW);
+      display.print(gruposPractica);
 
-      if (mostrarTextoGrupo) {
+      if (mostrarTextoGrupo && grupoActualStr.length() > 10) {
+        // Frase de QSO: no cabe en grande; en pequeno, hasta 2 lineas de 21 caracteres, partida en un espacio
+        int corte = grupoActualStr.length();
+        if (corte > 21) {
+          corte = grupoActualStr.lastIndexOf(' ', 21);
+          if (corte <= 0) corte = 21;
+        }
+        display.setCursor(0, 26);
+        display.print(grupoActualStr.substring(0, corte));
+        display.setCursor(0, 35);
+        String resto = grupoActualStr.substring(corte);
+        resto.trim();
+        display.print(resto);
+      } else if (mostrarTextoGrupo) {
         display.setTextSize(2);
         int16_t x1, y1;
         uint16_t w, h;

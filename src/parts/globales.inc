@@ -72,8 +72,10 @@ bool keyerModoB = false;            // false = modo A
 bool keyerPalasInvertidas = false;  // true = punta de la clavija = raya
 bool enKeyer = false;               // Subpantalla del keyer abierta
 uint8_t opcionKeyer = 0;            // Pantalla: 0 = borrar, 1 = menu
-bool keyerEnAjustes = false;        // Lista de ajustes (menu): 0 wpm, 1 modo, 2 palas, 3 salir, 4 volver (pie)
+bool keyerEnAjustes = false;        // Lista de ajustes (menu): 0 wpm, 1 modo, 2 palas, 3 ritmo, 4 salir, 5 volver (pie)
 uint8_t opcionAjustesKeyer = 0;
+bool keyerEnRitmo = false;          // Paginas de RITMO (desde el menu): 0 espacios, 1 resumen, 2 consejo
+uint8_t paginaRitmo = 0;
 String textoKeyer = "";             // Lo descodificado de la manipulacion
 volatile uint32_t keyerUltimoUsoMs = 0;  // Ultima vez que se pulso una pala o sono un elemento (QSO)
 
@@ -113,7 +115,17 @@ uint8_t leccionCW = 4;
 uint8_t caracteresCW = 5;
 uint8_t gruposCW = 20;
 uint8_t refuerzoKoch = REFUERZO_SUAVE;  // Mas veces las letras de mas errores (NVS "kref")
-uint8_t opcionSubpantalla = 7;  // Ajustes del Koch: 7 = iniciar
+// Texto del Koch (NVS "ktexto"): grupos de la leccion, indicativos al azar o frases de QSO POTA
+#define TEXTO_GRUPOS      0
+#define TEXTO_INDICATIVOS 1
+#define TEXTO_QSO         2
+uint8_t textoKoch = TEXTO_GRUPOS;
+// Topes de una practica: un indicativo ocupa hasta 8 caracteres ("EA4ABC/P") y una frase hasta 30
+// ("CQ POTA DE EA4ABC/P EA4ABC/P K"); con el espacio, 30 x 9 y 9 x 31 caben en MAX_TEXTO_LECCION (300)
+#define MAX_INDICATIVOS_PRACTICA 30
+#define MAX_FRASES_PRACTICA      9
+uint8_t gruposPractica = 20;    // Grupos (o indicativos o frases) de la practica en curso: con texto largo, menos
+uint8_t opcionSubpantalla = 8;  // Ajustes del Koch: 8 = iniciar
 
 enum EstadoCW { 
   CW_IDLE, 

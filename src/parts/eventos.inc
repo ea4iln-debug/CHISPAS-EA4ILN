@@ -549,8 +549,14 @@ void procesarBoton() {
         else if (estadoEcho != ECHO_RESULTADO) echoNuevoReto(true);  // Con el resultado a la vista, sigue solo
       }
 
+    } else if (enKeyer && keyerEnRitmo) {
+      // Paginas de RITMO: girar pasa pagina; pulsar o atras vuelve al menu
+      if (atras || pulsa || ejeLarga) keyerEnRitmo = false;
+      else if (giro != 0) paginaRitmo = (paginaRitmo + PAGINAS_RITMO + giro) % PAGINAS_RITMO;
+
     } else if (enKeyer && keyerEnAjustes) {
-      // Ajustes de TX LIBRE. Foco: 0 wpm, 1 modo, 2 palas, 3 salir, 4 volver (pie). Las palas siguen manipulando
+      // Ajustes de TX LIBRE. Foco: 0 wpm, 1 modo, 2 palas, 3 ritmo, 4 salir, 5 volver (pie). Las palas siguen
+      // manipulando
       const uint8_t N_FOCO = N_AJUSTES_KEYER + 1;
       if (atras) {
         keyerEnAjustes = false;
@@ -562,7 +568,8 @@ void procesarBoton() {
           case 0: editandoValor = !editandoValor; break;
           case 1: keyerModoB = !keyerModoB; break;
           case 2: keyerPalasInvertidas = !keyerPalasInvertidas; break;
-          case 3: keyerEnAjustes = false; salirDeKeyer(); break;
+          case 3: keyerEnRitmo = true; paginaRitmo = 0; break;
+          case 4: keyerEnAjustes = false; salirDeKeyer(); break;
           default: keyerEnAjustes = false; break;
         }
       }
@@ -574,7 +581,7 @@ void procesarBoton() {
       } else if (giro != 0) {
         opcionKeyer = (opcionKeyer + 1) % 2;
       } else if (pulsa) {
-        if (opcionKeyer == 0) textoKeyer = "";
+        if (opcionKeyer == 0) { textoKeyer = ""; ritmoBorrar = true; }  // Borra tambien lo medido en RITMO
         else { keyerEnAjustes = true; opcionAjustesKeyer = 0; }
       }
 
@@ -685,8 +692,8 @@ void procesarBoton() {
       }
 
     } else if (enSubpantallaCW) {
-      // Ajustes del KOCH (lista). Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos, 5 refuerzo,
-      // 6 estadisticas, 7 iniciar, 8 volver
+      // Ajustes del KOCH (lista). Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos, 5 texto,
+      // 6 refuerzo, 7 estadisticas, 8 iniciar, 9 volver. Leccion, caracteres y refuerzo solo con texto GRUPOS
       const uint8_t N_FOCO = N_AJUSTES_KOCH + 2;
       if (atras) {
         enSubpantallaCW = false;
@@ -703,14 +710,18 @@ void procesarBoton() {
           opcionSubpantalla = (opcionSubpantalla + N_FOCO + giro) % N_FOCO;
         }
       } else if (pulsa) {
-        if (opcionSubpantalla <= 4) editandoValor = !editandoValor;
-        else if (opcionSubpantalla == 5) refuerzoKoch = siguienteRefuerzo(refuerzoKoch);
-        else if (opcionSubpantalla == 6) {
+        bool grupos = textoKoch == TEXTO_GRUPOS;
+        if (opcionSubpantalla <= 4) {
+          if (grupos || (opcionSubpantalla != 2 && opcionSubpantalla != 3)) editandoValor = !editandoValor;
+        }
+        else if (opcionSubpantalla == 5) textoKoch = (textoKoch + 1) % (TEXTO_QSO + 1);
+        else if (opcionSubpantalla == 6) { if (grupos) refuerzoKoch = siguienteRefuerzo(refuerzoKoch); }
+        else if (opcionSubpantalla == 7) {
           enEstadisticas3_5 = true;  // Al salir se vuelve aqui
           paginaStats3_5 = 0;
           confirmandoBorrado = false;
         }
-        else if (opcionSubpantalla == 7) iniciarPracticaCW();
+        else if (opcionSubpantalla == 8) iniciarPracticaCW();
         else enSubpantallaCW = false;
       }
 
@@ -723,7 +734,7 @@ void procesarBoton() {
       } else if (pulsa) {
         if (opcionPantalla3 == 0) {
           enSubpantallaCW = true;
-          opcionSubpantalla = 7;  // iniciar
+          opcionSubpantalla = 8;  // iniciar
         } else if (opcionPantalla3 == 1) {
           entrarEnEcho();
         } else if (opcionPantalla3 == 2) {

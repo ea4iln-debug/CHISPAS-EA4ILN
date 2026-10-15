@@ -88,12 +88,12 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - **Cola de spots POTA:** publicar el spot propio al activar un parque (indicativo, referencia, frecuencia, CW) y, si
   no hay cobertura, guardarlo y enviarlo en cuanto haya WiFi. Antes, revisar las condiciones de la API de POTA para
   publicar.
-- **Batería en `[DIAG]`:** añadir la tensión y el % a la línea de diagnóstico (p. ej. `| BAT 4.12V 90%`) para ver
-  en los registros largos la curva de carga y descarga, y medir la autonomía con un registro en vez de a mano.
+- ✅ **Batería en `[DIAG]`** (16 oct 2026): `| BAT 4.17V 100%` al final de la línea, para medir la autonomía con un registro.
+- ✅ **Koch con indicativos y QSO POTA** (16 oct 2026): ajuste TEXTO del Koch.
+- ✅ **Ritmo de la manipulación** (16 oct 2026): TX LIBRE > menu > RITMO. Falta probarlo con las palas.
 
 ### Por decidir
-- **Batería llena = 100 %:** tras cargar, la LiPo se relaja a ~4,10–4,15 V y la curva marca ~89–90 % con el LED de
-  carga apagado (carga terminada). Propuesta: contar 4,15 V o más como 100 %.
+- ✅ **Batería llena = 100 %** (16 oct 2026): 4,15 V o más cuenta como 100 %.
 - ~~**SOTA**~~ (**descartado**): las condiciones de su API exigen aprobación previa para software generado con IA;
   no se programa el cliente.
 

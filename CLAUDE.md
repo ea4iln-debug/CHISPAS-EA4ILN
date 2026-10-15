@@ -109,8 +109,12 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - **PCB en curso (15 oct)**: KiCad 10, `hardware/` (5 placas JLCPCB, el mínimo; SMD montado; ver NOTAS: "PCB"). Esquema
   completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Pedidos a JLCPCB (5 placas) y LCSC hechos y combinados (15 oct); R7 cambiado al CTR C18213426 (el ALPS, sin stock; lineal, encaje sin comprobar). Siguiente: recibir y montar. Skill **`pcb`** (scripts en `hardware/herramientas/`).
 
+- **Sin versión nueva (16 oct, en la placa 1 por USB):** Koch con ajuste TEXTO (GRUPOS / INDICAT. / QSO POTA),
+  TX LIBRE > menu > RITMO (espacios, titubeos, velocidad real y consejo), batería al 100 % desde 4,15 V y en `[DIAG]`.
+
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
+2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se

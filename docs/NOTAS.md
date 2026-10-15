@@ -170,7 +170,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   WiFi en el NVS del ESP32. Borrar estadísticas solo borra estadísticas; el reset de fábrica lo borra todo. El locator por defecto es genérico (IN80dk, Madrid): cada placa
   debe poner el suyo en webconf.
 - Recursos (v0.6m): flash 1,12 MB de 3,19 MB (app0); RAM estática 51,8 KB de 320 KB; app1 (OTA) y spiffs (1,5 MB,
-  desde el 14 oct 2026 con la lista de parques POTA en LittleFS) sin usar. `[DIAG]` por serie cada minuto (v0.7m): heap libre ~317 KB con el WiFi
+  desde el 14 oct 2026 con la lista de parques POTA en LittleFS) sin usar. `[DIAG]` por serie cada minuto (v0.7m; desde el 16 oct 2026 acaba en `| BAT 4.17V 100%` o `| BAT USB`, para medir la autonomía con un registro largo): heap libre ~317 KB con el WiFi
   apagado y mínimo ~181 KB tras usar WiFi + HTTPS; pila libre: loop ~4,3 KB (tras HTTPS), motorCW 3,3 KB de 4, keyer
   2,3 KB de 3; NVS 168/630 entradas.
 - **Consumo** (medido por USB sin batería, resolución 10 mA): v0.7l: 50 mA sin WiFi, 90 mA con WiFi (y el WiFi se
@@ -261,6 +261,16 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     normal. **Olvido gradual** (`registrarCaracter()`): al pasar de 100 intentos una letra, aciertos y fallos se
     dividen a la mitad (también afecta a MÁS ERRORES). Por serie al empezar: `[KOCH] REFUERZO SUAVE: K x1.6 ...`.
     El Duo no usa refuerzo.
+    **TEXTO** (16 oct 2026, sin versión nueva; ajuste del Koch tras GRUPOS, pulsar cambia; NVS `ktexto`):
+    **GRUPOS** (lo de siempre), **INDICAT.** (indicativos al azar: prefijo de una lista con más peso a EA, cifra
+    1–9, sufijo de 1–3 letras y "/P" el 15 %) o **QSO POTA** (7 frases típicas: `CQ POTA DE X X K`, `GM 5NN 5NN BK`,
+    referencia sin guion `ES0072` porque el `-` no está en la tabla Koch…). Con indicativos o QSO no cuentan
+    lección, caracteres ni refuerzo (salen `-` y no se editan); se usa todo el alfabeto. Topes para que quepa en
+    `MAX_TEXTO_LECCION` (300): 30 indicativos o 9 frases (`gruposPractica`); `totalCaracteresLeccion` se cuenta al
+    generar (sin espacios). La corrección x letra y total funciona igual y suma a las estadísticas por carácter y
+    a los totales, pero **no** al % de la lección. Las frases largas se ven en dos líneas pequeñas partidas en un
+    espacio. Probado en la placa 1 (16 oct 2026): lista, práctica de 20 indicativos y listado (capturas por serie);
+    la práctica de QSO POTA, sin probar.
   - **ECHO (TX)** (v0.7b; reestructurado en la v0.8g, probado): Chispas emite 1–5 letras de la lección del Echo con
     el motor CW (keyer en pausa mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las
     palas; durante el Echo el keyer descodifica con `echoWpm`. Como el Koch: **ajustes** propios (WPM 10–40, SP
@@ -284,6 +294,18 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     (`kwpm`, `kmodob`, `kinv`). Salida por LED y tono en GPIO7; KEY aún no. Apretón iámbico (modos A y B) y texto largo probados a mano el 12 oct 2026.
     Prueba del modo B: mantener la raya, tocar el punto y soltar las dos antes de que acabe la raya → modo A da "T",
     modo B da "N" (salió N). Si se suelta en la pausa, los dos modos añaden el elemento (memoria de pausa).
+    **RITMO** (16 oct 2026, sin versión nueva; menú de TX LIBRE: WPM, MODO, PALAS, RITMO, SALIR): con palas
+    iámbicas el keyer hace puntos y rayas exactos, así que lo único que depende de quien manipula son los silencios.
+    La tarea del keyer (`ritmoKeyer`) mide en décimas de punto el silencio desde el final de un elemento hasta el
+    siguiente: dentro de la letra (ideal 1; desde 1,5, **titubeo**), entre letras (ideal 3; el keyer cierra la letra a
+    los 2, así que no pueden salir menos) y entre palabras (ideal 7; cierra la palabra a los 6). Más de 15 puntos es
+    una pausa y no cuenta. Tres páginas: **ESPACIOS** (`LETRAS 2.6/3 BIEN`: media, ideal y CORTO < 2,5 / BIEN /
+    LARGO > 4,0; palabras LARGO > 9,5; regularidad = desviación típica entre letras), **RESUMEN** (caracteres, no
+    leídos `*`, titubeos y velocidad real = wpm × tiempo ideal / tiempo real, con los espacios de verdad) y
+    **CONSEJO** (lo que más falle, en orden: pocos datos < 5 espacios, > 10 % no leídos, letras juntas, letras
+    separadas, > 10 % titubeos, palabras largas, irregular > 0,8; si no, "BUEN RITMO"). Se pone a cero al entrar
+    en TX LIBRE y con "borrar" (`ritmoBorrar`, lo hace la tarea). Probado en la placa 1: menú y páginas sin datos
+    (capturas por serie); **falta probar manipulando con las palas**.
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso
@@ -430,7 +452,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - **SOTA: no programar el cliente.** Sus condiciones (api-db2.sota.org.uk/docs) exigen unirse al grupo
   "API-consumers" y prohíben conectar software generado por IA sin aprobación previa. Decisión pendiente del autor.
 - **Batería**: divisor activado con GPIO37 **HIGH** en estas placas (Meshtastic declara LOW). Atenuación 2,5 dB,
-  factor **4,985** para todas las placas (15 oct 2026, calibrado con polímetro en la placa 1 perforada: con 4,9 marcaba 4,03 V y la batería tenía 4,10 V; con 4,985, 4,12 V; antes, 4,9 calibrado en la placa 2 con 4,10 V reales / 836,7 mV en el pin; un solo punto en cada una), curva Li-ion y suavizado al
+  factor **4,985** para todas las placas (15 oct 2026, calibrado con polímetro en la placa 1 perforada: con 4,9 marcaba 4,03 V y la batería tenía 4,10 V; con 4,985, 4,12 V; antes, 4,9 calibrado en la placa 2 con 4,10 V reales / 836,7 mV en el pin; un solo punto en cada una), curva Li-ion (desde el 16 oct 2026, **100 % desde 4,15 V**: tras cargar, la celda se
+  relaja a 4,10–4,15 V y con el tope en 4,20 marcaba ~90 % recién cargada) y suavizado al
   50 %. **Sin batería y con USB** el cargador deja ~4,17 V de media pero oscila (medido con `prueba_bateria`:
   dispersión 0,25 V frente a 0,002 V con batería): `leerBateria()` toma 200 lecturas seguidas y, si la dispersión
   supera 0,08 V (`VBAT_DISPERSION_SIN_BATERIA`), indica "sin batería" (`PWR`). Probado en las dos placas. Con USB el
