@@ -29,7 +29,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (15 oct 2026)
-- **v1.10** (release del 15 oct, primera final; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance); falta instalarla por OTA en las dos placas. Antes,
+- **v1.10** (release del 15 oct, primera final; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance); instalada por OTA en la placa 1 el 15 oct (27 s, sin cortes); falta la placa 2. Antes,
   v1.09b (14 oct). **Nombres de las placas desde el 15 oct** (antes, al revés; lo anterior en NOTAS usa los viejos):
   **placa 1 = placa perforada** (MAC `08:c0`, montada y probada el 15 oct) y **placa 2 = protoboard** (MAC `50:74`,
   OLED con defecto de hardware). Las dos con encoder, entorno `heltec_wifi_lora_32_V3`.
