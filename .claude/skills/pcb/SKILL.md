@@ -22,7 +22,10 @@ Estado, decisiones, piezas LCSC y siguiente paso: **`docs/NOTAS.md`, sección "P
 hardware/herramientas/revisar.sh            # piezas, redes, cambios desde HEAD, ERC, DRC, PNG en hardware/.revision/
 hardware/herramientas/importar_lcsc.sh C123 C456   # simbolo+huella+3D a lib/chispas, tipos de pin y agujeros NPTH
 ~/.platformio/penv/Scripts/python.exe -I hardware/herramientas/buscar_jlc.py "0805 10kΩ" "PC817"  # catalogo JLCPCB
-"/c/Program Files/KiCad/10.0/bin/python.exe" hardware/herramientas/colocar.py   # coloca piezas y contorno
+"/c/Program Files/KiCad/10.0/bin/python.exe" hardware/herramientas/colocar.py   # coloca piezas y contorno (KiCad cerrado)
+"/c/Program Files/KiCad/10.0/bin/python.exe" hardware/herramientas/rutar.py     # Freerouting + planos de masa (KiCad cerrado)
+"/c/Program Files/KiCad/10.0/bin/python.exe" hardware/herramientas/serigrafia.py # textos de serigrafia (KiCad cerrado)
+"/c/Program Files/KiCad/10.0/bin/python.exe" hardware/herramientas/fabricar.py   # Gerber zip, BOM, CPL y compra en hardware/fabricacion/
 ~/.platformio/penv/Scripts/python.exe -I hardware/herramientas/gen_heltec.py    # simbolo y huella de la Heltec
 ```
 - `entorno.sh` crea `~/.venv-kicad` (easyeda2kicad y pymupdf, versiones en `requisitos.txt`) si falta en el

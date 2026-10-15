@@ -778,9 +778,17 @@ a `~/.freerouting`) rutea también GND; planos de GND en las dos caras, 116 vía
 de bajo la Heltec y de la zona del KEY; se quitan las que no tocan plano en las dos caras) y zona sin planos
 `aislamiento_KEY` (PJ1 + patas 3-4 de U2). DRC: 0 sin conectar, 0 errores; solo serigrafía. Notas de pcbnew en
 KiCad 10.0.7: pedir las listas (Zones, Tracks) antes de cualquier `b.Remove()`; `PCB_VIA.GetWidth()` sin capa
-aborta. **Siguiente:** revisión del usuario (3D), serigrafía (textos fuera de borde y solapes; marcas útiles:
-nombres de jacks, versión, licencia), Gerber/BOM/CPL con Fabrication Toolkit y comprobar rotaciones en la vista
-previa de JLCPCB.
+aborta (pedir el ancho con capa). En huellas, `PCB_TEXT.SetVisible(False)` no tiene efecto: pasar el texto a F.Fab.
+**Serigrafía** (`serigrafia.py`): referencias solo de JP1, JP2 y R8; nombres de conector KEY OUT (jack al
+transceptor; el usuario lo llamó antes PTT, pero es la salida KEY de CW), KEY IN (palas), DECOD, AURIC., VOL, BME280,
+GPS, ALTAVOZ, AUX (J4), TRAFO y "cortar=trafo"; por detrás nombre, PCB v1.0 (2026), repositorio, CC BY-NC-SA 4.0 y
+`JLCJLCJLCJLC`. DRC: solo 30 `silk_edge_clearance` (contornos de jacks y volumen que asoman; JLCPCB los recorta).
+**Fabricación** (`fabricar.py`, solo lee): `hardware/fabricacion/` con `chispas_gerber.zip`, `chispas_bom.csv` (28
+piezas, 11 LCSC: 9 Basic + PC817 y PAM8302A Extended), `chispas_cpl.csv` y `compra_lcsc.csv` (lo que suelda el
+usuario, para 5 placas, + 2 zócalos 1×18 por placa). Existencias comprobadas el 15 oct (encoder C7435302: 32).
+No incluidos en la compra: carcasas y contactos de los JST (o cables ya hechos), altavoz, botones, separadores M3.
+**Siguiente:** subir a JLCPCB y comprobar en la vista previa del montaje la rotación de cada pieza (sobre todo
+D1/D2, U2 y U3).
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno.
