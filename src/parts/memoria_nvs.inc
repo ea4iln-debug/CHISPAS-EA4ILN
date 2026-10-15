@@ -37,6 +37,7 @@ void cargarDatosNVS() {
   echoRefuerzo = min(prefs.getUChar("eref", REFUERZO_SUAVE), (uint8_t)REFUERZO_FUERTE);
   refuerzoKoch = min(prefs.getUChar("kref", REFUERZO_SUAVE), (uint8_t)REFUERZO_FUERTE);
   textoKoch = min(prefs.getUChar("ktexto", TEXTO_GRUPOS), (uint8_t)TEXTO_QSO);
+  textoDuo = min(prefs.getUChar("dtexto", TEXTO_GRUPOS), (uint8_t)TEXTO_QSO);
   echoTotalIntentos = prefs.getUInt("eint", 0);
   echoTotalAciertos = prefs.getUInt("eok", 0);
   echoSesiones = prefs.getUShort("eses", 0);
@@ -78,6 +79,7 @@ void guardarUltimaConfiguracionNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("kref", refuerzoKoch);
   prefs.putUChar("ktexto", textoKoch);
+  prefs.putUChar("dtexto", textoDuo);
   prefs.putUChar("wpm", wpmCW);
   prefs.putUShort("sp", espaciadoCW);
   prefs.putUChar("leccion", leccionCW);

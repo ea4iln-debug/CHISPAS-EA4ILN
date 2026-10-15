@@ -71,7 +71,7 @@ void procesarBoton() {
       }
 
     } else if (loraEnAjustes) {
-      // Ajustes ("menu"). Duo: 0 wpm, 1 espaciado, 2 leccion, 3 salir, 4 volver.
+      // Ajustes ("menu"). Duo: 0 wpm, 1 espaciado, 2 leccion, 3 texto, 4 salir, 5 volver.
       // QSO: 0 wpm, 1 ver, 2 salir, 3 volver (las palas siguen funcionando)
       bool esDuo = (subpantalla4Activa == 1);
       uint8_t n = esDuo ? N_AJUSTES_DUO : N_AJUSTES_QSO_LORA;
@@ -90,6 +90,7 @@ void procesarBoton() {
         if (opcionAjustesLora == n) loraEnAjustes = false;                       // volver
         else if (opcionAjustesLora == n - 1) salirModoLoRa();                   // salir
         else if (!esDuo && opcionAjustesLora == 1) qsoVerRx = !qsoVerRx;
+        else if (esDuo && opcionAjustesLora == 3) textoDuo = (textoDuo + 1) % (TEXTO_QSO + 1);
         else editandoValor = !editandoValor;                                    // Pulsar, girar y pulsar
       }
 
@@ -107,7 +108,9 @@ void procesarBoton() {
       } else if (pulsa) {
         if (opcionDuo4_1 == 0) {
           String nuevoGrupo = "";
-          for (int i = 0; i < caracteresCW; i++) nuevoGrupo += caracterKochAleatorio(leccionCW);
+          if (textoDuo == TEXTO_INDICATIVOS) nuevoGrupo = indicativoAleatorio();
+          else if (textoDuo == TEXTO_QSO) nuevoGrupo = fraseQsoAleatoria();  // Hasta 30: cabe en una trama
+          else for (int i = 0; i < caracteresCW; i++) nuevoGrupo += caracterKochAleatorio(leccionCW);
           transmitirGrupoDuoLoRa(nuevoGrupo);
         } else if (opcionDuo4_1 == 1) {
           grupoDuoRevelado = true;

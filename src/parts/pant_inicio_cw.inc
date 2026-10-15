@@ -314,14 +314,16 @@ const char* const NOMBRES_AJUSTES_KOCH[N_AJUSTES_KOCH] = {
   "WPM", "ESPACIADO", "LECCION", "CARACTERES", "GRUPOS", "TEXTO", "REFUERZO", "ESTADISTICAS"
 };
 
-// Nombre del texto del Koch: en la lista y en la practica
-const char* nombreTextoKoch() {
-  switch (textoKoch) {
+// Nombre del texto del Koch (y del Duo): en la lista y en la practica
+const char* nombreTexto(uint8_t texto) {
+  switch (texto) {
     case TEXTO_INDICATIVOS: return "INDICAT.";
     case TEXTO_QSO:         return "QSO POTA";
     default:                return "GRUPOS";
   }
 }
+
+const char* nombreTextoKoch() { return nombreTexto(textoKoch); }
 
 String valorAjusteKoch(uint8_t i) {
   // Con indicativos o QSO no cuentan la leccion, los caracteres ni el refuerzo: "-"

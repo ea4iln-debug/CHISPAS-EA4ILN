@@ -120,6 +120,7 @@ uint8_t refuerzoKoch = REFUERZO_SUAVE;  // Mas veces las letras de mas errores (
 #define TEXTO_INDICATIVOS 1
 #define TEXTO_QSO         2
 uint8_t textoKoch = TEXTO_GRUPOS;
+uint8_t textoDuo = TEXTO_GRUPOS;  // Lo mismo para la PRACTICA DUO de LoRa, aparte (NVS "dtexto")
 // Topes de una practica: un indicativo ocupa hasta 8 caracteres ("EA4ABC/P") y una frase hasta 30
 // ("CQ POTA DE EA4ABC/P EA4ABC/P K"); con el espacio, 30 x 9 y 9 x 31 caben en MAX_TEXTO_LECCION (300)
 #define MAX_INDICATIVOS_PRACTICA 30
@@ -179,7 +180,7 @@ uint8_t opcionPantalla4 = 2;   // 0=PRACTICA DUO, 1=QSO LIBRE, 2=BARRA INFERIOR 
 uint8_t subpantalla4Activa = 0;
 
 uint8_t opcionDuo4_1 = 0;       // Duo: 0 enviar, 1 ver (solo con un grupo oculto), 2 menu
-// Ajustes ("menu") de Duo (0 wpm, 1 espaciado, 2 leccion, 3 salir, 4 volver) y de QSO (0 wpm, 1 ver, 2 salir,
+// Ajustes ("menu") de Duo (0 wpm, 1 espaciado, 2 leccion, 3 texto, 4 salir, 5 volver) y de QSO (0 wpm, 1 ver, 2 salir,
 // 3 volver). Las palas siguen funcionando en los del QSO
 bool loraEnAjustes = false;
 uint8_t opcionAjustesLora = 0;

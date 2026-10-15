@@ -15,9 +15,29 @@ void dibujarUltimasLineas(String t, int16_t y, uint8_t lineas, uint8_t alto) {
   }
 }
 
+// Texto en dos lineas de 21, partido por los espacios (una palabra mas larga que la linea se corta); lo que no
+// quepa en las dos no se ve
+void dibujarDosLineasPorPalabras(const String& t, int16_t y, uint8_t alto) {
+  const unsigned ANCHO = 21;
+  String l1 = t, l2 = "";
+  if (t.length() > ANCHO) {
+    int corte = t.lastIndexOf(' ', ANCHO);  // El espacio en la posicion 21 tambien vale
+    if (corte <= 0) corte = ANCHO;
+    l1 = t.substring(0, corte);
+    l2 = t.substring(t.charAt(corte) == ' ' ? corte + 1 : corte);
+    if (l2.length() > ANCHO) l2 = l2.substring(0, ANCHO);
+  }
+  display.setCursor(0, y);
+  display.print(l1);
+  if (l2.length() > 0) {
+    display.setCursor(0, y + alto);
+    display.print(l2);
+  }
+}
+
 // Ajustes ("menu") de PRACTICA DUO y de QSO LIBRE
-#define N_AJUSTES_DUO 4
-const char* const NOMBRES_AJUSTES_DUO[N_AJUSTES_DUO] = { "WPM", "ESPACIADO", "LECCION", "SALIR" };
+#define N_AJUSTES_DUO 5
+const char* const NOMBRES_AJUSTES_DUO[N_AJUSTES_DUO] = { "WPM", "ESPACIADO", "LECCION", "TEXTO", "SALIR" };
 #define N_AJUSTES_QSO_LORA 3
 const char* const NOMBRES_AJUSTES_QSO_LORA[N_AJUSTES_QSO_LORA] = { "WPM", "VER LO RECIBIDO", "SALIR" };
 
@@ -26,6 +46,7 @@ String valorAjusteDuo(uint8_t i) {
     case 0: return String(wpmCW);
     case 1: return String(espaciadoCW) + "%";
     case 2: return String(leccionCW);
+    case 3: return String(nombreTexto(textoDuo));
     default: return String("");
   }
 }
@@ -61,38 +82,27 @@ void renderizarPantallaLora() {
   } else if (subpantalla4Activa == 1) {
     display.setTextSize(1);
 
-    // La cabecera ya da el wpm y el espaciado: aqui, la leccion y las letras por grupo (se cambian en "menu")
+    // La cabecera ya da el wpm y el espaciado: aqui, la leccion y las letras por grupo, o el texto (se cambian
+    // en "menu"), y el RSSI de la ultima trama recibida (0 = aun no se ha recibido nada)
     display.setCursor(0, 11);
-    display.print("LECCION " + String(leccionCW) + "  " + String(caracteresCW) + " LETRAS");  // 20 como mucho
-
-    display.setCursor(0, 21);
-    display.print(F("TX -> "));
-    if (grupoDuoTransmitido.length() > 0) {
-      display.print(F("[")); display.print(grupoDuoTransmitido); display.print(F("]"));
-    } else {
-      display.print(F("--"));
-    }
-
-    display.setCursor(0, 32);
-    if (grupoDuoRecibido.length() > 0) {
-      if (grupoDuoRevelado) {
-        display.print(F("RX <- [")); display.print(grupoDuoRecibido); display.print(F("]"));
-      } else {
-        display.print(F("RX <- LED (OCULTO)"));
-      }
-    } else {
-      display.print(F("RX <- ESCUCHANDO..."));
-    }
-
-    // RSSI de la ultima trama recibida (0 = aun no se ha recibido nada)
+    if (textoDuo == TEXTO_GRUPOS) display.print("LECCION " + String(leccionCW) + " x" + String(caracteresCW));
+    else display.print(textoDuo == TEXTO_QSO ? F("QSO POTA") : F("INDICATIVOS"));
     if (rssiUltimo != 0) {
       String txtRssi = String(rssiUltimo) + "dBm";
-      int16_t x1, y1;
-      uint16_t w, h;
-      display.getTextBounds(txtRssi.c_str(), 0, 0, &x1, &y1, &w, &h);
-      display.setCursor(128 - w, 42);
+      display.setCursor(128 - txtRssi.length() * 6, 11);
       display.print(txtRssi);
     }
+
+    // TX y RX, de hasta dos lineas cada uno (una frase de QSO POTA no cabe en una). Lo recibido puede ser
+    // una frase aunque aqui se envien grupos: depende del ajuste de la otra placa
+    String tx = grupoDuoTransmitido.length() > 0 ? "[" + grupoDuoTransmitido + "]" : String("--");
+    dibujarDosLineasPorPalabras("TX -> " + tx, 21, 8);
+
+    String rx;
+    if (grupoDuoRecibido.length() == 0) rx = "ESCUCHANDO...";
+    else if (grupoDuoRevelado) rx = "[" + grupoDuoRecibido + "]";
+    else rx = "LED (OCULTO)";
+    dibujarDosLineasPorPalabras("RX <- " + rx, 37, 8);
 
     // Pie: "> enviar   ver   menu" (21 caracteres); "ver" solo si hay un grupo recibido sin revelar
     String txtPie4_1 = (opcionDuo4_1 == 0 ? "> " : "  ") + String("enviar ");
