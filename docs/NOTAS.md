@@ -721,7 +721,42 @@ C2 resultó ser un EPCOS de poliéster 1 µF 100 V de paso 15 mm (18 × 5 × 11 
 C8 (DEC_CUR, puente B8–C8) y C14 (BIAS, cable aislado 14 hasta D9), pegado por arriba al zócalo de U1.
 
 ## PCB
-Se empezará desde cero más adelante (decidido el 12 oct 2026): no hay nada de KiCad en el repositorio.
+**Empezada el 15 oct 2026** en KiCad 10.0.7, proyecto `hardware/chispas.kicad_pro`. Objetivo: 5 placas en JLCPCB,
+SMD montado por ellos (montaje económico, cara de arriba) y lo de agujero pasante soldado por el usuario, pedido en
+LCSC con el mismo envío. Forma de trabajar: el usuario dibuja en la interfaz siguiendo pasos numerados; Claude revisa
+los archivos con `kicad-cli` (netlist, ERC, DRC, PDF → PNG con pymupdf) y coloca con scripts del Python de KiCad
+(`C:/Program Files/KiCad/10.0/bin/python.exe`, con el editor de placas **cerrado**). Al revisar, comparar la netlist
+con la del último commit (una vez se borró un cable sin querer: PJ1 pin 5).
+
+**Decisiones (15 oct):** Heltec enchufada en dos zócalos hembra 1×18 (C2905422); GPS y BME280 como módulos; KY-040
+por cable; amplificador **PAM8302A integrado** (C113367, MSOP-8) con el circuito de la hoja de datos (10 µF + 1 µF en
+VDD, 0,1 µF en serie en IN+ e IN−); jacks, volumen y trimmer soldados en el borde; trafo 600:600 como **dos puentes de
+soldadura cerrados** (JP1 punta→DEC_IN, JP2 malla→GND) + 4 agujeros J6 (TJ, SJ, DEC_IN, GND); detección de USB
+**no** incluida; tira de 6 pines con GPIO3, 33, 34, 40, 3V3, GND; encoder, GPS y BME280 con **JST-XH** con enganche
+(B5B C157991, B4B C144395; el fallo del encoder de la placa 1 era un Dupont); altavoz con JST-PH 2 (C131337);
+**10 nF a masa en DIT y DAH** (filtro de RF); 10 nF de DECOD a masa (el C3 opcional de la perforada).
+Distribución: **detrás** KEY y decodificador (+ trimmer); **delante** palas, auriculares y volumen; **USB de la
+Heltec en el borde izquierdo**, Heltec en horizontal (el usuario: la OLED se lee derecha con el USB a la izquierda).
+Placa de 90 × 60 mm, 4 agujeros M3 a 4 mm de las esquinas.
+
+**Piezas LCSC** (catálogo consultado el 15 oct): R 0805 Basic 10k C17414, 1k C17513, 220 C17557, 330 C17630;
+C 0805 Basic 100n C49678, 1µ C28323, 10µ C15850, 10n C1710; 1N4148W C81598; PC817 SMD C66405 (Extended);
+PAM8302AASCR C113367 (Extended). Para soldar: PJ-307 C2939173 (×4; 1 = S, 2 = R, 3 = RN, 4 = TN, 5 = T, comprobado
+en la hoja de datos), potenciómetro ALPS RK097111080J C97444 (horizontal, rosca M7, eje 15 mm, curva log),
+trimmer 3296W C118954. Campo de símbolo **`LCSC Part`** (lo lee Fabrication Toolkit); las piezas que suelda el
+usuario, con "Excluir de la lista de materiales".
+
+**Archivos:** `hardware/lib/` (librería `chispas`: piezas importadas con `easyeda2kicad` en `~/.venv-kicad`, que hay
+que crear en cada equipo; `heltec.kicad_sym` + huella `Heltec_WiFi_LoRa_32_V3`: pads 1–18 = J3, 19–36 = J2, filas a
+22,86 mm). `hardware/herramientas/`: `buscar_jlc.py` (catálogo de JLCPCB: Basic/Extended, existencias, precio),
+`gen_heltec.py`, `tipos_pines.py` (corrige los tipos de pin de los símbolos importados; repetir tras importar),
+`colocar.py` (posición de cada pieza y contorno). Se ignoran `hardware/.history/` (historial de KiCad 10) y backups.
+
+**Estado (15 oct):** esquema completo (ERC 0 errores, 0 avisos); placa con todas las piezas colocadas por
+`colocar.py` (DRC: solo conexiones sin rutar y serigrafía). **Siguiente:** el usuario revisa la colocación en 3D
+(paso 9); luego rutado (propuesta: Freerouting + revisión de masa, alimentación del PAM y entrada del
+decodificador), planos de masa, serigrafía, Gerber/BOM/CPL con Fabrication Toolkit y comprobar rotaciones en la
+vista previa de JLCPCB. Pendiente de la caja: agujero para ajustar el trimmer.
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno.
