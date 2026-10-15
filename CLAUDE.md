@@ -108,7 +108,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. Parques POTA cercanos: probados con fijo del GPS en la calle (15 oct). Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).
-2. Pila del motor CW tras Duo; cara de tormenta sin ver
+2. Cara de tormenta sin ver
    (la de auriculares, vista el 13 oct).
 3. OLED negra a veces en la placa 2 (protoboard; era la "placa 1" hasta el 15 oct): **defecto de hardware de esa
    Heltec** (ver NOTAS). Aparcado: detección de USB (probada el 14 oct con 47k/68k → GPIO33:

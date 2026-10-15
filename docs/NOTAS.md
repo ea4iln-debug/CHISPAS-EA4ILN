@@ -587,7 +587,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    - **Estabilidad comprobada** (placa 2, v1.03b, noche del 12 oct 2026: 8 h en POTA, 233 consultas HTTPS a pota.app, una
      con HTTP -11, tiempo de lectura, que se recuperó sola): heap libre 248,8–249,1 KB, mínimo 165,5 → 162,7 KB en la
      primera hora y luego fijo, mayor bloque 180 212 B fijo (sin fragmentación), pila libre loop 2568, motorCW 3292,
-     keyer 2304 sin cambios. Pendiente solo la pila del motor CW tras Duo (2016 bytes libres de 4096, medida antigua). Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
+     keyer 2304 sin cambios. Pila del motor CW tras Duo medida el 15 oct 2026 (v1.10, placa 1, 13 min tras arrancar, Duo en los dos sentidos): **3148 bytes libres de 4096** (la medida antigua daba 2016); loop 5720, keyer 2240, heap mínimo 298 732 B. Deep sleep medido por el usuario el 11 oct 2026: **0,00 A** (por debajo de la
      resolución del aparato) y después en µA (12 oct 2026): **despreciable**.
    - **Detectar USB y carga: aparcado (14 oct 2026).** La V3 no lo permite por software; "cargando" tampoco se puede
      leer (la salida del cargador solo va a su LED). Probado en la placa 1 con un divisor del pin 5V (J2-2) a GPIO33
