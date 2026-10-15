@@ -318,7 +318,8 @@ void procesarBateriaYPantalla() {
 
 /**
  * Diagnostico por serie cada DIAG_INTERVALO_MS: memoria (libre, minimo historico y mayor bloque, para
- * vigilar la fragmentacion), pila libre de cada tarea, uso de la NVS y frecuencia de la CPU
+ * vigilar la fragmentacion), pila libre de cada tarea, uso de la NVS, frecuencia de la CPU y bateria
+ * (la ultima lectura en cache; "BAT USB" sin bateria), para medir la autonomia con un registro largo
  */
 #define DIAG_INTERVALO_MS 60000UL
 
@@ -329,11 +330,13 @@ void procesarDiagnostico() {
   nvs_stats_t nvs;
   bool hayNvs = nvs_get_stats(NULL, &nvs) == ESP_OK;
   Serial.printf("[DIAG] %lu min | heap libre %u, minimo %u, mayor bloque %u | pila libre: loop %u, motorCW %u, keyer %u | "
-                "NVS %u/%u entradas | CPU %u MHz\n",
+                "NVS %u/%u entradas | CPU %u MHz | ",
                 millis() / 60000, ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(),
                 uxTaskGetStackHighWaterMark(NULL), uxTaskGetStackHighWaterMark(tareaMotorCW),
                 uxTaskGetStackHighWaterMark(tareaKeyer), hayNvs ? nvs.used_entries : 0,
                 hayNvs ? nvs.total_entries : 0, getCpuFrequencyMhz());
+  if (bateriaActual.estado == SOLO_USB) Serial.println(F("BAT USB"));
+  else Serial.printf("BAT %.2fV %d%%\n", bateriaActual.voltaje, bateriaActual.porcentaje);
 }
 
 /**

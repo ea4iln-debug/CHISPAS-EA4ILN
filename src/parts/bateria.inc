@@ -4,7 +4,7 @@
 // Se incluye desde main.cpp en su orden (una sola unidad de compilacion); no compila suelta.
 
 // ============================================================================
-// LECTURA DE BATERIA (4.20V / 100%)
+// LECTURA DE BATERIA (4.15V / 100%)
 // ============================================================================
 enum EstadoAlimentacion { SOLO_USB, BAT_DESCARGA };
 
@@ -15,9 +15,10 @@ struct BateriaInfo {
 };
 
 // Curva de descarga tipica de una celda Li-ion en reposo (tension -> %), interpolada.
-// Con USB conectado el cargador sube la tension y el porcentaje sale alto.
+// Con USB conectado el cargador sube la tension y el porcentaje sale alto. Tope en 4,15 V (no 4,20): tras
+// cargar, la celda se relaja a 4,10-4,15 V y con el tope en 4,20 marcaba ~90 % recien cargada.
 int porcentajeLiIon(float v) {
-  static const float tension[] = { 3.30, 3.60, 3.68, 3.72, 3.75, 3.78, 3.81, 3.86, 3.92, 4.00, 4.10, 4.20 };
+  static const float tension[] = { 3.30, 3.60, 3.68, 3.72, 3.75, 3.78, 3.81, 3.86, 3.92, 4.00, 4.10, 4.15 };
   static const int   pct[]     = {    0,    5,   10,   20,   30,   40,   50,   60,   70,   80,   90,  100 };
   const int n = sizeof(tension) / sizeof(tension[0]);
   if (v <= tension[0]) return 0;
