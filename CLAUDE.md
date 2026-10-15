@@ -26,6 +26,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   **Preguntar siempre al usuario antes de subir la versión y antes de publicar una release** (llegan por OTA).
   Procedimiento: skill **`release`** (`./publicar.sh` en tres pasos, borrador antes de publicar).
 - OTA: CONF > CONFIG > ACTUALIZAR FW; TLS con `include/certificados_github.h`.
+- **Web de instalación por USB** (16 oct): https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (`web/`, ESP Web Tools);
+  la Action `web.yml` la rehace sola al publicar una release final (parte el `-usb.bin` para conservar la NVS).
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (15 oct 2026)
@@ -109,6 +111,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
+2. Probar la web de instalación con una placa (sin borrar: debe conservar la configuración).
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se

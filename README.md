@@ -140,6 +140,12 @@ El firmware es para la placa con **encoder**. Hasta la v1.10 hubo también una c
 placa desnuda que se manejaba solo con el botón PRG; desde la 1.20 ya no existe (una placa sin encoder se queda en la
 v1.10; el OTA dirá que no hay binario para ella).
 
+### Desde el navegador (lo más fácil)
+Abre **[ea4iln-debug.github.io/CHISPAS-EA4ILN](https://ea4iln-debug.github.io/CHISPAS-EA4ILN/)** con Chrome o Edge
+en un ordenador, conecta la placa por USB y pulsa **Instalar en la placa**. Instala la última versión final y
+**conserva la configuración** guardada, salvo que marques borrar la placa (recomendable si traía otro firmware).
+En Windows hace falta el driver del CP210x (ver arriba).
+
 ### Sin compilar (desde la release)
 En [Releases](https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases) están las imágenes listas:
 

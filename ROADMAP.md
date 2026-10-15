@@ -104,11 +104,9 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
   conexión (UART a 9600 bd, NMEA). Por ahora se sigue con el NEO-6M.
 
 ### Instalación y estructura del firmware (ideas)
-- **Web de instalación por USB** con **ESP Web Tools** en GitHub Pages: botón «Instalar» por Web Serial (Chrome o
-  Edge de escritorio; no Firefox ni Safari; en Windows sigue haciendo falta el driver CP210x). Un solo botón (desde la
-  1.20 no hay variante sin encoder) y grabación por partes (bootloader, particiones, boot_app0 y app) para **conservar la NVS** al reinstalar,
-  salvo que se elija borrar; monitor serie en la misma página. GitHub no sirve los `.bin` de las releases a otra web
-  (CORS): una **GitHub Action** los copia a la página al publicar cada release.
+- ~~**Web de instalación por USB**~~ **Hecha el 16 oct 2026**: https://ea4iln-debug.github.io/CHISPAS-EA4ILN/
+  (ESP Web Tools en GitHub Pages; una GitHub Action copia y parte el firmware de la última release final para
+  conservar la NVS). Detalle en `docs/NOTAS.md` ("Releases y OTA").
 - **Firmware modular**, con la opción de **un solo binario con todo y módulos activados en el aparato** (la app ocupa
   bastante menos de la mitad de sus 3,2 MB): autodetección donde se pueda (el BME280 ya se detecta; el GPS, si llegan
   frases NMEA) y una pantalla **CONF > HARDWARE** (o un asistente al primer arranque) para lo que no se detecta
