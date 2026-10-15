@@ -102,6 +102,11 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
   (p. ej. MAX98357A, 3 GPIO). Sustituiría al PAM8302A y obligaría a rehacer la salida de auriculares.
 - **GPS ATGM336H** en lugar del NEO-6M: más pequeño, más barato y de menor consumo (GPS + BeiDou), con la misma
   conexión (UART a 9600 bd, NMEA). Por ahora se sigue con el NEO-6M.
+- **Despertar y pitar a distancia ("buscar Chispas")** (16 oct 2026, aparcado): el deep sleep apaga la radio, así
+  que el BLE no puede despertar. Opciones: light sleep con BLE anunciándose (~1–3 mA dormido; NimBLE; ajuste
+  apagado por defecto; Web Bluetooth desde la web en Chrome, no en iPhone), deep sleep con despertar periódico, o
+  despertar por LoRa (`startReceiveDutyCycle`, DIO1 = GPIO14 RTC; mucho menos consumo, pero solo desde otro
+  Chispas). Primer paso: medir el consumo en light sleep con BLE en una prueba aparte en `pruebas/`.
 
 ### Instalación y estructura del firmware (ideas)
 - ~~**Web de instalación por USB**~~ **Hecha el 16 oct 2026**: https://ea4iln-debug.github.io/CHISPAS-EA4ILN/
