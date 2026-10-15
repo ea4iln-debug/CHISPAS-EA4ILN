@@ -30,7 +30,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 
 ## Estado actual (15 oct 2026)
 - **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
-  y batería a 4,985. En la placa 1 por USB (probada); la placa 2 sigue en la v1.10 (pendiente: OTA con corte).
+  y batería a 4,985. En la placa 1 por USB y en la placa 2 por OTA (16 oct; antes, reinicio por OTA sin avance probado).
   Antes, v1.10 (15 oct, primera final; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance). **Nombres de las placas desde el 15 oct** (antes, al revés; lo anterior en NOTAS usa los viejos):
   **placa 1 = placa perforada** (MAC `08:c0`, montada y probada el 15 oct) y **placa 2 = protoboard** (MAC `50:74`,
   OLED con defecto de hardware). Las dos con encoder, entorno `heltec_wifi_lora_32_V3`.
@@ -108,14 +108,12 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Pedidos a JLCPCB (5 placas) y LCSC hechos y combinados (15 oct); R7 cambiado al CTR C18213426 (el ALPS, sin stock; lineal, encaje sin comprobar). Siguiente: recibir y montar. Skill **`pcb`** (scripts en `hardware/herramientas/`).
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-1. Reinicio de la OTA si la descarga no avanza en 30 s: compila, sin probar (la OTA de la v1.10 fue limpia y no
-   saltó; forzarlo cortando la WiFi a mitad, p. ej. con la OTA a la v1.20).
-2. PCB: recibir y montar (ver "Hardware").
+1. PCB: recibir y montar (ver "Hardware").
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se
 desvía mucho), ahorro de tokens (hábito; Claude avisa de tareas caras y de cuándo hacer `/clear`) y versión sin
-encoder (quitada en la 1.20).
+encoder (quitada en la 1.20). Reinicio de la OTA sin avance: probado el 16 oct (ver NOTAS).
 
 ## Decisiones que no hay que deshacer
 - **SOTA: no programar el cliente** (sus condiciones prohíben software generado por IA sin aprobación previa).

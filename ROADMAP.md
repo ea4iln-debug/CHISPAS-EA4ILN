@@ -8,7 +8,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 | | Prueba | Cómo |
 |---|---|---|
-| ⬜ | Reinicio de la OTA si la descarga no avanza en 30 s | Cortar la WiFi a mitad de una OTA: debe reiniciar en la versión de antes |
+| ✅ | Reinicio de la OTA si la descarga no avanza en 30 s | 16 oct 2026, placa 2: internet cortado al 40 %, reinicio a los 30 s en la v1.10 |
 | ⬜ | Tendencia del BME280 y aviso de tormenta | Placa 1 con varias horas de datos |
 | ✅ | Parques POTA cercanos con fijo del GPS | 15 oct 2026, en la calle con la posición del GPS |
 | ✅ | Pila del motor CW tras Duo | 15 oct 2026 (v1.10): 3148 bytes libres de 4096 |
@@ -185,10 +185,9 @@ alcance de la radio.
   y **v1.20** (16 oct 2026, solo con encoder).
 
 ## Orden propuesto
-1. **Con la próxima OTA:** forzar el reinicio por descarga sin avance (cortar la WiFi a mitad).
-2. **Sin piezas:** tendencia del BME280 con varias horas de datos; salvapantallas y brillo (v1.05b).
-3. **Al llegar la PCB:** montarla y probarla.
-4. **Después:** cola de spots POTA y, si se quiere, Bluetooth (teclado CW desde el móvil).
+1. **Sin piezas:** tendencia del BME280 con varias horas de datos; salvapantallas y brillo (v1.05b).
+2. **Al llegar la PCB:** montarla y probarla.
+3. **Después:** cola de spots POTA y, si se quiere, Bluetooth (teclado CW desde el móvil).
 
 ## Hecho
 - ✅ Entrenador Koch estilo LCWO con corrección por letra o por total, Echo y TX libre (keyer iámbico A/B).

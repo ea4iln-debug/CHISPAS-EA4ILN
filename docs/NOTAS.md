@@ -604,8 +604,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
      perforada queda con 47k/68k. (Nota del montaje: en la protoboard de la placa 1 el carril de masa está partido
      en el centro.)
 4. QSO LIBRE en los dos sentidos: hecho el 15 oct 2026 (todo bien). A estudiar, no prioritarios: audio I2S y GPS ATGM336H en lugar del NEO-6M (ver `ROADMAP.md`).
-5. **OTA: timeout de descarga sin avance** — hecho el 15 oct 2026 (compila; **sin probar**: necesita una release
-   nueva). `instalarActualizacion()` arranca un `esp_timer` de 1 s (`vigilarOta()`); `onProgress` apunta
+5. **OTA: timeout de descarga sin avance** — hecho el 15 oct 2026 y **probado el 16 oct 2026** (placa 2, de la
+   v1.10 a la v1.20): descarga iniciada a las 00:23:49, cable de internet del router quitado hacia el 40 % (la WiFi
+   seguía), `[OTA] SIN AVANCE EN 30 S (40 %): REINICIANDO` a las 00:24:33 y arranque en la v1.10 sin daños.
+   Repetida sin cortar: 30 s de descarga y arranque en la v1.20. (Log grabado con `serie.py` en segundo plano:
+   sin internet Claude no responde, pero el log sigue.) `instalarActualizacion()` arranca un `esp_timer` de 1 s (`vigilarOta()`); `onProgress` apunta
    `otaUltimoAvanceMs` y, si pasan `OTA_SIN_AVANCE_MS` (30 s) sin avance, `esp_restart()`: la partición a medias no
    se activa y arranca la versión de antes (se descartó `cliente.stop()` desde otra tarea: no es seguro con TLS).
    Antecedente: 14 oct 2026: la placa 1 se quedó parada en
