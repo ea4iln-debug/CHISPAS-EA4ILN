@@ -270,7 +270,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     generar (sin espacios). La corrección x letra y total funciona igual y suma a las estadísticas por carácter y
     a los totales, pero **no** al % de la lección. Las frases largas se ven en dos líneas pequeñas partidas en un
     espacio. Probado en la placa 1 (16 oct 2026): lista, práctica de 20 indicativos y listado (capturas por serie);
-    la práctica de QSO POTA, sin probar.
+    la práctica de QSO POTA, sin probar. Cada indicativo **suena dos veces** (`EA4ABC EA4ABC`, como en el aire; en
+    el texto a corregir, una) y la pausa entre grupos, indicativos o frases pasa de 2 a **3 s**
+    (`PAUSA_ENTRE_GRUPOS_MS`; 16 oct 2026, a petición del usuario; cargado en la placa 1, sin oír aún).
   - **ECHO (TX)** (v0.7b; reestructurado en la v0.8g, probado): Chispas emite 1–5 letras de la lección del Echo con
     el motor CW (keyer en pausa mientras emite: `keyerPausar()`/`keyerReanudar()`) y hay que repetirlas con las
     palas; durante el Echo el keyer descodifica con `echoWpm`. Como el Koch: **ajustes** propios (WPM 10–40, SP

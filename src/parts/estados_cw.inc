@@ -131,6 +131,10 @@ void enviarResultadoKoch(bool porLetra) {
   opcionResumen = 0;
 }
 
+// Pausa del Koch entre un grupo (o indicativo o frase) y el siguiente, con el anterior a la vista (2 s hasta el
+// 16 oct 2026)
+#define PAUSA_ENTRE_GRUPOS_MS 3000
+
 void procesarMaquinaEstadosCW() {
   if (!enPractica3_2 || estadoCW == CW_PAUSADO || estadoCW == CW_IDLE || 
       estadoCW == CW_PANTALLA_3_3_LISTADO || estadoCW == CW_PANTALLA_CORREGIR_ERRORES ||
@@ -153,7 +157,12 @@ void procesarMaquinaEstadosCW() {
       mostrarTextoGrupo = false;
       estadoCW = CW_EMITIENDO_GRUPO;
       actualizarPantalla();
-      motorCWEmitir(grupoActualStr.c_str(), wpmCW, espaciadoCW, "KOCH");
+      // Los indicativos suenan dos veces ("EA4ABC EA4ABC", como en el aire); en el texto a corregir, una
+      if (textoKoch == TEXTO_INDICATIVOS) {
+        motorCWEmitir((grupoActualStr + " " + grupoActualStr).c_str(), wpmCW, espaciadoCW, "KOCH");
+      } else {
+        motorCWEmitir(grupoActualStr.c_str(), wpmCW, espaciadoCW, "KOCH");
+      }
       break;
 
     case CW_EMITIENDO_GRUPO:
@@ -161,7 +170,7 @@ void procesarMaquinaEstadosCW() {
       mostrarTextoGrupo = true;
       actualizarPantalla();
       estadoCW = CW_PAUSA_ENTRE_GRUPOS;
-      tiempoCWProximo = motorCWFinMs + 2000;
+      tiempoCWProximo = motorCWFinMs + PAUSA_ENTRE_GRUPOS_MS;
       break;
 
     case CW_PAUSA_ENTRE_GRUPOS:
