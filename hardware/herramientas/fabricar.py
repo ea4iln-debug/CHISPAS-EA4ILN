@@ -21,9 +21,11 @@ PCB = HW / "chispas.kicad_pcb"
 SAL = HW / "fabricacion"
 PLACAS = int(sys.argv[1]) if len(sys.argv) > 1 else 10
 CLI = sorted(glob.glob("C:/Program Files/KiCad/*/bin/kicad-cli.exe"))[-1]
-# Correccion de giro para el CPL por huella (grados que se suman), comprobada en la vista previa de JLCPCB:
-#   D_SOD-123: el pin 1 (catodo) de la pieza de JLCPCB salia en el lado contrario al pad 1 de KiCad (15 oct 2026)
-GIRO_JLC = {"D_SOD-123": 180}
+# Correccion de giro para el CPL por huella (grados que se suman), si la vista previa de JLCPCB lo pide.
+# Comprobar con la marca fisica de la pieza (raya del catodo, punto del pin 1 en el cuerpo), NO con el punto rosa:
+# el 15 oct 2026 se giraron los diodos por el punto rosa y quedaron al reves; sin correccion salen bien
+# (raya del catodo sobre la barra de la serigrafia). U2 y U3 tambien bien sin correccion.
+GIRO_JLC = {}
 # Piezas para soldar que no estan en el esquema (por placa)
 EXTRA = [("Zocalo hembra 1x18 2,54 mm (Heltec)", "C2905422", 2)]
 

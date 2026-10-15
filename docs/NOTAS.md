@@ -786,7 +786,8 @@ GPS, ALTAVOZ, AUX (J4), TRAFO y "cortar=trafo"; por detrás nombre, PCB v1.0 (20
 **Fabricación** (`fabricar.py`, solo lee): `hardware/fabricacion/` con `chispas_gerber.zip`, `chispas_bom.csv` (28
 piezas, 11 LCSC: 9 Basic + PC817 y PAM8302A Extended), `chispas_cpl.csv` y `compra_lcsc.csv` (lo que suelda el
 usuario, para 10 placas, + 2 zócalos 1×18 por placa). Existencias comprobadas el 15 oct para 10 (encoder C7435302: 32).
-CPL: D1/D2 con 180° de corrección (`GIRO_JLC` en `fabricar.py`; en la vista previa el pin 1 salía al revés); U2 y U3 bien.
+CPL sin correcciones de giro: D1/D2, U2 y U3 salen bien en la vista previa (comprobado por la raya del cátodo y el
+punto del cuerpo; el punto rosa de JLCPCB no es el cátodo: girarlos por él los dejó al revés).
 No incluidos en la compra: carcasas y contactos de los JST (o cables ya hechos), altavoz, botones, separadores M3.
 **Siguiente:** subir a JLCPCB y comprobar en la vista previa del montaje la rotación de cada pieza (sobre todo
 D1/D2, U2 y U3).
