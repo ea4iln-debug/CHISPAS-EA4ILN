@@ -29,11 +29,12 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (15 oct 2026)
-- **v1.09b** (última release, 14 oct: el reset de fábrica borra también la lista de parques; antes, v1.08b con los
-  parques POTA cercanos, POTA > VER PARQUES) en las dos placas. Placa 1: protoboard con encoder, palas, KEY, amplificador,
-  BME280 y batería; entorno `heltec_wifi_lora_32_V3`. Placa 2: **en la placa perforada desde el 15 oct** (montada,
-  todos los módulos probados); ahora también entorno `heltec_wifi_lora_32_V3` (cargada por USB). `heltec_sin_encoder`
-  (`-DSIN_ENCODER`) queda para una Heltec desnuda.
+- **v1.10** (primera final, fuera de la beta; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance). Antes,
+  v1.09b (14 oct). **Nombres de las placas desde el 15 oct** (antes, al revés; lo anterior en NOTAS usa los viejos):
+  **placa 1 = placa perforada** (MAC `08:c0`, montada y probada el 15 oct) y **placa 2 = protoboard** (MAC `50:74`,
+  OLED con defecto de hardware). Las dos con encoder, entorno `heltec_wifi_lora_32_V3`.
+- **Fin del soporte sin encoder:** la v1.10 es la última con `heltec_sin_encoder` (`-DSIN_ENCODER`); desde la 1.11
+  no se compila ni se publica su binario.
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
   WiFiManager 2.0.17, ArduinoJson 7. **Un solo `.cpp` en `src/`** (el resto en `src/parts/*.inc`, ver "Código");
   `pio run` compila solo el firmware
@@ -105,16 +106,17 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. Parques POTA cercanos hechos (14 oct; lista de España en LittleFS): falta probarlos con fijo del GPS en la calle.
    Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).
-2. Placa perforada **montada y probada el 15 oct** con la Heltec de la placa 2: encoder, audio, palas, BME280, KEY,
-   decodificador y GPS bien (sin el jack de auriculares el ampli no suena: va por T–TN).
-3. QSO LIBRE en los dos sentidos (la placa 2 ya tiene palas); pila del motor CW tras Duo; cara de tormenta sin ver
+2. Placa perforada (placa 1) **montada y probada el 15 oct**: encoder, audio, palas, BME280, KEY, decodificador y
+   GPS bien (sin el jack de auriculares el ampli no suena: va por T–TN).
+3. QSO LIBRE en los dos sentidos (las dos placas tienen palas); pila del motor CW tras Duo; cara de tormenta sin ver
    (la de auriculares, vista el 13 oct).
-4. OLED negra a veces en la placa 1: **defecto de hardware de esa Heltec** (14 oct: falla desnuda, la placa 2 nunca;
-   ver NOTAS); para la placa perforada, la Heltec de la placa 2 o una nueva. Aparcado: detección de USB (probada el 14 oct con 47k/68k → GPIO33:
+4. OLED negra a veces en la placa 2 (protoboard; era la "placa 1" hasta el 15 oct): **defecto de hardware de esa
+   Heltec** (ver NOTAS). Aparcado: detección de USB (probada el 14 oct con 47k/68k → GPIO33:
    funciona, pero sin USB el pin 5V da 1,3 V y quedan 0,7 V, poco margen; si se retoma, GPIO3 con ADC).
-5. **Próxima release** (sin subir versión aún): WIFI DATOS MANUAL/AUTO (probado en la placa 2) y reinicio de la OTA
-   si la descarga no avanza en 30 s (compila; se probará con esa release). Detalle en NOTAS.
-6. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
+5. Reinicio de la OTA si la descarga no avanza en 30 s: compila, sin probar (se verá al instalar la v1.10 por OTA).
+6. Desde la 1.11: quitar `heltec_sin_encoder` de `platformio.ini`, `compilar.sh` y `publicar.sh` (¿y el código
+   `#ifdef SIN_ENCODER`? preguntar).
+7. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
 
 ## Decisiones que no hay que deshacer

@@ -1,6 +1,6 @@
 ---
 name: placa
-description: Cargar el firmware de Chispas en una placa por USB y comprobarlo - identificar la placa (1 protoboard o 2 placa perforada, por la MAC) y su entorno, pio upload, leer el arranque y los mensajes con serie.py, capturar la OLED. Usar para probar cambios en el hardware real (GPS, BME280, audio, KEY, etc.).
+description: Cargar el firmware de Chispas en una placa por USB y comprobarlo - identificar la placa (1 placa perforada o 2 protoboard, por la MAC) y su entorno, pio upload, leer el arranque y los mensajes con serie.py, capturar la OLED. Usar para probar cambios en el hardware real (GPS, BME280, audio, KEY, etc.).
 ---
 
 # Probar en placa
@@ -11,9 +11,9 @@ description: Cargar el firmware de Chispas en una placa por USB y comprobarlo - 
 - Las dos placas tienen el mismo adaptador; se distinguen por la MAC del ESP32, que `pio run -t upload` imprime
   (`MAC: ...`). Tabla en `docs/NOTAS.md`, sección "Estado actual" (MAC de cada placa). Si la tabla no la tiene aún,
   **preguntar al usuario qué placa es** antes de cargar y, tras cargar, apuntar la MAC.
-- Entornos: desde el 15 oct 2026 las dos placas llevan encoder → `heltec_wifi_lora_32_V3` (placa 1 en la
-  protoboard; placa 2 en la placa perforada). `heltec_sin_encoder` solo para una Heltec desnuda, sin encoder:
-  **cargar el entorno equivocado deja la placa sin manejo**. Si la tabla de NOTAS dice otra cosa, manda la tabla.
+- Entornos: las dos placas llevan encoder → `heltec_wifi_lora_32_V3`. Nombres desde el 15 oct 2026: **placa 1 =
+  placa perforada** (MAC `3c:0f:02:ee:08:c0`), **placa 2 = protoboard** (MAC `3c:0f:02:ee:50:74`, OLED con defecto).
+  `heltec_sin_encoder` solo existe hasta la v1.10 (Heltec desnuda): **el entorno equivocado deja la placa sin manejo**.
 
 ## 2. Cargar
 - Cerrar antes cualquier `serie.py` o monitor abierto (el puerto no se comparte).

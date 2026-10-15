@@ -119,9 +119,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 
 ## Estado actual (12 oct 2026)
 - **MAC de cada placa** (las dos tienen el mismo CP2102; `pio run -t upload` imprime `MAC: ...`; la skill `placa`
-  la usa para elegir el entorno): placa 1 (protoboard, encoder, `heltec_wifi_lora_32_V3`): `3c:0f:02:ee:50:74`;
-  placa 2 (**en la placa perforada desde el 15 oct 2026**, con encoder, `heltec_wifi_lora_32_V3`; antes desnuda con
-  `heltec_sin_encoder`): `3c:0f:02:ee:08:c0`. Por OTA cada placa baja el `.bin` de su entorno (el `-sin-encoder` solo
+  la usa para elegir el entorno). **Nombres cambiados el 15 oct 2026** (todo lo anterior a esa fecha en estas notas
+  usa los viejos, al revés): **placa 1 = placa perforada**, `3c:0f:02:ee:08:c0` (la antigua "placa 2", desnuda y
+  sin encoder hasta el 15 oct); **placa 2 = protoboard**, `3c:0f:02:ee:50:74` (la antigua "placa 1", con la OLED
+  defectuosa). Las dos con encoder, `heltec_wifi_lora_32_V3`. Por OTA cada placa baja el `.bin` de su entorno (el `-sin-encoder` solo
   si lleva `SIN_ENCODER`), así que la placa 2 ya seguirá con el de encoder.
 - Firmware: `src/main.cpp` **v1.09b** (el reset de fábrica borra también `/parques.bin`; release del 14 oct 2026,
   probado antes por USB en la placa 2; instalada por OTA en las dos placas el 14 oct; en la placa 1 la primera
@@ -323,7 +324,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     con la antigüedad (`AHORA`, `12MIN`, `3H`; `spotsPotaOkMs`) en lugar de "SPOTS".
   **Probado (placa 2, 15 oct 2026):** pasar por PROP/POTA sin encender el WiFi; POTA > ACTUALIZAR 9 s en total
   (conectar 3 s, 9 spots, comprobación de la OTA 4 s, apagado); PROP > ACTUALIZAR 6 s; cancelar mientras conecta;
-  AUTO conecta al entrar en POTA. Avisos y pie de antigüedad vistos por el usuario. RAM 17,1 %, flash 38,6 %.
+  AUTO conecta al entrar en POTA. Avisos y pie de antigüedad vistos por el usuario. SOL > ACTUALIZAR en MANUAL,
+  correcto (probado por el usuario). RAM 17,1 %, flash 38,6 %. (Probado en la placa perforada: "placa 2" con los
+  nombres de entonces, "placa 1" con los nuevos.)
 - **Parques POTA cercanos** (14 oct 2026, sin versión nueva; `src/parts/parques.inc`; **probado en la placa 1**).
   Menú de POTA (título ` POTA `) con tres opciones: `< VER SPOTS >`, `< VER PARQUES >` y `< ACTUALIZAR >` (sin
   conexión, la primera y la última pasan a ABRIR WEBCONF y REINTENTAR; VER PARQUES no cambia: la lista está en la
