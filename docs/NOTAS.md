@@ -771,10 +771,16 @@ piezas LCSC y las corrige), `revisar.sh` (piezas, redes, cambios desde HEAD, ERC
 `colocar.py` (posición de cada pieza y contorno). Se ignoran `hardware/.history/` (historial de KiCad 10) y backups.
 
 **Estado (15 oct):** esquema completo (ERC 0 errores; 1 aviso inocuo `lib_symbol_mismatch` del encoder: pines
-iguales, solo cambia el formato); placa con todas las piezas colocadas por `colocar.py` (DRC: solo conexiones sin
-rutar y serigrafía). **Siguiente:** el usuario revisa la colocación en 3D (paso 9); luego rutado (propuesta:
-Freerouting + revisión de masa, alimentación del PAM y entrada del decodificador), planos de masa, serigrafía,
-Gerber/BOM/CPL con Fabrication Toolkit y comprobar rotaciones en la vista previa de JLCPCB.
+iguales, solo cambia el formato); placa colocada (`colocar.py`, PC817 girado 180° para que sus patas aisladas miren
+al jack KEY) y **rutada** con `rutar.py` (KiCad cerrado): clases de red Default 0,25 mm y Potencia 0,4 mm (GND,
++3.3V, altavoz; con 0,5 no cabía la 3V3), mínimo 0,15 mm; Freerouting 2.4.1 (`freerouting.sh` baja Java 25 y el jar
+a `~/.freerouting`) rutea también GND; planos de GND en las dos caras, 116 vías de cosido en rejilla de 4 mm (fuera
+de bajo la Heltec y de la zona del KEY; se quitan las que no tocan plano en las dos caras) y zona sin planos
+`aislamiento_KEY` (PJ1 + patas 3-4 de U2). DRC: 0 sin conectar, 0 errores; solo serigrafía. Notas de pcbnew en
+KiCad 10.0.7: pedir las listas (Zones, Tracks) antes de cualquier `b.Remove()`; `PCB_VIA.GetWidth()` sin capa
+aborta. **Siguiente:** revisión del usuario (3D), serigrafía (textos fuera de borde y solapes; marcas útiles:
+nombres de jacks, versión, licencia), Gerber/BOM/CPL con Fabrication Toolkit y comprobar rotaciones en la vista
+previa de JLCPCB.
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno.
