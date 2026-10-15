@@ -118,6 +118,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
    `#ifdef SIN_ENCODER`? preguntar).
 7. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
+8. Batería de la placa 1 (perforada): marca 90 % con la carga terminada (15 oct). Comprobar con polímetro si el
+   factor 4,9 (calibrado en la otra Heltec) vale para esta; si no, factor por placa según la MAC (ver NOTAS).
 
 ## Decisiones que no hay que deshacer
 - **SOTA: no programar el cliente** (sus condiciones prohíben software generado por IA sin aprobación previa).

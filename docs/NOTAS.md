@@ -612,6 +612,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    puede tardar muchos minutos en dar error y PRG no responde (bucle bloqueante). Idea: vigilar el avance (p. ej.
    un temporizador que mire `otaProgreso`) y, si pasan 20–30 s sin avanzar, cortar con `cliente.stop()` para que
    salga "ERROR"; o bajar el timeout del cliente y de `HTTPUpdate`. Comprobar en el core qué corta antes.
+6. **Batería de la placa 1 (perforada)** (15 oct 2026): con el cargador ya parado marca 90 % (unos 4,10 V en la
+   curva). Razonado, sin medir: tras cortar la carga la celda baja a 4,10–4,15 V, y el factor 4,9 se calibró en un
+   solo punto con la Heltec que entonces era la placa 1 (ahora la protoboard, placa 2); la perforada lleva la otra
+   Heltec, y un 1 % de tolerancia del divisor son ~0,04 V (4–5 puntos). Prueba: comparar `BAT x.xxV` de STATUS >
+   SISTEMA con el polímetro en el mismo momento. Si difiere, factor por placa según la MAC.
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).
