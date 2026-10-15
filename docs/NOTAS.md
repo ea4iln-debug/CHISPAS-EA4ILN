@@ -721,7 +721,7 @@ C2 resultó ser un EPCOS de poliéster 1 µF 100 V de paso 15 mm (18 × 5 × 11 
 C8 (DEC_CUR, puente B8–C8) y C14 (BIAS, cable aislado 14 hasta D9), pegado por arriba al zócalo de U1.
 
 ## PCB
-**Empezada el 15 oct 2026** en KiCad 10.0.7, proyecto `hardware/chispas.kicad_pro`. Objetivo: 5 placas en JLCPCB,
+**Empezada el 15 oct 2026** en KiCad 10.0.7, proyecto `hardware/chispas.kicad_pro`. Objetivo: 10 placas en JLCPCB (eran 5; 10 desde el 15 oct),
 SMD montado por ellos (montaje económico, cara de arriba) y lo de agujero pasante soldado por el usuario, pedido en
 LCSC con el mismo envío. Forma de trabajar: el usuario dibuja en la interfaz siguiendo pasos numerados; Claude revisa
 los archivos con `kicad-cli` (netlist, ERC, DRC, PDF → PNG con pymupdf) y coloca con scripts del Python de KiCad
@@ -785,7 +785,8 @@ GPS, ALTAVOZ, AUX (J4), TRAFO y "cortar=trafo"; por detrás nombre, PCB v1.0 (20
 `JLCJLCJLCJLC`. DRC: solo 30 `silk_edge_clearance` (contornos de jacks y volumen que asoman; JLCPCB los recorta).
 **Fabricación** (`fabricar.py`, solo lee): `hardware/fabricacion/` con `chispas_gerber.zip`, `chispas_bom.csv` (28
 piezas, 11 LCSC: 9 Basic + PC817 y PAM8302A Extended), `chispas_cpl.csv` y `compra_lcsc.csv` (lo que suelda el
-usuario, para 5 placas, + 2 zócalos 1×18 por placa). Existencias comprobadas el 15 oct (encoder C7435302: 32).
+usuario, para 10 placas, + 2 zócalos 1×18 por placa). Existencias comprobadas el 15 oct para 10 (encoder C7435302: 32).
+CPL: D1/D2 con 180° de corrección (`GIRO_JLC` en `fabricar.py`; en la vista previa el pin 1 salía al revés); U2 y U3 bien.
 No incluidos en la compra: carcasas y contactos de los JST (o cables ya hechos), altavoz, botones, separadores M3.
 **Siguiente:** subir a JLCPCB y comprobar en la vista previa del montaje la rotación de cada pieza (sobre todo
 D1/D2, U2 y U3).
