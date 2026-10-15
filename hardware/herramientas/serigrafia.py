@@ -58,7 +58,7 @@ def texto(t, x, y, capa=pcbnew.F_SilkS, alto=1.2, rot=0, grueso=None):
 # --- Cara de arriba: conectores (posiciones segun colocar.py)
 texto("KEY OUT", 115, 114.6)
 texto("DECOD", 141, 114.6)
-texto("KEYER", 115, 145.4)
+texto("KEY IN", 115, 145.4)
 texto("AURIC.", 133, 145.4)
 texto("VOL", 150, 150.4)
 texto("BME280", 188, 117.5, rot=90)
