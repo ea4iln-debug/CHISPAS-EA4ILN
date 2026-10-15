@@ -1,0 +1,127 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (C) 2026 EA4ILN -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalar Chispas</title>
+<meta name="description" content="Instala el firmware de Chispas EA4ILN en una Heltec WiFi LoRa 32 V3 por USB, desde el navegador.">
+<script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
+<style>
+  :root {
+    --fondo: #f6f5f2; --tarjeta: #ffffff; --texto: #1d1d1b; --suave: #5c5b57; --borde: #dddbd4;
+    --acento: #b4400c; --acento-texto: #ffffff; --aviso: #fff4e0; --aviso-borde: #e8b562;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fondo: #161614; --tarjeta: #201f1c; --texto: #ecebe6; --suave: #a8a69f; --borde: #3a3934;
+      --acento: #f08a4b; --acento-texto: #161614; --aviso: #2e2615; --aviso-borde: #7a5a1f;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--fondo); color: var(--texto);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 1.15rem; margin: 32px 0 8px; }
+  .subtitulo { color: var(--suave); margin: 0 0 24px; }
+  a { color: var(--acento); }
+  .pantallas { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 24px; }
+  .pantallas img {
+    width: 256px; max-width: calc(50% - 6px); height: auto; image-rendering: pixelated;
+    border-radius: 6px; background: #000; border: 1px solid var(--borde);
+  }
+  .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 10px; padding: 20px; }
+  .version { color: var(--suave); font-size: 0.95rem; margin: 12px 0 0; }
+  esp-web-install-button { display: inline-block; }
+  .boton {
+    font: inherit; font-weight: 600; font-size: 1.05rem; cursor: pointer; border: 0; border-radius: 8px;
+    padding: 12px 22px; background: var(--acento); color: var(--acento-texto);
+  }
+  .boton:hover { filter: brightness(1.08); }
+  .aviso { background: var(--aviso); border: 1px solid var(--aviso-borde); border-radius: 8px; padding: 12px 14px; }
+  ol, ul { padding-left: 1.3em; }
+  li { margin: 4px 0; }
+  code { font-size: 0.92em; background: var(--fondo); border: 1px solid var(--borde); border-radius: 4px; padding: 0 4px; }
+  footer { color: var(--suave); font-size: 0.9rem; margin-top: 40px; border-top: 1px solid var(--borde); padding-top: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Instalar Chispas</h1>
+  <p class="subtitulo">Entrenador y compañero de CW de EA4ILN para la Heltec WiFi LoRa 32 V3. Se instala por USB desde
+    el navegador, sin instalar nada más.</p>
+
+  <div class="pantallas">
+    <img src="img/inicio.png" width="256" height="128" alt="Pantalla de inicio de Chispas">
+    <img src="img/cara.png" width="256" height="128" alt="Salvapantallas de Chispas: la cara del robot">
+  </div>
+
+  <div class="tarjeta">
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate" class="boton">Instalar en la placa</button>
+      <div slot="unsupported" class="aviso">Este navegador no puede usar el puerto USB. Abre esta página con
+        <strong>Chrome</strong> o <strong>Edge</strong> en un ordenador (no sirven Firefox, Safari ni el móvil).</div>
+      <div slot="not-allowed" class="aviso">La página tiene que abrirse por <strong>https</strong> (o desde
+        <code>localhost</code>) para poder usar el puerto USB.</div>
+    </esp-web-install-button>
+    <p class="version" id="version">Versión: cargando…</p>
+  </div>
+
+  <h2>Antes de empezar</h2>
+  <ul>
+    <li>Chrome o Edge en Windows, macOS o Linux.</li>
+    <li>Un cable USB-C <strong>con datos</strong> (algunos solo cargan).</li>
+    <li>En Windows, el driver del
+      <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers">CP210x de Silicon Labs</a>
+      (el conversor USB de la V3). Sin él, la placa no aparece en la lista.</li>
+    <li>Cierra cualquier otro programa que tenga el puerto abierto (monitor serie de PlatformIO, Arduino…).</li>
+  </ul>
+
+  <h2>Pasos</h2>
+  <ol>
+    <li>Conecta la placa por USB y pulsa <strong>Instalar en la placa</strong>.</li>
+    <li>Elige el puerto (<code>CP2102</code> o <code>USB to UART</code>) y pulsa <em>Conectar</em>.</li>
+    <li>Pulsa <em>Install Chispas EA4ILN</em>. Te preguntará si quieres <em>borrar</em> la placa:
+      <ul>
+        <li><strong>Sin marcar</strong> (lo normal): se conserva lo guardado en la placa (indicativo, locator,
+          memorias, estadísticas, red WiFi y lista de parques POTA).</li>
+        <li><strong>Marcado</strong>: borra toda la memoria. Úsalo si la placa traía otro programa
+          (Meshtastic, por ejemplo) o si Chispas se comporta raro tras instalar.</li>
+      </ul>
+    </li>
+    <li>Espera a que termine (un minuto, más o menos). La placa se reinicia sola.</li>
+  </ol>
+  <p>Si no conecta, mantén pulsado el botón <strong>PRG</strong>, pulsa y suelta <strong>RST</strong>, suelta
+    <strong>PRG</strong> y vuelve a intentarlo. Tras instalar, la opción <em>Logs &amp; Console</em> del mismo
+    diálogo muestra el monitor serie.</p>
+
+  <h2>Siguientes versiones</h2>
+  <p>Una vez instalado, Chispas se actualiza solo por WiFi: <strong>CONF &gt; CONFIG &gt; ACTUALIZAR FW</strong>.
+    Esta página sirve para la primera instalación o para recuperar una placa.</p>
+
+  <footer>
+    Esta página instala siempre la última versión final publicada en
+    <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases">GitHub</a> (las beta, solo por OTA).
+    <br>Chispas es software libre (GPL-3.0-or-later):
+    <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN" id="codigo">código fuente</a> ·
+    <a href="LICENCIAS_TERCEROS.txt">licencias de terceros</a>. 73 de EA4ILN.
+  </footer>
+</main>
+<script>
+  fetch("manifest.json")
+    .then((r) => r.json())
+    .then((m) => {
+      document.getElementById("version").textContent = "Versión: " + m.version;
+      document.getElementById("codigo").href =
+        "https://github.com/ea4iln-debug/CHISPAS-EA4ILN/tree/v" + encodeURIComponent(m.version);
+    })
+    .catch(() => { document.getElementById("version").textContent = ""; });
+</script>
+</body>
+</html>

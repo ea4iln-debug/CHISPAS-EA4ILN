@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 EA4ILN
+#
+# Web de instalacion por USB (web/, ESP Web Tools) en GitHub Pages, con el firmware de la ultima release final.
+# GitHub no sirve los .bin de las releases a otra web (CORS): se copian aqui, partidos en trozos por
+# web/preparar.py para no pisar la NVS. Se rehace al publicar una release, al cambiar web/ y a mano.
+
+name: Web de instalacion
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/web.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.desplegar.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Firmware de la ultima release final
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ETIQUETA=$(gh release view --json tagName -q .tagName)  # Sin argumento: la ultima no beta
+          VER=${ETIQUETA#v}
+          gh release download "$ETIQUETA" -p "chispas-$VER-usb.bin" -D descarga
+          python3 web/preparar.py "descarga/chispas-$VER-usb.bin" "$VER" _site
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - id: desplegar
+        uses: actions/deploy-pages@v4
