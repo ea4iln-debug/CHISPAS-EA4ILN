@@ -13,3 +13,4 @@ hardware/_autosave-*
 hardware/*.kicad_prl
 hardware/production/
 hardware/.history/
+hardware/.revision/

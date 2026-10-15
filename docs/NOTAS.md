@@ -746,10 +746,12 @@ en la hoja de datos), potenciómetro ALPS RK097111080J C97444 (horizontal, rosca
 trimmer 3296W C118954. Campo de símbolo **`LCSC Part`** (lo lee Fabrication Toolkit); las piezas que suelda el
 usuario, con "Excluir de la lista de materiales".
 
-**Archivos:** `hardware/lib/` (librería `chispas`: piezas importadas con `easyeda2kicad` en `~/.venv-kicad`, que hay
-que crear en cada equipo; `heltec.kicad_sym` + huella `Heltec_WiFi_LoRa_32_V3`: pads 1–18 = J3, 19–36 = J2, filas a
+**Archivos:** `hardware/lib/` (librería `chispas`: piezas importadas con `easyeda2kicad` en `~/.venv-kicad`, que
+crea `entorno.sh` en cada equipo; `heltec.kicad_sym` + huella `Heltec_WiFi_LoRa_32_V3`: pads 1–18 = J3, 19–36 = J2, filas a
 22,86 mm). `hardware/herramientas/`: `buscar_jlc.py` (catálogo de JLCPCB: Basic/Extended, existencias, precio),
-`gen_heltec.py`, `tipos_pines.py` (corrige los tipos de pin de los símbolos importados; repetir tras importar),
+`gen_heltec.py`, `tipos_pines.py` (corrige los tipos de pin de los símbolos importados), `importar_lcsc.sh` (importa
+piezas LCSC y las corrige), `revisar.sh` (piezas, redes, cambios desde HEAD, ERC, DRC e imágenes), `entorno.sh` (crea
+`~/.venv-kicad` si falta, versiones en `requisitos.txt`),
 `colocar.py` (posición de cada pieza y contorno). Se ignoran `hardware/.history/` (historial de KiCad 10) y backups.
 
 **Estado (15 oct):** esquema completo (ERC 0 errores, 0 avisos); placa con todas las piezas colocadas por

@@ -104,7 +104,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - Módulos a **3V3 de J3** (pines 2/3; GND en el 1). `Ve` es Vext (OLED). `5V` solo con USB.
 - Esquema (`docs/gen_esquema.py`) y placa perforada (`docs/gen_placa.py`) → PDF: skill **`esquema`**.
 - **PCB en curso (15 oct)**: KiCad 10, `hardware/` (5 placas JLCPCB, SMD montado; ver NOTAS: "PCB"). Esquema
-  completo; piezas colocadas (90 × 60 mm). Siguiente: revisión 3D del usuario y rutado. Scripts en `hardware/herramientas/`.
+  completo; piezas colocadas (90 × 60 mm). Siguiente: revisión 3D del usuario y rutado. Skill **`pcb`** (scripts en `hardware/herramientas/`).
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. Parques POTA cercanos hechos (14 oct; lista de España en LittleFS): falta probarlos con fijo del GPS en la calle.
@@ -147,4 +147,4 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   `~/.platformio/penv/Scripts/pio.exe` y `~/.platformio/penv/Scripts/python.exe`.
 - Skills del proyecto (`.claude/skills/`): **`cerrar-tarea`** al terminar cada tarea (compilar, CLAUDE.md
   resumen + NOTAS detalle, commit, push); **`placa`** para cargar y probar en placa (elige el entorno según la
-  placa); **`release`**; **`esquema`**.
+  placa); **`release`**; **`esquema`**; **`pcb`** (diseño de la PCB en KiCad).
