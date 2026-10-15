@@ -7,7 +7,8 @@ from pathlib import Path
 
 LIB = Path(__file__).resolve().parent.parent / "lib" / "chispas.kicad_sym"
 
-# simbolo -> {numero de pin: tipo}; "*" = todos los demas
+# simbolo -> {numero de pin: tipo}; "*" = todos los demas. Los simbolos que no esten aqui: todos sus pines pasivos
+# (conectores, encoders, potenciometros...). Los circuitos integrados con alimentacion, darlos de alta aqui.
 TIPOS = {
     "PAM8302AASCR": {"1": "input", "2": "no_connect", "3": "input", "4": "input", "5": "output", "6": "power_in",
                      "7": "power_in", "8": "output"},
@@ -23,8 +24,8 @@ partes = re.split(r'(?m)^(?=  \(symbol ")', texto)
 salida = []
 for parte in partes:
     m = re.match(r'  \(symbol "([^"]+)"', parte)
-    if m and m.group(1) in TIPOS:
-        tipos = TIPOS[m.group(1)]
+    if m:
+        tipos = TIPOS.get(m.group(1), {"*": "passive"})
 
         def cambiar(mp):
             num = re.search(r'\(number "([^"]+)"', mp.group(0)).group(1)

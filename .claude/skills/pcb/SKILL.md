@@ -29,7 +29,7 @@ hardware/herramientas/importar_lcsc.sh C123 C456   # simbolo+huella+3D a lib/chi
   equipo; lo llaman `revisar.sh` e `importar_lcsc.sh`, no hace falta ejecutarlo a mano.
 - Ver las imágenes con Read: `hardware/.revision/placa.png` y `esquema.png`.
 - Tras importar una pieza que ya está en el esquema: en KiCad, Herramientas > Actualizar símbolos desde la
-  librería. Si la pieza tiene pines con función (no pasivos), añadir sus tipos en `tipos_pines.py`.
+  librería. Los pines quedan pasivos salvo que la pieza esté en `tipos_pines.py`: los circuitos integrados (alimentación, entradas y salidas), darlos de alta allí.
 - `buscar_jlc.py`: preferir **Basic** (sin recargo); las Extended cuestan unos 3 $ por referencia distinta.
 
 ## Reglas
