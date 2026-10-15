@@ -617,6 +617,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    solo punto con la Heltec que entonces era la placa 1 (ahora la protoboard, placa 2); la perforada lleva la otra
    Heltec, y un 1 % de tolerancia del divisor son ~0,04 V (4–5 puntos). Prueba: comparar `BAT x.xxV` de STATUS >
    SISTEMA con el polímetro en el mismo momento. Si difiere, factor por placa según la MAC.
+   Sin USB, después de la carga, marca **4,08 V** (lo esperado en reposo: 4,15–4,18 V). Puede leer bajo (factor ~1,5–2 %
+   corto) o la celda quedarse ahí (corte pronto del cargador o celda gastada): hace falta el polímetro. Si da ~4,16 V,
+   el factor de esta placa sería 4,9 × 4,16 / 4,08 ≈ 5,0.
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).
