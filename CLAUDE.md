@@ -42,6 +42,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   (driver CP210x).
 - Pruebas con LED, pantalla, monitor serie y audio (altavoz y auriculares).
 - Placa perforada (placa 1) montada completa el 15 oct, con el jack de auriculares: todo bien, circuito correcto.
+  Pasos en falso del encoder (15 oct): mal contacto del Dupont de DT (GPIO48); resuelto moviendo los conectores.
 
 ## Arquitectura (detalle en NOTAS: "Funciones" y "Manejo")
 - Pantallas `PANTALLA_*`: 1 Inicio, 2 CW, 3 LoRa, 4 TRX, 5 PROP, 6 POTA, 7 Sol, 8 CONF. Cabecera: hora, nombre corto,

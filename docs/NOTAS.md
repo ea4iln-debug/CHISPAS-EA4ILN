@@ -680,6 +680,14 @@ recibe la señal por el contacto T–TN del jack; para probar sin jack, puente T
 derecha con el eje hacia uno y las patas abajo (3 a R1, 2 a C1, 1 a masa).
 **Montaje completo (15 oct 2026, más tarde):** con todos los componentes, jack de auriculares incluido, todo funciona:
 el circuito de la placa perforada está bien.
+**Encoder con pasos en falso (15 oct 2026, placa 1, v1.10):** traza temporal en `isrEncoder` (cada interrupción con
+su hora y estado CLK·DT, volcada por serie como `[ENC]`; no está en el repositorio). Primera captura: 164 de 194
+recorridos eran `3 >1 >3` (CLK baja y sube, **DT en GPIO48 siempre a 1**): sin DT no hay sentido y no cuenta paso;
+casi todo el giro rápido se perdía. El usuario movió los conectores Dupont del encoder y en la segunda captura los
+135 recorridos dieron su paso (122 limpios con ±4; 7 con un `SALTO` por rebote, contados con ±2; 3 rebotes de CLK
+sueltos antes de un paso bueno). Causa: **mal contacto en el conector de DT**, no el firmware. El firmware estaba
+bien: la tabla filtra los rebotes y no se pierden eventos (al girar rápido el `loop()` va unos pocos pasos por detrás,
+~50 ms por paso con la traza, y los entrega todos). Si vuelve a pasar: revisar ese conector (o soldar los cables).
 
 Plano para montar el prototipo en una placa de pads a doble cara (pedidas de 7×9 cm, 24×30 agujeros; el plano ocupa
 21×26, 53×66 mm): `docs/placa_perforada.pdf` (4 páginas: componentes, soldaduras con puentes y 12 cables numerados,
