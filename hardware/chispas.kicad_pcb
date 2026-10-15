@@ -377,7 +377,7 @@
 	(footprint "chispas:AUDIO-TH_PJ-307"
 		(layer "F.Cu")
 		(uuid "1672474d-efa5-4b69-90f1-322a864047ac")
-		(at 133 151 90)
+		(at 133 152.67 90)
 		(property "Reference" "PJ3"
 			(at 0 -9 90)
 			(layer "F.SilkS")
@@ -8544,7 +8544,7 @@
 	(footprint "chispas:AUDIO-TH_PJ-307"
 		(layer "F.Cu")
 		(uuid "bed85a8b-b66b-4528-a2b4-8888cf0f8c8d")
-		(at 115 109 -90)
+		(at 115 107.33 -90)
 		(property "Reference" "PJ1"
 			(at 0 -9 270)
 			(layer "F.SilkS")
@@ -10872,7 +10872,7 @@
 	(footprint "chispas:AUDIO-TH_PJ-307"
 		(layer "F.Cu")
 		(uuid "e2339674-d37b-40fb-af46-23f81d2f1b84")
-		(at 141 109 -90)
+		(at 141 107.33 -90)
 		(property "Reference" "PJ4"
 			(at 0 -9 270)
 			(layer "F.SilkS")
@@ -11520,7 +11520,7 @@
 	(footprint "chispas:AUDIO-TH_PJ-307"
 		(layer "F.Cu")
 		(uuid "f793e015-cf4b-4712-89c4-a20b29bb6db8")
-		(at 115 151 90)
+		(at 115 152.67 90)
 		(property "Reference" "PJ2"
 			(at 0 -9 90)
 			(layer "F.SilkS")
@@ -12608,7 +12608,7 @@
 		)
 		(fill no)
 		(layer "Edge.Cuts")
-		(uuid "8afded9f-604d-4a60-bd63-678505135d79")
+		(uuid "b8aadd26-0d81-445b-9300-feaa9d2b2e1d")
 	)
 	(embedded_fonts no)
 )

@@ -11,10 +11,13 @@ import pcbnew
 PCB = Path(__file__).resolve().parent.parent / "chispas.kicad_pcb"
 X0, Y0, ANCHO, ALTO = 100.0, 100.0, 90.0, 60.0
 
-# Jack PJ-307: la clavija entra por el lado -X de la huella y su cañon acaba a 8,98 mm del centro.
+# Jack PJ-307: la clavija entra por el lado -X de la huella. Cuerpo hasta -7,33 mm del centro (escalon) y cañon
+# de 6 mm hasta -8,98. El escalon va en el borde de la placa: el cañon asoma 1,65 mm y entra en el agujero de la
+# pared de la caja, y el cuerpo apoya en la pared por dentro (si el cañon acabara en el borde, la clavija no
+# llegaria al fondo al atravesar la pared).
 JACK_DETRAS = -90   # abre hacia -Y (borde superior)
 JACK_DELANTE = 90   # abre hacia +Y (borde inferior)
-D_JACK = 9.0
+D_JACK = 7.33
 
 # Heltec: en la huella el USB queda en +Y a 26,35 mm del centro; con -90 apunta a -X (borde izquierdo).
 HELTEC_ROT = -90

@@ -732,12 +732,28 @@ con la del último commit (una vez se borró un cable sin querer: PJ1 pin 5).
 por cable; amplificador **PAM8302A integrado** (C113367, MSOP-8) con el circuito de la hoja de datos (10 µF + 1 µF en
 VDD, 0,1 µF en serie en IN+ e IN−); jacks, volumen y trimmer soldados en el borde; trafo 600:600 como **dos puentes de
 soldadura cerrados** (JP1 punta→DEC_IN, JP2 malla→GND) + 4 agujeros J6 (TJ, SJ, DEC_IN, GND); detección de USB
-**no** incluida; tira de 6 pines con GPIO3, 33, 34, 40, 3V3, GND; encoder, GPS y BME280 con **JST-XH** con enganche
-(B5B C157991, B4B C144395; el fallo del encoder de la placa 1 era un Dupont); altavoz con JST-PH 2 (C131337);
+**no** incluida; tira de 6 pines con GPIO3, 33, 34, 40, 3V3, GND; GPS y BME280 con **JST-XH** con enganche
+(B4B C144395; el fallo del encoder de la placa 1 era un Dupont); altavoz con JST-PH 2 (C131337);
+**encoder en la placa** (decidido el 15 oct, en vez del KY-040 por cable): Bourns **PEC11R-4230F-S0024** (C7435302,
+24 pulsos/24 clics como el KY-040; los ALPS EC11 en stock son 30/15, dos clics por pulso), vertical, eje de 30 mm
+(OLED a 17 mm de la placa, medido en la placa 1: la tapa queda a ~19–20 mm y el eje asoma ~10 mm). Filtro de la hoja
+de Bourns en CLK y DT: 10 kΩ a 3V3, 10 kΩ en serie y 10 nF a masa; pulsador directo a ENC_SW (pull-up interno);
+A → ENC_CLK, B → ENC_DT (sentido sin comprobar: si sale al revés, opción de firmware); C, pulsador 2 y patillas de
+sujeción a GND;
 **10 nF a masa en DIT y DAH** (filtro de RF); 10 nF de DECOD a masa (el C3 opcional de la perforada).
 Distribución: **detrás** KEY y decodificador (+ trimmer); **delante** palas, auriculares y volumen; **USB de la
 Heltec en el borde izquierdo**, Heltec en horizontal (el usuario: la OLED se lee derecha con el USB a la izquierda).
-Placa de 90 × 60 mm, 4 agujeros M3 a 4 mm de las esquinas.
+Placa de 90 × 60 mm, 4 agujeros M3 a 4 mm de las esquinas. Encoder a la derecha de la Heltec (eje junto a la
+OLED); BME280 y GPS en el borde derecho; tira de pines delante, entre auriculares y volumen.
+**Jacks:** el escalón del cuerpo (fin del cuerpo cuadrado) en el borde de la placa; el cañón (6 mm, 1,65 mm de
+largo) asoma por fuera y el cuerpo apoya en la pared por dentro. Podrían salir 1,5 mm más (límite: los agujeros de
+los tetones), pero asomaría el cuerpo cuadrado y el esfuerzo de la clavija iría a las soldaduras: descartado.
+Volumen con la cara del cuerpo en el borde (rosca M7 de 5 mm: pared de 2 mm + tuerca). USB de la Heltec enrasado.
+
+**Para la caja:** alrededor de cada jack, rebaje redondo por fuera (~10 mm) que deje la pared en ~1,5 mm (si no,
+la clavija no llega al fondo); agujero para el eje del encoder junto a la OLED; agujero pequeño para ajustar el
+trimmer del decodificador (o ajustarlo antes de cerrar); hueco del USB-C algo mayor que la funda del cable; SMA de
+la antena LoRa (cable desde el IPEX de la Heltec).
 
 **Piezas LCSC** (catálogo consultado el 15 oct): R 0805 Basic 10k C17414, 1k C17513, 220 C17557, 330 C17630;
 C 0805 Basic 100n C49678, 1µ C28323, 10µ C15850, 10n C1710; 1N4148W C81598; PC817 SMD C66405 (Extended);
@@ -754,11 +770,11 @@ piezas LCSC y las corrige), `revisar.sh` (piezas, redes, cambios desde HEAD, ERC
 `~/.venv-kicad` si falta, versiones en `requisitos.txt`),
 `colocar.py` (posición de cada pieza y contorno). Se ignoran `hardware/.history/` (historial de KiCad 10) y backups.
 
-**Estado (15 oct):** esquema completo (ERC 0 errores, 0 avisos); placa con todas las piezas colocadas por
-`colocar.py` (DRC: solo conexiones sin rutar y serigrafía). **Siguiente:** el usuario revisa la colocación en 3D
-(paso 9); luego rutado (propuesta: Freerouting + revisión de masa, alimentación del PAM y entrada del
-decodificador), planos de masa, serigrafía, Gerber/BOM/CPL con Fabrication Toolkit y comprobar rotaciones en la
-vista previa de JLCPCB. Pendiente de la caja: agujero para ajustar el trimmer.
+**Estado (15 oct):** esquema completo (ERC 0 errores; 1 aviso inocuo `lib_symbol_mismatch` del encoder: pines
+iguales, solo cambia el formato); placa con todas las piezas colocadas por `colocar.py` (DRC: solo conexiones sin
+rutar y serigrafía). **Siguiente:** el usuario revisa la colocación en 3D (paso 9); luego rutado (propuesta:
+Freerouting + revisión de masa, alimentación del PAM y entrada del decodificador), planos de masa, serigrafía,
+Gerber/BOM/CPL con Fabrication Toolkit y comprobar rotaciones en la vista previa de JLCPCB.
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno.
