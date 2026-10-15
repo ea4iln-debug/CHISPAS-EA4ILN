@@ -93,7 +93,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   versión acaba en letra). Un borrador no aparece en la API sin autenticar, así que el OTA no lo ve. `--publicar`:
   `gh release edit --draft=false` (GitHub crea entonces la etiqueta) y `git fetch --tags`. Probado el paso 1 con la
   v1.06b (sin las comprobaciones de git): mismos nombres; `-usb` = firmware + 64 KB. `dist/` está en `.gitignore`.
-  **Primera release completa con `publicar.sh`: v1.07b, 14 oct 2026** (los tres pasos sin problemas). v1.08b y v1.09b, 14 oct 2026: igual.
+  **Primera release completa con `publicar.sh`: v1.07b, 14 oct 2026** (los tres pasos sin problemas). v1.08b y v1.09b, 14 oct 2026: igual. **v1.10 (primera final, no prerelease), 15 oct 2026**, con `publicar.sh` sin
+  problemas: WIFI DATOS MANUAL/AUTO, reinicio de la OTA sin avance; **última con binario `sin-encoder`** (desde la
+  1.11 no se compila ni se publica). https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.10
 - **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0) y
   sesión iniciada (`gh auth login`, cuenta ea4iln-debug, HTTPS, token en el llavero de Windows). Desde entonces ya no hace falta la vía de la API REST.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >
