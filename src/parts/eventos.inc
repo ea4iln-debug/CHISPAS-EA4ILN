@@ -483,7 +483,51 @@ void procesarBoton() {
     }
 
   } else if (pantallaActual == PANTALLA_CW) {
-    if (enEcho && enEstadisticasEcho) {
+    if (enSim && estadoSim == SIM_AJUSTES) {
+      // Ajustes del simulador. Foco: 0 wpm activador, 1 espaciado, 2 wpm palas, 3 ver, 4 iniciar, 5 volver
+      if (atras) {
+        salirDeSim();
+      } else if (giro != 0) {
+        if (editandoValor) {
+          switch (opcionSim) {
+            case 0: ajustarValor(simWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
+            case 1: ajustarValor(simEspaciado, giro * 10, 100, 200); break;
+            case 2: ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
+          }
+        } else {
+          opcionSim = (opcionSim + N_OPCIONES_SIM + giro) % N_OPCIONES_SIM;
+        }
+      } else if (pulsa) {
+        switch (opcionSim) {
+          case 3: simVerTexto = !simVerTexto; break;
+          case 4: iniciarSim(); break;
+          case 5: salirDeSim(); break;
+          default: editandoValor = !editandoValor; break;  // 0, 1 y 2
+        }
+      }
+
+    } else if (enSim && estadoSim == SIM_FIN) {
+      // Resultado. Foco: 0 volver (a los ajustes), 1 otro QSO. La larga del eje es atajo de otro
+      if (atras) simAAjustes();
+      else if (ejeLarga) iniciarSim();
+      else if (giro != 0) opcionPracticaSim = (opcionPracticaSim + 1) % 2;
+      else if (pulsa) {
+        if (opcionPracticaSim == 0) simAAjustes();
+        else iniciarSim();
+      }
+
+    } else if (enSim) {
+      // QSO. Foco: 0 repetir (lo ultimo del activador), 1 salir. Las palas funcionan con cualquier foco
+      if (atras || ejeLarga) {
+        simAAjustes();
+      } else if (giro != 0) {
+        opcionPracticaSim = (opcionPracticaSim + 1) % 2;
+      } else if (pulsa) {
+        if (opcionPracticaSim == 1) simAAjustes();
+        else simRepetir();
+      }
+
+    } else if (enEcho && enEstadisticasEcho) {
       // Como ESTAD. del Koch: girar pasa pagina (la ultima es la de borrado); pulsar vuelve o borra
       if (atras || ejeLarga) {
         enEstadisticasEcho = false; confirmandoBorrado = false;
@@ -732,7 +776,7 @@ void procesarBoton() {
       if (atras) {
         entrarEnPantalla(PANTALLA_INICIO);
       } else if (giro != 0) {
-        // Foco: [sig.] -> [KOCH (RX)] -> [ECHO (TX)] -> [TX LIBRE] -> [ant.] -> [sig.] ...
+        // Foco: [sig.] -> [KOCH (RX)] -> [ECHO (TX)] -> [TX LIBRE] -> [qso sim] -> [ant.] -> [sig.] ...
         moverFocoAnillo(opcionPantalla3, OPCION_BARRA_CW, giro);
       } else if (pulsa) {
         if (opcionPantalla3 == 0) {
@@ -742,6 +786,8 @@ void procesarBoton() {
           entrarEnEcho();
         } else if (opcionPantalla3 == 2) {
           entrarEnKeyer();
+        } else if (opcionPantalla3 == OPCION_SIM_CW) {
+          entrarEnSim();
         } else {
           navegarDesdeBarra();
         }

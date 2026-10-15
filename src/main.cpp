@@ -81,6 +81,7 @@ inline bool depuActiva(uint8_t bit) { return (depuracion & bit) != 0; }
 #include "parts/sol.inc"
 #include "parts/conf.inc"
 #include "parts/estados_cw.inc"
+#include "parts/qso_sim.inc"
 #include "parts/cara.inc"
 #include "parts/entrada.inc"
 #include "parts/eventos.inc"
@@ -388,6 +389,7 @@ void loop() {
   procesarTonoPrueba();
   procesarTextoKeyer();
   procesarEcho();
+  procesarSim();
   procesarCara();
   procesarMaquinaEstadosCW();
   procesarFinEmisionDuo();

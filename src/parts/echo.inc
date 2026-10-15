@@ -125,6 +125,10 @@ void procesarTextoKeyer() {
       echoRecibirCaracter(c);
       continue;
     }
+    if (enSim) {
+      simRecibirCaracter(c);
+      continue;
+    }
     if (pantallaActual == PANTALLA_LORA && enPantalla4_Sub && subpantalla4Activa == 2) {
       qsoCaracterManipulado(c);
       continue;

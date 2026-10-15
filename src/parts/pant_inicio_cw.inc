@@ -360,10 +360,15 @@ String valorAjusteEcho(uint8_t i) {
   }
 }
 
+void dibujarPantallaSim();  // Definida con el simulador de QSO
+
 void renderizarPantallaCW() {
   display.setTextColor(SSD1306_WHITE);
 
-  if (enKeyer && keyerEnRitmo) {
+  if (enSim) {
+    dibujarPantallaSim();
+
+  } else if (enKeyer && keyerEnRitmo) {
     // Paginas de RITMO: se actualizan solas al manipular (las palas siguen funcionando)
     display.setTextSize(1);
     dibujarPaginaRitmo();
@@ -471,14 +476,16 @@ void renderizarPantallaCW() {
                        (opcionPracticaEcho == 1 ? "> " : "  ") + String("salir"));
 
   } else if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
-    // Mismo estilo que la pantalla LoRa: titulo en negativo y tres opciones
+    // Mismo estilo que la pantalla LoRa: titulo en negativo y tres opciones; "qso sim" en el centro del pie
+    // (como "memorias" en TRX: una cuarta opcion no cabe)
     display.setTextSize(1);
     dibujarTituloMenu(" ENTRENADOR CW ");
 
     const char* opciones[] = { "< KOCH (RX) >", "< ECHO (TX) >", "< TX LIBRE >" };
     for (uint8_t i = 0; i < 3; i++) dibujarOpcionCentrada(opcionPantalla3 == i, opciones[i], 24 + i * 9);
 
-    dibujarBarraAvanzarRetroceder(opcionPantalla3 == OPCION_BARRA_CW);
+    dibujarBarraAvanzarRetroceder(opcionPantalla3 == OPCION_BARRA_CW,
+                                  opcionPantalla3 == OPCION_SIM_CW ? ">qso sim" : " qso sim");
 
   } else if (enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
     // Ajustes del Koch: lista como CONF > CONFIG; "iniciar" y "volver" en el pie

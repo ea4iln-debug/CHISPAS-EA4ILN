@@ -38,6 +38,9 @@ void cargarDatosNVS() {
   refuerzoKoch = min(prefs.getUChar("kref", REFUERZO_SUAVE), (uint8_t)REFUERZO_FUERTE);
   textoKoch = min(prefs.getUChar("ktexto", TEXTO_GRUPOS), (uint8_t)TEXTO_QSO);
   textoDuo = min(prefs.getUChar("dtexto", TEXTO_GRUPOS), (uint8_t)TEXTO_QSO);
+  simWpm = constrain(prefs.getUChar("swpm", 18), KEYER_WPM_MIN, KEYER_WPM_MAX);
+  simEspaciado = constrain(prefs.getUShort("ssp", 150), 100, 200);
+  simVerTexto = prefs.getBool("sver", true);
   echoTotalIntentos = prefs.getUInt("eint", 0);
   echoTotalAciertos = prefs.getUInt("eok", 0);
   echoSesiones = prefs.getUShort("eses", 0);
@@ -151,6 +154,14 @@ void guardarEchoNVS() {
   prefs.putBool("ever", echoVerObjetivo);
   prefs.putUChar("eretos", echoRetos);
   prefs.putUChar("eref", echoRefuerzo);
+  prefs.end();
+}
+
+void guardarSimNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putUChar("swpm", simWpm);
+  prefs.putUShort("ssp", simEspaciado);
+  prefs.putBool("sver", simVerTexto);
   prefs.end();
 }
 

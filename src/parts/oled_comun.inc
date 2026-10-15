@@ -83,13 +83,15 @@ void dibujarEncabezado() {
     display.setCursor(128 - w, 0);
     display.print(txtRight);
 
-  } else if ((pantallaActual == PANTALLA_CW && (enPractica3_2 || (enEcho && echoPracticando))) ||
+  } else if ((pantallaActual == PANTALLA_CW &&
+              (enPractica3_2 || (enEcho && echoPracticando) || (enSim && estadoSim != SIM_AJUSTES))) ||
              (pantallaActual == PANTALLA_LORA && subpantalla4Activa == 1)) {
     bool deEcho = pantallaActual == PANTALLA_CW && enEcho;
+    bool deSim = pantallaActual == PANTALLA_CW && enSim;
     display.setCursor(0, 0);
-    display.print(deEcho ? echoWpm : wpmCW);
+    display.print(deEcho ? echoWpm : (deSim ? simWpm : wpmCW));
     display.print(F("WPM SP:"));
-    display.print(deEcho ? echoEspaciado : espaciadoCW);
+    display.print(deEcho ? echoEspaciado : (deSim ? simEspaciado : espaciadoCW));
     display.print(F("%"));
 
     String txtRight = "BAT:" + strBat;

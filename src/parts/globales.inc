@@ -63,8 +63,10 @@ uint32_t kochTotCaracteres = 0, kochTotAciertos = 0;
 bool enSubpantallaCW = false;
 bool enPractica3_2 = false;
 bool enEstadisticas3_5 = false;
-#define OPCION_BARRA_CW 3
-uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=KOCH (RX), 1=ECHO (TX), 2=TX LIBRE, 3=BARRA INFERIOR (ant/sig)
+#define OPCION_SIM_CW   3
+#define OPCION_BARRA_CW 4
+uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=KOCH (RX), 1=ECHO (TX), 2=TX LIBRE, 3=QSO SIM (centro del pie),
+                                           // 4=BARRA INFERIOR (ant/sig)
 
 // Keyer iambico (pantalla CW > TX LIBRE). La configuracion se guarda en NVS al salir
 uint8_t keyerWpm = 20;
@@ -108,6 +110,21 @@ uint32_t echoTotalIntentos = 0, echoTotalAciertos = 0;  // Historico (ESTAD. del
 uint16_t echoSesiones = 0;                               // Practicas terminadas
 uint8_t paginaStatsEcho = 0;      // 0 mas errores, 1 totales, 2-15 lecciones, 16 borrado (como el Koch)
 #define TOTAL_PAGINAS_STATS_ECHO 17
+
+// Simulador de QSO POTA (pantalla CW > qso sim): Chispas hace de activador y tu de cazador, con las palas.
+// SIM_AJUSTES = lista de ajustes (sin QSO en marcha)
+enum EstadoSim { SIM_AJUSTES, SIM_EMITIENDO, SIM_ESCUCHANDO, SIM_FIN };
+enum FaseSim { FASE_LLAMADA, FASE_INFORME, FASE_DESPEDIDA };
+bool enSim = false;               // Simulador abierto (ajustes, QSO o resultado)
+EstadoSim estadoSim = SIM_AJUSTES;
+FaseSim faseSim = FASE_LLAMADA;
+#define OPCION_SIM_INICIAR 4
+#define N_OPCIONES_SIM 6
+uint8_t opcionSim = OPCION_SIM_INICIAR;  // Ajustes: 0 wpm activador, 1 espaciado, 2 wpm palas, 3 ver, 4 iniciar, 5 volver
+uint8_t opcionPracticaSim = 0;    // QSO: 0 repetir, 1 salir. Resultado: 0 volver, 1 otro
+uint8_t simWpm = 18;              // Velocidad del activador (NVS "swpm"); la de las palas es keyerWpm
+uint16_t simEspaciado = 150;      // NVS "ssp"
+bool simVerTexto = true;          // Ver lo que emite el activador mientras suena (NVS "sver")
 
 uint8_t wpmCW = 25;
 uint16_t espaciadoCW = 200;

@@ -19,6 +19,7 @@ void guardarKeyerNVS();                // Definida en la seccion NVS
 void guardarEchoNVS();                 // Definida en la seccion NVS
 void qsoCaracterManipulado(char c);    // Definida con la radio LoRa
 void trxCaracterManipulado(char c);    // Definida con la pantalla TRX
+void simRecibirCaracter(char c);       // Definida con el simulador de QSO
 extern bool pantallaPendiente;         // Definida con la bateria
 extern unsigned long ultimaActividadMs;  // Definida con la cara (ultimo giro, pulsacion o manipulacion)
 
