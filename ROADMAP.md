@@ -1,6 +1,6 @@
 # Hoja de ruta de Chispas
 
-Estado a 14 de octubre de 2026, con el firmware **v1.07b** (beta). Lo marcado ✅ está hecho y probado en placa.
+Estado a 16 de octubre de 2026, con el firmware **v1.20** (final; la v1.10 fue la primera final). Lo marcado ✅ está hecho y probado en placa.
 
 ## 1. Pruebas pendientes
 
@@ -8,16 +8,18 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 | | Prueba | Cómo |
 |---|---|---|
-| ⬜ | Parques POTA cercanos con fijo del GPS | En la calle: POTA > VER PARQUES con la posición del GPS (en casa, probado con el locator) |
-| ⬜ | Consumo del GPS dormido | Polímetro en µA en serie con el VCC del GPS; si baja de ~0,5 mA, no hace falta transistor |
+| ⬜ | Reinicio de la OTA si la descarga no avanza en 30 s | Cortar la WiFi a mitad de una OTA: debe reiniciar en la versión de antes |
 | ⬜ | Tendencia del BME280 y aviso de tormenta | Placa 1 con varias horas de datos |
-| ⬜ | Pila del motor CW tras Duo | Repetir la medida (la antigua daba 2016 bytes libres de 4096) |
-| ⬜ | QSO LIBRE en los dos sentidos | Necesita palas en la placa 2 (o cambiar las palas de placa) |
-| ⬜ | Expresiones de radioaficionado y SALVAPANTALLAS | Nube de tormenta (con TORM!) sin ver aún (auriculares vista); tiempo del salvapantallas en CONFIG |
+| ✅ | Parques POTA cercanos con fijo del GPS | 15 oct 2026, en la calle con la posición del GPS |
+| ✅ | Pila del motor CW tras Duo | 15 oct 2026 (v1.10): 3148 bytes libres de 4096 |
+| ✅ | QSO LIBRE en los dos sentidos | 15 oct 2026, placa perforada y protoboard |
+| ✅ | Batería calibrada con polímetro | 15 oct 2026, placa perforada: factor único 4,985 para todas |
+| ~~⬜~~ | ~~Consumo del GPS dormido~~ | Descartado el 16 oct 2026: despreciable, no se mide |
+| ~~⬜~~ | ~~Nube de tormenta del salvapantallas~~ | Descartado el 16 oct 2026: en Badajoz hay pocas tormentas (la cara de auriculares, vista) |
 | ⬜ | Salvapantallas y brillo (v1.05b) | Cara a los 15 s en Inicio, PROP, POTA, SOL y CONF (no en CW, LoRa, TRX ni con el portal/QR); brillo tenue al minuto en todas |
 | ✅ | Control del amplificador (SD en GPIO38) | Placa 1, 12 oct 2026 (v1.04b por OTA): suena en CW, LoRa, TRX y el pitido de TONO; calla en el resto |
 | ✅ | Estabilidad tras muchas horas | Placa 2, noche del 12 oct 2026: 8 h en POTA (233 consultas HTTPS); heap libre ±150 B, mínimo estable tras la 1.ª hora, mayor bloque y pilas sin cambios |
-| ✅ | OTA del binario sin encoder a la v1.02b y a la v1.03b | Placa 2, 12 oct 2026 |
+| ✅ | OTA del binario sin encoder a la v1.02b y a la v1.03b | Placa 2, 12 oct 2026 (la variante se quitó en la 1.20) |
 | ✅ | Batería después del decodificador | Placa 2, 12 oct 2026: la tensión se sigue leyendo bien tras DECODIFICAR y QSO |
 | ✅ | QSO del TRX con emisora real | 12 oct 2026: manipular y decodificar en la misma sesión, sin descodificar lo propio |
 | ✅ | Keyer iámbico | 12 oct 2026: apretón en modo A y B, y textos largos |
@@ -29,7 +31,7 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 ### Montado
 - **GPS NEO-6M**: ✅ montado y probado el 13 oct 2026 (TX a GPIO47, RX a GPIO39). Apagarlo cuando no se usa:
-  1. ✅ **Por software (funciona; falta medir en µA):** cable de GPIO39 (J3-10) al RX del GPS y órdenes UBX (`UBX-RXM-PMREQ` para
+  1. ✅ **Por software (funciona; consumo dormido despreciable, no se mide):** cable de GPIO39 (J3-10) al RX del GPS y órdenes UBX (`UBX-RXM-PMREQ` para
      dormir; si no despierta bien, `UBX-CFG-RST` con GNSS stop/start). Medir con el polímetro en serie con el VCC del
      GPS: si dormido baja de ~0,5 mA, no hace falta transistor.
   2. ~~Interruptor en el positivo~~ (**descartado el 13 oct 2026**; GPIO3, BAJO = encendido): AO3401A, o sus equivalentes en SOT-23 IRLML6401,
@@ -43,11 +45,14 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - **Trafo de aislamiento 600:600**, solo si aparece zumbido por lazo de masa con la emisora.
 - **C3 (10–100 nF) de GPIO6 a GND**, solo si el decodificador da ruido o letras falsas (por ejemplo, al transmitir
   con potencia): filtra la RF y el ruido de alta frecuencia y estabiliza la lectura del ADC.
-- **Detección de USB y de carga:** divisor 100k/150k del pin 5V (J2-2) a GPIO33. Antes, comprobar que el pin 5V da
-  0 V solo con batería.
+- **Detección de USB y de carga** (aparcada el 14 oct 2026): sin USB el pin 5V da 1,3 V, no 0 V, y con 47k/68k a
+  GPIO33 quedan 0,7 V, poco margen. Si se retoma, GPIO3 con ADC (ver NOTAS).
 
-### Más adelante
-- **PCB propia**, empezando desde cero.
+### PCB propia (en curso)
+- ✅ Placa perforada montada y probada (15 oct 2026).
+- ✅ PCB en KiCad 10 (90 × 60 mm, SMD montado por JLCPCB): esquema, rutado y serigrafía; pedidos a JLCPCB (5 placas)
+  y LCSC hechos el 15 oct 2026.
+- ⬜ Recibir, montar y probar (comprobar el encaje del encoder CTR R7, que sustituye al ALPS sin stock).
 
 ## 3. Desarrollo del firmware
 
@@ -100,14 +105,14 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 
 ### Instalación y estructura del firmware (ideas)
 - **Web de instalación por USB** con **ESP Web Tools** en GitHub Pages: botón «Instalar» por Web Serial (Chrome o
-  Edge de escritorio; no Firefox ni Safari; en Windows sigue haciendo falta el driver CP210x). Dos botones (con y sin
-  encoder) y grabación por partes (bootloader, particiones, boot_app0 y app) para **conservar la NVS** al reinstalar,
+  Edge de escritorio; no Firefox ni Safari; en Windows sigue haciendo falta el driver CP210x). Un solo botón (desde la
+  1.20 no hay variante sin encoder) y grabación por partes (bootloader, particiones, boot_app0 y app) para **conservar la NVS** al reinstalar,
   salvo que se elija borrar; monitor serie en la misma página. GitHub no sirve los `.bin` de las releases a otra web
   (CORS): una **GitHub Action** los copia a la página al publicar cada release.
 - **Firmware modular**, con la opción de **un solo binario con todo y módulos activados en el aparato** (la app ocupa
   bastante menos de la mitad de sus 3,2 MB): autodetección donde se pueda (el BME280 ya se detecta; el GPS, si llegan
   frases NMEA) y una pantalla **CONF > HARDWARE** (o un asistente al primer arranque) para lo que no se detecta
-  (encoder, amplificador, KEY…). Un solo binario simplifica la OTA y haría desaparecer la variante sin encoder. La
+  (encoder, amplificador, KEY…). Un solo binario simplifica la OTA (la variante sin encoder ya se quitó en la 1.20). La
   web podría llevar casillas de hardware (generando la NVS en el navegador, o mejor preguntándolo al primer arranque).
   Descartado: compilar a la carta en un servidor (lento, necesita un token o un servidor propio) y precompilar todas
   las combinaciones (2^N binarios).
@@ -170,21 +175,20 @@ alcance de la radio.
 - **Coste:** la Heltec V3 cuesta unos 20–25 €; un ESP32 con OLED, encoder y cargador, unos 12–15 €. El ahorro está más
   en lo que se deja fuera (LoRa, GPS, BME280, amplificador) que en la placa: el Lite tiene sentido como versión más
   sencilla y barata para clubes o alumnos.
-- **Firmware:** el mismo `main.cpp` con un entorno `chispas_lite` (como `heltec_sin_encoder`); lo principal, separar
+- **Firmware:** el mismo `main.cpp` con un entorno `chispas_lite` (como el antiguo `heltec_sin_encoder`); lo principal, separar
   la capa de transporte (LoRa / ESP-NOW), ya decidida como intercambiable.
 
 ## 4. Documentación y publicación
 - ✅ GPS en el esquema (montado) y en el README; release v1.07b publicada (14 oct 2026).
-- Capturas nuevas: CONFIG, STATUS > GPS, PONER HORA, POTA y VER PARQUES.
-- Los parques cercanos van en la placa 1 sin versión nueva: entrarán en la próxima release (preguntar antes).
+- ✅ Capturas nuevas: CONFIG, STATUS > GPS, PONER HORA, POTA y VER PARQUES.
+- ✅ Releases v1.08b y v1.09b (14 oct 2026), **v1.10** (15 oct 2026, primera final; última con binario sin encoder)
+  y **v1.20** (16 oct 2026, solo con encoder).
 
 ## Orden propuesto
-1. **En la calle:** parques cercanos con fijo del GPS; medir el GPS dormido en µA.
-2. **Sin piezas:** capturas; tendencia del BME280 con varias horas de datos; salvapantallas y brillo (v1.05b); pila
-   del motor CW tras Duo.
-3. **Con palas en la placa 2:** QSO LIBRE en los dos sentidos.
-4. **Después:** placa perforada (comprobar antes los pines del PAM8302A, el GPS y el BME280), cola de spots POTA y
-   PCB.
+1. **Con la próxima OTA:** forzar el reinicio por descarga sin avance (cortar la WiFi a mitad).
+2. **Sin piezas:** tendencia del BME280 con varias horas de datos; salvapantallas y brillo (v1.05b).
+3. **Al llegar la PCB:** montarla y probarla.
+4. **Después:** cola de spots POTA y, si se quiere, Bluetooth (teclado CW desde el móvil).
 
 ## Hecho
 - ✅ Entrenador Koch estilo LCWO con corrección por letra o por total, Echo y TX libre (keyer iámbico A/B).
@@ -202,3 +206,4 @@ alcance de la radio.
 - ✅ GPS (13 oct 2026): hora, locator y altitud automáticos; hora con fuente (GPS > WIFI > MANUAL) y puesta a mano.
 - ✅ Parques POTA cercanos sin conexión (14 oct 2026): lista de España en LittleFS, distancia y rumbo.
 - ✅ Consumo en reposo despreciable.
+- ✅ Placa perforada montada y probada (15 oct 2026).
