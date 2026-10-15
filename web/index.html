@@ -179,7 +179,7 @@
       <p class="lema">Entrenador Koch, keyer iámbico, QSO por LoRa y compañero del transceptor. Conecta la placa por
         USB y en un minuto está lista, sin instalar ningún programa.</p>
       <div class="acciones">
-        <esp-web-install-button manifest="manifest.json">
+        <esp-web-install-button manifest="manifest.json?__SELLO__">
           <button slot="activate" class="boton">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
@@ -312,7 +312,8 @@
 
 <script>
   // Version y enlace al codigo de esa version
-  fetch("manifest.json")
+  const SELLO = "__SELLO__";  // Lo pone web/preparar.py en cada despliegue (cache de GitHub Pages)
+  fetch("manifest.json?" + SELLO)
     .then((r) => r.json())
     .then((m) => {
       document.getElementById("version").innerHTML = "Versión <b>" + m.version + "</b> · última final";
@@ -332,7 +333,7 @@
   let actual = 0, temporizador;
   const imgs = PANTALLAS.map(([archivo, nombre], i) => {
     const img = new Image(128, 64);
-    img.src = "img/" + archivo + ".png";
+    img.src = "img/" + archivo + ".png?" + SELLO;
     img.alt = "Pantalla " + nombre;
     oled.appendChild(img);
     const b = document.createElement("button");

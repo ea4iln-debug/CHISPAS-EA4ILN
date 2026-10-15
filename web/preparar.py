@@ -15,6 +15,7 @@
 import json
 import shutil
 import sys
+import time
 from pathlib import Path
 
 TROZOS = [  # (archivo, desde, hasta); None = hasta el final
@@ -35,13 +36,17 @@ def main():
     if datos[0] != 0xE9 or datos[0x8000:0x8002] != b"\xaa\x50" or datos[0x10000] != 0xE9:
         sys.exit(f"{imagen} no parece una imagen completa de Chispas (bootloader, particiones y app)")
 
+    # GitHub Pages deja 10 min en cache cada archivo: el sello (?AAAAMMDDhhmmss del despliegue) en el manifiesto,
+    # los trozos y las capturas hace que el navegador pida los nuevos tras cada despliegue
+    sello = time.strftime("%Y%m%d%H%M%S", time.gmtime())
+
     if salida.exists():
         shutil.rmtree(salida)
     (salida / "firmware").mkdir(parents=True)
     partes = []
     for nombre, desde, hasta in TROZOS:
         (salida / "firmware" / nombre).write_bytes(datos[desde:hasta])
-        partes.append({"path": f"firmware/{nombre}", "offset": desde})
+        partes.append({"path": f"firmware/{nombre}?{sello}", "offset": desde})
 
     manifiesto = {
         "name": "Chispas EA4ILN",
@@ -52,7 +57,8 @@ def main():
     }
     (salida / "manifest.json").write_text(json.dumps(manifiesto, indent=2), encoding="utf-8")
 
-    shutil.copy(RAIZ / "web" / "index.html", salida)
+    pagina = (RAIZ / "web" / "index.html").read_text(encoding="utf-8")
+    (salida / "index.html").write_text(pagina.replace("__SELLO__", sello), encoding="utf-8")
     (salida / "img").mkdir()
     for img in ("inicio.png", "cara.png", "koch.png", "trx.png", "prop.png", "pota.png", "sol.png", "lora.png"):
         shutil.copy(RAIZ / "docs" / "img" / img, salida / "img")
