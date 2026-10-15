@@ -36,10 +36,31 @@ void dibujarMenuDatos(const char* titulo, uint8_t opcion, const char* op0, const
   dibujarBarraAvanzarRetroceder(opcion == ultima + 1);
 }
 
-// Cuerpo de una pagina sin datos: el estado del WiFi o el aviso que toque
-void dibujarSinDatos(const String& aviso) {
+// Aviso a pantalla completa mientras se conecta, se descarga o se espera la hora (ver avisoWifiVisible)
+void dibujarAvisoWifi(const char* titulo) {
+  dibujarTituloMenu(titulo);
+  const char* texto = actualizandoWifi ? avisoDescarga
+                      : (estadoWifi == WIFI_CONECTANDO ? "CONECTANDO WIFI..." : "SINCRONIZANDO HORA...");
+  dibujarTituloCentrado(String(texto), 32);
+  if (!actualizandoWifi) dibujarPieCentrado("> cancelar");
+}
+
+// Cuerpo de una pagina sin datos: el estado del WiFi o el aviso que toque. En MANUAL, sin datos aun, como pedirlos
+void dibujarSinDatos(const String& aviso, bool sinDatos) {
   display.setCursor(0, 22);
   display.print(aviso);
+  if (sinDatos && !wifiAuto && estadoWifi == WIFI_APAGADO) {
+    display.setCursor(0, 32);
+    display.print(F("ACTUALIZAR EN EL MENU"));
+  }
+}
+
+// Antiguedad corta de unos datos para el pie de sus paginas: "AHORA", "12MIN", "3H"
+String textoEdadDatos(unsigned long okMs) {
+  unsigned long min = (millis() - okMs) / 60000UL;
+  if (min < 1) return String("AHORA");
+  if (min < 60) return String(min) + "MIN";
+  return String(min / 60) + "H";
 }
 
 const char* const NOMBRES_PAGINAS_PROP[2] = { "INDICES", "BANDAS" };
@@ -59,6 +80,10 @@ void renderizarPantallaPropagacion() {
     }
   }
 
+  if (avisoWifiVisible()) {
+    dibujarAvisoWifi(" PROPAGACION ");
+    return;
+  }
   if (subDatos == DATOS_PORTAL) {
     dibujarVistaPortal(focoPortalDatos);
     return;
@@ -70,7 +95,7 @@ void renderizarPantallaPropagacion() {
 
   // Paginas
   if (actualizandoWifi || !propagacion.validos) {
-    dibujarSinDatos(estado);
+    dibujarSinDatos(estado, !propagacion.validos);
   } else if (paginaPropagacion == 1) {
     // Prevision de hamqsl por banda: D = dia, N = noche
     for (uint8_t b = 0; b < 4; b++) {
@@ -126,6 +151,10 @@ void renderizarPantallaSpots() {
     else estado = String(numSpotsPota) + " SPOTS CW";
   }
 
+  if (avisoWifiVisible()) {
+    dibujarAvisoWifi(" POTA ");
+    return;
+  }
   if (subDatos == DATOS_PORTAL) {
     dibujarVistaPortal(focoPortalDatos);
     return;
@@ -141,7 +170,7 @@ void renderizarPantallaSpots() {
 
   // Paginas
   if (actualizandoWifi || !spotsPotaValidos || numSpotsPota == 0) {
-    dibujarSinDatos(estado);
+    dibujarSinDatos(estado, !spotsPotaValidos);
   } else {
     // Indicativo, frecuencia (kHz) y referencia en 21 caracteres. La referencia va entera y
     // pegada a la derecha, con la frecuencia delante. Si no cabe todo, la frecuencia pierde
@@ -168,6 +197,7 @@ void renderizarPantallaSpots() {
     }
     display.setTextWrap(true);
   }
-  dibujarPiePaginas(paginaSpots, paginas, "SPOTS");
+  // Con datos, su antiguedad (en MANUAL no se refrescan solos)
+  dibujarPiePaginas(paginaSpots, paginas, spotsPotaValidos ? textoEdadDatos(spotsPotaOkMs) : String("SPOTS"));
 }
 

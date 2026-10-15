@@ -244,7 +244,7 @@ void procesarBoton() {
         break;
 
       case CONF_CONFIG:
-        // Lista: ID, LOCATOR, ALTITUD, HORA, RELOJ, TONO, ACELERACION, SALVAPANTALLAS, APAGADO, WEBCONF, ACTUALIZAR FW,
+        // Lista: ID, LOCATOR, ALTITUD, HORA, RELOJ, TONO, ACELERACION, SALVAPANTALLAS, APAGADO, WIFI DATOS, WEBCONF, ACTUALIZAR FW,
         // DEPURACION, FABRICA y volver (pie)
         if (atras) {
           subConf = CONF_MENU;
@@ -261,6 +261,10 @@ void procesarBoton() {
             guardarSalvapantallasNVS();
           } else if (editandoValor && focoConf == OC_LOCATOR) {
             locatorEditAuto = !locatorEditAuto;
+          } else if (editandoValor && focoConf == OC_WIFI_DATOS) {
+            wifiAuto = !wifiAuto;
+            guardarWifiAutoNVS();
+            Serial.printf("[CONFIG] WIFI DATOS %s\n", wifiAuto ? "AUTO" : "MANUAL");
           } else if (editandoValor && focoConf == OC_HORA) {
             horaUtcCabecera = !horaUtcCabecera;
             guardarEstacionNVS();
@@ -313,6 +317,7 @@ void procesarBoton() {
               confAbrirReloj();
               break;
             case OC_HORA:
+            case OC_WIFI_DATOS:
             case OC_ACELERACION:
             case OC_SALVAPANTALLAS:
             case OC_APAGADO:
@@ -419,7 +424,10 @@ void procesarBoton() {
     uint8_t barra = esPota ? OPCION_BARRA_SPOTS : OPCION_BARRA_DATOS;
     uint8_t& pagina = esProp ? paginaPropagacion : (esSol ? paginaSol : paginaSpots);
     uint8_t paginas = esProp ? 2 : (esSol ? paginasSol() : paginasSpots());
-    switch (subDatos) {
+    if (avisoWifiVisible()) {
+      // Conectando o esperando la hora tras ACTUALIZAR: atras o pulsar cancela (la descarga en si no se ve: bloquea)
+      if (atras || pulsa) terminarPeticionWifi();
+    } else switch (subDatos) {
       case DATOS_MENU:
         if (atras) entrarEnPantalla(PANTALLA_INICIO);
         else if (giro != 0) moverFocoAnillo(opcion, barra, giro);
@@ -436,8 +444,14 @@ void procesarBoton() {
               abrirPortalWifi();
               subDatos = DATOS_PORTAL;
               focoPortalDatos = 0;
+              // Al conectar desde el portal: en PROP y POTA se descarga y en SOL se espera la hora; en MANUAL,
+              // luego se apaga
+              wifiPorPeticion = true;
+              forzarActualizacion = !esSol;
+            } else if (esSol) {
+              actualizarHoraSol();  // Reintentar
             } else {
-              encenderWifi();  // Reintentar
+              pedirActualizacionWifi();
             }
           } else if (op == 0) {
             subDatos = DATOS_PAGINAS;

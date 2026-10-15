@@ -210,6 +210,7 @@ String valorOpcionConf(uint8_t i) {
     case OC_ACELERACION: return textoAceleracion();
     case OC_SALVAPANTALLAS: return textoSalvapantallas();
     case OC_APAGADO:     return textoApagado();
+    case OC_WIFI_DATOS:  return wifiAuto ? String("AUTO") : String("MANUAL");
     case OC_TONO:        return String(frecTonoHz) + " Hz";
     case OC_WEBCONF:     return estadoWifi == WIFI_PORTAL ? String("ABIERTO") : String("");
     case OC_ACTUALIZAR:  return hayActualizacion() ? "v" + otaVersionNueva : String("");
@@ -220,7 +221,7 @@ String valorOpcionConf(uint8_t i) {
 }
 
 const char* const NOMBRES_OPCIONES_CONF[N_OPCIONES_CONF - 1] = {
-  "ID", "LOCATOR", "ALTITUD", "HORA", "RELOJ", "TONO", "ACELERACION", "SALVAPANTALLAS", "APAGADO", "WEBCONF", "ACTUALIZAR FW",
+  "ID", "LOCATOR", "ALTITUD", "HORA", "RELOJ", "TONO", "ACELERACION", "SALVAPANTALLAS", "APAGADO", "WIFI DATOS", "WEBCONF", "ACTUALIZAR FW",
   "DEPURACION", "FABRICA"
 };
 
@@ -228,7 +229,7 @@ const char* const NOMBRES_OPCIONES_CONF[N_OPCIONES_CONF - 1] = {
 void dibujarListaConf() {
   dibujarListaOpciones(NOMBRES_OPCIONES_CONF, N_OPCIONES_CONF - 1, focoConf, valorOpcionConf,
                        (1UL << OC_LOCATOR) | (1UL << OC_ALTITUD) | (1UL << OC_HORA) | (1UL << OC_TONO) | (1UL << OC_ACELERACION) |
-                       (1UL << OC_SALVAPANTALLAS) | (1UL << OC_APAGADO));
+                       (1UL << OC_SALVAPANTALLAS) | (1UL << OC_APAGADO) | (1UL << OC_WIFI_DATOS));
   dibujarPieCentrado(focoConf == OC_VOLVER ? "> volver" : "  volver");
 }
 

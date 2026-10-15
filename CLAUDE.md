@@ -60,7 +60,9 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   NTP solo si la hora no viene del GPS.
 - GPS (opcional, AUSENTE si no contesta al arrancar): duerme por UBX; se despierta al arrancar, cada 10 min y en
   STATUS > GPS; antes del deep sleep, PMREQ y GPIO39 retenido en ALTO. Historial de presión a nivel del mar con su altitud.
-- WiFi solo en PROP y POTA (y SOL si falta la hora); el portal (`Chispas-XXXX`, clave `chispas73`) no se abre solo.
+- WiFi de PROP, POTA y SOL según CONFIG > **WIFI DATOS** (15 oct): `MANUAL` (defecto) solo con ACTUALIZAR, con aviso
+  a pantalla completa, y se apaga al acabar; `AUTO`, al entrar y con refresco. Las descargas HTTPS bloquean el `loop()`
+  unos segundos (por eso el aviso). El portal (`Chispas-XXXX`, clave `chispas73`) no se abre solo.
 - KEY (GPIO2) solo con `keyHabilitada` (OPERAR y QSO de TRX); corte de seguridad a los 10 s.
 - Amplificador: SD (GPIO38) en ALTO solo en CW, LoRa, TRX y pitido de prueba; en BAJO retenido al dormir.
 - Dormir (deep sleep, despierta con PRG): KEY, Vext, divisor y SD retenidos con `gpio_hold`; se liberan en `setup()`.
@@ -110,8 +112,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 4. OLED negra a veces en la placa 1: **defecto de hardware de esa Heltec** (14 oct: falla desnuda, la placa 2 nunca;
    ver NOTAS); para la placa perforada, la Heltec de la placa 2 o una nueva. Aparcado: detección de USB (probada el 14 oct con 47k/68k → GPIO33:
    funciona, pero sin USB el pin 5V da 1,3 V y quedan 0,7 V, poco margen; si se retoma, GPIO3 con ADC).
-5. **Próxima release:** timeout de la OTA si la descarga no avanza en 20–30 s (14 oct la placa 1 se colgó en el 8 %;
-   con RST y otro intento, bien). Detalle en NOTAS, "Pendiente".
+5. **Próxima release** (sin subir versión aún): WIFI DATOS MANUAL/AUTO (probado en la placa 2) y reinicio de la OTA
+   si la descarga no avanza en 30 s (compila; se probará con esa release). Detalle en NOTAS.
 6. Ahorro de tokens: `/clear` entre tareas y fotos recortadas (extensiones de VS Code revisadas el 13 oct 2026:
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
 

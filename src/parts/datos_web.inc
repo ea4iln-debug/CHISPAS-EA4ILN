@@ -86,6 +86,7 @@ void actualizarSpotsPota() {
   }
   qsort(spotsPota, numSpotsPota, sizeof(SpotPota), compararSpotsRecientePrimero);
   spotsPotaValidos = true;
+  spotsPotaOkMs = millis();
   paginaSpots = 0;
   Serial.printf("[WIFI] POTA: %u SPOTS CW\n", numSpotsPota);
 }
@@ -94,33 +95,70 @@ bool tocaDescargarParques();  // Definidas con los parques POTA
 void descargarParques();
 
 /**
- * Opcion "actualizar": con WiFi descarga ya; sin WiFi intenta conectar.
+ * Opcion "actualizar" (y REINTENTAR) de PROP y POTA: descarga en cuanto haya conexion; sin WiFi lo enciende.
+ * En MANUAL, al acabar se apaga (terminarPeticionWifi)
  */
 void pedirActualizacionWifi() {
-  if (estadoWifi == WIFI_CONECTADO) forzarActualizacion = true;
-  else if (estadoWifi == WIFI_APAGADO) encenderWifi();
+  forzarActualizacion = true;
+  wifiPorPeticion = true;
+  if (estadoWifi == WIFI_APAGADO || estadoWifi == WIFI_SIN_CONEXION) encenderWifi();
+  pantallaPendiente = true;
+}
+
+// Fin de lo pedido con ACTUALIZAR: en MANUAL se apaga el WiFi; en AUTO sigue encendido mientras se este en la pantalla
+void terminarPeticionWifi() {
+  wifiPorPeticion = false;
+  forzarActualizacion = false;
+  if (!wifiAuto && estadoWifi != WIFI_PORTAL && estadoWifi != WIFI_APAGADO) apagarWifi();
+  pantallaPendiente = true;
+}
+
+/**
+ * Aviso a pantalla completa de PROP, POTA y SOL: mientras se descarga (bloquea; tambien en AUTO) y, tras
+ * ACTUALIZAR, mientras conecta o (en SOL) espera la hora del NTP. Con el aviso, atras o pulsar cancela
+ */
+bool avisoWifiVisible() {
+  if (actualizandoWifi) return true;
+  if (!wifiPorPeticion) return false;
+  if (estadoWifi == WIFI_CONECTANDO) return true;
+  return estadoWifi == WIFI_CONECTADO && pantallaActual == PANTALLA_SOL;
+}
+
+// Antes de una descarga (bloquea unos segundos): el aviso se dibuja ya, porque el loop no vuelve hasta que acaba
+void empezarDescarga(const char* aviso) {
+  avisoDescarga = aviso;
+  actualizandoWifi = true;
+  actualizarPantalla();
+}
+
+void terminarDescarga() {
+  actualizandoWifi = false;
+  pantallaPendiente = true;
 }
 
 /**
  * Enciende o apaga el WiFi al entrar o salir de sus pantallas, avanza la conexion o el
- * portal y descarga los datos cuando tocan. La descarga bloquea 1-3 s, pero en estas
- * pantallas no suena CW ni hay recepcion LoRa.
+ * portal y descarga los datos cuando tocan. La descarga bloquea 1-3 s (con aviso en pantalla), pero en
+ * estas pantallas no suena CW ni hay recepcion LoRa.
  */
 void procesarWifi() {
   static uint8_t pantallaAnterior = 0;
-  // PROP y POTA encienden el WiFi al entrar; SOL tambien, pero solo si aun no hay hora (para
-  // sincronizarla por NTP). Si no conecta, su menu ofrece ABRIR WEBCONF y REINTENTAR. En CONF y SOL el WiFi
-  // solo sigue encendido si el portal esta abierto: si se llega con el WiFi conectado (desde PROP o
-  // POTA) se apaga, porque no se usa (eran unos 40 mA de mas, medido).
+  // En AUTO, PROP y POTA encienden el WiFi al entrar; SOL tambien, pero solo si aun no hay hora (para
+  // sincronizarla por NTP). En MANUAL, ninguna: solo ACTUALIZAR. Si no conecta, su menu ofrece ABRIR WEBCONF y
+  // REINTENTAR. En CONF y SOL el WiFi solo sigue encendido si el portal esta abierto: si se llega con el WiFi
+  // conectado (desde PROP o POTA) se apaga, porque no se usa (eran unos 40 mA de mas, medido). Al cambiar de
+  // pantalla se olvida lo pedido con ACTUALIZAR.
   if (pantallaActual != pantallaAnterior) {
     struct tm hora;
     bool solSinHora = pantallaActual == PANTALLA_SOL && !horaLocalValida(hora);
     bool enDatos = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS || solSinHora);
     bool conPortal = estadoWifi == WIFI_PORTAL &&
                      (pantallaActual == PANTALLA_CONFIG || pantallaActual == PANTALLA_SOL);
-    bool usaWifi = enDatos || conPortal;
-    if (enDatos && (estadoWifi == WIFI_APAGADO || estadoWifi == WIFI_SIN_CONEXION)) encenderWifi();
-    if (!usaWifi && estadoWifi != WIFI_APAGADO) apagarWifi();
+    bool encender = wifiAuto && enDatos;
+    wifiPorPeticion = false;
+    forzarActualizacion = false;
+    if (encender && (estadoWifi == WIFI_APAGADO || estadoWifi == WIFI_SIN_CONEXION)) encenderWifi();
+    if (!encender && !conPortal && estadoWifi != WIFI_APAGADO) apagarWifi();
     pantallaAnterior = pantallaActual;
   }
 
@@ -156,30 +194,41 @@ void procesarWifi() {
         pantallaPendiente = true;
         break;
       }
-      bool tocaPropagacion = pantallaActual == PANTALLA_PROPAGACION &&
-          (forzarActualizacion || propagacion.intentoMs == 0 ||
-           millis() - propagacion.intentoMs > REFRESCO_PROPAGACION_MS);
-      bool tocaPota = pantallaActual == PANTALLA_SPOTS &&
-          (forzarActualizacion || spotsPotaIntentoMs == 0 ||
-           millis() - spotsPotaIntentoMs > REFRESCO_POTA_MS);
+      // En MANUAL solo se descarga lo pedido; en AUTO, ademas, la primera vez y al cumplirse el refresco
+      bool enProp = pantallaActual == PANTALLA_PROPAGACION;
+      bool enPota = pantallaActual == PANTALLA_SPOTS;
+      bool tocaPropagacion = enProp &&
+          (forzarActualizacion || (wifiAuto && (propagacion.intentoMs == 0 ||
+                                                millis() - propagacion.intentoMs > REFRESCO_PROPAGACION_MS)));
+      bool tocaPota = enPota &&
+          (forzarActualizacion || (wifiAuto && (spotsPotaIntentoMs == 0 ||
+                                                millis() - spotsPotaIntentoMs > REFRESCO_POTA_MS)));
       if (tocaPropagacion || tocaPota) {
         forzarActualizacion = false;
-        actualizandoWifi = true;
-        actualizarPantalla();
+        empezarDescarga("DESCARGANDO...");
         if (tocaPropagacion) actualizarPropagacion();
         if (tocaPota) actualizarSpotsPota();
-        actualizandoWifi = false;
-        pantallaPendiente = true;
-      } else if (pantallaActual == PANTALLA_SPOTS && tocaDescargarParques()) {
+        terminarDescarga();
+      } else if (enPota && tocaDescargarParques()) {
         // Lista de parques: si no la hay o tiene mas de un mes (despues de los spots, ya con la hora del NTP)
+        empezarDescarga("BAJANDO PARQUES...");
         descargarParques();
-        pantallaPendiente = true;
+        terminarDescarga();
       }
       // Aviso de version nueva: una vez al dia, aprovechando el WiFi de PROP o POTA
-      bool enDatos = pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS;
-      if (enDatos && !actualizandoWifi && (!otaComprobada || millis() - otaComprobadaMs > OTA_COMPROBACION_MS)) {
+      if ((enProp || enPota) && (!otaComprobada || millis() - otaComprobadaMs > OTA_COMPROBACION_MS)) {
+        empezarDescarga("BUSCANDO FW NUEVO...");
         buscarActualizacion();
-        pantallaPendiente = true;
+        terminarDescarga();
+      }
+      // ACTUALIZAR terminado: nada mas que bajar y la hora del NTP recibida (o ya no hace falta, o se acabo la
+      // espera; en SOL, que solo pide la hora, se espera siempre a ella)
+      if (wifiPorPeticion) {
+        bool pendiente = forzarActualizacion || (enPota && tocaDescargarParques());
+        bool quiereNtp = pantallaActual == PANTALLA_SOL || fuenteHoraActual() < HORA_WIFI;
+        bool esperaNtp = quiereNtp && fuenteHoraActual() != HORA_GPS && !ntpRecibido &&
+                         millis() - esperaNtpDesdeMs < WIFI_ESPERA_NTP_MS;
+        if (!pendiente && !esperaNtp) terminarPeticionWifi();
       }
       break;
     }

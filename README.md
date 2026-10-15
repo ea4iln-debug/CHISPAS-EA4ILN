@@ -204,8 +204,9 @@ Con una red WiFi guardada (ver [Configuración](#configuración)):
 2. Si hay una más nueva, la enseña (`NUEVA v1.01b`) y pide confirmar con **instalar**. Descarga el binario de su
    placa (con o sin encoder), lo instala en la otra partición de la flash y reinicia. Si algo falla, la versión
    instalada sigue intacta.
-3. Además, cuando Chispas ya tiene el WiFi encendido en PROP. o POTA, mira una vez al día si hay versión nueva y lo
+3. Además, cuando Chispas enciende el WiFi en PROP. o POTA, mira una vez al día si hay versión nueva y lo
    avisa en el menú (`FW NUEVO: v1.01b`).
+4. Si la descarga se queda parada 30 s, Chispas se reinicia y sigue con la versión que tenía.
 
 Con batería por debajo del 30 % (y sin USB) no instala, para que no se quede a medias. La conexión con GitHub va
 cifrada y se comprueba con los certificados raíz de [`include/certificados_github.h`](include/certificados_github.h).
@@ -325,6 +326,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | **ACELERACION** | Salto de los valores al girar rápido: `NO` o x2 a x5 |
 | **SALVAPANTALLAS** | Tiempo sin uso antes de que salga la cara: `NO`, 15 s, 30 s, 1, 2 o 5 min |
 | **APAGADO** | Minutos sin uso antes de dormir: nunca, 5, 10, 15, 30, 60 o 120 (nunca en CW, LoRa ni TRX) |
+| **WIFI DATOS** | `MANUAL` (por defecto): PROP., POTA y SOL solo encienden el WiFi al pulsar **ACTUALIZAR** (`CONECTANDO WIFI...`, `DESCARGANDO...`; mientras conecta, **cancelar**) y lo apagan al terminar; los datos se quedan hasta la siguiente vez (en los spots, su antigüedad en el pie). `AUTO`: se conecta al entrar en esas pantallas y refresca solo (POTA cada 2 min, PROP. cada hora) |
 | **WEBCONF** | Abre el portal WiFi (ver abajo) |
 | **ACTUALIZAR FW** | Actualización por OTA (ver [arriba](#actualizar-por-wifi-ota)) |
 | **DEPURACION** | Mensajes y órdenes por serie para pruebas: órdenes serie, diagnóstico, decodificador y retraso CW (todo en `NO` por defecto) |

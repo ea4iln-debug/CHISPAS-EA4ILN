@@ -24,8 +24,10 @@ FuenteHora fuenteHoraActual() {
 }
 
 // Llamada por el NTP (desde la tarea de red) al sincronizar
+volatile bool ntpRecibido = false;  // Desde la ultima conexion (lo usa el WiFi en MANUAL para apagarse)
 void horaSincronizadaNtp(struct timeval* tv) {
   fuenteHora = HORA_WIFI;
+  ntpRecibido = true;
 }
 
 // Pone el reloj del sistema (UTC) si la fuente lo permite. Con la hora del GPS se para el NTP (menos exacto)

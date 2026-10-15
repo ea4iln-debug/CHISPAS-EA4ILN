@@ -301,6 +301,29 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   HTTPS con `setInsecure()`. PROP: hamqsl.com cada 60 min (su autor pide no consultar el XML más de una vez por hora; desde la v0.9c), dos páginas (índices y condiciones por banda). POTA: spots
   solo CW cada 2 min (sin límites publicados: con moderación); línea de spot en 21 caracteres (referencia entera a la
   derecha; la frecuencia pierde el decimal y luego se recorta el indicativo si no cabe).
+- **WIFI DATOS: MANUAL / AUTO** (15 oct 2026, sin versión nueva; probado en la placa 2, en la placa perforada).
+  Motivo: con la placa perforada el usuario notó que el encoder "se saltaba pasos, como si la placa se congelara
+  unos segundos". Por serie coincidía con `[WIFI] POTA: N SPOTS CW`: `descargarUrl()` (HTTPS) bloquea el `loop()`
+  ~3 s; el encoder va por interrupción y no pierde pasos, pero se aplican de golpe al acabar. En POTA pasaba cada
+  2 min y además el WiFi se encendía solo con pasar por PROP o POTA. Descartado (por ahora) mover las descargas a
+  otra tarea: datos compartidos con la pantalla, salir a mitad, LittleFS de los parques.
+  Ahora, CONF > CONFIG > **WIFI DATOS** (`wifiAuto`, NVS `chispas`/`wifiauto`, por defecto `false` = MANUAL):
+  - **MANUAL:** entrar en PROP, POTA o SOL no enciende nada. ACTUALIZAR (y REINTENTAR) llama a
+    `pedirActualizacionWifi()` (`forzarActualizacion` + `wifiPorPeticion`); al conectar se descarga, y en POTA
+    también la lista de parques si toca y la comprobación diaria de la OTA; luego, si la hora no viene del GPS ni
+    del NTP (o en SOL siempre), se espera al NTP hasta `WIFI_ESPERA_NTP_MS` (8 s; `ntpRecibido` lo pone
+    `horaSincronizadaNtp()`), y `terminarPeticionWifi()` apaga el WiFi. Desde el portal de PROP/POTA/SOL también
+    cuenta como petición. Cambiar de pantalla la olvida.
+  - **AUTO:** como antes (encender al entrar, refresco de POTA 2 min y de PROP 60 min, apagar al salir).
+  - **Aviso a pantalla completa** (`avisoWifiVisible()` / `dibujarAvisoWifi()`): título del menú y
+    `CONECTANDO WIFI...` (tras ACTUALIZAR), `DESCARGANDO...`, `BAJANDO PARQUES...`, `BUSCANDO FW NUEVO...` (en los dos
+    modos; `empezarDescarga()` lo dibuja antes de bloquear) o `SINCRONIZANDO HORA...` (SOL). Mientras conecta o
+    espera la hora, `> cancelar` en el pie: atrás o pulsar → `terminarPeticionWifi()`.
+  - Páginas sin datos en MANUAL: `ACTUALIZAR EN EL MENU` (SOL sin hora: `ACTUALIZAR O WEBCONF`). Pie de VER SPOTS
+    con la antigüedad (`AHORA`, `12MIN`, `3H`; `spotsPotaOkMs`) en lugar de "SPOTS".
+  **Probado (placa 2, 15 oct 2026):** pasar por PROP/POTA sin encender el WiFi; POTA > ACTUALIZAR 9 s en total
+  (conectar 3 s, 9 spots, comprobación de la OTA 4 s, apagado); PROP > ACTUALIZAR 6 s; cancelar mientras conecta;
+  AUTO conecta al entrar en POTA. Avisos y pie de antigüedad vistos por el usuario. RAM 17,1 %, flash 38,6 %.
 - **Parques POTA cercanos** (14 oct 2026, sin versión nueva; `src/parts/parques.inc`; **probado en la placa 1**).
   Menú de POTA (título ` POTA `) con tres opciones: `< VER SPOTS >`, `< VER PARQUES >` y `< ACTUALIZAR >` (sin
   conexión, la primera y la última pasan a ABRIR WEBCONF y REINTENTAR; VER PARQUES no cambia: la lista está en la
@@ -573,7 +596,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
      perforada queda con 47k/68k. (Nota del montaje: en la protoboard de la placa 1 el carril de masa está partido
      en el centro.)
 4. QSO LIBRE: probar en los dos sentidos cuando la placa 2 tenga palas. A estudiar, no prioritarios: audio I2S y GPS ATGM336H en lugar del NEO-6M (ver `ROADMAP.md`).
-5. **OTA: timeout de descarga sin avance** (para la próxima release). 14 oct 2026: la placa 1 se quedó parada en
+5. **OTA: timeout de descarga sin avance** — hecho el 15 oct 2026 (compila; **sin probar**: necesita una release
+   nueva). `instalarActualizacion()` arranca un `esp_timer` de 1 s (`vigilarOta()`); `onProgress` apunta
+   `otaUltimoAvanceMs` y, si pasan `OTA_SIN_AVANCE_MS` (30 s) sin avance, `esp_restart()`: la partición a medias no
+   se activa y arranca la versión de antes (se descartó `cliente.stop()` desde otra tarea: no es seguro con TLS).
+   Antecedente: 14 oct 2026: la placa 1 se quedó parada en
    el 8 % al actualizar a la v1.09b (la placa 2, bien con la misma release); con RST arrancó en la v1.08b y al
    repetir actualizó. Causa razonada (core 2.0.17): si la conexión se corta, `Update.writeStream()` reintenta
    `readBytes()` hasta 300 veces y cada lectura espera el timeout del cliente (8 s de `HTTPUpdate`), así que

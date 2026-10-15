@@ -116,6 +116,21 @@ bool buscarActualizacion() {
 
 void actualizarPantalla();  // Definida con el resto del dibujo
 
+// Vigilancia de la descarga: si en OTA_SIN_AVANCE_MS no llega nada, se reinicia. httpUpdate no se puede cortar
+// desde fuera y, con la conexion parada, Update.writeStream reintenta hasta 300 veces el tiempo de espera del
+// cliente (se quedo asi en el 8 % el 14 oct 2026). La particion a medio escribir no se activa: arranca la de antes
+#define OTA_SIN_AVANCE_MS 30000
+volatile unsigned long otaUltimoAvanceMs = 0;
+esp_timer_handle_t temporizadorOta = nullptr;
+
+void vigilarOta(void*) {
+  if (millis() - otaUltimoAvanceMs > OTA_SIN_AVANCE_MS) {
+    Serial.printf("[OTA] SIN AVANCE EN %u S (%u %%): REINICIANDO\n", OTA_SIN_AVANCE_MS / 1000, otaProgreso);
+    Serial.flush();
+    esp_restart();
+  }
+}
+
 /**
  * Descarga e instala el binario (sigue la redireccion de GitHub a su servidor de descargas). La pantalla
  * enseña el progreso; al terminar, reinicia. Si falla, la version instalada sigue intacta
@@ -137,7 +152,16 @@ void instalarActualizacion() {
   cliente.setCACert(CERTIFICADOS_GITHUB);
   httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   httpUpdate.rebootOnUpdate(false);
+  otaUltimoAvanceMs = millis();
+  if (temporizadorOta == nullptr) {
+    esp_timer_create_args_t args = {};
+    args.callback = vigilarOta;
+    args.name = "ota";
+    esp_timer_create(&args, &temporizadorOta);
+  }
+  esp_timer_start_periodic(temporizadorOta, 1000000);  // Cada segundo
   httpUpdate.onProgress([](int hecho, int total) {
+    otaUltimoAvanceMs = millis();
     uint8_t pct = total > 0 ? (uint8_t)((int64_t)hecho * 100 / total) : 0;
     if (pct != otaProgreso) {
       otaProgreso = pct;
@@ -145,6 +169,7 @@ void instalarActualizacion() {
     }
   });
   t_httpUpdate_return r = httpUpdate.update(cliente, otaUrlBinario);
+  esp_timer_stop(temporizadorOta);
   if (r == HTTP_UPDATE_OK) {
     estadoOta = OTA_HECHO;
     actualizarPantalla();

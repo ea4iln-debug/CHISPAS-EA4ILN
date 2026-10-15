@@ -50,7 +50,7 @@ unsigned long parquesIntentoMs = 0;      // Ultima descarga fallida; 0 = ninguna
 uint16_t parquesDescargados = 0;         // Progreso, para la pantalla
 bool descargandoParques = false;
 
-void dibujarSinDatos(const String& aviso);  // Definida con PROP y POTA
+void dibujarSinDatos(const String& aviso, bool sinDatos = false);  // Definida con PROP y POTA
 bool buscarParquesCercanos();               // Definida mas abajo
 
 // Monta LittleFS la primera vez que hace falta (la primera de todas formatea la particion, 1-2 s)

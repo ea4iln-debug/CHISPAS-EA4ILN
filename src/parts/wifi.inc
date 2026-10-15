@@ -6,8 +6,10 @@
 // ============================================================================
 // WIFI: HORA NTP, PROPAGACION (hamqsl.com) Y SPOTS POTA
 // ============================================================================
-// El WiFi solo se enciende en PROP y POTA, en SOL sin hora, para el portal (webconf) y para ACTUALIZAR FW, y se
-// apaga al salir. Si no hay red guardada o no conecta, PROP, POTA y SOL lo dicen y ofrecen abrir el portal
+// CONF > CONFIG > WIFI DATOS: en MANUAL (por defecto, desde el 15 oct 2026) el WiFi de PROP, POTA y SOL solo se
+// enciende con ACTUALIZAR, descarga (o sincroniza la hora) y se apaga; en AUTO, como antes: se enciende al entrar en
+// PROP y POTA (y en SOL sin hora), descarga cuando toca y se apaga al salir. Ademas, el portal (webconf) y
+// ACTUALIZAR FW. Las descargas bloquean unos segundos: se avisa en pantalla. Si no hay red guardada o no conecta, PROP, POTA y SOL lo dicen y ofrecen abrir el portal
 // (WiFiManager), donde se elige la red desde el movil; queda guardada en la NVS del WiFi.
 // SOTA no se incluye: sus condiciones de uso exigen aprobacion previa para software generado por IA.
 #define WIFI_TIMEOUT_CONEXION_MS 15000
@@ -28,8 +30,13 @@ EstadoWifi estadoWifi = WIFI_APAGADO;
 unsigned long inicioConexionWifi = 0;
 WiFiManager wm;
 char nombrePortal[16] = "";
-bool actualizandoWifi = false;     // Se esta descargando: la pantalla muestra "ACTUALIZANDO..."
+bool actualizandoWifi = false;     // Se esta descargando (bloquea): la pantalla muestra avisoDescarga
+const char* avisoDescarga = "";
 bool forzarActualizacion = false;  // Pedido con la opcion "actualizar"
+bool wifiAuto = false;             // CONFIG > WIFI DATOS (NVS "wifiauto"): false = MANUAL
+bool wifiPorPeticion = false;      // ACTUALIZAR en curso (conectar, descargar, hora): al acabar, en MANUAL se apaga
+unsigned long esperaNtpDesdeMs = 0;
+#define WIFI_ESPERA_NTP_MS 8000    // Tras conectar, lo que se espera a la hora del NTP antes de apagar (MANUAL)
 
 struct DatosPropagacion {
   bool validos;
@@ -53,6 +60,7 @@ SpotPota spotsPota[MAX_SPOTS_POTA];
 uint8_t numSpotsPota = 0;
 bool spotsPotaValidos = false;
 unsigned long spotsPotaIntentoMs = 0;  // 0 = nunca
+unsigned long spotsPotaOkMs = 0;       // Ultima descarga buena (en las paginas sale su antiguedad)
 uint8_t paginaSpots = 0;
 
 // PROP, POTA y SOL: menu (VER DATOS y ACTUALIZAR; sin conexion, ABRIR WEBCONF y REINTENTAR), paginas que se
@@ -78,10 +86,10 @@ enum SubConf { CONF_MENU, CONF_CONFIG, CONF_STATUS, CONF_PORTAL, CONF_EDITOR, CO
 SubConf subConf = CONF_MENU;
 // Lista de CONFIG (4 a la vista; "volver" en el pie)
 // Por bloques: estacion (ID, LOCATOR, ALTITUD, HORA, RELOJ), sonido y manejo (TONO, ACELERACION), pantalla y
-// energia (SALVAPANTALLAS, APAGADO) y sistema (WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA)
+// energia (SALVAPANTALLAS, APAGADO, WIFI DATOS) y sistema (WEBCONF, ACTUALIZAR FW, DEPURACION, FABRICA)
 enum OpcionConf { OC_ID, OC_LOCATOR, OC_ALTITUD, OC_HORA, OC_RELOJ, OC_TONO, OC_ACELERACION, OC_SALVAPANTALLAS,
-                  OC_APAGADO, OC_WEBCONF, OC_ACTUALIZAR, OC_DEPURACION, OC_FABRICA, OC_VOLVER };
-#define N_OPCIONES_CONF 14
+                  OC_APAGADO, OC_WIFI_DATOS, OC_WEBCONF, OC_ACTUALIZAR, OC_DEPURACION, OC_FABRICA, OC_VOLVER };
+#define N_OPCIONES_CONF 15
 uint8_t focoConf = 0;
 // ALTITUD (con el BME280): al pulsar se edita partiendo de la altitud actual; al pulsar otra vez se calcula el QNH
 #define ALTITUD_MIN_M -400
@@ -421,6 +429,8 @@ void quedarseSinConexion() {
   WiFi.mode(WIFI_OFF);
   cpuSegunWifi(false);
   estadoWifi = WIFI_SIN_CONEXION;
+  wifiPorPeticion = false;
+  forzarActualizacion = false;
   // PROP, POTA y SOL vuelven a su menu, con el foco en "ABRIR WEBCONF"
   subDatos = DATOS_MENU;
   opcionPantallaProp = opcionPantallaSpots = opcionPantallaSol = 0;
@@ -462,6 +472,8 @@ void wifiConectado() {
   estadoWifi = WIFI_CONECTADO;
   Serial.print(F("[WIFI] CONECTADO, IP "));
   Serial.println(WiFi.localIP());
+  ntpRecibido = false;
+  esperaNtpDesdeMs = millis();
   iniciarNtp();
   pantallaPendiente = true;
 }

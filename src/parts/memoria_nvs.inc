@@ -10,6 +10,7 @@ extern uint8_t apagadoAutoMin;  // Minutos del apagado automatico; definida con 
 extern uint8_t aceleracionGiro;  // Aceleracion del encoder; definida con las opciones de CONF
 extern uint8_t caraEsperaIdx;   // Tiempo del salvapantallas (indice); definida con las opciones de CONF
 extern const uint8_t N_OPCIONES_CARA;
+extern bool wifiAuto;           // WiFi de PROP, POTA y SOL al entrar (AUTO) o solo con ACTUALIZAR; definida con el WiFi
 
 void cargarDatosNVS() {
   prefs.begin(NVS_ENTRENADOR, false);  // Lectura y escritura: en el primer arranque crea el espacio (sin errores)
@@ -44,6 +45,7 @@ void cargarDatosNVS() {
   if (aceleracionGiro == 1 || aceleracionGiro > 5) aceleracionGiro = 5;
   frecTonoHz = constrain(prefs.getUShort("tono", FREC_AUDIO_HZ), TONO_MIN_HZ, TONO_MAX_HZ);
   depuracion = prefs.getUChar("depu", 0) & (DEPU_SERIE | DEPU_DIAG | DEPU_DECOD | DEPU_CW);
+  wifiAuto = prefs.getBool("wifiauto", false);
 
   for (int i = 0; i < 40; i++) {
     String kComp = "c_" + String(i);
@@ -85,6 +87,12 @@ void guardarUltimaConfiguracionNVS() {
 void guardarApagadoNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("apag", apagadoAutoMin);
+  prefs.end();
+}
+
+void guardarWifiAutoNVS() {
+  prefs.begin(NVS_ENTRENADOR, false);
+  prefs.putBool("wifiauto", wifiAuto);
   prefs.end();
 }
 

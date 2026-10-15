@@ -183,14 +183,21 @@ void dibujarPaginaAmbiente() {
 }
 
 // SOL: "actualizar" despierta el GPS (si lo hay) y, si la hora no viene de el, la sincroniza por NTP (enciende el
-// WiFi si hace falta)
+// WiFi si hace falta; en MANUAL se apaga al llegar la hora o a los WIFI_ESPERA_NTP_MS)
 void actualizarHoraSol() {
   if (gpsDetectado()) {
     despertarGps(GPS_TOPE_PERIODICO_MS, "SOL");
     if (fuenteHoraActual() == HORA_GPS) return;
   }
-  if (estadoWifi == WIFI_CONECTADO) iniciarNtp();
-  else if (estadoWifi == WIFI_APAGADO) encenderWifi();
+  wifiPorPeticion = true;
+  if (estadoWifi == WIFI_CONECTADO) {
+    ntpRecibido = false;
+    esperaNtpDesdeMs = millis();
+    iniciarNtp();
+  } else if (estadoWifi == WIFI_APAGADO || estadoWifi == WIFI_SIN_CONEXION) {
+    encenderWifi();
+  }
+  pantallaPendiente = true;
 }
 
 void renderizarPantallaSol() {
@@ -211,6 +218,10 @@ void renderizarPantallaSol() {
     else estado = "LOCATOR " + String(locatorEstacion);
   }
 
+  if (avisoWifiVisible()) {
+    dibujarAvisoWifi(" SOL Y LINEA GRIS ");
+    return;
+  }
   if (subDatos == DATOS_PORTAL) {
     dibujarVistaPortal(focoPortalDatos);
     return;
@@ -231,7 +242,7 @@ void renderizarPantallaSol() {
     dibujarSinDatos(estado);
     if (estadoWifi != WIFI_CONECTADO && estadoWifi != WIFI_CONECTANDO) {
       display.setCursor(0, 32);
-      display.print(F("PONLA EN WEBCONF"));
+      display.print(wifiAuto ? F("PONLA EN WEBCONF") : F("ACTUALIZAR O WEBCONF"));
     }
   } else {
     time_t ahora = time(nullptr);
