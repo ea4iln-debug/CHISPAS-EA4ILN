@@ -154,8 +154,9 @@ resistencia("R11", "47 kΩ", (3, 20), (7, 20), "5V", "USB_DET", "reserva: detecc
 resistencia("R12", "68 kΩ", (2, 22), (6, 22), "GND", "USB_DET", "reserva: detección de USB", reserva="USB")
 
 # --- Derecha: encoder y GPS ---
-tira("P1", "encoder KY-040 (CLK, SW, DT, +, GND)", 20, 8, ["CLK", "SW", "DT", "+", "GND"],
-     ["ENC_CLK", "ENC_SW", "ENC_DT", "3V3", "GND"])
+# P1 en el orden del KY-040 (cable recto). La placa 1 se monto antes con CLK, SW, DT (cable con DT y SW cruzados)
+tira("P1", "encoder KY-040 (CLK, DT, SW, +, GND)", 20, 8, ["CLK", "DT", "SW", "+", "GND"],
+     ["ENC_CLK", "ENC_DT", "ENC_SW", "3V3", "GND"])
 tira("P9", "GPS (VCC, RX, TX, GND)", 20, 14, ["VCC", "RX", "TX", "GND"], ["3V3", "GPS_RX", "GPS_TX", "GND"])
 
 # Zonas
@@ -228,8 +229,7 @@ PUENTES = [
     ("KEY_C", [(0, 15), (1, 15)]),
     # Encoder y GPS
     ("ENC_CLK", tramo(h2(18), (20, heltec_y(18)))),
-    ("ENC_SW", tramo(h2(17), (20, heltec_y(17)))),
-    ("ENC_DT", tramo(h2(14), (19, heltec_y(14)), (19, 10), (20, 10))),
+    ("ENC_DT", tramo(h2(14), (19, heltec_y(14)), (19, 9), (20, 9))),
     ("GPS_TX", tramo(h2(13), (19, heltec_y(13)), (19, 16), (20, 16))),
     # Reserva USB (solo al montar R11 y R12)
     ("USB_DET", tramo((7, 20), (7, 22), (6, 22)), "USB"),
@@ -258,6 +258,7 @@ CABLES = [
     ("SDA", h3(8), (0, 25)),
     ("TN", (16, 1), (0, 17)),
     ("BIAS", (2, 13), (3, 8)),
+    ("ENC_SW", h2(17), (20, 10)),   # Cruza el puente de DT: P1 en el orden del KY-040
 ]
 # Cables de las reservas (letras en el plano): red, desde, hasta, reserva
 CABLES_RESERVA = [
@@ -715,7 +716,7 @@ th { background: #eef4ee; }
         filas_bom.append(f"<tr><td><b>{p.ref}</b></td><td>{esc(p.valor)}</td><td>{', '.join(f'{n}: {hueco(x, y)}' for n, x, y, r in p.pines)}</td>"
                          f"<td>{esc(p.nota)}</td></tr>")
     conectores = [
-        ("P1", "Encoder KY-040", "CLK, DT, SW, +, GND", "Mismo orden que el módulo: cable recto de 5 hilos."),
+        ("P1", "Encoder KY-040", "CLK, DT, SW, +, GND", "Mismo orden que el módulo: cable recto de 5 hilos. (Placa 1, de antes: P1 en CLK, SW, DT; cable con DT y SW cruzados.)"),
         ("P2", "Jack de palas J1", "DAH, DIT, GND", "DIT = punta, DAH = anillo, GND = malla (módulo: L, R, G)."),
         ("P3", "Jack de auriculares J2 (5 patillas)", "S, TN, T, R", "TN: contacto que se abre al meter la clavija. RN libre."),
         ("P4", "Potenciómetro de volumen RV1", "3, 2, 1", "Pata 3 a R1, 2 (cursor) a C1, 1 a masa."),

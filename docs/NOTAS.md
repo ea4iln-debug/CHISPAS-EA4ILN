@@ -646,7 +646,7 @@ el adaptador de 6,35 mm y los opcionales. Valores de la lista sin probar en banc
 | 6 | Entrada del decodificador (ADC1): acoplo 1 µF, polarización 2×10 kΩ, trimmer, 1 kΩ y 2×1N4148 |
 | 7 | Tono CW por PWM: 1 kΩ, potenciómetro de volumen, amplificador PAM8302A con altavoz en TN del jack de auriculares (silencio mecánico) y auriculares con 10 µF y 220 Ω en T y R. **Montado y probado** (el buzzer piezo del principio se descartó: sonaba muy bajo) |
 | 38 | SD (apagado) del amplificador PAM8302A (`AMP_SD_PIN`). BAJO = apagado. Amplificador montado y control de SD probado (v1.04b) |
-| 19 / 20 / 48 | Encoder KY-040 CLK / SW / DT. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas). El 13 oct 2026 se cambiaron SW (antes 48) y DT (antes 20): SW en un pin RTC despierta del deep sleep (ext1, pull-up del RTC; PRG sigue en ext0) y GPIO3, el único libre con ADC y RTC, queda de reserva. La ISR lee DT de `GPIO_IN1_REG`. En la placa perforada, P1 pasa a CLK, SW, DT, +, GND. **Probado en la placa 1** (13 oct 2026): giro con aceleración, pulsación corta y larga, y despertar con el eje y con PRG |
+| 19 / 20 / 48 | Encoder KY-040 CLK / SW / DT. **Montado y probado** (19/20 son USB D−/D+ del S3 pero funcionan como entradas). El 13 oct 2026 se cambiaron SW (antes 48) y DT (antes 20): SW en un pin RTC despierta del deep sleep (ext1, pull-up del RTC; PRG sigue en ext0) y GPIO3, el único libre con ADC y RTC, queda de reserva. La ISR lee DT de `GPIO_IN1_REG`. En la placa perforada, P1 va en el orden del KY-040 (CLK, DT, SW, +, GND; cable recto) desde el 15 oct 2026; la placa 1 se montó antes con CLK, SW, DT (cable con DT y SW cruzados). **Probado en la placa 1** (13 oct 2026): giro con aceleración, pulsación corta y larga, y despertar con el eje y con PRG |
 | 47 / 39 | GPS NEO-6M (GY-GPS6MV2, firmware 7.03, hw 00040007) en UART1 a 9600 bd: 47 recibe su TX (NMEA), 39 va a su RX (UBX). VCC a 3V3, siempre alimentado. **Montado y probado el 13 oct 2026** en la placa 1 con `pruebas/prueba_gps.cpp` (`pio run -e prueba_gps -t upload`; órdenes serie y PRG para dormir/despertar, estado en la OLED): `UBX-RXM-PMREQ` (backup, sin límite) lo duerme (0 bytes) y una ráfaga de 0xFF por su RX lo despierta; con fijo previo vuelve a 6 satélites en segundos. Consumo con medidor USB (resolución 0,01 A, toda la placa, sin batería): 0,13 A buscando, 0,09–0,13 A con fijo (6 satélites), 0,07 A con el GPS dormido (= placa sin GPS): el GPS gasta ~60 mA buscando, 20–60 mA con fijo y, dormido, menos de lo que resuelve el medidor. **Falta medirlo dormido en µA/mA** (polímetro en serie con su VCC) antes de fiarse en deep sleep. Enable con transistor (AO3401A en GPIO3) **descartado el 13 oct 2026** |
 | 3 (libre) | El único libre con ADC1 y RTC: de reserva |
 | 41 / 42 | BME280: I2C 0x76 en Wire1, SDA 41 (J3-8), SCL 42 (J3-7). **Montado y probado** (12 oct 2026, v1.03b) |
@@ -688,6 +688,18 @@ casi todo el giro rápido se perdía. El usuario movió los conectores Dupont de
 sueltos antes de un paso bueno). Causa: **mal contacto en el conector de DT**, no el firmware. El firmware estaba
 bien: la tabla filtra los rebotes y no se pierden eventos (al girar rápido el `loop()` va unos pocos pasos por detrás,
 ~50 ms por paso con la traza, y los entrega todos). Si vuelve a pasar: revisar ese conector (o soldar los cables).
+**Volvió a fallar** (mismo día): con los cables quietos, rachas de `3 >1 >0 >1 >3` (el pulso de DT acaba antes que el
+de CLK) y `3 >1 >3`; a veces también CLK (`3 >2 >3`) y algún detente que se queda en 1 o en 0 en vez de en 3. Prueba
+controlada, 10 clics lentos a cada lado: Inicio con el GPS dormido 20/20, STATUS > GPS (despierto) 19/20, TRX >
+DECODIFICAR (ADC por DMA) 20/20: **ni el GPS ni el decodificador influyen** (la traza ve los pines en la ISR; un
+retraso de software daría `SALTO`, no pulsos de 50–100 ms). Causa probable: contacto intermitente en el camino del
+encoder (contactos del KY-040, Dupont, soldaduras de P1/J2 o la masa, que comparten CLK y DT). Sin resolver: queda
+revisar soldaduras y continuidad (hoja de revisión hecha, no guardada en el repositorio) o probar el encoder de la placa 2.
+**P1 de la placa 1, montada al revés del plano nuevo:** el plano tenía P1 en CLK, SW, DT y la tabla de la página 3
+decía "cable recto" (mal); el usuario lo vio y la montó con **DT y SW cruzados en el cable**. Desde el 15 oct el
+plano pone P1 en el orden del KY-040 (CLK, DT, SW, +, GND: U9, U10, U11) con cable recto: DT llega por T13–T10 a U10
+y SW (GPIO20) va por el cable aislado 15 (S10 → U11). **La placa 1 sigue con el orden viejo**: su cable del encoder
+no es recto.
 
 Plano para montar el prototipo en una placa de pads a doble cara (pedidas de 7×9 cm, 24×30 agujeros; el plano ocupa
 21×26, 53×66 mm): `docs/placa_perforada.pdf` (4 páginas: componentes, soldaduras con puentes y 12 cables numerados,

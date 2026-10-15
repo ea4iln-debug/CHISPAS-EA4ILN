@@ -42,7 +42,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   (driver CP210x).
 - Pruebas con LED, pantalla, monitor serie y audio (altavoz y auriculares).
 - Placa perforada (placa 1) montada completa el 15 oct, con el jack de auriculares: todo bien, circuito correcto.
-  Pasos en falso del encoder (15 oct): mal contacto del Dupont de DT (GPIO48); resuelto moviendo los conectores.
+  **Su P1 (encoder) va CLK, SW, DT** (cable con DT y SW cruzados); el plano, desde el 15 oct, CLK, DT, SW con cable recto.
 
 ## Arquitectura (detalle en NOTAS: "Funciones" y "Manejo")
 - Pantallas `PANTALLA_*`: 1 Inicio, 2 CW, 3 LoRa, 4 TRX, 5 PROP, 6 POTA, 7 Sol, 8 CONF. Cabecera: hora, nombre corto,
@@ -120,6 +120,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
 7. Batería de la placa 1 (perforada): marca 90 % con la carga terminada (15 oct). Comprobar con polímetro si el
    factor 4,9 (calibrado en la otra Heltec) vale para esta; si no, factor por placa según la MAC (ver NOTAS).
+8. Encoder de la placa 1 con pasos en falso a rachas (15 oct): contacto intermitente en DT (a veces CLK); GPS y
+   decodificador descartados por traza. Revisar soldaduras/continuidad de P1, J2-14/18 y la masa, o probar otro KY-040.
 
 ## Decisiones que no hay que deshacer
 - **SOTA: no programar el cliente** (sus condiciones prohíben software generado por IA sin aprobación previa).
