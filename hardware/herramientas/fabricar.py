@@ -21,6 +21,9 @@ PCB = HW / "chispas.kicad_pcb"
 SAL = HW / "fabricacion"
 PLACAS = int(sys.argv[1]) if len(sys.argv) > 1 else 5
 CLI = sorted(glob.glob("C:/Program Files/KiCad/*/bin/kicad-cli.exe"))[-1]
+# Correccion de giro para el CPL por huella (grados que se suman), comprobada en la vista previa de JLCPCB:
+#   D_SOD-123: el pin 1 (catodo) de la pieza de JLCPCB salia en el lado contrario al pad 1 de KiCad (15 oct 2026)
+GIRO_JLC = {"D_SOD-123": 180}
 # Piezas para soldar que no estan en el esquema (por placa)
 EXTRA = [("Zocalo hembra 1x18 2,54 mm (Heltec)", "C2905422", 2)]
 
@@ -83,7 +86,8 @@ with (SAL / "chispas_cpl.csv").open("w", newline="", encoding="utf-8") as fh:
         for ref in sorted(refs, key=orden):
             r = filas_pos[ref]
             w.writerow([ref, f"{float(r['PosX']):.3f}mm", f"{float(r['PosY']):.3f}mm",
-                        "Top" if r["Side"] == "top" else "Bottom", f"{float(r['Rot']) % 360:.0f}"])
+                        "Top" if r["Side"] == "top" else "Bottom",
+                        f"{(float(r['Rot']) + GIRO_JLC.get(r['Package'], 0)) % 360:.0f}"])
 
 with (SAL / "compra_lcsc.csv").open("w", newline="", encoding="utf-8") as fh:
     w = csv.writer(fh)
