@@ -28,11 +28,12 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - OTA: CONF > CONFIG > ACTUALIZAR FW; TLS con `include/certificados_github.h`.
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
-## Estado actual (14 oct 2026)
+## Estado actual (15 oct 2026)
 - **v1.09b** (última release, 14 oct: el reset de fábrica borra también la lista de parques; antes, v1.08b con los
-  parques POTA cercanos, POTA > VER PARQUES) en las dos placas por OTA. Placa 1: protoboard con encoder, palas, KEY, amplificador,
-  BME280 y batería; entorno `heltec_wifi_lora_32_V3`. Placa 2: desnuda, sin encoder; entorno `heltec_sin_encoder`
-  (`-DSIN_ENCODER`), se actualiza por OTA.
+  parques POTA cercanos, POTA > VER PARQUES) en las dos placas. Placa 1: protoboard con encoder, palas, KEY, amplificador,
+  BME280 y batería; entorno `heltec_wifi_lora_32_V3`. Placa 2: **en la placa perforada desde el 15 oct** (montada,
+  todos los módulos probados); ahora también entorno `heltec_wifi_lora_32_V3` (cargada por USB). `heltec_sin_encoder`
+  (`-DSIN_ENCODER`) queda para una Heltec desnuda.
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,
   WiFiManager 2.0.17, ArduinoJson 7. **Un solo `.cpp` en `src/`** (el resto en `src/parts/*.inc`, ver "Código");
   `pio run` compila solo el firmware
@@ -102,9 +103,9 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. Parques POTA cercanos hechos (14 oct; lista de España en LittleFS): falta probarlos con fijo del GPS en la calle.
    Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).
-2. Placa perforada (U1 corregido el 14 oct: punto en E16): Heltec bien orientada (`J3_IZQUIERDA`, 13 oct) y orden de pines de los módulos comprobado (14 oct;
-   P5 del PAM8302A ahora de 5 pines A+, A−, SD, VIN, GND): lista para soldar.
-3. QSO LIBRE en los dos sentidos (cuando la placa 2 tenga palas); pila del motor CW tras Duo; cara de tormenta sin ver
+2. Placa perforada **montada y probada el 15 oct** con la Heltec de la placa 2: encoder, audio, palas, BME280, KEY,
+   decodificador y GPS bien (sin el jack de auriculares el ampli no suena: va por T–TN).
+3. QSO LIBRE en los dos sentidos (la placa 2 ya tiene palas); pila del motor CW tras Duo; cara de tormenta sin ver
    (la de auriculares, vista el 13 oct).
 4. OLED negra a veces en la placa 1: **defecto de hardware de esa Heltec** (14 oct: falla desnuda, la placa 2 nunca;
    ver NOTAS); para la placa perforada, la Heltec de la placa 2 o una nueva. Aparcado: detección de USB (probada el 14 oct con 47k/68k → GPIO33:

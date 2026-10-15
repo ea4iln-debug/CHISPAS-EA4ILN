@@ -119,8 +119,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 
 ## Estado actual (12 oct 2026)
 - **MAC de cada placa** (las dos tienen el mismo CP2102; `pio run -t upload` imprime `MAC: ...`; la skill `placa`
-  la usa para elegir el entorno): placa 1 (encoder, `heltec_wifi_lora_32_V3`): `3c:0f:02:ee:50:74`; placa 2 (sin
-  encoder, `heltec_sin_encoder`): `3c:0f:02:ee:08:c0`.
+  la usa para elegir el entorno): placa 1 (protoboard, encoder, `heltec_wifi_lora_32_V3`): `3c:0f:02:ee:50:74`;
+  placa 2 (**en la placa perforada desde el 15 oct 2026**, con encoder, `heltec_wifi_lora_32_V3`; antes desnuda con
+  `heltec_sin_encoder`): `3c:0f:02:ee:08:c0`. Por OTA cada placa baja el `.bin` de su entorno (el `-sin-encoder` solo
+  si lleva `SIN_ENCODER`), así que la placa 2 ya seguirá con el de encoder.
 - Firmware: `src/main.cpp` **v1.09b** (el reset de fábrica borra también `/parques.bin`; release del 14 oct 2026,
   probado antes por USB en la placa 2; instalada por OTA en las dos placas el 14 oct; en la placa 1 la primera
   descarga se colgó en el 8 % y la segunda fue bien, ver "Pendiente"). v1.08b (parques POTA cercanos, POTA > VER PARQUES; release del 14 oct 2026 con
@@ -626,7 +628,17 @@ imprime con Edge sin interfaz: `msedge --headless --no-pdf-header-footer --print
 con `C:\Program Files\Google\Chrome\Application\chrome.exe`). El script recibe la ruta del HTML como argumento. Las hojas
 tienen altura fija y ocultan lo que sobra: tras cambios grandes, revisar el PDF (no basta con el HTML en pantalla). Si cambia algún pin, actualizar el script y regenerar el PDF.
 
-## Placa perforada (12 oct 2026, sin montar)
+## Placa perforada (12 oct 2026; montada y probada el 15 oct 2026)
+**15 oct 2026: montada y funcionando.** El usuario hizo las comprobaciones de la página 4 del PDF y pinchó la Heltec
+de la placa 2: arrancó bien. Se le cargó por USB la v1.09b del entorno con encoder (`heltec_wifi_lora_32_V3`; los
+pines del encoder llevan pull-up interno, así que sin el encoder montado no se dispara nada) y se fueron
+conectando los módulos uno a uno, todos bien: encoder (giro, eje, PRG atrás, despertar con el eje en GPIO20),
+amplificador + altavoz + RV1 + auriculares (el altavoz calla al meter la clavija), palas (TX LIBRE), BME280
+(STATUS > SENSOR), KEY (polímetro en P6 con el tune de TRX > OPERAR y con las palas), decodificador (audio Morse en
+J3, TRX > DECODIFICAR) y GPS. Notas del montaje: **sin el jack de auriculares en P3 el amplificador no suena** (A+
+recibe la señal por el contacto T–TN del jack; para probar sin jack, puente T–TN). RV1: patas 1-2-3 de izquierda a
+derecha con el eje hacia uno y las patas abajo (3 a R1, 2 a C1, 1 a masa).
+
 Plano para montar el prototipo en una placa de pads a doble cara (pedidas de 7×9 cm, 24×30 agujeros; el plano ocupa
 21×26, 53×66 mm): `docs/placa_perforada.pdf` (4 páginas: componentes, soldaduras con puentes y 12 cables numerados,
 piezas y conectores, montaje), generado con `docs/gen_placa.py` (`python gen_placa.py salida.html` y luego Chrome
