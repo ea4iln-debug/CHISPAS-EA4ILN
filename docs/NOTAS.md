@@ -109,8 +109,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   entero borra la NVS; por trozos se conserva (y el LittleFS de parques), salvo que se marque borrar en el diálogo
   (`new_install_prompt_erase`). La app partida es idéntica byte a byte a `chispas-1.20.bin`. Probar en local:
   `python web/preparar.py dist/1.20/chispas-1.20-usb.bin 1.20 .pio/web` y `python -m http.server -d .pio/web`
-  (Web Serial funciona en `localhost`). Primer despliegue bien (manifiesto 1.20 y binarios servidos); **sin probar aún
-  la grabación en una placa**. `publicar.sh` no cambia.
+  (Web Serial funciona en `localhost`). Primer despliegue bien (manifiesto 1.20 y binarios servidos).
+  `publicar.sh` no cambia. Probada en la placa 1 el 16 oct 2026: instala bien. Ese día, aspecto nuevo al estilo del flasher de Meshtastic: oscura, OLED simulada con 8 capturas reales que van pasando, "CHISPAS" en Morse, pasos, funciones y ayuda (Space Grotesk y JetBrains Mono de Google Fonts).
 - **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0) y
   sesión iniciada (`gh auth login`, cuenta ea4iln-debug, HTTPS, token en el llavero de Windows). Desde entonces ya no hace falta la vía de la API REST.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >

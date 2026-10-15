@@ -54,7 +54,7 @@ def main():
 
     shutil.copy(RAIZ / "web" / "index.html", salida)
     (salida / "img").mkdir()
-    for img in ("inicio.png", "cara.png"):
+    for img in ("inicio.png", "cara.png", "koch.png", "trx.png", "prop.png", "pota.png", "sol.png", "lora.png"):
         shutil.copy(RAIZ / "docs" / "img" / img, salida / "img")
     shutil.copy(RAIZ / "docs" / "LICENCIAS_TERCEROS.txt", salida)
     print(f"Web de Chispas {version} en {salida}")
