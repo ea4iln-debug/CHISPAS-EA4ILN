@@ -96,6 +96,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   **Primera release completa con `publicar.sh`: v1.07b, 14 oct 2026** (los tres pasos sin problemas). v1.08b y v1.09b, 14 oct 2026: igual. **v1.10 (primera final, no prerelease), 15 oct 2026**, con `publicar.sh` sin
   problemas: WIFI DATOS MANUAL/AUTO, reinicio de la OTA sin avance; **última con binario `sin-encoder`** (desde la
   1.11 no se compila ni se publica). https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.10
+  **v1.20 (final), 16 oct 2026**: sin la variante sin encoder (solo `chispas-1.20.bin` y `-usb.bin`) y batería con
+  el factor 4,985. Antes de publicar, cargada por USB en la placa 1 (perforada): encoder, topes de los valores,
+  dormir y despertar con el eje, bien; batería 4,17 V. https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.20
 - **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0) y
   sesión iniciada (`gh auth login`, cuenta ea4iln-debug, HTTPS, token en el llavero de Windows). Desde entonces ya no hace falta la vía de la API REST.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >
