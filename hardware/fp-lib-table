@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "chispas")(type "KiCad")(uri "${KIPRJMOD}/lib/chispas.pretty")(options "")(descr "Piezas LCSC importadas con easyeda2kicad"))
+)

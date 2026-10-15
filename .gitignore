@@ -5,3 +5,10 @@
 .vscode/ipch
 dist/
 .claude/settings.local.json
+# KiCad
+hardware/*-backups/
+hardware/*.lck
+hardware/fp-info-cache
+hardware/_autosave-*
+hardware/*.kicad_prl
+hardware/production/
