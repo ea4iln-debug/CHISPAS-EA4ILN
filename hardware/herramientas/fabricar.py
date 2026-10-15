@@ -19,7 +19,7 @@ import pcbnew
 HW = Path(__file__).resolve().parent.parent
 PCB = HW / "chispas.kicad_pcb"
 SAL = HW / "fabricacion"
-PLACAS = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+PLACAS = int(sys.argv[1]) if len(sys.argv) > 1 else 5
 CLI = sorted(glob.glob("C:/Program Files/KiCad/*/bin/kicad-cli.exe"))[-1]
 # Correccion de giro para el CPL por huella (grados que se suman), si la vista previa de JLCPCB lo pide.
 # Comprobar con la marca fisica de la pieza (raya del catodo, punto del pin 1 en el cuerpo), NO con el punto rosa:

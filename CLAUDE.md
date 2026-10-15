@@ -103,12 +103,11 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - Libres: 3 (único con ADC y RTC: reserva), 33, 34, 40. **No usar:** 0, 1, 8–14, 17/18/21 (OLED), 26–32, 35, 36, 37, 43/44, 45/46.
 - Módulos a **3V3 de J3** (pines 2/3; GND en el 1). `Ve` es Vext (OLED). `5V` solo con USB.
 - Esquema (`docs/gen_esquema.py`) y placa perforada (`docs/gen_placa.py`) → PDF: skill **`esquema`**.
-- **PCB en curso (15 oct)**: KiCad 10, `hardware/` (10 placas JLCPCB, SMD montado; ver NOTAS: "PCB"). Esquema
+- **PCB en curso (15 oct)**: KiCad 10, `hardware/` (5 placas JLCPCB, el mínimo; SMD montado; ver NOTAS: "PCB"). Esquema
   completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Siguiente: pedido y rotaciones en la vista previa de JLCPCB. Skill **`pcb`** (scripts en `hardware/herramientas/`).
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-1. Parques POTA cercanos hechos (14 oct; lista de España en LittleFS): falta probarlos con fijo del GPS en la calle.
-   Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).
+1. Parques POTA cercanos: probados con fijo del GPS en la calle (15 oct). Del GPS falta medir el GPS dormido en µA (capturas nuevas hechas el 14 oct).
 2. QSO LIBRE en los dos sentidos (las dos placas tienen palas); pila del motor CW tras Duo; cara de tormenta sin ver
    (la de auriculares, vista el 13 oct).
 3. OLED negra a veces en la placa 2 (protoboard; era la "placa 1" hasta el 15 oct): **defecto de hardware de esa
@@ -121,8 +120,6 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
    no hace falta ninguna más; ver NOTAS, "Cómo trabajar").
 7. Batería de la placa 1 (perforada): marca 90 % con la carga terminada (15 oct). Comprobar con polímetro si el
    factor 4,9 (calibrado en la otra Heltec) vale para esta; si no, factor por placa según la MAC (ver NOTAS).
-8. Encoder de la placa 1 con pasos en falso a rachas (15 oct): contacto intermitente en DT (a veces CLK); GPS y
-   decodificador descartados por traza. Revisar soldaduras/continuidad de P1, J2-14/18 y la masa, o probar otro KY-040.
 
 ## Decisiones que no hay que deshacer
 - **SOTA: no programar el cliente** (sus condiciones prohíben software generado por IA sin aprobación previa).

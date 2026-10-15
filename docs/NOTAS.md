@@ -345,8 +345,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   (equirectangular; rumbo en 8 puntos, O = oeste). **Páginas:** 2 parques por página, `ES-1078      4.5km E` y el
   nombre debajo; pie `1/10 IM68mu  >volver` (o `GPS`). Durante la descarga, `DESCARGANDO PARQUES` y la cuenta.
   Probado: descarga en 8–17 s con WiFi de casa, 2497 parques; 20 cercanos desde el locator IM68mu (el más cercano
-  a 4,5 km); ACTUALIZAR sigue bajando spots. **Sin probar:** búsqueda desde un fijo del GPS (dentro de casa no lo
-  tenía), el refresco a los 30 días y la descarga fallida. Flash +49 KB (38,5 %), RAM +0,7 KB.
+  a 4,5 km); ACTUALIZAR sigue bajando spots. Búsqueda desde un fijo del GPS **probada por el usuario en la calle** (15 oct 2026).
+  **Sin probar:** el refresco a los 30 días y la descarga fallida. Flash +49 KB (38,5 %), RAM +0,7 KB.
   **Reset de fábrica** (14 oct 2026, después de la v1.08b): `resetFabrica()` monta LittleFS y borra también
   `/parques.bin` y `/parques.tmp` (antes los dejaba). Probado en la placa 2 por USB: tras el reset, sin lista; al
   configurar el WiFi y entrar en POTA la vuelve a bajar (2497 parques en 8 s).
@@ -693,8 +693,8 @@ de CLK) y `3 >1 >3`; a veces también CLK (`3 >2 >3`) y algún detente que se qu
 controlada, 10 clics lentos a cada lado: Inicio con el GPS dormido 20/20, STATUS > GPS (despierto) 19/20, TRX >
 DECODIFICAR (ADC por DMA) 20/20: **ni el GPS ni el decodificador influyen** (la traza ve los pines en la ISR; un
 retraso de software daría `SALTO`, no pulsos de 50–100 ms). Causa probable: contacto intermitente en el camino del
-encoder (contactos del KY-040, Dupont, soldaduras de P1/J2 o la masa, que comparten CLK y DT). Sin resolver: queda
-revisar soldaduras y continuidad (hoja de revisión hecha, no guardada en el repositorio) o probar el encoder de la placa 2.
+encoder (contactos del KY-040, Dupont, soldaduras de P1/J2 o la masa, que comparten CLK y DT). **Resuelto (15 oct 2026):** el usuario cambió
+un cable Dupont del encoder y los pasos en falso desaparecieron (era el contacto del cable).
 **P1 de la placa 1, montada al revés del plano nuevo:** el plano tenía P1 en CLK, SW, DT y la tabla de la página 3
 decía "cable recto" (mal); el usuario lo vio y la montó con **DT y SW cruzados en el cable**. Desde el 15 oct el
 plano pone P1 en el orden del KY-040 (CLK, DT, SW, +, GND: U9, U10, U11) con cable recto: DT llega por T13–T10 a U10
@@ -721,7 +721,7 @@ C2 resultó ser un EPCOS de poliéster 1 µF 100 V de paso 15 mm (18 × 5 × 11 
 C8 (DEC_CUR, puente B8–C8) y C14 (BIAS, cable aislado 14 hasta D9), pegado por arriba al zócalo de U1.
 
 ## PCB
-**Empezada el 15 oct 2026** en KiCad 10.0.7, proyecto `hardware/chispas.kicad_pro`. Objetivo: 10 placas en JLCPCB (eran 5; 10 desde el 15 oct),
+**Empezada el 15 oct 2026** en KiCad 10.0.7, proyecto `hardware/chispas.kicad_pro`. Objetivo: 5 placas en JLCPCB (el mínimo; se pensó en 10 el 15 oct y se volvió a 5 el mismo día),
 SMD montado por ellos (montaje económico, cara de arriba) y lo de agujero pasante soldado por el usuario, pedido en
 LCSC con el mismo envío. Forma de trabajar: el usuario dibuja en la interfaz siguiendo pasos numerados; Claude revisa
 los archivos con `kicad-cli` (netlist, ERC, DRC, PDF → PNG con pymupdf) y coloca con scripts del Python de KiCad
@@ -785,7 +785,7 @@ GPS, ALTAVOZ, AUX (J4), TRAFO y "cortar=trafo"; por detrás nombre, PCB v1.0 (20
 `JLCJLCJLCJLC`. DRC: solo 30 `silk_edge_clearance` (contornos de jacks y volumen que asoman; JLCPCB los recorta).
 **Fabricación** (`fabricar.py`, solo lee): `hardware/fabricacion/` con `chispas_gerber.zip`, `chispas_bom.csv` (28
 piezas, 11 LCSC: 9 Basic + PC817 y PAM8302A Extended), `chispas_cpl.csv` y `compra_lcsc.csv` (lo que suelda el
-usuario, para 10 placas, + 2 zócalos 1×18 por placa). Existencias comprobadas el 15 oct para 10 (encoder C7435302: 32).
+usuario, para 5 placas, `fabricar.py [placas]`, defecto 5; + 2 zócalos 1×18 por placa). Existencias comprobadas el 15 oct para 10 (encoder C7435302: 32).
 CPL sin correcciones de giro: D1/D2, U2 y U3 salen bien en la vista previa (comprobado por la raya del cátodo y el
 punto del cuerpo; el punto rosa de JLCPCB no es el cátodo: girarlos por él los dejó al revés).
 No incluidos en la compra: carcasas y contactos de los JST (o cables ya hechos), altavoz, botones, separadores M3.
