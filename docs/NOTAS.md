@@ -102,7 +102,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   **v1.30b (beta), borrador del 16 oct 2026, sin publicar**: audio sintetizado por sigma-delta, QSO SIM (tercera
   opción del menú CW; `tx libre` al pie), Koch y Duo con TEXTO, TX LIBRE > RITMO y batería al 100 % desde 4,15 V.
   En la placa 1 por USB (arranque v1.30b, menú CW y entrada a QSO SIM y TX LIBRE por capturas). Notas para el
-  usuario escritas a mano en `dist/1.30b/notas.md`. Falta `./publicar.sh --publicar`.
+  usuario escritas a mano en `dist/1.30b/notas.md`. **Publicada el 16 oct 2026** (prerelease):
+  https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.30b. La Action de la web falló al publicarla:
+  el entorno `github-pages` solo admitía la rama `main` y el evento de release corre en la etiqueta. Se añadió la
+  regla de etiquetas `v*` al entorno (`gh api -X POST .../environments/github-pages/deployment-branch-policies
+  -f name='v*' -f type=tag`) y se relanzó a mano (`gh workflow run web.yml`): web con estable 1.20 y beta 1.30b.
 - **Web de instalación por USB (16 oct 2026):** https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (GitHub Pages,
   fuente "GitHub Actions", activada con `gh api -X POST repos/.../pages -f build_type=workflow`). `web/index.html`
   con **ESP Web Tools 10.4.0** (unpkg, `<esp-web-install-button>`; Chrome/Edge de escritorio). La Action
@@ -125,7 +129,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   la deja elegida. Sección **Novedades de la beta** (QSO SIM, sonido nuevo, Koch/Duo TEXTO, RITMO, batería), solo
   si hay beta: **texto fijo en `index.html`, rehacerlo con cada beta**. Capturas de la OLED: 10 (añadidas CW y
   QSO SIM). Probada en local (Edge sin interfaz, con beta y sin ella); la instalación de la beta desde la web, sin
-  probar (la v1.30b está en borrador: hasta publicarla, la web solo ofrece la estable).
+  probar.
 - **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0) y
   sesión iniciada (`gh auth login`, cuenta ea4iln-debug, HTTPS, token en el llavero de Windows). Desde entonces ya no hace falta la vía de la API REST.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >
