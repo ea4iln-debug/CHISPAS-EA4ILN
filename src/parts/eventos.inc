@@ -484,7 +484,8 @@ void procesarBoton() {
 
   } else if (pantallaActual == PANTALLA_CW) {
     if (enSim && estadoSim == SIM_AJUSTES) {
-      // Ajustes del simulador. Foco: 0 wpm activador, 1 espaciado, 2 wpm palas, 3 ver, 4 qsb, 5 iniciar, 6 volver
+      // Ajustes del simulador. Foco: 0 wpm activador, 1 espaciado, 2 wpm palas, 3 ver, 4 qsb, 5 ruido,
+      // 6 tormenta, 7 qrm, 8 iniciar, 9 volver
       if (atras) {
         salirDeSim();
       } else if (giro != 0) {
@@ -501,8 +502,11 @@ void procesarBoton() {
         switch (opcionSim) {
           case 3: simVerTexto = !simVerTexto; break;
           case 4: simQsb = (simQsb + 1) % (QSB_FUERTE + 1); break;
-          case 5: iniciarSim(); break;
-          case 6: salirDeSim(); break;
+          case 5: simRuido = (simRuido + 1) % (QSB_FUERTE + 1); break;
+          case 6: simTormenta = (simTormenta + 1) % (QSB_FUERTE + 1); break;
+          case 7: simQrm = (simQrm + 1) % (QSB_FUERTE + 1); break;
+          case 8: iniciarSim(); break;
+          case 9: salirDeSim(); break;
           default: editandoValor = !editandoValor; break;  // 0, 1 y 2
         }
       }

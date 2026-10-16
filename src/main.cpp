@@ -48,6 +48,9 @@
 #include <driver/gpio.h>
 #include <driver/rtc_io.h>
 #include <driver/adc.h>  // ADC por DMA (decodificador CW de la pantalla TRX)
+#include <driver/sigmadelta.h>  // Audio sintetizado (audio.inc)
+#include <hal/sigmadelta_ll.h>
+#include <soc/gpio_sd_struct.h>
 #include "certificados_github.h"  // Raices TLS para la actualizacion OTA
 
 volatile uint8_t depuracion = 0;  // Bits DEPU_*; la lee tambien la tarea del motor CW
@@ -98,9 +101,7 @@ void encenderPerifericos() {
   pinMode(KEYER_PADDLE_DIT, INPUT_PULLUP);
   pinMode(KEYER_PADDLE_DAH, INPUT_PULLUP);
 
-  ledcSetup(CANAL_PWM_AUDIO, FREC_AUDIO_HZ, RES_PWM_AUDIO);
-  ledcAttachPin(SPEAKER_PWM_PIN, CANAL_PWM_AUDIO);
-  ledcWrite(CANAL_PWM_AUDIO, 0);
+  iniciarAudio();
 
   delay(100);
 }
@@ -153,13 +154,14 @@ void dormirChispas(const char* motivo) {
   // Salidas en reposo y retenidas durante el sueno (si no, quedan al aire): KEY en BAJO, Vext
   // apagada (ALTO: OLED sin alimentacion) y divisor de bateria desactivado
   digitalWrite(LED_PIN, LOW);
-  ledcWrite(CANAL_PWM_AUDIO, 0);
   digitalWrite(KEY_OUT_PIN, LOW);
   digitalWrite(AMP_SD_PIN, LOW);  // Amplificador apagado: el 3V3 sigue vivo durante el sueno
+  apagarAudioYa();                // Despues del amplificador: el salto a 0 V no llega al altavoz
   digitalWrite(VEXT_CTRL, HIGH);
   digitalWrite(ADC_CTRL_PIN, LOW);
   gpio_hold_en((gpio_num_t)KEY_OUT_PIN);
   gpio_hold_en((gpio_num_t)AMP_SD_PIN);
+  gpio_hold_en((gpio_num_t)SPEAKER_PWM_PIN);
   gpio_hold_en((gpio_num_t)VEXT_CTRL);
   gpio_hold_en((gpio_num_t)ADC_CTRL_PIN);
   gpio_deep_sleep_hold_en();
@@ -195,6 +197,7 @@ void setup() {
   gpio_deep_sleep_hold_dis();
   gpio_hold_dis((gpio_num_t)KEY_OUT_PIN);
   gpio_hold_dis((gpio_num_t)AMP_SD_PIN);
+  gpio_hold_dis((gpio_num_t)SPEAKER_PWM_PIN);
   gpio_hold_dis((gpio_num_t)VEXT_CTRL);
   gpio_hold_dis((gpio_num_t)ADC_CTRL_PIN);
   rtc_gpio_deinit((gpio_num_t)ENC_SW_PIN);  // Tras despertar por ext1 sigue en el RTC: se devuelve a GPIO

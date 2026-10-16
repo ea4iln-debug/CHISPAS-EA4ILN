@@ -10,7 +10,7 @@
 //   LLAMADA:    "CQ POTA DE EA3XYZ/P EA3XYZ/P K"  -> tu indicativo (una o dos veces)
 //   INFORME:    "EA4ILN GM 5NN 5NN BK"            -> "BK TU 5NN 5NN 73 BK" (basta con el 5NN o 599)
 //   DESPEDIDA:  "TU ES0072 73 E E"                 -> "E E" (opcional) y resultado
-// Con QSB, el volumen del activador sube y baja (simCicloQsb)
+// Con QSB, el volumen del activador sube y baja (simNivelQsb); con RUIDO, TORMENTA y QRM se oye la banda
 // Lo manipulado se compara sin espacios (una pausa larga parte el indicativo) y solo se buscan las palabras
 // clave: para empezar a manipular basta. "AGN" o "?" piden que repita. Si no te entiende, pide lo que falta
 #define SIM_FIN_TURNO_MS     3000   // Silencio que cierra tu turno (o 25 puntos, si es mas)
@@ -28,16 +28,33 @@ float simQsbFase1 = 0, simQsbFase2 = 0;  // Al azar en cada QSO
 
 // QSB: el volumen del activador baja y sube despacio, con dos senos de periodos que no encajan (5,3 y 2,1 s)
 // para que no se repita igual. Profundidad: SUAVE, hasta -8 dB; FUERTE, hasta -26 dB (casi desaparece).
-// De la amplitud al ciclo del PWM: la fundamental de la cuadrada va con sin(pi * ciclo), asi que
-// ciclo = asin(amplitud) / pi (128 = 50 % = el maximo)
-uint8_t simCicloQsb() {
-  if (simQsb == QSB_NO) return 128;
+// Devuelve el volumen del tono para la sintesis (256 = el maximo)
+int32_t simNivelQsb() {
+  if (simQsb == QSB_NO) return 256;
   float t = millis() / 1000.0f;
   float f = 0.5f + 0.5f * (0.7f * sinf(2 * PI * t / 5.3f + simQsbFase1) + 0.3f * sinf(2 * PI * t / 2.1f + simQsbFase2));
   float profundidad = (simQsb == QSB_FUERTE) ? 0.95f : 0.6f;
-  float amplitud = 1.0f - profundidad * f;
-  int ciclo = lroundf(256.0f * asinf(amplitud) / PI);
-  return (uint8_t)constrain(ciclo, 2, 128);
+  return lroundf(256.0f * (1.0f - profundidad * f));
+}
+
+// La banda durante el QSO (no en los ajustes ni en el resultado). SUAVE = lo elegido de oido en
+// pruebas/prueba_audio.cpp (ruido 30, 30 chasquidos por minuto, pitido 10); FUERTE, el doble.
+// El pitido de interferencia va 180 Hz por encima del tono y deriva +-60 Hz en 17 s
+void simAplicarBanda() {
+  bool enQso = enSim && (estadoSim == SIM_EMITIENDO || estadoSim == SIM_ESCUCHANDO);
+  audioQsb = (enQso && estadoSim == SIM_EMITIENDO) ? simNivelQsb() : 256;
+  audioRuido = enQso ? simRuido * 30 : 0;
+  static uint8_t tormentaPuesta = 0;
+  uint8_t tormenta = enQso ? simTormenta : 0;
+  if (tormenta != tormentaPuesta) {
+    tormentaPuesta = tormenta;
+    audioPonerChasquidos(tormenta * 30);
+  }
+  audioInterf = enQso ? simQrm * 10 : 0;
+  if (audioInterf > 0) {
+    float t = millis() / 1000.0f;
+    audioIncInterf = audioIncremento(frecTonoHz + 180 + 60 * sinf(2 * PI * t / 17.0f));
+  }
 }
 
 // El saludo segun la hora local: GM hasta las 13, GA hasta las 20 y GE despues
@@ -51,7 +68,7 @@ void simEmitir(const String& texto) {
   simEmitido = texto;
   simRespuesta = "";
   keyerPausar();
-  cicloTono = simCicloQsb();  // Ya para el primer elemento (luego lo sigue procesarSim)
+  audioQsb = simNivelQsb();  // Ya para el primer elemento (luego lo sigue procesarSim)
   motorCWEmitir(texto.c_str(), simWpm, simEspaciado, "SIM");
   estadoSim = SIM_EMITIENDO;
   pantallaPendiente = true;
@@ -162,8 +179,9 @@ void simRecibirCaracter(char c) {
 }
 
 void procesarSim() {
-  // QSB solo mientras emite el activador: tu tono de las palas (y el resto de Chispas) siempre al maximo
-  cicloTono = (enSim && estadoSim == SIM_EMITIENDO) ? simCicloQsb() : 128;
+  // QSB solo mientras emite el activador: tu tono de las palas (y el resto de Chispas) siempre al maximo.
+  // Ruido, tormenta y QRM durante todo el QSO
+  simAplicarBanda();
   if (!enSim) return;
   if (estadoSim == SIM_EMITIENDO && !motorCWOcupado()) {
     keyerReanudar();  // Tu turno
@@ -197,10 +215,14 @@ void simRepetir() {
 // ----------------------------------------------------------------------------
 // Pantallas
 // ----------------------------------------------------------------------------
-#define N_AJUSTES_SIM 5
+#define N_AJUSTES_SIM 8
 const char* const NOMBRES_AJUSTES_SIM[N_AJUSTES_SIM] = {
-  "WPM ACTIVADOR", "ESPACIADO", "WPM PALAS", "VER TEXTO", "QSB"
+  "WPM ACTIVADOR", "ESPACIADO", "WPM PALAS", "VER TEXTO", "QSB", "RUIDO", "TORMENTA", "QRM"
 };
+
+String textoNivelSim(uint8_t nivel) {
+  return nivel == QSB_FUERTE ? String("FUERTE") : (nivel == QSB_SUAVE ? String("SUAVE") : String("NO"));
+}
 
 String valorAjusteSim(uint8_t i) {
   switch (i) {
@@ -208,7 +230,10 @@ String valorAjusteSim(uint8_t i) {
     case 1: return String(simEspaciado) + "%";
     case 2: return String(keyerWpm);
     case 3: return simVerTexto ? String("SI") : String("NO");
-    case 4: return simQsb == QSB_FUERTE ? String("FUERTE") : (simQsb == QSB_SUAVE ? String("SUAVE") : String("NO"));
+    case 4: return textoNivelSim(simQsb);
+    case 5: return textoNivelSim(simRuido);
+    case 6: return textoNivelSim(simTormenta);
+    case 7: return textoNivelSim(simQrm);
     default: return String("");
   }
 }

@@ -43,7 +43,7 @@
 #define ENC_CLK_PIN     19  // Pull-up de 10 kOhm en el modulo
 #define ENC_SW_PIN      20  // Pulsador del eje, sin pull-up en el modulo: INPUT_PULLUP. Pin RTC: despierta del deep sleep
 #define ENC_DT_PIN      48  // Pull-up de 10 kOhm en el modulo
-#define SPEAKER_PWM_PIN  7  // Tono CW por PWM (J3-18): volumen, auriculares y buzzer (ver esquema, hoja 4)
+#define SPEAKER_PWM_PIN  7  // Tono CW por sigma-delta (J3-18; hasta la v1.20, PWM): volumen, auriculares y buzzer (ver esquema, hoja 4)
 #define AMP_SD_PIN      38  // SD del amplificador PAM8302A (J3-11): ALTO = encendido. Solo en CW, LoRa y TRX
 
 #define FREC_AUDIO_HZ    850 // Tono CW por defecto; se elige en CONF > CONFIG > TONO (frecTonoHz)
@@ -51,8 +51,12 @@
 #define TONO_MAX_HZ      1000
 #define TONO_PASO_HZ     50
 #define TONO_PRUEBA_MS   300 // Pitido de prueba al cambiar el tono en CONF
-#define CANAL_PWM_AUDIO  0  // Canal PWM del ESP32-S3
-#define RES_PWM_AUDIO    8  // Resolucion de 8 bits para el PWM
+#define CANAL_SD_AUDIO   0  // Canal del modulador sigma-delta (audio sintetizado, audio.inc)
+#define DIVISOR_SD_AUDIO 10 // Divisor del sigma-delta: con 0, zumbido y clics leves; con 10, no (probado de oido)
+#define AUDIO_FS         16000  // Muestras por segundo de la sintesis
+#define AUDIO_RAMPA      3  // Paso de la envolvente del tono por muestra (256 / 3 = 85 muestras = 5 ms)
+#define AUDIO_MEDIO_PASOS 2048  // Muestras para subir o bajar el nivel medio entre 0 V y la mitad (128 ms)
+#define AUDIO_MEDIO_MS   130  // Lo mismo en ms, redondeado hacia arriba (espera del pitido de prueba)
 
 #define VBAT_ADC_PIN    1   // Pin ADC para lectura del divisor de voltaje de la bateria
 #define ADC_CTRL_PIN    37  // Habilitacion del divisor de tension de bateria

@@ -118,14 +118,18 @@ enum FaseSim { FASE_LLAMADA, FASE_INFORME, FASE_DESPEDIDA };
 bool enSim = false;               // Simulador abierto (ajustes, QSO o resultado)
 EstadoSim estadoSim = SIM_AJUSTES;
 FaseSim faseSim = FASE_LLAMADA;
-#define OPCION_SIM_INICIAR 5
-#define N_OPCIONES_SIM 7
+#define OPCION_SIM_INICIAR 8
+#define N_OPCIONES_SIM 10
 uint8_t opcionSim = OPCION_SIM_INICIAR;  // Ajustes: 0 wpm activador, 1 espaciado, 2 wpm palas, 3 ver, 4 qsb,
-                                         // 5 iniciar, 6 volver
+                                         // 5 ruido, 6 tormenta, 7 qrm, 8 iniciar, 9 volver
+// Nivel de QSB, ruido, tormenta y QRM del simulador
 #define QSB_NO     0
-#define QSB_SUAVE  1
-#define QSB_FUERTE 2
+#define QSB_SUAVE  1  // El elegido de oido en pruebas/prueba_audio.cpp
+#define QSB_FUERTE 2  // Mas o menos el doble
 uint8_t simQsb = QSB_NO;          // Desvanecimiento del activador (NVS "sqsb")
+uint8_t simRuido = QSB_NO;        // Ruido de banda (NVS "srui")
+uint8_t simTormenta = QSB_NO;     // Chasquidos de estatica (NVS "stor")
+uint8_t simQrm = QSB_NO;          // Pitido de interferencia (NVS "sqrm")
 uint8_t opcionPracticaSim = 0;    // QSO: 0 repetir, 1 salir. Resultado: 0 volver, 1 otro
 uint8_t simWpm = 18;              // Velocidad del activador (NVS "swpm"); la de las palas es keyerWpm
 uint16_t simEspaciado = 150;      // NVS "ssp"
