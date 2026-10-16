@@ -52,7 +52,8 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - ✅ Placa perforada montada y probada (15 oct 2026).
 - ✅ PCB en KiCad 10 (90 × 60 mm, SMD montado por JLCPCB): esquema, rutado y serigrafía; pedidos a JLCPCB (5 placas)
   y LCSC hechos el 15 oct 2026.
-- ⬜ Recibir, montar y probar (comprobar el encaje del encoder CTR R7, que sustituye al ALPS sin stock).
+- ⬜ Recibir, montar y probar (comprobar el encaje del potenciómetro CTR comprado para R7, en lugar del ALPS
+  sin stock; el diseño y la BOM siguen con el ALPS).
 
 ## 3. Desarrollo del firmware
 
