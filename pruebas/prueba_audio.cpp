@@ -13,6 +13,7 @@
  *   c N  chasquidos por minuto (0-300)     i N  nivel del pitido de interferencia (0-127)
  *   q N  QSB: 0 no, 1 suave, 2 fuerte      p N  divisor del sigma-delta (0-255; 0 = el mas rapido)
  *   m    cambia a PWM cuadrado (como ahora en Chispas) o vuelve a sigma-delta, para comparar
+ *   w N  forma del tono: 0 seno, 1 cuadrada suavizada (mas volumen, timbre como el PWM)
  *   k    CW o tono continuo                ?    ayuda y valores
  * Se carga con: pio run -e prueba_audio -t upload   (monitor a 115200)
  *
@@ -33,7 +34,7 @@
 #define RAMPA       3      // Paso de la envolvente por muestra (256 / 3 = 85 muestras = 5 ms)
 
 // Ajustes (los cambia loop() por serie; la ISR solo los lee)
-volatile int32_t nivelTono = 100, nivelRuido = 0, nivelInterf = 0;
+volatile int32_t nivelTono = 127, nivelRuido = 30, nivelInterf = 10;  // Los elegidos de oido (16 oct)
 volatile uint32_t probChasquido = 0;  // Por muestra, sobre 2^32
 volatile uint8_t anchoRuido = 2;
 volatile int32_t qsbNivel = 256;      // Lo calcula loop(): 256 = sin atenuar
@@ -42,13 +43,16 @@ volatile bool keyAbajo = false;
 volatile int32_t svfF = 0, svfQ = 0;  // Filtro de estado variable (Q12) centrado en el tono
 
 int8_t SENO[256];
+int8_t CUADRADA[256];             // Cuadrada suavizada: fundamental, 3.er y 5.o armonicos (pico 127)
+const int8_t* volatile ondaTono = SENO;
+uint8_t forma = 0;
 hw_timer_t* timer = NULL;
 bool modoPwm = false;
 bool continuo = false;
 uint16_t frecTono = 700;
-uint8_t qsb = 0;
-uint8_t prescaler = 0;
-uint16_t chasquidosMin = 0;
+uint8_t qsb = 1;
+uint8_t prescaler = 10;  // Con 0 (el mas rapido) hay zumbido y clics leves; con 10, no (16 oct)
+uint16_t chasquidosMin = 30;
 
 // Estado de la ISR
 uint32_t faseTono = 0, faseInterf = 0, semilla = 12345;
@@ -64,7 +68,7 @@ void IRAM_ATTR muestra() {
   if (keyAbajo) { envolvente += RAMPA; if (envolvente > 256) envolvente = 256; }
   else          { envolvente -= RAMPA; if (envolvente < 0) envolvente = 0; }
   faseTono += incTono;
-  int32_t s = (int32_t)SENO[faseTono >> 24] * envolvente / 256 * nivelTono / 127 * qsbNivel / 256;
+  int32_t s = (int32_t)ondaTono[faseTono >> 24] * envolvente / 256 * nivelTono / 127 * qsbNivel / 256;
 
   // Ruido: blanco; o paso alto suave (ancho); o filtro de estado variable en el tono (como un filtro de CW)
   int32_t blanco = (int32_t)(aleatorio() & 0xFF) - 128;
@@ -101,8 +105,17 @@ void IRAM_ATTR muestra() {
   sigmadelta_ll_set_duty(&SIGMADELTA, (sigmadelta_channel_t)CANAL_SD, (int8_t)s);
 }
 
+// Coste de la ISR (orden x): ciclos de CPU por muestra, media y maximo
+volatile uint32_t ciclosSuma = 0, ciclosMax = 0, ciclosN = 0;
+
 void IRAM_ATTR isrMuestra() {
-  if (!modoPwm) muestra();
+  if (modoPwm) return;
+  uint32_t t0 = ESP.getCycleCount();
+  muestra();
+  uint32_t c = ESP.getCycleCount() - t0;
+  ciclosSuma += c;
+  ciclosN++;
+  if (c > ciclosMax) ciclosMax = c;
 }
 
 uint32_t incremento(float hz) { return (uint32_t)(hz * 4294967296.0f / FS); }
@@ -199,9 +212,9 @@ void procesarLento() {
 
 void ayuda() {
   Serial.println(F("\n[AUDIO] t tono, f frec, r ruido, a ancho (0 blanco, 1 ancho, 2 estrecho), c chasquidos/min,"));
-  Serial.println(F("        i interferencia, q qsb (0-2), p divisor SD, m PWM/SD, k CW/continuo"));
-  Serial.printf("[AUDIO] %s  tono %ld a %u Hz  ruido %ld (ancho %u)  chasquidos %u/min  interf %ld  qsb %u  p %u  %s\n",
-                modoPwm ? "PWM" : "SIGMA-DELTA", (long)nivelTono, frecTono, (long)nivelRuido, anchoRuido,
+  Serial.println(F("        i interferencia, q qsb (0-2), p divisor SD, w onda (0 seno, 1 cuadrada), m PWM/SD, k CW/continuo"));
+  Serial.printf("[AUDIO] %s %s  tono %ld a %u Hz  ruido %ld (ancho %u)  chasquidos %u/min  interf %ld  qsb %u  p %u  %s\n",
+                modoPwm ? "PWM" : "SIGMA-DELTA", forma ? "CUADRADA" : "SENO", (long)nivelTono, frecTono, (long)nivelRuido, anchoRuido,
                 chasquidosMin, (long)nivelInterf, qsb, prescaler, continuo ? "CONTINUO" : "CW");
 }
 
@@ -230,6 +243,19 @@ void procesarSerie() {
         if (!modoPwm) sigmadelta_set_prescale((sigmadelta_channel_t)CANAL_SD, prescaler);
         break;
       case 'm': ponerModo(!modoPwm); teclaPwm(keyAbajo); break;
+      case 'u': setCpuFrequencyMhz(v == 80 || v == 160 ? v : 240); break;
+      case 'x': {
+        uint32_t n = ciclosN, suma = ciclosSuma, mx = ciclosMax;
+        ciclosN = ciclosSuma = ciclosMax = 0;
+        uint32_t mhz = getCpuFrequencyMhz();
+        float media = n ? (float)suma / n : 0;
+        // CPU ocupada = ciclos por muestra x muestras por segundo / ciclos por segundo (mas la entrada y
+        // salida de la interrupcion, que aqui no se mide: unos cientos de ciclos)
+        Serial.printf("[AUDIO] CPU %lu MHz: %.0f ciclos/muestra de media, %lu como mucho (%lu muestras): %.1f %% de la CPU\n",
+                      (unsigned long)mhz, media, (unsigned long)mx, (unsigned long)n, media * FS / (mhz * 1e6f) * 100);
+        break;
+      }
+      case 'w': forma = constrain(v, 0, 1); ondaTono = forma ? CUADRADA : SENO; break;
       case 'k': continuo = !continuo; keyAbajo = false; teclaPwm(false); tramo = 0; inicioTramo = millis(); break;
     }
     linea = "";
@@ -244,6 +270,15 @@ void setup() {
   pinMode(AMP_SD_PIN, OUTPUT);
   digitalWrite(AMP_SD_PIN, HIGH);
   for (int i = 0; i < 256; i++) SENO[i] = (int8_t)lroundf(127 * sinf(2 * PI * i / 256));
+  float suma[256], pico = 0;
+  for (int i = 0; i < 256; i++) {
+    float x = 2 * PI * i / 256;
+    suma[i] = sinf(x) + sinf(3 * x) / 3 + sinf(5 * x) / 5;
+    pico = max(pico, fabsf(suma[i]));
+  }
+  for (int i = 0; i < 256; i++) CUADRADA[i] = (int8_t)lroundf(127 * suma[i] / pico);
+  Serial.printf("[AUDIO] Cuadrada suavizada: fundamental x%.2f sobre el seno\n", 1.0f / pico);
+  probChasquido = (uint32_t)(4294967296.0 * chasquidosMin / 60.0 / FS);
 
   ponerTono(frecTono);
   ponerModo(false);
