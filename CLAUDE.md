@@ -111,10 +111,17 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 
 - **Sin versión nueva (16 oct, en la placa 1 por USB):** Koch con ajuste TEXTO (GRUPOS / INDICAT. / QSO POTA),
   TX LIBRE > menu > RITMO (espacios, titubeos, velocidad real y consejo), batería al 100 % desde 4,15 V y en `[DIAG]`.
+- **Sin versión nueva y sin probar en placa (16 oct):** Duo de LoRa con ajuste TEXTO (grupos, indicativos, frases
+  POTA); **CW > qso sim** (`qso_sim.inc`: simulador de QSO POTA, Chispas de activador, con QSB provisional por PWM).
+- **Audio sigma-delta** (16 oct, `pruebas/prueba_audio.cpp`, probado de oído en la placa 1, que **tiene cargada esa
+  prueba**): mismo GPIO7, ISR a 16 kHz, divisor 10 (con 0, zumbido), cuadrada suavizada, ruido de banda, chasquidos,
+  pitido y QSB; ~5 % de CPU a 80 MHz. Plan en NOTAS: "Audio sintetizado".
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
+3. **Siguiente:** pasar el audio de Chispas a sigma-delta y añadir al simulador RUIDO, TORMENTA y QRM (plan en NOTAS:
+   "Audio sintetizado"); luego cargar el firmware en la placa 1 y probar el Duo TEXTO (dos placas) y el qso sim.
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se

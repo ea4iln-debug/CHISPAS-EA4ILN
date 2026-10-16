@@ -308,6 +308,19 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     separadas, > 10 % titubeos, palabras largas, irregular > 0,8; si no, "BUEN RITMO"). Se pone a cero al entrar
     en TX LIBRE y con "borrar" (`ritmoBorrar`, lo hace la tarea). Probado en la placa 1: menú y páginas sin datos
     (capturas por serie); **falta probar manipulando con las palas**.
+  - **QSO SIM** (16 oct 2026, sin versión nueva, **sin probar en placa**; `src/parts/qso_sim.inc`): simulador de QSO
+    POTA, Chispas de activador y el usuario de cazador con las palas. En el menú CW va en el centro del pie
+    ("qso sim", `OPCION_SIM_CW` = 3, barra = 4), como "memorias" en TRX: una cuarta opción no cabe. Ajustes: WPM
+    ACTIVADOR (`simWpm`, 18), ESPACIADO (150 %), WPM PALAS (`keyerWpm`, el de TX LIBRE), VER TEXTO, QSB (NO / SUAVE /
+    FUERTE); NVS `swpm`, `ssp`, `sver`, `sqsb`. Tres turnos: `CQ POTA DE <A> <A> K` → tu indicativo;
+    `<MI> GM 5NN 5NN BK` (GM/GA/GE por la hora local) → basta `5NN` o `599`; `TU <PARQUE> 73 E E` → `E E` opcional.
+    Lo manipulado se compara sin espacios y solo por palabras clave; si falta, el activador manda lo copiado con "?"
+    (`EA4?`, si coinciden 3 caracteres o más) o `AGN?`, y en el informe `RST? BK`; "AGN" o "?" le piden repetir sin
+    contar. Fin del turno: 3 s sin manipular (o 25 puntos); sin nada en 20 s, vuelve a llamar; en la despedida, 6 s.
+    Pantalla como QSO LIBRE (activador arriba, separador `1/3 ESCUCHA` / `TU TURNO`, lo tuyo abajo; con VER NO, `?`
+    mientras suena); pie repetir / salir. Resultado: `CON <A> <PARQUE>`, tiempo, repeticiones y velocidad real (como
+    RITMO). QSB provisional: baja el ciclo del PWM (`cicloTono`, ciclo = asin(amplitud)/π) con dos senos de 5,3 y
+    2,1 s; **se rehará con el audio sigma-delta** (ver "Audio sintetizado").
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso
@@ -319,6 +332,13 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   - **PRÁCTICA DUO**: grupos Koch a los wpm del emisor (5–60); RSSI en pantalla. Desde la v0.9h: arriba
     `LECCION 4  5 LETRAS` (wpm y espaciado van en la cabecera), TX y RX, y el pie `> enviar  ver  menu` ("ver"
     solo si hay un grupo oculto; `opcionDuo4_1` 0–2); menu (`loraEnAjustes`): WPM, ESPACIADO, LECCION, SALIR.
+    **TEXTO** (16 oct 2026, sin versión nueva, **sin probar en placa**): menú WPM, ESPACIADO, LECCION, TEXTO, SALIR;
+    TEXTO (`textoDuo`, NVS `dtexto`, aparte del Koch) = GRUPOS / INDICAT. / QSO POTA, con las mismas funciones del
+    Koch (`indicativoAleatorio()`, `fraseQsoAleatoria()`; hasta 30 caracteres, cabe en una trama de 32). Pantalla:
+    arriba `LECCION 12 x5` o `INDICATIVOS`/`QSO POTA` con el RSSI a la derecha; TX y RX en dos líneas cada uno,
+    partidas por los espacios (`dibujarDosLineasPorPalabras()`); el receptor enseña lo que llegue aunque su ajuste sea
+    otro. Al salir del Duo se guardan wpm, espaciado, lección y texto (`guardarUltimaConfiguracionNVS()`; antes solo
+    al empezar un Koch). Falta probarlo con las dos placas.
   - **QSO LIBRE** (v0.8h; probado en los dos sentidos el 15 oct 2026 con la v1.10, pasando las únicas palas de una placa a otra): con las palas (keyer activo
     en cualquier foco, wpm de TX LIBRE); cada palabra se envía sola al detectar el espacio entre palabras
     (`qsoCaracterManipulado()`; a los 32 caracteres, en el acto; al salir, lo que quede). Lo recibido suena a los wpm
@@ -567,6 +587,33 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - **Salida KEY** (GPIO2): `KEY_OUT_PIN` en BAJO al principio de `setup()` (v0.6c); la usa la pantalla TRX (v0.9a). Medido con polímetro:
   0 V en marcha; picos de 0,3–0,5 V al arrancar y con RST (pin al aire hasta `setup()`), por debajo de los ~1,1 V
   que necesita el LED del PC817. **10 kΩ de GPIO2 a GND** (R10, ya en el esquema y en la lista).
+- **Audio sintetizado por sigma-delta** (prueba del 16 oct 2026 en la placa 1, de oído, altavoz y auriculares;
+  `pruebas/prueba_audio.cpp`, `pio run -e prueba_audio -t upload`, órdenes por serie con `serie.py -e $'r 30\n'`).
+  Para el simulador hace falta ruido y tonos mezclados con el CW, y el PWM de un canal solo da un tono. Una
+  interrupción a 16 kHz (timer 0, 1 µs, solo enteros: en una ISR no se usa la FPU) calcula cada muestra y la escribe
+  con `sigmadelta_ll_set_duty(&SIGMADELTA, canal, int8)` (el core 2.0.17 trae sigma-delta en el S3, 8 canales);
+  el pin es el mismo GPIO7, **sin cambiar hardware**. Resultados:
+  - Divisor del sigma-delta (`sigmadelta_prescale`): con **0** (el más rápido) hay zumbido de fondo y clics leves en
+    los flancos; con **10**, zumbido imperceptible y sin clics. Se queda 10. Con el PWM de ahora no hay zumbido en
+    los silencios y los flancos hacen algo de clic.
+  - Tono: envolvente de 5 ms (sin clics). **Cuadrada suavizada** (fundamental + 3.er + 5.º armónicos, pico 127)
+    preferida al seno: suena más fuerte y gusta más; aun así, algo más baja que el PWM cuadrado (su fundamental solo
+    gana 0,6 dB sobre el seno: el resto es por los armónicos). "Compensa la calidad"; en la caja, con el altavoz
+    bien apoyado y rejilla delante, debería ganar algo (razonado).
+  - Ruido de banda: filtro de estado variable centrado en el tono, Q = 3 (unos 250 Hz) → "suena a radio"; el ancho
+    (paso banda suave) gusta menos; el blanco ni se probó. Nivel 30 de 127 bien.
+  - Chasquidos de estática (ráfagas de ruido blanco que se apagan en ~10 ms): 30 por minuto, bien.
+  - Pitido de interferencia (seno 180 Hz por encima del tono, deriva ±60 Hz en 17 s): nivel 10 (30 molestaba).
+  - QSB con seno (dos senos de 5,3 y 2,1 s): suave (-8 dB) y fuerte (-26 dB), los dos se quedan.
+  - **Coste medido** a 80 MHz (`u 80`, `x`): 256 ciclos por muestra de media y 313 como mucho con todo (5,1 % de la
+    CPU), 206 solo el tono (4,1 %); más la entrada y salida de la interrupción (sin medir, ~2–3 %).
+  **Plan (siguiente tarea):** pasar todo el audio de Chispas a la síntesis (`audio.inc`: `conmutarEmisionMorse()`
+  pone la tecla y la ISR hace la envolvente; `frecTonoHz` y pitido de prueba igual; la ISR solo con el amplificador
+  encendido; al dormir, pin en BAJO y retenido). Ajustes del simulador: QSB, RUIDO, TORMENTA (NO / POCA / MUCHA) y
+  QRM, cada uno con su nivel; "suave" = lo elegido de oído (ruido 30, 30 chasquidos/min, QRM 10), "fuerte" ≈ el
+  doble. Comprobar después: Koch, keyer, TRX con KEY, ritmo del CW y **el decodificador** (GPIO6 está junto al
+  GPIO7: el pin conmutando podría colarse en el ADC; si pasa, apagar la síntesis al decodificar). Escribir en flash
+  (NVS, OTA) puede retrasar la ISR: corte breve del audio.
 - **Tono** (montado y probado el 10 oct 2026, placa 1): GPIO7 (PWM, `frecTonoHz`) → R1 1 kΩ → RV1 10 kΩ log (pat. 3;
   pat. 1 a GND) → cursor → C1 10 µF (+ al cursor) → R2 220 Ω → J2 T y R3 220 Ω → J2 R; J2 TN → BZ1 + (piezo pasivo
   de 16 mm), BZ1 − y J2 S a GND; RN libre. Auriculares por los dos lados y silencio mecánico del buzzer probados
