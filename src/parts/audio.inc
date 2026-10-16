@@ -13,6 +13,10 @@ volatile bool trxTonoLocal = true;           // Buzzer/auriculares mientras sale
 volatile unsigned long keyActivaDesdeMs = 0;  // 0 = KEY en reposo (para el corte de seguridad)
 volatile unsigned long keyFinMs = 0;          // Ultima vez que se solto KEY (el decodificador no escucha justo despues)
 
+// Volumen del tono: 128 = el maximo (cuadrada al 50 %); con menos, la fundamental baja (sin(pi * ciclo)).
+// Solo lo cambia el QSB del simulador de QSO, mientras emite el activador; se aplica al empezar cada elemento
+volatile uint8_t cicloTono = 128;
+
 void conmutarEmisionMorse(bool activar) {
   digitalWrite(LED_PIN, activar ? HIGH : LOW);
   bool key = activar && keyHabilitada;
@@ -26,7 +30,7 @@ void conmutarEmisionMorse(bool activar) {
     keyFinMs = millis();
   }
   bool tono = activar && (!keyHabilitada || trxTonoLocal);
-  ledcWrite(CANAL_PWM_AUDIO, tono ? 128 : 0);
+  ledcWrite(CANAL_PWM_AUDIO, tono ? cicloTono : 0);
 }
 
 uint16_t frecTonoHz = FREC_AUDIO_HZ;  // Tono CW (buzzer y auriculares); se elige en CONF y se guarda en NVS

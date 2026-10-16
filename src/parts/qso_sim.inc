@@ -10,6 +10,7 @@
 //   LLAMADA:    "CQ POTA DE EA3XYZ/P EA3XYZ/P K"  -> tu indicativo (una o dos veces)
 //   INFORME:    "EA4ILN GM 5NN 5NN BK"            -> "BK TU 5NN 5NN 73 BK" (basta con el 5NN o 599)
 //   DESPEDIDA:  "TU ES0072 73 E E"                 -> "E E" (opcional) y resultado
+// Con QSB, el volumen del activador sube y baja (simCicloQsb)
 // Lo manipulado se compara sin espacios (una pausa larga parte el indicativo) y solo se buscan las palabras
 // clave: para empezar a manipular basta. "AGN" o "?" piden que repita. Si no te entiende, pide lo que falta
 #define SIM_FIN_TURNO_MS     3000   // Silencio que cierra tu turno (o 25 puntos, si es mas)
@@ -23,6 +24,21 @@ String simRespuesta = "";   // Lo manipulado en este turno
 unsigned long simInicioTurnoMs = 0, simInicioMs = 0, simDuracionMs = 0;
 uint8_t simRepeticiones = 0;  // Veces que el activador no te entendio
 uint32_t simWpmReal = 0;      // Velocidad real de tu manipulacion (como en RITMO), al acabar
+float simQsbFase1 = 0, simQsbFase2 = 0;  // Al azar en cada QSO
+
+// QSB: el volumen del activador baja y sube despacio, con dos senos de periodos que no encajan (5,3 y 2,1 s)
+// para que no se repita igual. Profundidad: SUAVE, hasta -8 dB; FUERTE, hasta -26 dB (casi desaparece).
+// De la amplitud al ciclo del PWM: la fundamental de la cuadrada va con sin(pi * ciclo), asi que
+// ciclo = asin(amplitud) / pi (128 = 50 % = el maximo)
+uint8_t simCicloQsb() {
+  if (simQsb == QSB_NO) return 128;
+  float t = millis() / 1000.0f;
+  float f = 0.5f + 0.5f * (0.7f * sinf(2 * PI * t / 5.3f + simQsbFase1) + 0.3f * sinf(2 * PI * t / 2.1f + simQsbFase2));
+  float profundidad = (simQsb == QSB_FUERTE) ? 0.95f : 0.6f;
+  float amplitud = 1.0f - profundidad * f;
+  int ciclo = lroundf(256.0f * asinf(amplitud) / PI);
+  return (uint8_t)constrain(ciclo, 2, 128);
+}
 
 // El saludo segun la hora local: GM hasta las 13, GA hasta las 20 y GE despues
 const char* simSaludo() {
@@ -35,6 +51,7 @@ void simEmitir(const String& texto) {
   simEmitido = texto;
   simRespuesta = "";
   keyerPausar();
+  cicloTono = simCicloQsb();  // Ya para el primer elemento (luego lo sigue procesarSim)
   motorCWEmitir(texto.c_str(), simWpm, simEspaciado, "SIM");
   estadoSim = SIM_EMITIENDO;
   pantallaPendiente = true;
@@ -62,6 +79,8 @@ void iniciarSim() {
   simParque = referenciaParqueAleatoria();
   simRepeticiones = 0;
   simInicioMs = millis();
+  simQsbFase1 = random(628) / 100.0f;
+  simQsbFase2 = random(628) / 100.0f;
   faseSim = FASE_LLAMADA;
   opcionPracticaSim = 0;
   ritmoBorrar = true;  // Para la velocidad real del resultado
@@ -143,6 +162,8 @@ void simRecibirCaracter(char c) {
 }
 
 void procesarSim() {
+  // QSB solo mientras emite el activador: tu tono de las palas (y el resto de Chispas) siempre al maximo
+  cicloTono = (enSim && estadoSim == SIM_EMITIENDO) ? simCicloQsb() : 128;
   if (!enSim) return;
   if (estadoSim == SIM_EMITIENDO && !motorCWOcupado()) {
     keyerReanudar();  // Tu turno
@@ -176,8 +197,10 @@ void simRepetir() {
 // ----------------------------------------------------------------------------
 // Pantallas
 // ----------------------------------------------------------------------------
-#define N_AJUSTES_SIM 4
-const char* const NOMBRES_AJUSTES_SIM[N_AJUSTES_SIM] = { "WPM ACTIVADOR", "ESPACIADO", "WPM PALAS", "VER TEXTO" };
+#define N_AJUSTES_SIM 5
+const char* const NOMBRES_AJUSTES_SIM[N_AJUSTES_SIM] = {
+  "WPM ACTIVADOR", "ESPACIADO", "WPM PALAS", "VER TEXTO", "QSB"
+};
 
 String valorAjusteSim(uint8_t i) {
   switch (i) {
@@ -185,6 +208,7 @@ String valorAjusteSim(uint8_t i) {
     case 1: return String(simEspaciado) + "%";
     case 2: return String(keyerWpm);
     case 3: return simVerTexto ? String("SI") : String("NO");
+    case 4: return simQsb == QSB_FUERTE ? String("FUERTE") : (simQsb == QSB_SUAVE ? String("SUAVE") : String("NO"));
     default: return String("");
   }
 }

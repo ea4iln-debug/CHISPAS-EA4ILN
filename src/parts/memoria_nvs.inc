@@ -41,6 +41,7 @@ void cargarDatosNVS() {
   simWpm = constrain(prefs.getUChar("swpm", 18), KEYER_WPM_MIN, KEYER_WPM_MAX);
   simEspaciado = constrain(prefs.getUShort("ssp", 150), 100, 200);
   simVerTexto = prefs.getBool("sver", true);
+  simQsb = min(prefs.getUChar("sqsb", QSB_NO), (uint8_t)QSB_FUERTE);
   echoTotalIntentos = prefs.getUInt("eint", 0);
   echoTotalAciertos = prefs.getUInt("eok", 0);
   echoSesiones = prefs.getUShort("eses", 0);
@@ -162,6 +163,7 @@ void guardarSimNVS() {
   prefs.putUChar("swpm", simWpm);
   prefs.putUShort("ssp", simEspaciado);
   prefs.putBool("sver", simVerTexto);
+  prefs.putUChar("sqsb", simQsb);
   prefs.end();
 }
 
