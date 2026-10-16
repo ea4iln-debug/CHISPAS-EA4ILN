@@ -139,7 +139,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   Imágenes de la PCB en `web/hardware/` (en Git: la Action no tiene KiCad), hechas con
   **`hardware/herramientas/imagenes_web.sh`** (kicad-cli `pcb render` y `sch export pdf`, PNG del esquema con
   pymupdf; ~2 min): **rehacerlas si cambia la PCB**. `preparar.py` copia también `hardware.html`, `web/hardware/`,
-  los PDF de `docs/` (esquema de la protoboard y plano de la perforada) y `docs/img/prototipo.jpg`; la Action se
+  los PDF de `docs/` (esquema de la protoboard y plano de la perforada) y las fotos `docs/img/prototipo.jpg` y
+  `placa_perforada.jpg` (foto del usuario, reducida a 1020 px); la Action se
   lanza también al cambiar `docs/*.pdf` o `docs/img/`. En el móvil las tablas pasan a fichas apiladas. Probada en
   local con Chrome sin interfaz (1280 y 500 px; Chrome no baja de ~500 px de ventana).
 - **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0) y

@@ -27,7 +27,7 @@ TROZOS = [  # (archivo, desde, hasta); None = hasta el final
 ]
 
 CAPTURAS = ("inicio.png", "cara.png", "cw.png", "qso_sim.png", "koch.png", "trx.png", "prop.png", "pota.png",
-            "sol.png", "lora.png", "prototipo.jpg")
+            "sol.png", "lora.png", "prototipo.jpg", "placa_perforada.jpg")
 
 PAGINAS = ("index.html", "hardware.html")
 DOCS_PDF = ("esquema_protoboard.pdf", "placa_perforada.pdf")
