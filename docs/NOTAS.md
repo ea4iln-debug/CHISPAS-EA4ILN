@@ -99,6 +99,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   **v1.20 (final), 16 oct 2026**: sin la variante sin encoder (solo `chispas-1.20.bin` y `-usb.bin`) y batería con
   el factor 4,985. Antes de publicar, cargada por USB en la placa 1 (perforada): encoder, topes de los valores,
   dormir y despertar con el eje, bien; batería 4,17 V. https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.20
+  **v1.30b (beta), borrador del 16 oct 2026, sin publicar**: audio sintetizado por sigma-delta, QSO SIM (tercera
+  opción del menú CW; `tx libre` al pie), Koch y Duo con TEXTO, TX LIBRE > RITMO y batería al 100 % desde 4,15 V.
+  En la placa 1 por USB (arranque v1.30b, menú CW y entrada a QSO SIM y TX LIBRE por capturas). Notas para el
+  usuario escritas a mano en `dist/1.30b/notas.md`. Falta `./publicar.sh --publicar`.
 - **Web de instalación por USB (16 oct 2026):** https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (GitHub Pages,
   fuente "GitHub Actions", activada con `gh api -X POST repos/.../pages -f build_type=workflow`). `web/index.html`
   con **ESP Web Tools 10.4.0** (unpkg, `<esp-web-install-button>`; Chrome/Edge de escritorio). La Action
