@@ -86,6 +86,9 @@ GitHub.
 
 ## Hardware
 
+Resumen con fotos, fases del desarrollo, piezas, conexiones y la PCB (aún sin probar):
+**[página de hardware](https://ea4iln-debug.github.io/CHISPAS-EA4ILN/hardware.html)**.
+
 ### Placa principal
 - **[Heltec WiFi LoRa 32 V3](https://heltec.org/project/wifi-lora-32-v3/)**: ESP32-S3FN8 (8 MB de flash, sin PSRAM), radio
   LoRa SX1262 a 868 MHz, pantalla OLED de 0,96" (128×64, SSD1306) y cargador de batería LiPo integrado.
