@@ -65,7 +65,8 @@ GitHub.
 | **Koch (RX)** | Orden de caracteres de LCWO (lecciones 1–40), grupos aleatorios configurables (wpm, espaciado, caracteres y grupos), o **indicativos** al azar y **frases de QSO POTA**. La letra nueva de cada lección sale el 25 % de las veces y, con el **refuerzo**, las letras que más fallas salen más (hasta el doble o el triple). Al terminar se corrige **letra a letra** (marcando cada fallo) o con el **total de fallos**; estadísticas por lección y por carácter. | ✅ |
 | **Echo (TX)** | Chispas emite letras y hay que repetirlas con las palas. Ajustes propios (wpm, espaciado, lección, letras por reto, número de retos, refuerzo de las letras con más errores), resultado al terminar y estadísticas por lección y por carácter. | ✅ |
 | **TX libre (keyer iámbico)** | Modos A y B, 10–40 wpm, palas normales o invertidas. Descodifica en pantalla lo que se manipula y mide tu **ritmo** (espacios entre letras y palabras, titubeos, velocidad real) con un consejo. | ✅ |
-| **Práctica Duo por LoRa** | Práctica en pareja entre dos Chispas: uno envía grupos y el otro los recibe y los copia. Tramas digitales a 868 MHz, sin audio. | ✅ |
+| **QSO SIM** | Simulador de QSO POTA: Chispas hace de activador y tú de cazador con las palas (indicativo, `5NN`, `73`). Si no te copia, te pide repetir. Velocidad del activador, espaciado, texto en pantalla y condiciones de banda: **QSB**, **ruido**, **estática de tormenta** y **QRM** (NO / SUAVE / FUERTE). | ✅ |
+| **Práctica Duo por LoRa** | Práctica en pareja entre dos Chispas: uno envía grupos (o indicativos, o frases de QSO POTA) y el otro los recibe y los copia. Tramas digitales a 868 MHz, sin audio. | ✅ |
 | **QSO libre por LoRa** | QSO con las palas entre dos Chispas: cada palabra se envía al terminarla y lo recibido suena cuando dejas de manipular (si manipulas mientras suena, se corta). | ✅ |
 | **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`, `{WX}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez. | ✅ |
 | **Propagación** | Índices solares y condiciones por banda de [hamqsl.com](https://www.hamqsl.com/). | ✅ |
@@ -77,7 +78,7 @@ GitHub.
 | **Actualización OTA** | Busca la última release en GitHub, avisa si hay versión nueva y la instala por WiFi (TLS validado). | ✅ |
 | **Batería** | Tensión y porcentaje. Detecta cuando no hay batería conectada. | ✅ |
 | **Cara de Chispas** | Salvapantallas animado con expresiones y gestos, también de radioaficionado: antena llamando CQ, auriculares, bocadillo con CQ/73/88 y guiño en Morse. Reacciona a la línea gris, a la buena propagación y al aviso de tormenta. Sale tras el tiempo elegido sin uso en cualquier pantalla salvo CW, LoRa y TRX. | ✅ |
-| **Tono por altavoz y auriculares** | Tono CW (400–1000 Hz, 850 por defecto) por un altavoz con amplificador PAM8302A, con volumen y silencio automático del altavoz al conectar auriculares. El amplificador solo se enciende en CW, LoRa y TRX. | ✅ |
+| **Tono por altavoz y auriculares** | Tono CW (400–1000 Hz, 850 por defecto) por un altavoz con amplificador PAM8302A, con volumen y silencio automático del altavoz al conectar auriculares. Audio sintetizado (sigma-delta a 16 kHz): tono sin clics y, en el simulador, ruido, estática, QRM y QSB. El amplificador solo se enciende en CW, LoRa y TRX. | ✅ |
 | **Ahorro de energía** | CPU a 80 MHz sin WiFi, radio dormida fuera de LoRa, pantalla atenuada y apagado automático (deep sleep). | ✅ |
 | **GPS** | Hora, locator y altitud automáticos (QNH del BME280 e historial de presión a nivel del mar). Duerme casi siempre para ahorrar. Opcional. | ✅ |
 
@@ -256,7 +257,7 @@ muy larga (2,5 s) = dormir.
 | N.º | Pantalla | Contenido |
 |---|---|---|
 | 1 | **Inicio** | Nombre, indicativo y versión. Tras unos segundos sin uso aparece la cara de Chispas (también en PROP., POTA, SOL y CONF.). |
-| 2 | **CW** | Entrenador: `KOCH (RX)`, `ECHO (TX)` y `TX LIBRE` (keyer), con ajustes, práctica y estadísticas |
+| 2 | **CW** | Entrenador: `KOCH (RX)`, `ECHO (TX)`, `QSO SIM` (simulador de QSO POTA) y `tx libre` en el pie (keyer), con ajustes, práctica y estadísticas |
 | 3 | **LoRa** | `PRÁCTICA DUO` (grupos en pareja) y `QSO LIBRE` (con las palas) |
 | 4 | **TRX** | Transceptor: `DECODIFICAR`, `OPERAR` (por KEY, con tune), `QSO` y `memorias` |
 | 5 | **PROP.** | Propagación: índices solares y condiciones por banda |
@@ -276,7 +277,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | <img src="docs/img/koch_listado.png" width="256" alt="Koch: grupos emitidos"><br>Koch: grupos emitidos | <img src="docs/img/koch_total.png" width="256" alt="Koch: fallos totales"><br>Koch: corregir con el total | <img src="docs/img/koch_errores.png" width="256" alt="Koch: más errores"><br>Koch: más errores |
 | <img src="docs/img/koch_totales.png" width="256" alt="Koch: totales"><br>Koch: totales | <img src="docs/img/koch_lecciones.png" width="256" alt="Koch: lecciones"><br>Koch: lecciones | <img src="docs/img/echo.png" width="256" alt="Ajustes del Echo"><br>Echo: ajustes |
 | <img src="docs/img/echo_practica.png" width="256" alt="Práctica Echo"><br>Echo: práctica | <img src="docs/img/echo_errores.png" width="256" alt="Echo: más errores"><br>Echo: más errores | <img src="docs/img/echo_lecciones.png" width="256" alt="Echo: lecciones"><br>Echo: lecciones |
-| <img src="docs/img/tx_libre.png" width="256" alt="TX libre"><br>TX libre (keyer) | <img src="docs/img/tx_libre_menu.png" width="256" alt="Ajustes de TX libre"><br>TX libre: menu | |
+| <img src="docs/img/tx_libre.png" width="256" alt="TX libre"><br>TX libre (keyer) | <img src="docs/img/tx_libre_menu.png" width="256" alt="Ajustes de TX libre"><br>TX libre: menu | <img src="docs/img/qso_sim.png" width="256" alt="Ajustes de QSO SIM"><br>QSO SIM: ajustes |
 
 ### LoRa
 

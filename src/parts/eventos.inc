@@ -781,7 +781,7 @@ void procesarBoton() {
       if (atras) {
         entrarEnPantalla(PANTALLA_INICIO);
       } else if (giro != 0) {
-        // Foco: [sig.] -> [KOCH (RX)] -> [ECHO (TX)] -> [TX LIBRE] -> [qso sim] -> [ant.] -> [sig.] ...
+        // Foco: [sig.] -> [KOCH (RX)] -> [ECHO (TX)] -> [QSO SIM] -> [tx libre] -> [ant.] -> [sig.] ...
         moverFocoAnillo(opcionPantalla3, OPCION_BARRA_CW, giro);
       } else if (pulsa) {
         if (opcionPantalla3 == 0) {
@@ -790,9 +790,9 @@ void procesarBoton() {
         } else if (opcionPantalla3 == 1) {
           entrarEnEcho();
         } else if (opcionPantalla3 == 2) {
-          entrarEnKeyer();
-        } else if (opcionPantalla3 == OPCION_SIM_CW) {
           entrarEnSim();
+        } else if (opcionPantalla3 == OPCION_LIBRE_CW) {
+          entrarEnKeyer();
         } else {
           navegarDesdeBarra();
         }

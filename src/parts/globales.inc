@@ -63,9 +63,9 @@ uint32_t kochTotCaracteres = 0, kochTotAciertos = 0;
 bool enSubpantallaCW = false;
 bool enPractica3_2 = false;
 bool enEstadisticas3_5 = false;
-#define OPCION_SIM_CW   3
+#define OPCION_LIBRE_CW 3
 #define OPCION_BARRA_CW 4
-uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=KOCH (RX), 1=ECHO (TX), 2=TX LIBRE, 3=QSO SIM (centro del pie),
+uint8_t opcionPantalla3 = OPCION_BARRA_CW; // 0=KOCH (RX), 1=ECHO (TX), 2=QSO SIM, 3=TX LIBRE (centro del pie),
                                            // 4=BARRA INFERIOR (ant/sig)
 
 // Keyer iambico (pantalla CW > TX LIBRE). La configuracion se guarda en NVS al salir

@@ -233,7 +233,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 
 ## Funciones (probadas en placa salvo que se diga)
 - **Pantalla CW** (v0.7d; nombres y orden de la v0.8g): estilo LoRa, título " ENTRENADOR CW " en negativo y
-  `< KOCH (RX) >`, `< ECHO (TX) >`, `< TX LIBRE >`, centradas con `dibujarOpcionCentrada()` como las de LoRa (`opcionPantalla3` 0/1/2; no caben 4 opciones con 9 px por línea).
+  `< KOCH (RX) >`, `< ECHO (TX) >`, `< QSO SIM >`, centradas con `dibujarOpcionCentrada()` como las de LoRa (`opcionPantalla3` 0/1/2; no caben 4 opciones con 9 px por línea). `tx libre` va en el centro del pie (`OPCION_LIBRE_CW` = 3, barra = 4), como "memorias" en TRX. **Desde la v1.30b (16 oct 2026)**: antes la tercera era TX LIBRE y el pie "qso sim"; el usuario quiso el simulador más a la vista. Probado en la placa 1 (capturas por serie: foco y entrada a cada una).
   - **KOCH (RX)**: ajustes en lista desde la v0.9h (WPM, ESPACIADO, LECCION, CARACTERES, GRUPOS, ESTAD.; pie
     `iniciar`/`volver`; `opcionSubpantalla` 0–7, 6 = iniciar por defecto). El Echo, igual (`NOMBRES_AJUSTES_ECHO`).
     ESTAD. (Koch y Echo): pie `3/17 L01-03  >volver` (`nombrePaginaEstad()`). Práctica: pausa/seguir y salir; resultado: volver y
@@ -308,9 +308,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     separadas, > 10 % titubeos, palabras largas, irregular > 0,8; si no, "BUEN RITMO"). Se pone a cero al entrar
     en TX LIBRE y con "borrar" (`ritmoBorrar`, lo hace la tarea). Probado en la placa 1: menú y páginas sin datos
     (capturas por serie); **falta probar manipulando con las palas**.
-  - **QSO SIM** (16 oct 2026, sin versión nueva, **sin probar en placa**; `src/parts/qso_sim.inc`): simulador de QSO
-    POTA, Chispas de activador y el usuario de cazador con las palas. En el menú CW va en el centro del pie
-    ("qso sim", `OPCION_SIM_CW` = 3, barra = 4), como "memorias" en TRX: una cuarta opción no cabe. Ajustes: WPM
+  - **QSO SIM** (16 oct 2026, v1.30b; `src/parts/qso_sim.inc`; probado en la placa 1 de oído con QSB, RUIDO,
+    TORMENTA y QRM; **falta manipularlo con las palas**): simulador de QSO
+    POTA, Chispas de activador y el usuario de cazador con las palas. En el menú CW es la tercera opción (`opcionPantalla3`
+    = 2; hasta la v1.30b iba en el centro del pie como "qso sim"). Ajustes: WPM
     ACTIVADOR (`simWpm`, 18), ESPACIADO (150 %), WPM PALAS (`keyerWpm`, el de TX LIBRE), VER TEXTO, QSB (NO / SUAVE /
     FUERTE); NVS `swpm`, `ssp`, `sver`, `sqsb`. Tres turnos: `CQ POTA DE <A> <A> K` → tu indicativo;
     `<MI> GM 5NN 5NN BK` (GM/GA/GE por la hora local) → basta `5NN` o `599`; `TU <PARQUE> 73 E E` → `E E` opcional.
@@ -627,9 +628,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   **Decodificador** (TRX > DECODIFICAR sin señal): ninguna letra falsa, pero la barra de nivel queda en ~10 % (con
   el PWM estaba a 0): algo del GPIO7 llega al GPIO6 o a su masa. **Falta probar con CW real**; si empeora, parar
   la síntesis en DECODIFICAR (no necesita tono local) o en todo TRX salvo el tono local de OPERAR/QSO.
-  **Auriculares de la placa 1: solo suena el derecho** (anillo, por R3). La síntesis es una sola señal para los dos
-  lados, así que es del montaje: revisar la clavija, R2 (220 Ω de C1 a la punta de J2) y la patilla T de J2. No
-  se había probado antes con el PWM en esta placa.
+  **Auriculares de la placa 1: solo sonaba el derecho** (anillo, por R3). **Resuelto el 16 oct 2026:** eran los
+  cables T y TN cruzados en el jack (ver "Placa perforada"), no la síntesis.
 - **Tono** (montado y probado el 10 oct 2026, placa 1): GPIO7 (PWM, `frecTonoHz`) → R1 1 kΩ → RV1 10 kΩ log (pat. 3;
   pat. 1 a GND) → cursor → C1 10 µF (+ al cursor) → R2 220 Ω → J2 T y R3 220 Ω → J2 R; J2 TN → BZ1 + (piezo pasivo
   de 16 mm), BZ1 − y J2 S a GND; RN libre. Auriculares por los dos lados y silencio mecánico del buzzer probados
@@ -732,6 +732,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    `leerEventoBoton`, valores con vuelta, binario de la OTA, `TIEMPO_PULSACION_DORMIR`, `ultimaDuracion`). Una placa
    sin encoder se queda en la v1.10. La versión es **1.20 y no 1.2**: `compararVersiones()` compara cada número por
    separado y "1.2" (1, 2) sería menor que "1.10" (1, 10). Compila: RAM 17,1 %, flash 38,6 %.
+9. **Auricular izquierdo de la placa 1**: resuelto el 16 oct 2026 (T y TN cruzados en el jack; ver "Placa perforada").
+10. **Siguiente:** decodificador con CW real (nivel ~10 % en silencio con la síntesis); Duo TEXTO con dos placas; QSO SIM,
+   TX LIBRE > RITMO y la práctica QSO POTA del Koch manipulando con las palas.
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).
@@ -812,6 +815,13 @@ decía "cable recto" (mal); el usuario lo vio y la montó con **DT y SW cruzados
 plano pone P1 en el orden del KY-040 (CLK, DT, SW, +, GND: U9, U10, U11) con cable recto: DT llega por T13–T10 a U10
 y SW (GPIO20) va por el cable aislado 15 (S10 → U11). **La placa 1 sigue con el orden viejo**: su cable del encoder
 no es recto.
+**Auricular izquierdo mudo en la placa 1 (16 oct 2026): T y TN cruzados entre P3 y el jack.** Sin clavija el altavoz
+sonaba (T y TN se tocan dentro del jack y da igual cuál es cuál), pero con la clavija el auricular izquierdo quedaba
+en TN, que la clavija separa del tono. Razonamiento: el amplificador recibe la señal por R2 → P3·T → borne T →
+contacto T–TN → P3·TN → A+, así que si el altavoz suena, R2 y esos cables están bien; solo quedaba lo que trabaja con
+la clavija dentro. Esquema de diagnóstico con tres medidas en ohmios contra P1 (A en R1 = P3·T, B en S1 = P3·R,
+C en Q1 = P3·TN): https://claude.ai/artifact/Qh4gAfhxtzJSJgm8164XA7. El usuario cambió entre sí los Dupont de P3·T
+y P3·TN y suenan los dos auriculares y el altavoz. Al montar: **comprobar qué borne del jack es T y cuál TN**.
 
 Plano para montar el prototipo en una placa de pads a doble cara (pedidas de 7×9 cm, 24×30 agujeros; el plano ocupa
 21×26, 53×66 mm): `docs/placa_perforada.pdf` (4 páginas: componentes, soldaduras con puentes y 12 cables numerados,

@@ -476,16 +476,16 @@ void renderizarPantallaCW() {
                        (opcionPracticaEcho == 1 ? "> " : "  ") + String("salir"));
 
   } else if (!enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
-    // Mismo estilo que la pantalla LoRa: titulo en negativo y tres opciones; "qso sim" en el centro del pie
+    // Mismo estilo que la pantalla LoRa: titulo en negativo y tres opciones; "tx libre" en el centro del pie
     // (como "memorias" en TRX: una cuarta opcion no cabe)
     display.setTextSize(1);
     dibujarTituloMenu(" ENTRENADOR CW ");
 
-    const char* opciones[] = { "< KOCH (RX) >", "< ECHO (TX) >", "< TX LIBRE >" };
+    const char* opciones[] = { "< KOCH (RX) >", "< ECHO (TX) >", "< QSO SIM >" };
     for (uint8_t i = 0; i < 3; i++) dibujarOpcionCentrada(opcionPantalla3 == i, opciones[i], 24 + i * 9);
 
     dibujarBarraAvanzarRetroceder(opcionPantalla3 == OPCION_BARRA_CW,
-                                  opcionPantalla3 == OPCION_SIM_CW ? ">qso sim" : " qso sim");
+                                  opcionPantalla3 == OPCION_LIBRE_CW ? ">tx libre" : " tx libre");
 
   } else if (enSubpantallaCW && !enPractica3_2 && !enEstadisticas3_5) {
     // Ajustes del Koch: lista como CONF > CONFIG; "iniciar" y "volver" en el pie

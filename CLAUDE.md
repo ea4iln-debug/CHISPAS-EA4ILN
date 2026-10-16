@@ -31,7 +31,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (16 oct 2026)
-- **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
+- **v1.30b** en borrador (ver abajo). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
   y batería a 4,985. En la placa 1 por USB y en la placa 2 por OTA (16 oct; antes, reinicio por OTA sin avance probado).
   Antes, v1.10 (15 oct, primera final; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance). **Nombres de las placas desde el 15 oct** (antes, al revés; lo anterior en NOTAS usa los viejos):
   **placa 1 = placa perforada** (MAC `08:c0`, montada y probada el 15 oct) y **placa 2 = protoboard** (MAC `50:74`,
@@ -98,7 +98,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 | 2 | KEY (PC817 330 Ω, 10 kΩ a GND, J4 con puente R-T) |
 | 4 / 5 | Pala DIT / DAH (pull-up interno) |
 | 6 | Entrada del decodificador (ADC1) |
-| 7 | Tono PWM → RV1 → PAM8302A + altavoz (TN del jack) y auriculares |
+| 7 | Tono sigma-delta → R1, RV1 → PAM8302A + altavoz (TN del jack) y auriculares |
 | 38 | SD del PAM8302A (BAJO = apagado) |
 | 19 / 20 / 48 | Encoder CLK / SW / DT (SW en pin RTC: despierta del deep sleep; cambiado el 13 oct) |
 | 41 / 42 | BME280 en Wire1 (SDA / SCL), 0x76 |
@@ -109,22 +109,19 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - **PCB en curso (15 oct)**: KiCad 10, `hardware/` (5 placas JLCPCB, el mínimo; SMD montado; ver NOTAS: "PCB"). Esquema
   completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Pedidos a JLCPCB (5 placas) y LCSC hechos y combinados (15 oct); R7 cambiado al CTR C18213426 (el ALPS, sin stock; lineal, encaje sin comprobar). Siguiente: recibir y montar. Skill **`pcb`** (scripts en `hardware/herramientas/`).
 
-- **Sin versión nueva (16 oct, en la placa 1 por USB):** Koch con ajuste TEXTO (GRUPOS / INDICAT. / QSO POTA),
-  TX LIBRE > menu > RITMO (espacios, titubeos, velocidad real y consejo), batería al 100 % desde 4,15 V y en `[DIAG]`.
-- **Sin versión nueva y sin probar en placa (16 oct):** Duo de LoRa con ajuste TEXTO (grupos, indicativos, frases
-  POTA).
-- **Audio sintetizado por sigma-delta** (16 oct, sin versión nueva; en la placa 1 por USB, probado de oído): sin PWM;
-  GPIO7, ISR a 16 kHz (timer 0) solo con el amplificador encendido, nivel medio con rampa de 128 ms (pulso casi
-  imperceptible al entrar y salir: se deja). **CW > qso sim** (`qso_sim.inc`) probado con QSB, RUIDO, TORMENTA y QRM
-  (NO / SUAVE / FUERTE). Decodificador sin señal: sin letras falsas, pero nivel ~10 % (antes 0). Detalle en NOTAS:
-  "Audio sintetizado".
+- **v1.30b (16 oct, borrador de release; en la placa 1 por USB):** audio sintetizado por sigma-delta (sin PWM; GPIO7,
+  ISR a 16 kHz con el amplificador encendido; pulso casi imperceptible al entrar y salir: se deja); **CW > QSO SIM**
+  (`qso_sim.inc`, tercera opción del menú; `tx libre` pasa al pie) con QSB, RUIDO, TORMENTA y QRM; Koch y Duo con
+  ajuste TEXTO (grupos, indicativos, QSO POTA; Duo sin probar con dos placas); TX LIBRE > menu > RITMO; batería al
+  100 % desde 4,15 V. Decodificador sin señal: sin letras falsas, pero nivel ~10 % (antes 0). Detalle en NOTAS:
+  "Audio sintetizado". Auricular izquierdo de la placa 1: T y TN cruzados en el jack (arreglado, 16 oct).
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente (17 oct):** decodificador con CW real (nivel ~10 % en silencio con la síntesis; si empeora, parar la
-   síntesis en DECODIFICAR); auricular izquierdo de la placa 1 mudo (revisar clavija, R2 y punta de J2); Duo TEXTO
-   (dos placas) y el qso sim manipulando con las palas.
+   síntesis en DECODIFICAR); Duo TEXTO (dos placas) y QSO SIM manipulando con las palas; publicar la v1.30b
+   si va bien.
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se
