@@ -29,7 +29,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - **Web de instalación por USB** (16 oct): https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (`web/`, ESP Web Tools; probada en la placa 1);
   la Action `web.yml` la rehace sola al publicar una release (parte el `-usb.bin` para conservar la NVS). Selector
   **Estable / Beta** (la beta solo si es posterior a la última final) y "Novedades de la beta": texto fijo en
-  `web/index.html`, **rehacerlo con cada beta**.
+  `web/index.html`, **rehacerlo con cada beta**. **Página de hardware** (`web/hardware.html`, 16 oct): fases, piezas,
+  pines y PCB (sin Gerber hasta probarla); imágenes de la PCB con `hardware/herramientas/imagenes_web.sh` (rehacerlas si cambia).
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (16 oct 2026)

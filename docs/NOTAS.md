@@ -130,6 +130,18 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   si hay beta: **texto fijo en `index.html`, rehacerlo con cada beta**. Capturas de la OLED: 10 (añadidas CW y
   QSO SIM). Probada en local (Edge sin interfaz, con beta y sin ella); la instalación de la beta desde la web, sin
   probar.
+  **Página de hardware (16 oct 2026, petición del usuario):** `web/hardware.html` (SPDX CC-BY-NC-SA-4.0, mismo
+  estilo que `index.html`, enlazada desde su barra y desde "Tres pasos"): fases (protoboard y placa perforada
+  **probadas**, PCB v1.0 **en curso, sin probar**), tabla de piezas (imprescindible / recomendado / opcional y qué se
+  pierde sin cada una), tabla de pines, PCB (vista 3D, caras de arriba y abajo, esquema en PNG y PDF) y enlaces al
+  proyecto de KiCad y a la BOM en GitHub. **Gerber sin publicar a propósito** hasta montar y probar la primera PCB
+  (aviso "no la encargues aún"); al probarla, añadir la descarga y cambiar el estado de la fase 3.
+  Imágenes de la PCB en `web/hardware/` (en Git: la Action no tiene KiCad), hechas con
+  **`hardware/herramientas/imagenes_web.sh`** (kicad-cli `pcb render` y `sch export pdf`, PNG del esquema con
+  pymupdf; ~2 min): **rehacerlas si cambia la PCB**. `preparar.py` copia también `hardware.html`, `web/hardware/`,
+  los PDF de `docs/` (esquema de la protoboard y plano de la perforada) y `docs/img/prototipo.jpg`; la Action se
+  lanza también al cambiar `docs/*.pdf` o `docs/img/`. En el móvil las tablas pasan a fichas apiladas. Probada en
+  local con Chrome sin interfaz (1280 y 500 px; Chrome no baja de ~500 px de ventana).
 - **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0) y
   sesión iniciada (`gh auth login`, cuenta ea4iln-debug, HTTPS, token en el llavero de Windows). Desde entonces ya no hace falta la vía de la API REST.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >

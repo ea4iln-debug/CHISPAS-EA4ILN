@@ -27,7 +27,10 @@ TROZOS = [  # (archivo, desde, hasta); None = hasta el final
 ]
 
 CAPTURAS = ("inicio.png", "cara.png", "cw.png", "qso_sim.png", "koch.png", "trx.png", "prop.png", "pota.png",
-            "sol.png", "lora.png")
+            "sol.png", "lora.png", "prototipo.jpg")
+
+PAGINAS = ("index.html", "hardware.html")
+DOCS_PDF = ("esquema_protoboard.pdf", "placa_perforada.pdf")
 
 RAIZ = Path(__file__).resolve().parent.parent
 
@@ -70,11 +73,17 @@ def main():
     if len(sys.argv) == 6:
         manifiesto(Path(sys.argv[4]), sys.argv[5], salida, sello, "beta")
 
-    pagina = (RAIZ / "web" / "index.html").read_text(encoding="utf-8")
-    (salida / "index.html").write_text(pagina.replace("__SELLO__", sello), encoding="utf-8")
+    for nombre in PAGINAS:
+        pagina = (RAIZ / "web" / nombre).read_text(encoding="utf-8")
+        (salida / nombre).write_text(pagina.replace("__SELLO__", sello), encoding="utf-8")
     (salida / "img").mkdir()
     for img in CAPTURAS:
         shutil.copy(RAIZ / "docs" / "img" / img, salida / "img")
+    # Pagina de hardware: imagenes de la PCB (hardware/herramientas/imagenes_web.sh), PDF y foto del prototipo
+    shutil.copytree(RAIZ / "web" / "hardware", salida / "hardware")
+    (salida / "docs").mkdir()
+    for pdf in DOCS_PDF:
+        shutil.copy(RAIZ / "docs" / pdf, salida / "docs")
     shutil.copy(RAIZ / "docs" / "LICENCIAS_TERCEROS.txt", salida)
     beta = f" y beta {sys.argv[5]}" if len(sys.argv) == 6 else ""
     print(f"Web de Chispas: estable {sys.argv[3]}{beta} en {salida}")

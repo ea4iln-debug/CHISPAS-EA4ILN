@@ -1,0 +1,293 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-NC-SA-4.0 -->
+<!-- Copyright (C) 2026 EA4ILN -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hardware de Chispas</title>
+<meta name="description" content="Qué hay que montar para usar Chispas EA4ILN: módulos, conexiones, esquemas y estado de la PCB.">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M18 2 6 18h8l-2 12 14-18h-9z' fill='%23ff8a3d'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* Mismos colores y piezas que index.html */
+  :root {
+    --fondo: #0b0d12; --fondo2: #11141b; --tarjeta: #151922; --borde: #252b38; --borde2: #343c4d;
+    --texto: #e9ecf2; --suave: #9aa3b5; --tenue: #6b7489;
+    --acento: #ff8a3d; --acento2: #ffb36b; --ok: #5be3a0; --azul: #6fb3ff;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--fondo); color: var(--texto); overflow-x: hidden;
+    font: 16px/1.6 "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(900px 500px at 75% -10%, rgba(255, 138, 61, 0.16), transparent 60%),
+      radial-gradient(700px 400px at 0% 30%, rgba(91, 160, 255, 0.07), transparent 60%),
+      radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0) 0 0 / 22px 22px;
+  }
+  a { color: var(--acento2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .envoltura { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+  header { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(10px);
+    background: rgba(11, 13, 18, 0.72); border-bottom: 1px solid var(--borde); }
+  .barra { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .marca { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; color: var(--texto); }
+  .marca:hover { text-decoration: none; }
+  .marca small { font-family: "JetBrains Mono", monospace; font-weight: 500; font-size: 0.75rem; color: var(--tenue);
+    border: 1px solid var(--borde2); border-radius: 6px; padding: 1px 6px; }
+  .enlaces { display: flex; gap: 18px; font-size: 0.95rem; }
+  .enlaces a { color: var(--suave); }
+  .enlaces a:hover { color: var(--texto); text-decoration: none; }
+
+  .portada { display: grid; grid-template-columns: 1fr 1.1fr; gap: 40px; align-items: center; padding: 64px 0 32px; }
+  h1 { font-size: clamp(2rem, 4.5vw, 3.2rem); line-height: 1.08; margin: 0 0 16px; letter-spacing: -0.03em; }
+  h1 .brillo { background: linear-gradient(90deg, var(--acento), var(--acento2)); -webkit-background-clip: text;
+    background-clip: text; color: transparent; }
+  .lema { color: var(--suave); font-size: 1.1rem; margin: 0 0 18px; }
+  .portada img { width: 100%; height: auto; display: block; filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.5)); }
+
+  section { padding: 36px 0; }
+  h2 { font-size: 1.7rem; letter-spacing: -0.02em; margin: 0 0 6px; }
+  h3 { margin: 10px 0 6px; font-size: 1.08rem; }
+  .intro { color: var(--suave); margin: 0 0 24px; max-width: 46em; }
+  .rejilla { display: grid; gap: 16px; }
+  .r2 { grid-template-columns: repeat(2, 1fr); }
+  .r3 { grid-template-columns: repeat(3, 1fr); }
+  .tarjeta { background: linear-gradient(180deg, var(--tarjeta), var(--fondo2)); border: 1px solid var(--borde);
+    border-radius: 16px; padding: 22px; }
+  .tarjeta p { margin: 0; color: var(--suave); font-size: 0.95rem; }
+  .tarjeta p + p { margin-top: 8px; }
+  .opciones { margin: 10px 0 0; padding: 0; list-style: none; font-size: 0.93rem; color: var(--suave); }
+  .opciones li { padding-left: 14px; position: relative; margin: 6px 0; }
+  .opciones li::before { content: ""; position: absolute; left: 0; top: 0.65em; width: 6px; height: 6px; border-radius: 50%; background: var(--tenue); }
+  .opciones b, .tarjeta b { color: var(--texto); font-weight: 500; }
+  code { font-family: "JetBrains Mono", monospace; font-size: 0.86em; background: #1b202b; border: 1px solid var(--borde2);
+    border-radius: 5px; padding: 1px 5px; color: var(--texto); }
+
+  /* Fases: probado, en curso */
+  .estado { display: inline-flex; align-items: center; gap: 7px; font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px;
+    padding: 3px 10px; }
+  .estado::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .probado { color: var(--ok); background: rgba(91, 227, 160, 0.08); border: 1px solid rgba(91, 227, 160, 0.35); }
+  .curso { color: var(--acento2); background: rgba(255, 138, 61, 0.08); border: 1px solid rgba(255, 138, 61, 0.4); }
+  .fase { display: flex; flex-direction: column; gap: 10px; }
+  .fase .num { font-family: "JetBrains Mono", monospace; color: var(--tenue); font-size: 0.85rem; }
+  .fase h3 { margin: 0; }
+  .fase .fecha { color: var(--tenue); font-size: 0.85rem; }
+  .fase .enlaces-fase { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.93rem; }
+  .fase.actual { border-color: rgba(255, 138, 61, 0.35); }
+  .foto { width: 100%; border-radius: 10px; border: 1px solid var(--borde); display: block; aspect-ratio: 16 / 9; object-fit: cover; }
+
+  .aviso { background: rgba(255, 179, 107, 0.08); border: 1px solid rgba(255, 179, 107, 0.35); color: var(--texto);
+    border-radius: 12px; padding: 14px 16px; font-size: 0.95rem; }
+  .aviso + .aviso { margin-top: 10px; }
+
+  /* Tablas */
+  .tabla { overflow-x: auto; border: 1px solid var(--borde); border-radius: 14px; background: var(--tarjeta); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  th { color: var(--tenue); font-weight: 500; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em;
+    background: var(--fondo2); }
+  tr:last-child td { border-bottom: 0; }
+  td { color: var(--suave); }
+  td:first-child { color: var(--texto); white-space: nowrap; }
+  td.gpio { font-family: "JetBrains Mono", monospace; color: var(--acento2); white-space: nowrap; }
+  .chip { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; border-radius: 6px; padding: 1px 7px;
+    white-space: nowrap; border: 1px solid var(--borde2); color: var(--suave); }
+  .chip.si { color: var(--acento2); border-color: rgba(255, 138, 61, 0.45); }
+
+  /* Galeria de la PCB */
+  .vistas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  figure { margin: 0; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 16px; padding: 14px; }
+  figure img { width: 100%; height: auto; display: block; border-radius: 8px; }
+  figure.blanco img { background: #f5f4ef; }
+  figcaption { color: var(--tenue); font-size: 0.88rem; margin-top: 8px; }
+  .descargas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .descarga { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--borde2); border-radius: 10px;
+    padding: 9px 14px; color: var(--texto); background: var(--fondo2); font-size: 0.93rem; }
+  .descarga:hover { border-color: var(--tenue); text-decoration: none; }
+  .descarga small { color: var(--tenue); font-family: "JetBrains Mono", monospace; }
+
+  footer { border-top: 1px solid var(--borde); margin-top: 40px; padding: 26px 0 40px; color: var(--tenue); font-size: 0.9rem; }
+  footer .envoltura { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+
+  @media (max-width: 900px) {
+    .portada { grid-template-columns: 1fr; padding-top: 36px; }
+    .r3 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 680px) {
+    .r2, .vistas { grid-template-columns: 1fr; }
+    .enlaces a.opcional { display: none; }
+    /* Tablas: cada fila apilada, como una ficha */
+    thead { display: none; }
+    table, tbody, tr, td { display: block; }
+    tr { padding: 10px 0; border-bottom: 1px solid var(--borde); }
+    tr:last-child { border-bottom: 0; }
+    td, td:first-child { border: 0; padding: 2px 14px; white-space: normal; }
+    td:first-child { font-weight: 500; }
+    #piezas td:nth-child(3)::before { content: "Sin ella: "; color: var(--tenue); }
+    #piezas td:nth-child(4) { padding-top: 6px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="envoltura barra">
+    <a class="marca" href="./">
+      <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 2 6 18h8l-2 12 14-18h-9z" fill="#ff8a3d"/></svg>
+      Chispas <small>EA4ILN</small>
+    </a>
+    <nav class="enlaces">
+      <a href="#fases" class="opcional">Fases</a>
+      <a href="#piezas" class="opcional">Piezas</a>
+      <a href="#pcb">PCB</a>
+      <a href="./">Instalar</a>
+    </nav>
+  </div>
+</header>
+
+<main class="envoltura">
+  <div class="portada">
+    <div>
+      <span class="estado curso">Hardware en desarrollo</span>
+      <h1>Qué hay que <span class="brillo">montar</span></h1>
+      <p class="lema">Chispas corre en una <b>Heltec WiFi LoRa 32 V3</b>. Alrededor lleva un encoder, un amplificador
+        de audio, la entrada de las palas, la salida KEY al transceptor y, si quieres, un sensor BME280 y un GPS.</p>
+      <p class="lema">Hoy se monta con módulos sobre placa perforada (o protoboard). La PCB propia está diseñada y
+        pedida, pero <b>aún no se ha probado</b>.</p>
+    </div>
+    <img src="hardware/pcb_3d.png?__SELLO__" width="1600" height="1100" alt="Vista 3D de la PCB de Chispas: Heltec en el centro, jacks en los bordes, encoder y conectores del GPS y del BME280">
+  </div>
+
+  <section id="fases">
+    <h2>Fases del desarrollo</h2>
+    <p class="intro">El firmware funciona igual en las tres: los pines son los mismos.</p>
+    <div class="rejilla r3">
+      <div class="tarjeta fase">
+        <span class="num">01 · Protoboard</span>
+        <span class="estado probado">Probado</span>
+        <img class="foto" src="img/prototipo.jpg?__SELLO__" alt="Prototipo de Chispas en protoboard con cables, encoder, jacks y palas" loading="lazy">
+        <p>El primer prototipo, con todos los módulos cableados. Sirvió para elegir pines y probar cada función.</p>
+        <div class="enlaces-fase"><a href="docs/esquema_protoboard.pdf">Esquema (PDF, 7 hojas)</a></div>
+      </div>
+      <div class="tarjeta fase">
+        <span class="num">02 · Placa perforada</span>
+        <span class="estado probado">Probado</span>
+        <p>La forma recomendada de montarlo hoy. Placa de pads a doble cara de 7 × 9 cm, con la Heltec en zócalos y
+          los módulos y mandos por cable a tiras de pines.</p>
+        <p>El plano marca dónde va cada pieza, cada soldadura y cada cable, con una lista de comprobaciones antes de
+          pinchar la Heltec. Montada completa y funcionando.</p>
+        <div class="enlaces-fase"><a href="docs/placa_perforada.pdf">Plano de montaje (PDF, 4 páginas)</a></div>
+      </div>
+      <div class="tarjeta fase actual">
+        <span class="num">03 · PCB v1.0</span>
+        <span class="estado curso">En curso · sin probar</span>
+        <p>Placa de 90 × 60 mm diseñada en KiCad, con los componentes SMD montados de fábrica y los de agujero pasante
+          (jacks, encoder, volumen y conectores) para soldar a mano.</p>
+        <p><b>Primeras placas pedidas, aún sin recibir.</b> Cuando se monte y se pruebe una, aquí estarán los archivos
+          para encargarla.</p>
+        <div class="enlaces-fase"><a href="#pcb">Ver la PCB</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="piezas">
+    <h2>Piezas</h2>
+    <p class="intro">Lo mínimo para usarlo es la Heltec, el encoder y el audio. El resto añade funciones: si falta,
+      Chispas arranca igual y solo pierdes lo que dice la tabla.</p>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Pieza</th><th>Para qué</th><th>Sin ella</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Heltec WiFi LoRa 32 V3</td><td>ESP32-S3 con LoRa SX1262 a 868 MHz y OLED de 128 × 64. Con su antena de 868 MHz.</td><td>Es el aparato.</td><td><span class="chip si">imprescindible</span></td></tr>
+          <tr><td>Encoder KY-040</td><td>Girar para moverse, pulsar para elegir. También despierta la placa.</td><td>No se puede manejar.</td><td><span class="chip si">imprescindible</span></td></tr>
+          <tr><td>Amplificador PAM8302A, altavoz de 8 Ω y potenciómetro</td><td>El tono de CW y los avisos. Volumen con el potenciómetro.</td><td>Sin sonido.</td><td><span class="chip si">imprescindible</span></td></tr>
+          <tr><td>Jack estéreo de 3,5 mm</td><td>Auriculares; al meter la clavija calla el altavoz.</td><td>Solo altavoz (hay que puentear T y TN del jack para que suene).</td><td><span class="chip">recomendado</span></td></tr>
+          <tr><td>Palas iámbicas y su jack</td><td>Keyer, Echo, TX libre, QSO SIM y QSO por LoRa.</td><td>Solo recepción: Koch y escucha.</td><td><span class="chip">recomendado</span></td></tr>
+          <tr><td>PC817, 330 Ω, 10 kΩ y jack</td><td>Salida KEY aislada para manipular el transceptor.</td><td>No manipula el equipo.</td><td><span class="chip">opcional</span></td></tr>
+          <tr><td>Decodificador: 1 µF, 2 × 10 kΩ, trimmer, 1 kΩ, 2 × 1N4148 y jack</td><td>Entrada de audio del transceptor para leer CW.</td><td>Sin TRX › DECODIFICAR.</td><td><span class="chip">opcional</span></td></tr>
+          <tr><td>BME280 (no BMP280)</td><td>Presión, temperatura, humedad y aviso de tormenta.</td><td>Sin datos de ambiente.</td><td><span class="chip">opcional</span></td></tr>
+          <tr><td>GPS NEO-6M (GY-GPS6MV2)</td><td>Hora exacta, locator y altitud.</td><td>Hora por WiFi o a mano; locator a mano.</td><td><span class="chip">opcional</span></td></tr>
+          <tr><td>LiPo 1S con conector SH1.25</td><td>Funcionar sin cable; se carga por el USB de la Heltec.</td><td>Solo con USB.</td><td><span class="chip">opcional</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="intro" style="margin-top:14px">Los valores exactos, el orden de pines de cada módulo y la lista de compra
+      están en los PDF de la <a href="#fases">protoboard y la placa perforada</a>.</p>
+  </section>
+
+  <section id="pines">
+    <h2>Conexiones</h2>
+    <p class="intro">GPIO de la Heltec V3. Los módulos se alimentan de <b>3V3</b> (pines 2 y 3 de J3; GND en el 1).</p>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>GPIO</th><th>Uso</th><th>Detalle</th></tr></thead>
+        <tbody>
+          <tr><td class="gpio">2</td><td>KEY</td><td>PC817 con 330 Ω, 10 kΩ a GND; jack con anillo y punta unidos.</td></tr>
+          <tr><td class="gpio">4 / 5</td><td>Pala DIT / DAH</td><td>A masa al pulsar (pull-up interno).</td></tr>
+          <tr><td class="gpio">6</td><td>Decodificador</td><td>Entrada ADC del audio del transceptor.</td></tr>
+          <tr><td class="gpio">7</td><td>Tono</td><td>Por resistencia y potenciómetro al PAM8302A y a los auriculares.</td></tr>
+          <tr><td class="gpio">38</td><td>SD del PAM8302A</td><td>Apaga el amplificador cuando no suena.</td></tr>
+          <tr><td class="gpio">19 / 20 / 48</td><td>Encoder CLK / SW / DT</td><td>SW en 20, que despierta la placa.</td></tr>
+          <tr><td class="gpio">41 / 42</td><td>BME280 SDA / SCL</td><td>I²C, dirección 0x76.</td></tr>
+          <tr><td class="gpio">47 / 39</td><td>GPS</td><td>47 recibe del TX del GPS; 39 va a su RX (9600 bd).</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px">
+      <p class="aviso"><b>No uses</b> 0, 1, 8–14, 17, 18, 21, 26–32, 35–37, 43–46: son de arranque, flash, OLED,
+        LoRa, batería o USB. Libres para ampliar: 3, 33, 34 y 40.</p>
+      <p class="aviso">El pin <b>5V</b> solo tiene tensión con el USB enchufado y <b>Ve</b> es la alimentación conmutada
+        de la OLED: no alimentes los módulos de ahí.</p>
+    </div>
+  </section>
+
+  <section id="pcb">
+    <h2>PCB v1.0 <span class="estado curso" style="vertical-align:0.3em">sin probar</span></h2>
+    <p class="intro">La Heltec va enchufada en dos zócalos, con el USB en el borde izquierdo. El amplificador va
+      integrado en la placa y el encoder (Bourns PEC11R) soldado junto a la pantalla. El GPS y el BME280 van por
+      cable con conectores JST-XH. El trafo de audio es opcional (dos puentes de soldadura).</p>
+    <div class="vistas">
+      <figure>
+        <img src="hardware/pcb_arriba.png?__SELLO__" width="1600" height="1100" alt="Cara de arriba de la PCB" loading="lazy">
+        <figcaption>Arriba: KEY y decodificador detrás; palas, auriculares y volumen delante.</figcaption>
+      </figure>
+      <figure>
+        <img src="hardware/pcb_abajo.png?__SELLO__" width="1600" height="1100" alt="Cara de abajo de la PCB" loading="lazy">
+        <figcaption>Abajo: planos de masa y serigrafía.</figcaption>
+      </figure>
+      <figure class="blanco" style="grid-column: 1 / -1">
+        <a href="hardware/esquema_pcb.pdf"><img src="hardware/esquema_pcb.png?__SELLO__" width="1520" height="1075" alt="Esquema de la PCB en KiCad" loading="lazy"></a>
+        <figcaption>Esquema de la PCB (KiCad 10). Pulsa para abrir el PDF.</figcaption>
+      </figure>
+    </div>
+    <div class="descargas">
+      <a class="descarga" href="hardware/esquema_pcb.pdf">Esquema <small>PDF</small></a>
+      <a class="descarga" href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN/tree/main/hardware">Proyecto de KiCad <small>GitHub</small></a>
+      <a class="descarga" href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN/blob/main/hardware/fabricacion/chispas_bom.csv">Lista de materiales <small>CSV</small></a>
+    </div>
+    <p class="aviso" style="margin-top:18px">Todavía no se ha montado ninguna PCB. <b>No la encargues aún:</b> si hay un
+      error, tendrías placas que no sirven. Los Gerber se publicarán aquí cuando la primera esté probada.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>Hardware y documentación: <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es">CC BY-NC-SA 4.0</a>
+      (sin uso comercial) · software: GPL-3.0-or-later.</span>
+    <span><a href="./">Instalar el firmware</a> ·
+      <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN">GitHub</a> · 73 de EA4ILN</span>
+  </div>
+</footer>
+</body>
+</html>
