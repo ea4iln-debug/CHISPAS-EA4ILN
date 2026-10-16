@@ -156,7 +156,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `--k` en pantallas estrechas. Foto `docs/img/chispas_campo.jpg`: render del usuario hecho con Gemini a partir del
   boceto, con el aviso de que es una recreación con IA. Probado en local con Edge sin interfaz (1280 y 400 px) y un
   servidor local con los manifiestos reales (el selector Estable/Beta solo sale por http: abierto como archivo no
-  puede leerlos).
+  puede leerlos). **Barra superior (16 oct 2026):** etiqueta naranja "Beta" junto a CHISPAS en las tres páginas; por
+  debajo de 860 px solo quedan GitHub y un menú desplegable (`details.menu`) con el resto de opciones (en `index.html`,
+  "Novedades de la beta" aparece a la vez que el enlace de la barra). Probado en local a 400 px con el menú abierto.
 - **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0) y
   sesión iniciada (`gh auth login`, cuenta ea4iln-debug, HTTPS, token en el llavero de Windows). Desde entonces ya no hace falta la vía de la API REST.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >
