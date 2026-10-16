@@ -143,6 +143,20 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `placa_perforada.jpg` (foto del usuario, reducida a 1020 px); la Action se
   lanza también al cambiar `docs/*.pdf` o `docs/img/`. En el móvil las tablas pasan a fichas apiladas. Probada en
   local con Chrome sin interfaz (1280 y 500 px; Chrome no baja de ~500 px de ventana).
+  **Portada nueva y página de funciones (16 oct 2026, petición del usuario):** `index.html` deja de ser solo de
+  instalación. Portada "CHISPAS, tu compañero para CW y POTA" con la OLED en carrusel (marco en verde oliva),
+  etiqueta amarilla "En desarrollo temprano" y tres botones (Qué hace CHISPAS, Constrúyelo, Instálalo). Orden:
+  portada → foto de campo → Qué hace (tarjetas que enlazan a `funciones.html#...`) → **Constrúyelo** (piezas
+  resumidas, aviso de hardware en desarrollo temprano y la **caja en 3D**) → Instálalo (selector y tres pasos) →
+  Novedades → Si algo falla. **`web/funciones.html`** (nueva, en `PAGINAS` de `preparar.py`): 12 apartados en
+  lenguaje de radioaficionado, sin detalles de programación. **CHISPAS siempre en mayúsculas y en masculino** en la
+  web (también el nombre del manifiesto). Caja 3D: concepto "Oliva" elegido entre 4 bocetos (rótulos KEY IN, SND OUT,
+  SND IN, EXIT, MENU · CLICK); caras en SVG generadas por JS y colocadas con transformaciones 3D de CSS, esquinas
+  redondeadas con 8 tiras por arista, mandos como discos apilados y la pantalla con el mismo carrusel; se reduce con
+  `--k` en pantallas estrechas. Foto `docs/img/chispas_campo.jpg`: render del usuario hecho con Gemini a partir del
+  boceto, con el aviso de que es una recreación con IA. Probado en local con Edge sin interfaz (1280 y 400 px) y un
+  servidor local con los manifiestos reales (el selector Estable/Beta solo sale por http: abierto como archivo no
+  puede leerlos).
 - **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0) y
   sesión iniciada (`gh auth login`, cuenta ea4iln-debug, HTTPS, token en el llavero de Windows). Desde entonces ya no hace falta la vía de la API REST.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >
@@ -953,6 +967,10 @@ LCSC). **R7 cambiado:** el ALPS RK097111080J (C97444) estaba sin stock; se compr
 encaje en la huella (3 pines en línea a 2,5 mm, sin patillas de sujeción): si trae patillas, cortarlas. Es de curva
 **lineal** (B103), no logarítmica: el volumen cambia sobre todo al principio del giro. En el esquema solo cambian el
 MPN, el `LCSC Part` y el enlace de R7; el valor, el símbolo y la huella siguen con el nombre del ALPS.
+**16 oct 2026 (decisión del usuario): R7 vuelve al ALPS** en el esquema (MPN, `LCSC Part` C97444 y enlace) y en
+`compra_lcsc.csv`, porque la placa está diseñada para él y repondrán stock; así la documentación no lleva a error.
+El CTR comprado sigue siendo la pieza de estas 5 placas (comprobar el encaje al montar). El encoder U4 no cambia:
+es el Bourns PEC11R desde el principio (la PCB pedida lleva su huella).
 Fuera de LCSC (Amazon o AliExpress): Heltec V3, BME280 (no BMP280), GPS NEO-6M, LiPo con conector SH1.25, altavoz de
 8 Ω, cables XH 4P a Dupont hembra, tiras de pines, separadores M3 y mandos.
 **Siguiente:** recibir las placas, comprobar R7 en la huella y montar la primera.

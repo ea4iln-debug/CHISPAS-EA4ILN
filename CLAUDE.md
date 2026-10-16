@@ -29,7 +29,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - **Web de instalación por USB** (16 oct): https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (`web/`, ESP Web Tools; probada en la placa 1);
   la Action `web.yml` la rehace sola al publicar una release (parte el `-usb.bin` para conservar la NVS). Selector
   **Estable / Beta** (la beta solo si es posterior a la última final) y "Novedades de la beta": texto fijo en
-  `web/index.html`, **rehacerlo con cada beta**. **Página de hardware** (`web/hardware.html`, 16 oct): fases, piezas,
+  `web/index.html`, **rehacerlo con cada beta**. Portada de presentación (16 oct): qué hace, Constrúyelo (caja en 3D,
+  concepto) e Instálalo; `web/funciones.html` explica cada función. En la web, **CHISPAS en mayúsculas y en masculino**. **Página de hardware** (`web/hardware.html`, 16 oct): fases, piezas,
   pines y PCB (sin Gerber hasta probarla); imágenes de la PCB con `hardware/herramientas/imagenes_web.sh` (rehacerlas si cambia).
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
@@ -110,7 +111,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - Módulos a **3V3 de J3** (pines 2/3; GND en el 1). `Ve` es Vext (OLED). `5V` solo con USB.
 - Esquema (`docs/gen_esquema.py`) y placa perforada (`docs/gen_placa.py`) → PDF: skill **`esquema`**.
 - **PCB en curso (15 oct)**: KiCad 10, `hardware/` (5 placas JLCPCB, el mínimo; SMD montado; ver NOTAS: "PCB"). Esquema
-  completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Pedidos a JLCPCB (5 placas) y LCSC hechos y combinados (15 oct); R7 cambiado al CTR C18213426 (el ALPS, sin stock; lineal, encaje sin comprobar). Siguiente: recibir y montar. Skill **`pcb`** (scripts en `hardware/herramientas/`).
+  completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Pedidos a JLCPCB (5 placas) y LCSC hechos y combinados (15 oct); R7 (volumen) es el ALPS C97444 en esquema y BOM (16 oct, decisión del usuario); para estas 5 placas se compró el CTR C18213426 porque no había stock (lineal, encaje sin comprobar). Siguiente: recibir y montar. Skill **`pcb`** (scripts en `hardware/herramientas/`).
 
 - **v1.30b (16 oct, release beta; en la placa 1 por USB):** audio sintetizado por sigma-delta (sin PWM; GPIO7,
   ISR a 16 kHz con el amplificador encendido; pulso casi imperceptible al entrar y salir: se deja); **CW > QSO SIM**

@@ -5,8 +5,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hardware de Chispas</title>
-<meta name="description" content="Qué hay que montar para usar Chispas EA4ILN: módulos, conexiones, esquemas y estado de la PCB.">
+<title>Hardware de CHISPAS</title>
+<meta name="description" content="Qué hay que montar para usar CHISPAS EA4ILN: módulos, conexiones, esquemas y estado de la PCB.">
 <meta name="theme-color" content="#0b0d12">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M18 2 6 18h8l-2 12 14-18h-9z' fill='%23ff8a3d'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -145,13 +145,14 @@
   <div class="envoltura barra">
     <a class="marca" href="./">
       <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 2 6 18h8l-2 12 14-18h-9z" fill="#ff8a3d"/></svg>
-      Chispas <small>EA4ILN</small>
+      CHISPAS <small>EA4ILN</small>
     </a>
     <nav class="enlaces">
       <a href="#fases" class="opcional">Fases</a>
       <a href="#piezas" class="opcional">Piezas</a>
       <a href="#pcb">PCB</a>
-      <a href="./">Instalar</a>
+      <a href="funciones.html" class="opcional">Qué hace</a>
+      <a href="./#instalar-seccion">Instálalo</a>
     </nav>
   </div>
 </header>
@@ -161,12 +162,12 @@
     <div>
       <span class="estado curso">Hardware en desarrollo</span>
       <h1>Qué hay que <span class="brillo">montar</span></h1>
-      <p class="lema">Chispas corre en una <b>Heltec WiFi LoRa 32 V3</b>. Alrededor lleva un encoder, un amplificador
+      <p class="lema">CHISPAS corre en una <b>Heltec WiFi LoRa 32 V3</b>. Alrededor lleva un encoder, un amplificador
         de audio, la entrada de las palas, la salida KEY al transceptor y, si quieres, un sensor BME280 y un GPS.</p>
-      <p class="lema">Hoy se monta con módulos sobre placa perforada (o protoboard). La PCB propia está diseñada y
-        pedida, pero <b>aún no se ha probado</b>.</p>
+      <p class="lema">Hoy se monta con módulos sobre placa perforada (o protoboard). <b>PCB diseñada y ya en
+        fabricación, aún sin probar.</b></p>
     </div>
-    <img src="hardware/pcb_3d.png?__SELLO__" width="1600" height="1100" alt="Vista 3D de la PCB de Chispas: Heltec en el centro, jacks en los bordes, encoder y conectores del GPS y del BME280">
+    <img src="hardware/pcb_3d.png?__SELLO__" width="1600" height="1100" alt="Vista 3D de la PCB de CHISPAS: Heltec en el centro, jacks en los bordes, encoder y conectores del GPS y del BME280">
   </div>
 
   <section id="fases">
@@ -176,14 +177,14 @@
       <div class="tarjeta fase">
         <span class="num">01 · Protoboard</span>
         <span class="estado probado">Probado</span>
-        <img class="foto" src="img/prototipo.jpg?__SELLO__" alt="Prototipo de Chispas en protoboard con cables, encoder, jacks y palas" loading="lazy">
+        <img class="foto" src="img/prototipo.jpg?__SELLO__" alt="Prototipo de CHISPAS en protoboard con cables, encoder, jacks y palas" loading="lazy">
         <p>El primer prototipo, con todos los módulos cableados. Sirvió para elegir pines y probar cada función.</p>
         <div class="enlaces-fase"><a href="docs/esquema_protoboard.pdf">Esquema (PDF, 7 hojas)</a></div>
       </div>
       <div class="tarjeta fase">
         <span class="num">02 · Placa perforada</span>
         <span class="estado probado">Probado</span>
-        <img class="foto" src="img/placa_perforada.jpg?__SELLO__" alt="Placa perforada de Chispas con la Heltec, la batería y los módulos conectados por cable: encoder, GPS, BME280, jacks y altavoz" loading="lazy">
+        <img class="foto" src="img/placa_perforada.jpg?__SELLO__" alt="Placa perforada de CHISPAS con la Heltec, la batería y los módulos conectados por cable: encoder, GPS, BME280, jacks y altavoz" loading="lazy">
         <p>La forma recomendada de montarlo hoy. Placa de pads a doble cara de 7 × 9 cm, con la Heltec en zócalos y
           los módulos y mandos por cable a tiras de pines.</p>
         <p>El plano marca dónde va cada pieza, cada soldadura y cada cable, con una lista de comprobaciones antes de
@@ -205,7 +206,7 @@
   <section id="piezas">
     <h2>Piezas</h2>
     <p class="intro">Lo mínimo para usarlo es la Heltec, el encoder y el audio. El resto añade funciones: si falta,
-      Chispas arranca igual y solo pierdes lo que dice la tabla.</p>
+      CHISPAS arranca igual y solo pierdes lo que dice la tabla.</p>
     <div class="tabla">
       <table>
         <thead><tr><th>Pieza</th><th>Para qué</th><th>Sin ella</th><th></th></tr></thead>
@@ -286,7 +287,7 @@
   <div class="envoltura">
     <span>Hardware y documentación: <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es">CC BY-NC-SA 4.0</a>
       (sin uso comercial) · software: GPL-3.0-or-later.</span>
-    <span><a href="./">Instalar el firmware</a> ·
+    <span><a href="./#instalar-seccion">Instalar el firmware</a> ·
       <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN">GitHub</a> · 73 de EA4ILN</span>
   </div>
 </footer>

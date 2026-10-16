@@ -5,19 +5,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chispas EA4ILN · CW y POTA</title>
-<meta name="description" content="Chispas EA4ILN, tu compañero para CW y POTA: entrenador Koch, keyer, QSO por LoRa y transceptor en una Heltec WiFi LoRa 32 V3. Se instala por USB desde el navegador.">
+<title>CHISPAS EA4ILN · CW y POTA</title>
+<meta name="description" content="CHISPAS EA4ILN, tu compañero para CW y POTA: entrenador Koch, keyer, QSO por LoRa y transceptor en una Heltec WiFi LoRa 32 V3. Se instala por USB desde el navegador.">
 <meta name="theme-color" content="#0b0d12">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M18 2 6 18h8l-2 12 14-18h-9z' fill='%23ff8a3d'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
 <style>
   :root {
     --fondo: #0b0d12; --fondo2: #11141b; --tarjeta: #151922; --borde: #252b38; --borde2: #343c4d;
     --texto: #e9ecf2; --suave: #9aa3b5; --tenue: #6b7489;
-    --acento: #ff8a3d; --acento2: #ffb36b; --acento-osc: #c95a14; --ok: #5be3a0;
+    --acento: #ff8a3d; --acento2: #ffb36b; --acento-osc: #c95a14; --ok: #5be3a0; --amarillo: #ffd23f;
     --oled: #dff4ff;
     /* Dialogo de ESP Web Tools */
     --mdc-theme-primary: #ff8a3d; --mdc-theme-on-primary: #0b0d12;
@@ -97,6 +97,12 @@
     text-transform: uppercase; color: var(--acento2); border: 1px dashed rgba(255, 138, 61, 0.55); border-radius: 6px;
     padding: 1px 7px; vertical-align: 0.2em; }
   .panel-instalar .version { margin-bottom: 0; }
+  .temprano { display: inline-flex; align-items: center; gap: 8px; margin: -12px 0 26px; font-size: 0.85rem;
+    font-weight: 500; color: var(--amarillo); background: rgba(255, 210, 63, 0.08); border: 1px solid rgba(255, 210, 63, 0.4);
+    border-radius: 999px; padding: 3px 12px; }
+  .temprano::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--amarillo); }
+  .aviso-temprano { max-width: none; margin: 0 0 22px; border-color: rgba(255, 210, 63, 0.45); background: rgba(255, 210, 63, 0.06); }
+  .aviso-temprano b { color: var(--amarillo); }
   .aviso-beta { margin: 14px 0 0; font-size: 0.93rem; }
   .aviso { background: rgba(255, 179, 107, 0.08); border: 1px solid rgba(255, 179, 107, 0.35); color: var(--texto);
     border-radius: 12px; padding: 14px 16px; max-width: 30em; }
@@ -105,22 +111,22 @@
   .placa { position: relative; justify-self: center; width: min(100%, 460px); }
   .pcb {
     position: relative; border-radius: 18px; padding: 26px 26px 22px;
-    background: linear-gradient(160deg, #1d2a3a, #121a24 60%); border: 1px solid #2b3a4e;
+    background: linear-gradient(160deg, #5c643b, #3a4026 62%); border: 1px solid #6b7347;
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
   .pcb::before, .pcb::after { content: ""; position: absolute; top: 10px; width: 9px; height: 9px; border-radius: 50%;
-    background: #0b0f15; box-shadow: 0 0 0 2px #c9a24a; }
+    background: #8f918a; box-shadow: 0 0 0 2px #4d4f49; }
   .pcb::before { left: 10px; } .pcb::after { right: 10px; }
   .oled { position: relative; background: #000; border-radius: 6px; padding: 10px; border: 3px solid #05070a;
-    box-shadow: 0 0 0 1px #2b3a4e, 0 0 40px rgba(170, 220, 255, 0.12); aspect-ratio: 2 / 1; overflow: hidden; }
+    box-shadow: 0 0 0 1px #2c3119, 0 0 40px rgba(170, 220, 255, 0.12); aspect-ratio: 2 / 1; overflow: hidden; }
   .oled img { position: absolute; inset: 10px; width: calc(100% - 20px); height: calc(100% - 20px);
     image-rendering: pixelated; opacity: 0; transition: opacity 0.5s;
     filter: drop-shadow(0 0 3px rgba(190, 230, 255, 0.45)); }
   .oled img.vista { opacity: 1; }
   .pie-placa { display: flex; justify-content: space-between; align-items: center; margin-top: 16px;
-    font-size: 0.78rem; color: #7f93ad; }
+    font-size: 0.78rem; color: #d6d0ab; }
   .puntos { display: flex; gap: 6px; }
-  .puntos button { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: 0; background: #34465c; cursor: pointer; }
+  .puntos button { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: 0; background: #2a2f1b; cursor: pointer; }
   .puntos button.vista { background: var(--acento); box-shadow: 0 0 8px var(--acento); }
   .rotulo { font-family: "JetBrains Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
   .morse { margin-top: 18px; text-align: center; font-family: "JetBrains Mono", monospace; color: var(--tenue);
@@ -152,6 +158,56 @@
   code { font-family: "JetBrains Mono", monospace; font-size: 0.86em; background: #1b202b; border: 1px solid var(--borde2);
     border-radius: 5px; padding: 1px 5px; color: var(--texto); }
 
+  a.tarjeta { display: flex; flex-direction: column; color: inherit; transition: border-color 0.15s, transform 0.15s; }
+  a.tarjeta:hover { text-decoration: none; border-color: var(--borde2); transform: translateY(-2px); }
+  a.tarjeta:focus-visible { outline: 2px solid var(--acento2); outline-offset: 2px; }
+  .tarjeta .mas { margin-top: auto; padding-top: 12px; font-size: 0.85rem; color: var(--acento2); }
+  .tarjeta .mas::after { content: " ›"; }
+  .construir { display: grid; grid-template-columns: 1fr 1.15fr; gap: 32px; align-items: start; }
+  .piezas { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; }
+  .piezas h3 { margin: 0; font-size: 0.82rem; font-weight: 500; color: var(--tenue); text-transform: uppercase; letter-spacing: 0.08em; }
+  .piezas .opciones { margin-top: 4px; }
+  .boceto { margin: 0; }
+  .boceto figcaption { color: var(--tenue); font-size: 0.88rem; margin-top: 10px; text-align: center; font-style: italic; }
+  #boceto-pantallas image { opacity: 0; transition: opacity 0.5s; image-rendering: pixelated; }
+  #boceto-pantallas image.vista { opacity: 1; }
+  /* Caja de CHISPAS en 3D (CSS): 4 px por mm, 100 x 62 x 30 mm */
+  .escena3d { --w: 400px; --d: 248px; --h: 120px; --r: 28px; position: relative; width: 100%; aspect-ratio: 1.6 / 1;
+    perspective: 1400px; perspective-origin: 50% 20%; }
+  .caja3d { position: absolute; left: 50%; top: 50%; width: var(--w); height: var(--d);
+    margin: calc(var(--d) / -2 - 20px) 0 0 calc(var(--w) / -2); transform-style: preserve-3d;
+    transform: scale(var(--k, 1)) rotateX(57deg) rotateZ(24deg);
+    animation: balanceo 14s ease-in-out infinite alternate; }
+  @keyframes balanceo { from { transform: scale(var(--k, 1)) rotateX(58deg) rotateZ(18deg); } to { transform: scale(var(--k, 1)) rotateX(56deg) rotateZ(30deg); } }
+  @media (prefers-reduced-motion: reduce) { .caja3d { animation: none; } }
+  .caja3d > * { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .caja3d svg { display: block; width: 100%; height: 100%; }
+  .c3-sombra { width: var(--w); height: var(--d); border-radius: 30px; background: rgba(0, 0, 0, 0.55); filter: blur(22px);
+    transform: translateZ(-2px) scale(1.04); }
+  .c3-tapa { width: var(--w); height: var(--d); transform: translateZ(var(--h)); }
+  /* Caras planas recortadas por las esquinas redondeadas (radio --r), que se hacen con tiras finas */
+  .c3-frente { width: calc(var(--w) - 2 * var(--r)); height: var(--h); transform-style: preserve-3d;
+    transform: translateX(var(--r)) translateY(var(--d)) translateZ(var(--h)) rotateX(-90deg); }
+  .c3-izq { width: calc(var(--d) - 2 * var(--r)); height: var(--h);
+    transform: translateY(var(--r)) translateZ(var(--h)) rotateZ(90deg) rotateX(-90deg); }
+  .c3-der { width: calc(var(--d) - 2 * var(--r)); height: var(--h);
+    transform: translateX(var(--w)) translateY(var(--r)) translateZ(var(--h)) rotateZ(90deg) rotateX(-90deg); }
+  .c3-tras { width: calc(var(--w) - 2 * var(--r)); height: var(--h); transform: translateX(var(--r)) translateZ(var(--h)) rotateX(-90deg); }
+  .c3-tira { height: var(--h); }
+  .disco { position: absolute; border-radius: 50%; }
+  .c3-antena { width: 12px; height: 84px; border-radius: 6px; background: linear-gradient(90deg, #0d0d0d, #2b2b2b 45%, #0d0d0d);
+    transform: translateX(346px) translateY(4px) translateZ(var(--h)) rotateX(90deg) rotateY(-8deg); }
+  .c3-sma { width: 16px; height: 14px; background: linear-gradient(90deg, #8a6f22, #e0c060 50%, #8a6f22);
+    transform: translateX(344px) translateY(4px) translateZ(var(--h)) rotateX(90deg); }
+  /* Foto de campo: recorte apaisado con el texto encima, abajo a la izquierda */
+  .campo { position: relative; margin: 8px 0 24px; border-radius: 20px; overflow: hidden; border: 1px solid var(--borde);
+    aspect-ratio: 16 / 9; max-width: 100%; background: var(--fondo2); }
+  .campo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 62%; display: block; }
+  .campo figcaption { position: absolute; inset: auto 0 0 0; display: flex; flex-direction: column; gap: 4px;
+    padding: 60px 28px 22px; background: linear-gradient(transparent, rgba(8, 10, 6, 0.88)); color: #f1eedf; }
+  .campo-titulo { font-family: "Black Ops One", "Space Grotesk", sans-serif; font-size: clamp(1.3rem, 3vw, 2rem);
+    letter-spacing: 0.04em; color: var(--acento2); }
+  .campo figcaption small { color: #b9b6a6; font-size: 0.82rem; font-style: italic; }
   .novedad { border-color: rgba(255, 138, 61, 0.28); }
   .novedad .opciones { margin-top: 12px; }
   details { border: 1px solid var(--borde); border-radius: 12px; background: var(--tarjeta); margin: 10px 0; }
@@ -168,10 +224,15 @@
     .portada { grid-template-columns: 1fr; padding-top: 40px; gap: 36px; }
     .r4 { grid-template-columns: repeat(2, 1fr); }
     .r3 { grid-template-columns: 1fr; }
+    .construir { grid-template-columns: 1fr; }
   }
   @media (max-width: 560px) {
+    .campo { aspect-ratio: 4 / 5; }
+    .campo figcaption { padding: 48px 18px 16px; }
     .r4 { grid-template-columns: 1fr; }
     .enlaces a.opcional { display: none; }
+    .enlaces { gap: 12px; font-size: 0.88rem; }
+    .marca small { display: none; }
     .pcb { padding: 20px 16px 16px; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -185,11 +246,12 @@
   <div class="envoltura barra">
     <a class="marca" href="#">
       <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 2 6 18h8l-2 12 14-18h-9z" fill="#ff8a3d"/></svg>
-      Chispas <small>EA4ILN</small>
+      CHISPAS <small>EA4ILN</small>
     </a>
     <nav class="enlaces">
-      <a href="#funciones" class="opcional">Funciones</a>
-      <a href="#instalar-seccion">Instalar</a>
+      <a href="#funciones" class="opcional">Qué hace</a>
+      <a href="#construir" class="opcional">Constrúyelo</a>
+      <a href="#instalar-seccion">Instálalo</a>
       <a href="#novedades" class="opcional" id="enlace-novedades" hidden>Novedades</a>
       <a href="hardware.html">Hardware</a>
       <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN">GitHub</a>
@@ -201,23 +263,25 @@
   <div class="portada">
     <div>
       <span class="etiqueta"><span class="punto"></span>Heltec WiFi LoRa 32 V3 · ESP32-S3</span>
-      <h1><span class="brillo">Chispas</span>,<br>tu compañero para CW y POTA</h1>
-      <p class="lema">Un aparato de bolsillo para aprender y practicar telegrafía: entrenador Koch, keyer iámbico,
-        QSO por LoRa con otra Chispas, manipulación de tu transceptor, propagación y spots POTA. Firmware libre que se instala desde el
-        navegador.</p>
+      <h1><span class="brillo">CHISPAS</span>,<br>tu compañero para CW y POTA</h1>
+      <p class="lema">Un compañero de bolsillo para aprender y practicar telegrafía: entrenador Koch, keyer iámbico,
+        decodificador CW, QSO por LoRa con otro CHISPAS, simulador de QSO, manipulación de tu transceptor, propagación
+        y spots POTA. Firmware libre que se instala desde el navegador.</p>
+      <p class="temprano">En desarrollo temprano</p>
       <div class="acciones">
+        <a class="boton-sec" href="#funciones">Qué hace CHISPAS</a>
+        <a class="boton-sec" href="#construir">Constrúyelo</a>
         <a class="boton" href="#instalar-seccion">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
-          Instalar
+          Instálalo
         </a>
-        <a class="boton-sec" href="#funciones">Qué lleva</a>
       </div>
     </div>
 
     <div class="placa">
       <div class="pcb">
-        <div class="oled" id="oled" role="img" aria-label="Pantallas de Chispas"></div>
+        <div class="oled" id="oled" role="img" aria-label="Pantallas de CHISPAS"></div>
         <div class="pie-placa">
           <span class="rotulo" id="rotulo">Inicio</span>
           <div class="puntos" id="puntos"></div>
@@ -227,48 +291,102 @@
     </div>
   </div>
 
+  <figure class="campo">
+    <img src="img/chispas_campo.jpg?__SELLO__" width="1077" height="992" loading="lazy"
+      alt="CHISPAS en verde oliva sobre una roca con líquenes, en un prado con hierba húmeda y montañas al fondo, junto a un cuaderno de log abierto, un lápiz, una brújula y un manipulador">
+    <figcaption>
+      <span class="campo-titulo">Listo para activar</span>
+      <span>El log abierto, la brújula a mano y CHISPAS en la roca: la CW de siempre, en el parque.</span>
+      <small>Recreación generada con IA a partir del boceto de la caja: aún no es una foto real.</small>
+    </figcaption>
+  </figure>
+
   <section id="funciones">
-    <h2>Qué lleva</h2>
-    <p class="intro">"Chispas" era el apodo del radiotelegrafista de a bordo.</p>
+    <h2>Qué hace CHISPAS</h2>
+    <p class="intro">El nombre viene de «chispas», el apodo del radiotelegrafista de a bordo.
+      <a href="funciones.html">Cada función, con más detalle</a>.</p>
     <div class="rejilla r4">
-      <div class="tarjeta">
+      <a class="tarjeta enlace" href="funciones.html#koch">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h2m4 0h10M4 6h6m4 0h2M4 18h10"/></svg></span>
-        <h3>Koch y Echo</h3><p>Lecciones al estilo LCWO, repaso de letras falladas y estadísticas por carácter.</p>
-      </div>
-      <div class="tarjeta">
+        <h3>Koch y Echo</h3><p>Lecciones al estilo LCWO, repaso de las letras que más fallas y estadísticas por carácter.</p><span class="mas">Más</span>
+      </a>
+      <a class="tarjeta enlace" href="funciones.html#keyer">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4v10a3 3 0 0 0 6 0V4M6 20h12"/></svg></span>
-        <h3>Keyer iámbico</h3><p>Palas A/B con tono por altavoz o auriculares y práctica libre; en la beta, también un QSO POTA simulado.</p>
-      </div>
-      <div class="tarjeta">
+        <h3>Keyer iámbico</h3><p>Conecta tus palas: keyer iámbico A/B con tono por altavoz o auriculares para practicar a tu ritmo. En la beta, también un QSO POTA simulado.</p><span class="mas">Más</span>
+      </a>
+      <a class="tarjeta enlace" href="funciones.html#lora">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20V10M8.5 6.5a5 5 0 0 1 7 0M5.5 3.5a9 9 0 0 1 13 0"/><circle cx="12" cy="10" r="1.5"/></svg></span>
-        <h3>QSO por LoRa</h3><p>Practica CW con otra Chispas a 868 MHz, sin licencia ni antena de HF.</p>
-      </div>
-      <div class="tarjeta">
+        <h3>QSO por LoRa</h3><p>Practica CW con otro CHISPAS a 868 MHz, sin licencia ni antena de HF.</p><span class="mas">Más</span>
+      </a>
+      <a class="tarjeta enlace" href="funciones.html#trx">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="7" width="18" height="12" rx="2"/><path d="M7 11h4M15 13h2M8 3l4 4 4-4"/></svg></span>
-        <h3>Transceptor</h3><p>Manipula tu equipo por KEY, memorias, tune y decodificador de CW por audio.</p>
-      </div>
-      <div class="tarjeta">
+        <h3>Transceptor</h3><p>Manipula tu equipo con las palas o con memorias, tune para el acoplador y decodificador de la CW que recibes.</p><span class="mas">Más</span>
+      </a>
+      <a class="tarjeta enlace" href="funciones.html#prop">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l5-6 4 3 5-7 4 4"/></svg></span>
-        <h3>Propagación</h3><p>Índices solares y estado de las bandas por WiFi.</p>
-      </div>
-      <div class="tarjeta">
+        <h3>Propagación</h3><p>Índices solares y estado de las bandas por WiFi.</p><span class="mas">Más</span>
+      </a>
+      <a class="tarjeta enlace" href="funciones.html#pota">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 4 20h16z"/><path d="M12 10v5"/></svg></span>
-        <h3>Spots POTA</h3><p>Activaciones al momento y parques de España más cercanos.</p>
-      </div>
-      <div class="tarjeta">
+        <h3>Spots POTA</h3><p>Activaciones en CW al momento y los parques de España más cercanos.</p><span class="mas">Más</span>
+      </a>
+      <a class="tarjeta enlace" href="funciones.html#sol">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg></span>
-        <h3>Sol y ambiente</h3><p>Orto, ocaso y línea gris; presión y tormenta con BME280; hora y locator por GPS.</p>
-      </div>
-      <div class="tarjeta">
+        <h3>Sol y ambiente</h3><p>Salida y puesta del sol y línea gris; presión, temperatura y aviso de tormenta con un sensor; hora y locator por GPS.</p><span class="mas">Más</span>
+      </a>
+      <a class="tarjeta enlace" href="funciones.html#ota">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></span>
-        <h3>OTA</h3><p>Se actualiza por WiFi desde GitHub, con conexión segura.</p>
+        <h3>OTA</h3><p>Se actualiza por WiFi desde GitHub, con conexión segura.</p><span class="mas">Más</span>
+      </a>
+    </div>
+  </section>
+
+  <section id="construir">
+    <h2>Constrúyelo</h2>
+    <p class="intro">Lo que necesitas para montar tu CHISPAS. Todo el detalle, en la
+      <a href="hardware.html">página de hardware</a>.</p>
+    <p class="aviso aviso-temprano"><b>Hardware en desarrollo temprano.</b> La PCB v1.0 está pedida pero aún no se ha
+      montado ni probado, y la caja está en diseño. Si quieres construir el tuyo, mejor espera a una versión del
+      hardware probada y estable.</p>
+    <div class="construir">
+      <div class="piezas">
+        <div>
+          <h3>Imprescindible</h3>
+          <ul class="opciones">
+            <li><b>Heltec WiFi LoRa 32 V3</b> con su antena de 868 MHz: el cerebro, la pantalla y la radio LoRa.</li>
+            <li><b>PCB de CHISPAS</b>, con las piezas pequeñas montadas de fábrica. Tú sueldas los jacks, el volumen
+              y los conectores.</li>
+            <li><b>Altavoz</b> pequeño de 8 Ω.</li>
+            <li><b>Batería LiPo</b> de una celda: va dentro y se carga por el USB-C.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Recomendado</h3>
+          <ul class="opciones">
+            <li><b>Palas iámbicas</b> con clavija de 3,5 mm.</li>
+            <li><b>Auriculares</b> con clavija de 3,5 mm.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Opcional</h3>
+          <ul class="opciones">
+            <li><b>GPS NEO-6M</b>: hora exacta, locator y altitud.</li>
+            <li><b>Sensor BME280</b>: presión, temperatura y aviso de tormenta.</li>
+            <li><b>Cables a tu transceptor</b>: KEY OUT para manipularlo y SND IN para decodificar su audio.</li>
+          </ul>
+        </div>
+        <a class="boton-sec" href="hardware.html">Ver el hardware</a>
       </div>
+      <figure class="boceto">
+        <div class="escena3d" id="escena3d" role="img" aria-label="Boceto en 3D de la caja de CHISPAS en verde oliva: pantalla, mando y altavoz arriba; KEY IN, SND OUT y volumen delante; antena detrás"></div>
+        <figcaption>Imagen basada en el concepto final de CHISPAS: la caja aún está en diseño.</figcaption>
+      </figure>
     </div>
   </section>
 
   <section id="instalar-seccion">
-    <h2>Instálalo desde el navegador</h2>
-    <p class="intro">Conecta la placa por USB y en un minuto está lista, sin instalar ningún programa. Chrome o Edge en Windows, macOS o Linux, y un cable USB-C <strong>con datos</strong>. ¿Aún no
+    <h2>Instálalo</h2>
+    <p class="intro">Desde el navegador: conecta la placa por USB y en un minuto está lista, sin instalar ningún programa. Chrome o Edge en Windows, macOS o Linux, y un cable USB-C <strong>con datos</strong>. ¿Aún no
       tienes el aparato montado? Mira <a href="hardware.html">qué hay que montar</a>.</p>
     <div class="panel-instalar">
      <div class="canal" id="canal" role="radiogroup" aria-label="Versión que se instala" hidden>
@@ -296,13 +414,13 @@
       <div class="tarjeta">
         <span class="num">01</span>
         <h3>Conecta</h3>
-        <p>Enchufa la placa y pulsa <b>Instalar en la placa</b>. Elige el puerto <code>CP2102</code> o
+        <p>Conecta CHISPAS al USB y pulsa <b>Instalar en la placa</b>. Elige el puerto <code>CP2102</code> o
           <code>USB to UART</code> y pulsa <em>Conectar</em>.</p>
       </div>
       <div class="tarjeta">
         <span class="num">02</span>
         <h3>Instala</h3>
-        <p>Pulsa <em>Install Chispas EA4ILN</em>. Te pregunta si quieres borrar la placa:</p>
+        <p>Pulsa <em>Install CHISPAS EA4ILN</em>. Te pregunta si quieres borrar la placa:</p>
         <ul class="opciones">
           <li><b>Sin marcar</b>: conserva indicativo, memorias, estadísticas, WiFi y parques POTA.</li>
           <li><b>Marcado</b>: lo borra todo. Úsalo si traía otro firmware (Meshtastic, por ejemplo).</li>
@@ -311,7 +429,7 @@
       <div class="tarjeta">
         <span class="num">03</span>
         <h3>Listo</h3>
-        <p>En un minuto, más o menos, la placa se reinicia con Chispas. A partir de ahí se actualiza sola por WiFi:
+        <p>En un minuto, más o menos, la placa se reinicia con CHISPAS. A partir de ahí se actualiza sola por WiFi:
           <b>CONF › CONFIG › ACTUALIZAR FW</b>.</p>
       </div>
     </div>
@@ -324,18 +442,20 @@
       <div class="tarjeta novedad">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg></span>
         <h3>QSO SIM</h3>
-        <p>Un QSO POTA de práctica: Chispas es el activador y llama CQ; tú contestas con las palas.</p>
+        <p>Un QSO POTA de práctica: CHISPAS es el activador y llama CQ; tú contestas con las palas.</p>
         <ul class="opciones">
           <li>Tu indicativo, el <b>5NN</b> y el <b>73</b>. Si no te copia, te pide repetir.</li>
           <li>Condiciones de banda: <b>QSB</b>, <b>ruido</b>, <b>estática de tormenta</b> y <b>QRM</b>.</li>
-          <li>Tercera opción del menú CW.</li>
         </ul>
       </div>
       <div class="tarjeta novedad">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12c2-6 4-6 6 0s4 6 6 0 4-6 6 0"/></svg></span>
-        <h3>Sonido nuevo</h3>
-        <p>Chispas sintetiza el audio en lugar de dar un pitido cuadrado: el tono arranca y para sin clics y suena
-          más redondo. Sin tocar el montaje.</p>
+        <h3>Nuevo sonido</h3>
+        <p>CHISPAS sintetiza el audio en lugar de dar un pitido cuadrado: el tono arranca y para sin clics y suena
+          más redondo. Sin modificar el hardware.</p>
+        <ul class="opciones">
+          <li><b>Bajo consumo</b>: unos 30 mA sin WiFi, más de 3 días seguidos con una batería de 3000 mAh (estimado).</li>
+        </ul>
       </div>
       <div class="tarjeta novedad">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 16 2 2 4-4"/></svg></span>
@@ -343,7 +463,7 @@
         <ul class="opciones">
           <li><b>Koch</b> y <b>Duo por LoRa</b>: grupos, <b>indicativos</b> o <b>frases de QSO POTA</b>.</li>
           <li><b>TX libre › RITMO</b>: mide tus espacios, titubeos y velocidad real, y te da un consejo.</li>
-          <li>La batería marca 100 % desde 4,15 V.</li>
+          <li>Medidor de carga de batería optimizado.</li>
         </ul>
       </div>
     </div>
@@ -364,7 +484,7 @@
         igual, mantén pulsado <b>PRG</b>, pulsa y suelta <b>RST</b>, suelta <b>PRG</b> y vuelve a intentarlo.</div>
     </details>
     <details>
-      <summary>Tras instalar, Chispas hace cosas raras</summary>
+      <summary>Tras instalar, CHISPAS hace cosas raras</summary>
       <div>Vuelve a instalar marcando <b>borrar la placa</b>: limpia lo que hubiera dejado otro firmware. Perderás la
         configuración guardada.</div>
     </details>
@@ -385,6 +505,119 @@
   </div>
 </footer>
 
+<script>
+  // Caja de CHISPAS en 3D: caras en SVG colocadas con transformaciones CSS (la pantalla, con el carrusel)
+  const C = { caja: "#4f5634", caja2: "#3b4027", frente: "#3c4227", lado: "#343a20", tinta: "#e9e4c8", f: "font-family:'Black Ops One'" };
+  const M = (mm) => mm * 5;  // caras en SVG a 5 unidades por mm
+  function caraMando(r, colorMarca) {
+    let s = `<svg viewBox="${-r} ${-r} ${2 * r} ${2 * r}"><circle r="${r}" fill="#161616"/>`;
+    for (let i = 0; i < 30; i++) { const a = i / 30 * Math.PI * 2;
+      s += `<line x1="${Math.cos(a) * (r - 1)}" y1="${Math.sin(a) * (r - 1)}" x2="${Math.cos(a) * r * 0.8}" y2="${Math.sin(a) * r * 0.8}" stroke="#2e2e2e" stroke-width="1.4"/>`; }
+    s += `<circle r="${r * 0.72}" fill="#1c1c1c"/><circle r="${r * 0.72}" fill="url(#brilloM)" opacity="0.5"/>`;
+    s += `<defs><radialGradient id="brilloM" cx="0.35" cy="0.3"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`;
+    s += `<line x1="0" y1="${-r * 0.66}" x2="0" y2="${-r * 0.22}" stroke="${colorMarca}" stroke-width="3" stroke-linecap="round"/></svg>`;
+    return s;
+  }
+  function jack(cx, cy) {
+    let pts = [];
+    for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; pts.push(`${cx + Math.cos(a) * 15},${cy + Math.sin(a) * 15}`); }
+    return `<polygon points="${pts.join(" ")}" fill="#b9b9b2" stroke="#6e6e68" stroke-width="1.2"/><circle cx="${cx}" cy="${cy}" r="9.5" fill="#d8d8d0" stroke="#77776f"/><circle cx="${cx}" cy="${cy}" r="5.5" fill="#050505"/>`;
+  }
+  function tapa() {
+    let s = `<svg viewBox="0 0 500 310"><defs>
+      <linearGradient id="luzT" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.10"/><stop offset="1" stop-color="#000" stop-opacity="0.15"/></linearGradient>
+      <linearGradient id="vidrio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.14"/><stop offset="0.45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <clipPath id="rejT"><rect x="${M(76)}" y="${M(10)}" width="90" height="190" rx="10"/></clipPath></defs>`;
+    s += `<rect width="500" height="310" rx="35" fill="${C.caja}"/><rect width="500" height="310" rx="35" fill="url(#luzT)"/>`;
+    s += `<rect x="5" y="5" width="490" height="300" rx="30" fill="none" stroke="#fff" stroke-opacity="0.07" stroke-width="10"/>`;
+    s += `<rect x="1.5" y="1.5" width="497" height="307" rx="33.5" fill="none" stroke="#6a7247" stroke-width="3" opacity="0.6"/>`;
+    for (const [cx, cy] of [[M(5.5), M(5.5)], [M(94.5), M(5.5)], [M(5.5), M(56.5)], [M(94.5), M(56.5)]])
+      s += `<circle cx="${cx}" cy="${cy}" r="7.5" fill="#8f918a" stroke="#4d4f49"/><line x1="${cx - 5}" y1="${cy - 2}" x2="${cx + 5}" y2="${cy + 2}" stroke="#3b3d38" stroke-width="2"/>`;
+    s += `<text x="${M(20)}" y="${M(4.5)}" text-anchor="middle" fill="${C.tinta}" font-size="12" style="${C.f}" opacity="0.8">▲ KEY OUT</text>`;
+    s += `<text x="${M(46)}" y="${M(4.5)}" text-anchor="middle" fill="${C.tinta}" font-size="12" style="${C.f}" opacity="0.8">▲ SND IN</text>`;
+    s += `<circle cx="${M(62)}" cy="${M(4)}" r="4" fill="#111"/><text x="${M(62) + 9}" y="${M(4.5)}" fill="${C.tinta}" font-size="11" style="${C.f}" opacity="0.8">NIVEL</text>`;
+    s += `<rect x="${M(23)}" y="${M(15.5)}" width="165" height="115" rx="7" fill="#0b0b0b" stroke="#000" stroke-width="3"/>`;
+    s += `<g id="boceto-pantallas"></g><rect x="${M(23)}" y="${M(15.5)}" width="165" height="115" rx="7" fill="url(#vidrio)"/>`;
+    s += `<circle cx="${M(10)}" cy="${M(27)}" r="10" fill="#151515" stroke="#000" stroke-width="3"/><circle cx="${M(10)}" cy="${M(27)}" r="6" fill="#c0392b"/>`;
+    s += `<text x="${M(10)}" y="${M(33.5)}" text-anchor="middle" fill="${C.tinta}" font-size="12" style="${C.f}">EXIT</text>`;
+    s += `<circle cx="${M(66.5)}" cy="${M(29)}" r="40" fill="#000" opacity="0.28"/><circle cx="${M(66.5)}" cy="${M(29)}" r="31" fill="#23271a"/>`;
+    s += `<text x="${M(66.5)}" y="${M(40.5)}" text-anchor="middle" fill="${C.tinta}" font-size="11" style="${C.f}">MENU · CLICK</text>`;
+    s += `<g clip-path="url(#rejT)">`;
+    for (let yy = M(10) + 6; yy < M(48); yy += 13) for (let xx = M(76) + 6 + ((yy / 13) % 2) * 6; xx < M(94); xx += 13)
+      s += `<circle cx="${xx}" cy="${yy}" r="3.8" fill="#0c0c0c"/>`;
+    s += `</g>`;
+    s += `<text x="${M(23)}" y="${M(48.5)}" fill="${C.tinta}" font-size="34" style="${C.f}" letter-spacing="2">CHISPAS</text>`;
+    s += `<text x="${M(23.4)}" y="${M(53)}" fill="${C.tinta}" font-size="13" style="${C.f}" opacity="0.8" letter-spacing="1.5">EA4ILN · CW · POTA</text>`;
+    s += `<rect x="${M(72)}" y="${M(50)}" width="110" height="45" rx="3" fill="#cfc8a6" stroke="#7a7457"/>`;
+    s += `<text x="${M(83)}" y="${M(53.6)}" text-anchor="middle" fill="#2f2c1d" font-size="10" style="font-family:'JetBrains Mono'">MOD. CHISPAS</text>`;
+    s += `<text x="${M(83)}" y="${M(56.8)}" text-anchor="middle" fill="#2f2c1d" font-size="10" style="font-family:'JetBrains Mono'">S/N 0001 · 868 MHz</text>`;
+    return s + `</svg>`;
+  }
+  function frente() {
+    let s = `<svg viewBox="35 0 430 150" preserveAspectRatio="none"><defs><linearGradient id="luzF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0.3"/></linearGradient></defs>`;
+    s += `<rect width="500" height="150" fill="${C.frente}"/><rect width="500" height="150" fill="url(#luzF)"/>`;
+    s += `<rect width="500" height="3" fill="#6a7247" opacity="0.6"/>`;
+    s += jack(M(20), 66) + jack(M(38), 66);
+    for (let k = 0; k <= 10; k++) { const a = (-225 + k * 27) * Math.PI / 180, r1 = 30, r2 = k % 5 ? 34 : 37;
+      s += `<line x1="${M(55) + Math.cos(a) * r1}" y1="${66 + Math.sin(a) * r1}" x2="${M(55) + Math.cos(a) * r2}" y2="${66 + Math.sin(a) * r2}" stroke="${C.tinta}" stroke-width="1.6"/>`; }
+    s += `<circle cx="${M(55)}" cy="66" r="25" fill="#000" opacity="0.3"/>`;
+    for (const [mm, t] of [[20, "KEY IN"], [38, "SND OUT"], [55, "VOL"]])
+      s += `<text x="${M(mm)}" y="122" text-anchor="middle" fill="${C.tinta}" font-size="14" style="${C.f}">${t}</text>`;
+    s += `<text x="${M(84)}" y="72" text-anchor="middle" fill="${C.tinta}" font-size="15" style="${C.f}" opacity="0.6" letter-spacing="3">-.-. .--</text>`;
+    return s + `</svg>`;
+  }
+  function lado(conUsb) {
+    let s = `<svg viewBox="35 0 240 150" preserveAspectRatio="none"><rect width="310" height="150" fill="${C.lado}"/><rect width="310" height="3" fill="#6a7247" opacity="0.5"/>`;
+    s += `<rect width="310" height="150" fill="url(#luzF)"/>`;
+    if (conUsb) {
+      s += `<rect x="${310 - M(31) - 26}" y="52" width="52" height="20" rx="10" fill="#0a0a0a" stroke="#22261a" stroke-width="3"/>`;
+      s += `<text x="${310 - M(31)}" y="100" text-anchor="middle" fill="${C.tinta}" font-size="13" style="${C.f}" opacity="0.85">USB-C</text>`;
+    }
+    return s + `</svg>`;
+  }
+  function cilindro(cx, cy, r, alto, colorMarca, eje) {
+    // Discos apilados en Z; el de arriba lleva la cara del mando
+    let s = "";
+    for (let z = 0; z <= alto; z += 2) {
+      const ultimo = z + 2 > alto;
+      const luz = 18 + Math.round(10 * z / alto);
+      s += `<div class="disco" style="left:${cx - r}px;top:${cy - r}px;width:${2 * r}px;height:${2 * r}px;transform:translateZ(${eje}${z}px);` +
+        (ultimo ? `">${caraMando(r, colorMarca)}</div>` : `background:rgb(${luz},${luz},${luz})"></div>`);
+    }
+    return s;
+  }
+  function esquinas(W, D, R) {
+    // Cada arista vertical, un cuarto de cilindro de 8 tiras; el tono pasa del lateral al frente
+    const mezcla = (a, b, t) => "#" + [1, 3, 5].map((i) =>
+      Math.round(parseInt(a.substr(i, 2), 16) * (1 - t) + parseInt(b.substr(i, 2), 16) * t).toString(16).padStart(2, "0")).join("");
+    const N = 8, paso = Math.PI / 2 / N, ancho = 2 * R * Math.sin(paso / 2) + 0.8;
+    let s = "";
+    for (const [cx, cy, a0] of [[W - R, D - R, 0], [R, D - R, 90], [R, R, 180], [W - R, R, 270]]) {
+      for (let i = 0; i < N; i++) {
+        const fi = (a0 * Math.PI / 180) + paso * (i + 0.5);
+        const color = mezcla(C.lado, C.frente, Math.max(0, Math.sin(fi)));
+        s += `<div class="c3-tira" style="width:${ancho.toFixed(2)}px;background:linear-gradient(${color}, ${mezcla(color, "#000000", 0.3)});` +
+          `transform:translate3d(${(cx + R * Math.cos(fi)).toFixed(2)}px, ${(cy + R * Math.sin(fi)).toFixed(2)}px, ${H}px) ` +
+          `rotateZ(${(fi * 180 / Math.PI - 90).toFixed(2)}deg) rotateX(-90deg) translateX(${(-ancho / 2).toFixed(2)}px)"></div>`;
+      }
+    }
+    return s;
+  }
+  const H = 120;
+  let html = `<div class="caja3d"><div class="c3-sombra"></div>`;
+  html += `<div class="c3-tras" style="background:${C.lado}"></div><div class="c3-der">${lado(false)}</div>`;
+  html += `<div class="c3-sma"></div><div class="c3-antena"></div>`;
+  html += `<div class="c3-izq">${lado(true)}</div>` + esquinas(400, 248, 28);
+  html += `<div class="c3-frente">${frente()}${cilindro(192, 53, 19, 18, "#e9e4c8", "")}</div>`;
+  html += `<div class="c3-tapa">${tapa()}</div>`;
+  html += cilindro(266, 116, 28, 40, "#e9e4c8", `${H}px) translateZ(`);
+  html += `</div>`;
+  const escena = document.getElementById("escena3d");
+  escena.innerHTML = html;
+  const ajustar = () => escena.style.setProperty("--k", Math.min(1.15, escena.clientWidth / 520).toFixed(3));
+  new ResizeObserver(ajustar).observe(escena);
+  ajustar();
+</script>
 <script>
   // Versiones: estable (manifest.json) y, si la hay, beta (manifest-beta.json). El selector cambia el manifiesto
   // del boton de instalar, la linea de version y el enlace al codigo de esa version. #beta en la URL la elige
@@ -437,6 +670,14 @@
   const oled = document.getElementById("oled"), puntos = document.getElementById("puntos");
   const rotulo = document.getElementById("rotulo");
   let actual = 0, temporizador;
+  const boceto = document.getElementById("boceto-pantallas"), SVGNS = "http://www.w3.org/2000/svg";
+  const imgsBoceto = PANTALLAS.map(([archivo]) => {
+    const im = document.createElementNS(SVGNS, "image");
+    for (const [k, v] of [["href", "img/" + archivo + ".png?" + SELLO], ["x", 125], ["y", 92.5], ["width", 145],
+      ["height", 72.5], ["preserveAspectRatio", "none"]]) im.setAttribute(k, v);
+    boceto.appendChild(im);
+    return im;
+  });
   const imgs = PANTALLAS.map(([archivo, nombre], i) => {
     const img = new Image(128, 64);
     img.src = "img/" + archivo + ".png?" + SELLO;
@@ -451,6 +692,7 @@
   function mostrar(i) {
     actual = i;
     imgs.forEach((img, j) => img.classList.toggle("vista", j === i));
+    imgsBoceto.forEach((img, j) => img.classList.toggle("vista", j === i));
     [...puntos.children].forEach((b, j) => b.classList.toggle("vista", j === i));
     rotulo.textContent = PANTALLAS[i][1];
   }

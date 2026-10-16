@@ -27,9 +27,9 @@ TROZOS = [  # (archivo, desde, hasta); None = hasta el final
 ]
 
 CAPTURAS = ("inicio.png", "cara.png", "cw.png", "qso_sim.png", "koch.png", "trx.png", "prop.png", "pota.png",
-            "sol.png", "lora.png", "prototipo.jpg", "placa_perforada.jpg")
+            "sol.png", "lora.png", "prototipo.jpg", "placa_perforada.jpg", "chispas_campo.jpg")
 
-PAGINAS = ("index.html", "hardware.html")
+PAGINAS = ("index.html", "hardware.html", "funciones.html")
 DOCS_PDF = ("esquema_protoboard.pdf", "placa_perforada.pdf")
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -46,7 +46,7 @@ def manifiesto(imagen, version, salida, sello, canal):
         (carpeta / nombre).write_bytes(datos[desde:hasta])
         partes.append({"path": f"firmware/{version}/{nombre}?{sello}", "offset": desde})
     m = {
-        "name": "Chispas EA4ILN",
+        "name": "CHISPAS EA4ILN",
         "version": version,
         "canal": canal,                     # "estable" o "beta" (lo lee la pagina; ESP Web Tools lo ignora)
         "new_install_prompt_erase": True,   # Pregunta si borrar todo; por defecto se conserva la NVS
