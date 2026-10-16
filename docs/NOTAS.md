@@ -107,14 +107,25 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   fuente "GitHub Actions", activada con `gh api -X POST repos/.../pages -f build_type=workflow`). `web/index.html`
   con **ESP Web Tools 10.4.0** (unpkg, `<esp-web-install-button>`; Chrome/Edge de escritorio). La Action
   `.github/workflows/web.yml` se lanza al publicar una release, al cambiar `web/` y a mano (`gh workflow run web.yml`):
-  baja el `-usb.bin` de la **última release final** (`gh release view` sin etiqueta no ve las beta) y
+  baja el `-usb.bin` de la **última release final** (`gh release view` sin etiqueta no ve las beta; la beta, ver abajo) y
   `web/preparar.py` lo parte en bootloader (0x0), particiones (0x8000), boot_app0 (0xE000) y app (0x10000) y escribe
   `manifest.json`. Por qué partirlo: `merge_bin` rellena con 0xFF de 0x9000 a 0xE000, así que grabar el `-usb.bin`
   entero borra la NVS; por trozos se conserva (y el LittleFS de parques), salvo que se marque borrar en el diálogo
   (`new_install_prompt_erase`). La app partida es idéntica byte a byte a `chispas-1.20.bin`. Probar en local:
-  `python web/preparar.py dist/1.20/chispas-1.20-usb.bin 1.20 .pio/web` y `python -m http.server -d .pio/web`
+  `python web/preparar.py .pio/web dist/1.20/chispas-1.20-usb.bin 1.20 [dist/1.30b/chispas-1.30b-usb.bin 1.30b]` y `python -m http.server -d .pio/web`
   (Web Serial funciona en `localhost`). Primer despliegue bien (manifiesto 1.20 y binarios servidos).
   `publicar.sh` no cambia. Probada en la placa 1 el 16 oct 2026: instala bien. Ese día, aspecto nuevo al estilo del flasher de Meshtastic: oscura, OLED simulada con 8 capturas reales que van pasando, "CHISPAS" en Morse, pasos, funciones y ayuda (Space Grotesk y JetBrains Mono de Google Fonts). GitHub Pages cachea 10 min (`max-age=600`): `preparar.py` cambia `__SELLO__` de `index.html` por la hora del despliegue y lo añade como `?sello` al manifiesto, a los trozos (ESP Web Tools los resuelve con `new URL`) y a las capturas.
+  **Estable o beta (16 oct 2026, petición del usuario):** la Action baja también la **última beta publicada si salió
+  después de la última final** (`gh release list` con `isPrerelease`, sin borradores, `publishedAt` posterior); al
+  publicar la final siguiente la beta desaparece sola. `preparar.py <carpeta> <estable> <ver> [<beta> <ver>]` deja
+  cada versión en `firmware/<ver>/` y escribe `manifest.json` y, con beta, `manifest-beta.json` (campo `canal`). La
+  página lee los dos: con beta enseña un selector **Estable / Beta** (con su versión) encima del botón, que cambia el
+  manifiesto del botón (propiedad `manifest`: ESP Web Tools 10.4.0 usa `button.manifest || getAttribute`), la línea de
+  versión y el enlace al código; con la beta, aviso de que se puede volver a la estable sin borrar. `#beta` en la URL
+  la deja elegida. Sección **Novedades de la beta** (QSO SIM, sonido nuevo, Koch/Duo TEXTO, RITMO, batería), solo
+  si hay beta: **texto fijo en `index.html`, rehacerlo con cada beta**. Capturas de la OLED: 10 (añadidas CW y
+  QSO SIM). Probada en local (Edge sin interfaz, con beta y sin ella); la instalación de la beta desde la web, sin
+  probar (la v1.30b está en borrador: hasta publicarla, la web solo ofrece la estable).
 - **`gh` en el equipo 1:** instalado el 13 oct 2026 con `winget install GitHub.cli` (v2.102.0) y
   sesión iniciada (`gh auth login`, cuenta ea4iln-debug, HTTPS, token en el llavero de Windows). Desde entonces ya no hace falta la vía de la API REST.
 - **OTA** (v1.00b; **probada de punta a punta el 11 oct 2026**: una compilación de prueba "0.99" en la placa 1 encontró la release v1.00b, la descargó e instaló, y arrancó con la v1.00b conservando la NVS): CONF > CONFIG >

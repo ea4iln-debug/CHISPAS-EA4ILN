@@ -24,6 +24,7 @@
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html { scroll-behavior: smooth; }
   body {
     margin: 0; background: var(--fondo); color: var(--texto); overflow-x: hidden;
@@ -76,6 +77,24 @@
   .boton-sec:hover { color: var(--texto); border-color: var(--tenue); text-decoration: none; }
   .version { margin-top: 18px; color: var(--tenue); font-size: 0.9rem; }
   .version b { color: var(--texto); font-weight: 500; }
+  /* Selector de version: estable o beta */
+  .canal { display: inline-flex; gap: 4px; padding: 4px; margin: 0 0 18px; border-radius: 12px;
+    background: var(--fondo2); border: 1px solid var(--borde2); }
+  .canal button { font: inherit; font-size: 0.95rem; font-weight: 500; cursor: pointer; border: 0; border-radius: 9px;
+    padding: 8px 16px; background: transparent; color: var(--suave); display: inline-flex; align-items: baseline; gap: 8px;
+    transition: background 0.15s, color 0.15s; }
+  .canal button:hover { color: var(--texto); }
+  .canal button[aria-checked="true"] { background: var(--tarjeta); color: var(--texto);
+    box-shadow: inset 0 0 0 1px var(--borde2), 0 4px 14px rgba(0, 0, 0, 0.35); }
+  .canal button[aria-checked="true"][data-canal="beta"] {
+    box-shadow: inset 0 0 0 1px rgba(255, 138, 61, 0.55), 0 4px 18px rgba(255, 138, 61, 0.18); }
+  .canal button:focus-visible { outline: 2px solid var(--acento2); outline-offset: 2px; }
+  .canal .mono { font-size: 0.8rem; color: var(--tenue); }
+  .canal button[aria-checked="true"] .mono { color: var(--acento2); }
+  .chip-beta { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--acento2); border: 1px dashed rgba(255, 138, 61, 0.55); border-radius: 6px;
+    padding: 1px 7px; vertical-align: 0.2em; }
+  .aviso-beta { margin: 14px 0 0; font-size: 0.93rem; }
   .aviso { background: rgba(255, 179, 107, 0.08); border: 1px solid rgba(255, 179, 107, 0.35); color: var(--texto);
     border-radius: 12px; padding: 14px 16px; max-width: 30em; }
 
@@ -130,6 +149,8 @@
   code { font-family: "JetBrains Mono", monospace; font-size: 0.86em; background: #1b202b; border: 1px solid var(--borde2);
     border-radius: 5px; padding: 1px 5px; color: var(--texto); }
 
+  .novedad { border-color: rgba(255, 138, 61, 0.28); }
+  .novedad .opciones { margin-top: 12px; }
   details { border: 1px solid var(--borde); border-radius: 12px; background: var(--tarjeta); margin: 10px 0; }
   summary { cursor: pointer; padding: 14px 18px; font-weight: 500; list-style: none; display: flex; justify-content: space-between; }
   summary::-webkit-details-marker { display: none; }
@@ -165,6 +186,7 @@
     </a>
     <nav class="enlaces">
       <a href="#pasos">Pasos</a>
+      <a href="#novedades" class="opcional" id="enlace-novedades" hidden>Novedades</a>
       <a href="#funciones" class="opcional">Funciones</a>
       <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN">GitHub</a>
     </nav>
@@ -178,8 +200,12 @@
       <h1>Instala <span class="brillo">Chispas</span><br>desde el navegador</h1>
       <p class="lema">Entrenador Koch, keyer iámbico, QSO por LoRa y compañero del transceptor. Conecta la placa por
         USB y en un minuto está lista, sin instalar ningún programa.</p>
+      <div class="canal" id="canal" role="radiogroup" aria-label="Versión que se instala" hidden>
+        <button type="button" role="radio" aria-checked="true" data-canal="estable" id="canal-estable">Estable <span class="mono" id="v-estable"></span></button>
+        <button type="button" role="radio" aria-checked="false" data-canal="beta" id="canal-beta">Beta <span class="mono" id="v-beta"></span></button>
+      </div>
       <div class="acciones">
-        <esp-web-install-button manifest="manifest.json?__SELLO__">
+        <esp-web-install-button id="instalar" manifest="manifest.json?__SELLO__">
           <button slot="activate" class="boton">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
@@ -193,6 +219,8 @@
         <a class="boton-sec" href="#pasos">Cómo funciona</a>
       </div>
       <p class="version" id="version">Versión <b>…</b></p>
+      <p class="aviso aviso-beta" id="aviso-beta" hidden>La beta trae lo último y aún se está probando. Si algo no va
+        bien, vuelve aquí, elige <b>Estable</b> e instálala sin borrar: conservas tu configuración.</p>
     </div>
 
     <div class="placa">
@@ -235,6 +263,38 @@
     </div>
   </section>
 
+  <section id="novedades" hidden>
+    <h2>Novedades de la beta <span class="chip-beta" id="novedades-version">beta</span></h2>
+    <p class="intro">Lo que trae la beta y aún no está en la estable.</p>
+    <div class="rejilla r3">
+      <div class="tarjeta novedad">
+        <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg></span>
+        <h3>QSO SIM</h3>
+        <p>Un QSO POTA de práctica: Chispas es el activador y llama CQ; tú contestas con las palas.</p>
+        <ul class="opciones">
+          <li>Tu indicativo, el <b>5NN</b> y el <b>73</b>. Si no te copia, te pide repetir.</li>
+          <li>Condiciones de banda: <b>QSB</b>, <b>ruido</b>, <b>estática de tormenta</b> y <b>QRM</b>.</li>
+          <li>Tercera opción del menú CW.</li>
+        </ul>
+      </div>
+      <div class="tarjeta novedad">
+        <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12c2-6 4-6 6 0s4 6 6 0 4-6 6 0"/></svg></span>
+        <h3>Sonido nuevo</h3>
+        <p>Chispas sintetiza el audio en lugar de dar un pitido cuadrado: el tono arranca y para sin clics y suena
+          más redondo. Sin tocar el montaje.</p>
+      </div>
+      <div class="tarjeta novedad">
+        <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 16 2 2 4-4"/></svg></span>
+        <h3>Más práctica</h3>
+        <ul class="opciones">
+          <li><b>Koch</b> y <b>Duo por LoRa</b>: grupos, <b>indicativos</b> o <b>frases de QSO POTA</b>.</li>
+          <li><b>TX libre › RITMO</b>: mide tus espacios, titubeos y velocidad real, y te da un consejo.</li>
+          <li>La batería marca 100 % desde 4,15 V.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <section id="funciones">
     <h2>Qué lleva</h2>
     <p class="intro">"Chispas" era el apodo del radiotelegrafista de a bordo.</p>
@@ -245,7 +305,7 @@
       </div>
       <div class="tarjeta">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4v10a3 3 0 0 0 6 0V4M6 20h12"/></svg></span>
-        <h3>Keyer iámbico</h3><p>Palas A/B con tono por altavoz o auriculares y práctica libre.</p>
+        <h3>Keyer iámbico</h3><p>Palas A/B con tono por altavoz o auriculares y práctica libre; en la beta, también un QSO POTA simulado.</p>
       </div>
       <div class="tarjeta">
         <span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20V10M8.5 6.5a5 5 0 0 1 7 0M5.5 3.5a9 9 0 0 1 13 0"/><circle cx="12" cy="10" r="1.5"/></svg></span>
@@ -302,8 +362,8 @@
 
 <footer>
   <div class="envoltura">
-    <span>Instala la última versión final de
-      <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases">GitHub</a>; las beta llegan solo por OTA.</span>
+    <span>Instala la última versión estable o, si la hay, la última beta de
+      <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases">GitHub</a>.</span>
     <span>Software libre GPL-3.0-or-later ·
       <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN" id="codigo">código fuente</a> ·
       <a href="LICENCIAS_TERCEROS.txt">licencias de terceros</a> · 73 de EA4ILN</span>
@@ -311,20 +371,51 @@
 </footer>
 
 <script>
-  // Version y enlace al codigo de esa version
+  // Versiones: estable (manifest.json) y, si la hay, beta (manifest-beta.json). El selector cambia el manifiesto
+  // del boton de instalar, la linea de version y el enlace al codigo de esa version. #beta en la URL la elige
   const SELLO = "__SELLO__";  // Lo pone web/preparar.py en cada despliegue (cache de GitHub Pages)
-  fetch("manifest.json?" + SELLO)
-    .then((r) => r.json())
-    .then((m) => {
-      document.getElementById("version").innerHTML = "Versión <b>" + m.version + "</b> · última final";
-      document.getElementById("codigo").href =
-        "https://github.com/ea4iln-debug/CHISPAS-EA4ILN/tree/v" + encodeURIComponent(m.version);
-    })
-    .catch(() => { document.getElementById("version").textContent = ""; });
+  const $ = (id) => document.getElementById(id);
+  const leer = (archivo) => fetch(archivo + "?" + SELLO).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const versiones = {};
+  function elegir(canal) {
+    const m = versiones[canal];
+    if (!m) return;
+    const manifiesto = (canal === "beta" ? "manifest-beta.json?" : "manifest.json?") + SELLO;
+    $("instalar").setAttribute("manifest", manifiesto);
+    $("instalar").manifest = manifiesto;  // ESP Web Tools mira primero la propiedad y luego el atributo
+    $("version").innerHTML = "Versión <b>" + m.version + "</b> · " +
+      (canal === "beta" ? "beta, para probar lo último" : "última estable");
+    $("codigo").href = "https://github.com/ea4iln-debug/CHISPAS-EA4ILN/tree/v" + encodeURIComponent(m.version);
+    $("aviso-beta").hidden = canal !== "beta";
+    for (const b of $("canal").querySelectorAll("button")) {
+      b.setAttribute("aria-checked", b.dataset.canal === canal);
+      b.tabIndex = b.dataset.canal === canal ? 0 : -1;
+    }
+  }
+  Promise.all([leer("manifest.json"), leer("manifest-beta.json")]).then(([estable, beta]) => {
+    if (!estable) { $("version").textContent = ""; return; }
+    versiones.estable = estable;
+    $("v-estable").textContent = estable.version;
+    if (beta) {
+      versiones.beta = beta;
+      $("v-beta").textContent = beta.version;
+      $("novedades-version").textContent = beta.version;
+      $("canal").hidden = $("novedades").hidden = $("enlace-novedades").hidden = false;
+    }
+    elegir(location.hash === "#beta" && beta ? "beta" : "estable");
+  });
+  for (const b of $("canal").querySelectorAll("button")) b.onclick = () => elegir(b.dataset.canal);
+  $("canal").addEventListener("keydown", (e) => {  // Flechas entre las dos opciones, como un grupo de radio
+    if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    const canal = e.key === "ArrowRight" ? "beta" : "estable";
+    elegir(canal);
+    $("canal-" + canal).focus();
+  });
 
   // OLED: capturas reales, una cada 3,5 s
   const PANTALLAS = [
-    ["inicio", "Inicio"], ["cara", "Salvapantallas"], ["koch", "Koch"], ["trx", "Transceptor"],
+    ["inicio", "Inicio"], ["cara", "Salvapantallas"], ["cw", "Entrenador CW"], ["koch", "Koch"],
+    ["qso_sim", "QSO SIM"], ["trx", "Transceptor"],
     ["lora", "LoRa"], ["prop", "Propagación"], ["pota", "POTA"], ["sol", "Sol"],
   ];
   const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;

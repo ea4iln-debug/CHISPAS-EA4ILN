@@ -143,8 +143,8 @@ v1.10; el OTA dirá que no hay binario para ella).
 
 ### Desde el navegador (lo más fácil)
 Abre **[ea4iln-debug.github.io/CHISPAS-EA4ILN](https://ea4iln-debug.github.io/CHISPAS-EA4ILN/)** con Chrome o Edge
-en un ordenador, conecta la placa por USB y pulsa **Instalar en la placa**. Instala la última versión final y
-**conserva la configuración** guardada, salvo que marques borrar la placa (recomendable si traía otro firmware).
+en un ordenador, conecta la placa por USB y pulsa **Instalar en la placa**. Instala la última versión estable o,
+si hay una más nueva, la **beta** (selector encima del botón), y **conserva la configuración** guardada, salvo que marques borrar la placa (recomendable si traía otro firmware).
 En Windows hace falta el driver del CP210x (ver arriba).
 
 ### Sin compilar (desde la release)
