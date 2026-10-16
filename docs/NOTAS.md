@@ -320,7 +320,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     Pantalla como QSO LIBRE (activador arriba, separador `1/3 ESCUCHA` / `TU TURNO`, lo tuyo abajo; con VER NO, `?`
     mientras suena); pie repetir / salir. Resultado: `CON <A> <PARQUE>`, tiempo, repeticiones y velocidad real (como
     RITMO). QSB provisional: baja el ciclo del PWM (`cicloTono`, ciclo = asin(amplitud)/π) con dos senos de 5,3 y
-    2,1 s; **se rehará con el audio sigma-delta** (ver "Audio sintetizado").
+    2,1 s; desde el 16 oct, con el audio sigma-delta: volumen real y ajustes RUIDO, TORMENTA y QRM (ver "Audio sintetizado").
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso
@@ -607,13 +607,29 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   - QSB con seno (dos senos de 5,3 y 2,1 s): suave (-8 dB) y fuerte (-26 dB), los dos se quedan.
   - **Coste medido** a 80 MHz (`u 80`, `x`): 256 ciclos por muestra de media y 313 como mucho con todo (5,1 % de la
     CPU), 206 solo el tono (4,1 %); más la entrada y salida de la interrupción (sin medir, ~2–3 %).
-  **Plan (siguiente tarea):** pasar todo el audio de Chispas a la síntesis (`audio.inc`: `conmutarEmisionMorse()`
-  pone la tecla y la ISR hace la envolvente; `frecTonoHz` y pitido de prueba igual; la ISR solo con el amplificador
-  encendido; al dormir, pin en BAJO y retenido). Ajustes del simulador: QSB, RUIDO, TORMENTA (NO / POCA / MUCHA) y
-  QRM, cada uno con su nivel; "suave" = lo elegido de oído (ruido 30, 30 chasquidos/min, QRM 10), "fuerte" ≈ el
-  doble. Comprobar después: Koch, keyer, TRX con KEY, ritmo del CW y **el decodificador** (GPIO6 está junto al
-  GPIO7: el pin conmutando podría colarse en el ADC; si pasa, apagar la síntesis al decodificar). Escribir en flash
-  (NVS, OTA) puede retrasar la ISR: corte breve del audio.
+  **En el firmware (16 oct 2026, sin versión nueva, commit 663a19a):** `audio.inc` sin PWM. `iniciarAudio()` hace las
+  tablas (seno y cuadrada suavizada), el sigma-delta (canal 0, divisor 10, a -128 = 0 V) y el timer 0 (1 MHz, alarma
+  cada 62 µs, parada). `conmutarEmisionMorse()` solo pone `audioTecla`; la ISR `isrAudio()` hace la envolvente.
+  `audioQsb` (256 = máximo), `audioRuido`, `audioPonerChasquidos()`, `audioInterf` e `audioIncInterf` los pone el
+  simulador (`simAplicarBanda()`, en `procesarSim()`); fuera del QSO, 256 y 0. La síntesis va con el amplificador
+  (`ponerAmplificador()` → `arrancarAudio()`): al encender y apagar, el **nivel medio** sube o baja despacio entre
+  0 V y la mitad (`AUDIO_MEDIO_PASOS` 2048 muestras = 128 ms; el tono no empieza hasta llegar arriba) y
+  `procesarAudio()` para el timer cuando ha bajado. El pitido de prueba de CONF espera `AUDIO_MEDIO_MS` (130) si el
+  amplificador estaba apagado. Al dormir: amplificador apagado, `apagarAudioYa()` (pin a GPIO en BAJO) y
+  `gpio_hold_en(7)`; se libera en `setup()`. ISR sin `ESP_INTR_FLAG_IRAM` (la del core): al escribir en flash se
+  retrasa (corte breve). Simulador: ajustes **RUIDO**, **TORMENTA** y **QRM** (NO / SUAVE / FUERTE; NVS `srui`,
+  `stor`, `sqrm`; foco 5–7, iniciar 8, volver 9): SUAVE = ruido 30, 30 chasquidos/min, QRM 10; FUERTE, el doble;
+  suenan en todo el QSO (también en tu turno). QSB con `simNivelQsb()` (volumen real, ya no el ciclo del PWM).
+  RAM 17,3 %, flash 39,2 %.
+  **Probado en la placa 1 (16 oct 2026, USB, de oído):** Koch, Echo y TX LIBRE bien (volumen, timbre, sin
+  retraso); al entrar y salir de las pantallas con sonido, un pulso casi imperceptible (se deja así: alargar el
+  nivel medio retrasaría el primer tono); pitido de prueba bien; qso sim con QSB, RUIDO, TORMENTA y QRM bien.
+  **Decodificador** (TRX > DECODIFICAR sin señal): ninguna letra falsa, pero la barra de nivel queda en ~10 % (con
+  el PWM estaba a 0): algo del GPIO7 llega al GPIO6 o a su masa. **Falta probar con CW real**; si empeora, parar
+  la síntesis en DECODIFICAR (no necesita tono local) o en todo TRX salvo el tono local de OPERAR/QSO.
+  **Auriculares de la placa 1: solo suena el derecho** (anillo, por R3). La síntesis es una sola señal para los dos
+  lados, así que es del montaje: revisar la clavija, R2 (220 Ω de C1 a la punta de J2) y la patilla T de J2. No
+  se había probado antes con el PWM en esta placa.
 - **Tono** (montado y probado el 10 oct 2026, placa 1): GPIO7 (PWM, `frecTonoHz`) → R1 1 kΩ → RV1 10 kΩ log (pat. 3;
   pat. 1 a GND) → cursor → C1 10 µF (+ al cursor) → R2 220 Ω → J2 T y R3 220 Ω → J2 R; J2 TN → BZ1 + (piezo pasivo
   de 16 mm), BZ1 − y J2 S a GND; RN libre. Auriculares por los dos lados y silencio mecánico del buzzer probados

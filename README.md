@@ -116,7 +116,7 @@ El esquema completo (7 hojas), con la lista de componentes y el orden de montaje
 | 4 | J3-15 | Pala de punto (DIT), pull-up interno | ✅ |
 | 5 | J3-16 | Pala de raya (DAH), pull-up interno | ✅ |
 | 6 | J3-17 | Entrada de audio del decodificador (ADC1, por DMA) | ✅ |
-| 7 | J3-18 | Tono CW por PWM (amplificador con altavoz y auriculares) | ✅ |
+| 7 | J3-18 | Tono CW por sigma-delta (amplificador con altavoz y auriculares) | ✅ |
 | 38 | J3-11 | Apagado (SD) del amplificador PAM8302A: solo encendido en CW, LoRa y TRX | ✅ |
 | 19 | J2-18 | Encoder CLK | ✅ |
 | 20 | J2-17 | Pulsador del encoder (también despierta la placa) | ✅ |
