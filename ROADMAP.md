@@ -108,6 +108,11 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
   apagado por defecto; Web Bluetooth desde la web en Chrome, no en iPhone), deep sleep con despertar periódico, o
   despertar por LoRa (`startReceiveDutyCycle`, DIO1 = GPIO14 RTC; mucho menos consumo, pero solo desde otro
   Chispas). Primer paso: medir el consumo en light sleep con BLE en una prueba aparte en `pruebas/`.
+- **Navegación en el campo con el GPS** (18 oct 2026, aparcado hasta una PCB nueva): marcar el punto de partida, ir
+  a un parque POTA (rumbo y distancia), grabar el recorrido en LittleFS (12 bytes por punto) y volver en línea recta
+  o desandando. Aparcado porque **sin brújula** el NEO-6M solo da el rumbo de marcha (inútil parado o a menos de
+  ~3 km/h); hace falta magnetómetro y acelerómetro (compensar la inclinación) en una futura versión de la PCB, p. ej.
+  en Wire1 con el BME280. Consumo estimado: GPS siempre despierto, ~70 mA, unas 40 h con 3000 mAh (frente a ~100 h).
 
 ### Instalación y estructura del firmware (ideas)
 - ~~**Web de instalación por USB**~~ **Hecha el 16 oct 2026**: https://ea4iln-debug.github.io/CHISPAS-EA4ILN/
