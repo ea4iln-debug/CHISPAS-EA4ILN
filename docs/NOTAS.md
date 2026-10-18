@@ -113,6 +113,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   Novedades de la web rehechas (QSO SIM con los dos roles, decodificador). **Orden para la web:** el evento de
   release la rehace desde el commit de la etiqueta, así que el commit con el texto nuevo de `web/` se sube
   *después* de `--publicar` (su push la rehace desde `main` con la release ya publicada). Las dos Actions, bien.
+  **OTA 1.20 → 1.31b probado en la placa 1 (18 oct):** se le cargó la app de la release 1.20 por USB sin tocar la
+  NVS (`esptool write_flash 0xE000 boot_app0.bin 0x10000 chispas-1.20.bin`; indicativo conservado) y desde
+  ACTUALIZAR FW encontró la v1.31b, la bajó e instaló y arrancó con ella (unos 35 s).
 - **Web de instalación por USB (16 oct 2026):** https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (GitHub Pages,
   fuente "GitHub Actions", activada con `gh api -X POST repos/.../pages -f build_type=workflow`). `web/index.html`
   con **ESP Web Tools 10.4.0** (unpkg, `<esp-web-install-button>`; Chrome/Edge de escritorio). La Action
