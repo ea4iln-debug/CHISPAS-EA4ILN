@@ -192,10 +192,12 @@ void editorAnadir(const String& s) {
 }
 
 void confCerrarEditor(bool guardar);  // Definida con la pantalla CONF
+void autospotCerrarEditor(bool guardar);  // Definida con el autospot
 
-// El editor sirve a TRX (memorias y SU) y a CONF (ID y locator de la estacion)
+// El editor sirve a TRX (memorias y SU), a CONF (ID y locator de la estacion) y a AUTOSPOT (ID del activador)
 void editorCerrar(bool guardar) {
-  if (editorDestino <= EDITOR_ID_ESTACION) confCerrarEditor(guardar);
+  if (editorDestino == EDITOR_SPOT) autospotCerrarEditor(guardar);
+  else if (editorDestino <= EDITOR_ID_ESTACION) confCerrarEditor(guardar);
   else trxCerrarEditor(guardar);
 }
 
@@ -205,9 +207,9 @@ void editorAplicar() {
   if (e == "OK") { editorCerrar(true); return; }
   if (e == "ESC") { editorCerrar(false); return; }
   if (e == "CLR") { editorTexto = ""; return; }
-  // ID y locator: solo letras y cifras (y "/" en el ID); sin espacios ni signos
+  // ID y locator: solo letras y cifras (y "/" en los ID); sin espacios ni signos
   if (editorDestino <= EDITOR_ID_ESTACION && e.length() == 1 && !isalnum(e[0]) &&
-      !(e == "/" && editorDestino == EDITOR_ID_ESTACION)) return;
+      !(e == "/" && editorDestino != EDITOR_LOCATOR)) return;
   if (editorDestino <= EDITOR_ID_ESTACION && e == "ESP") return;
   if (e == "<-") {
     if (editorTexto.endsWith("{MI}") || editorTexto.endsWith("{SU}") || editorTexto.endsWith("{WX}")) {

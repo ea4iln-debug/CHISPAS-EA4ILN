@@ -86,9 +86,9 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 ### Ideas decididas
 - ✅ **POTA sin conexión** (14 oct 2026): lista de parques de España en LittleFS y los más cercanos en POTA > VER
   PARQUES. Queda, si se quiere, buscar un parque por referencia.
-- **Cola de spots POTA:** publicar el spot propio al activar un parque (indicativo, referencia, frecuencia, CW) y, si
-  no hay cobertura, guardarlo y enviarlo en cuanto haya WiFi. Antes, revisar las condiciones de la API de POTA para
-  publicar.
+- ✅ **Autospot POTA** (18 oct 2026): VER PARQUES > pulsar > ficha > enviar, con aviso a los 25 min para renovarlo.
+  Queda, si se quiere, la **cola**: guardar el spot sin cobertura y enviarlo en cuanto haya WiFi (ojo: un spot
+  atrasado puede engañar a los cazadores). La frecuencia, sin CAT, se mete a mano (ver CAT abajo).
 - ✅ **Batería en `[DIAG]`** (16 oct 2026): `| BAT 4.17V 100%` al final de la línea, para medir la autonomía con un registro.
 - ✅ **Koch con indicativos y QSO POTA** (16 oct 2026): ajuste TEXTO del Koch.
 - ✅ **Ritmo de la manipulación** (16 oct 2026): TX LIBRE > menu > RITMO. Falta probarlo con las palas.

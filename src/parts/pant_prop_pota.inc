@@ -167,6 +167,14 @@ void renderizarPantallaSpots() {
     dibujarPaginasParques();
     return;
   }
+  if (subDatos == DATOS_AUTOSPOT) {
+    dibujarFichaSpot();
+    return;
+  }
+  if (subDatos == DATOS_EDITOR_SPOT) {
+    dibujarEditor();
+    return;
+  }
 
   // Paginas
   if (actualizandoWifi || !spotsPotaValidos || numSpotsPota == 0) {

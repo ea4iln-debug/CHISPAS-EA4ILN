@@ -433,6 +433,7 @@ void dibujarCara() {
 // del portal o el QR a la vista ni durante una actualizacion OTA
 bool caraPermitida() {
   if (OPCIONES_CARA_S[caraEsperaIdx] == 0) return false;  // SALVAPANTALLAS = NO
+  if (avisoRespot) return false;
   if (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA || pantallaActual == PANTALLA_TRX) return false;
   if (pantallaActual == PANTALLA_CONFIG && (subConf == CONF_PORTAL || subConf == CONF_OTA)) return false;
   bool pantallaDatos = pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||

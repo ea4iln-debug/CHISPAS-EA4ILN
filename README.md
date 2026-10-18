@@ -70,7 +70,7 @@ GitHub.
 | **QSO libre por LoRa** | QSO con las palas entre dos Chispas: cada palabra se envía al terminarla y lo recibido suena cuando dejas de manipular (si manipulas mientras suena, se corta). | ✅ |
 | **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`, `{WX}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez. | ✅ |
 | **Propagación** | Índices solares y condiciones por banda de [hamqsl.com](https://www.hamqsl.com/). | ✅ |
-| **Spots POTA** | Activaciones en CW publicadas en [pota.app](https://pota.app/). | ✅ |
+| **Spots POTA** | Activaciones en CW publicadas en [pota.app](https://pota.app/). **Autospot** (beta): desde los parques cercanos, publicas tu propio spot (parque, indicativo, banda, frecuencia, QRP/QRT) y CHISPAS te avisa a los 25 min para renovarlo. | ✅ |
 | **Sol y línea gris** | Salida y puesta del sol y ventanas de línea gris de hoy y de mañana, y altura actual del sol, para el locator de la estación. Funciona sin conexión. | ✅ |
 | **Sensor ambiental (BME280)** | Temperatura, humedad y presión; tendencia de la presión en 3 h con **aviso de tormenta**; altitud barométrica calibrable (útil en SOTA); la temperatura en las memorias con `{WX}`. Opcional: sin sensor, Chispas funciona igual. | ✅ |
 | **Configuración en el aparato** | Indicativo, locator, altitud, aceleración del encoder, apagado automático, tono y reset de fábrica, con el encoder. Página STATUS con estación, sistema, WiFi, memoria, arranque y sensor. | ✅ |
@@ -264,7 +264,7 @@ muy larga (2,5 s) = dormir.
 | 3 | **LoRa** | `PRÁCTICA DUO` (grupos en pareja) y `QSO LIBRE` (con las palas) |
 | 4 | **TRX** | Transceptor: `DECODIFICAR`, `OPERAR` (por KEY, con tune), `QSO` y `memorias` |
 | 5 | **PROP.** | Propagación: índices solares y condiciones por banda |
-| 6 | **POTA** | Spots de activaciones en CW y parques POTA más cercanos (con el GPS o el locator) |
+| 6 | **POTA** | Spots de activaciones en CW, parques POTA más cercanos (con el GPS o el locator) y autospot desde un parque |
 | 7 | **SOL** | Sol y línea gris: hoy, ahora y mañana; con el BME280, también AMBIENTE |
 | 8 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización, depuración y fábrica) y `STATUS` |
 

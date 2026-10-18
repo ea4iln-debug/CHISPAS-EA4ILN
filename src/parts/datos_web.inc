@@ -93,6 +93,7 @@ void actualizarSpotsPota() {
 
 bool tocaDescargarParques();  // Definidas con los parques POTA
 void descargarParques();
+void enviarSpotPota();        // Definida con el autospot
 
 /**
  * Opcion "actualizar" (y REINTENTAR) de PROP y POTA: descarga en cuanto haya conexion; sin WiFi lo enciende.
@@ -109,6 +110,7 @@ void pedirActualizacionWifi() {
 void terminarPeticionWifi() {
   wifiPorPeticion = false;
   forzarActualizacion = false;
+  spotPendiente = false;
   if (!wifiAuto && estadoWifi != WIFI_PORTAL && estadoWifi != WIFI_APAGADO) apagarWifi();
   pantallaPendiente = true;
 }
@@ -157,6 +159,7 @@ void procesarWifi() {
     bool encender = wifiAuto && enDatos;
     wifiPorPeticion = false;
     forzarActualizacion = false;
+    spotPendiente = false;
     if (encender && (estadoWifi == WIFI_APAGADO || estadoWifi == WIFI_SIN_CONEXION)) encenderWifi();
     if (!encender && !conPortal && estadoWifi != WIFI_APAGADO) apagarWifi();
     pantallaAnterior = pantallaActual;
@@ -203,7 +206,13 @@ void procesarWifi() {
       bool tocaPota = enPota &&
           (forzarActualizacion || (wifiAuto && (spotsPotaIntentoMs == 0 ||
                                                 millis() - spotsPotaIntentoMs > REFRESCO_POTA_MS)));
-      if (tocaPropagacion || tocaPota) {
+      if (enPota && spotPendiente) {
+        // AUTOSPOT > enviar: lo primero, antes que cualquier descarga
+        spotPendiente = false;
+        empezarDescarga("ENVIANDO SPOT...");
+        enviarSpotPota();
+        terminarDescarga();
+      } else if (tocaPropagacion || tocaPota) {
         forzarActualizacion = false;
         empezarDescarga("DESCARGANDO...");
         if (tocaPropagacion) actualizarPropagacion();
@@ -224,7 +233,7 @@ void procesarWifi() {
       // ACTUALIZAR terminado: nada mas que bajar y la hora del NTP recibida (o ya no hace falta, o se acabo la
       // espera; en SOL, que solo pide la hora, se espera siempre a ella)
       if (wifiPorPeticion) {
-        bool pendiente = forzarActualizacion || (enPota && tocaDescargarParques());
+        bool pendiente = forzarActualizacion || spotPendiente || (enPota && tocaDescargarParques());
         bool quiereNtp = pantallaActual == PANTALLA_SOL || fuenteHoraActual() < HORA_WIFI;
         bool esperaNtp = quiereNtp && fuenteHoraActual() != HORA_GPS && !ntpRecibido &&
                          millis() - esperaNtpDesdeMs < WIFI_ESPERA_NTP_MS;

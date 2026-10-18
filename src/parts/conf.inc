@@ -487,6 +487,11 @@ void actualizarPantalla() {
   }
   display.clearDisplay();
   dibujarEncabezado();
+  if (avisoRespot) {  // Renovar el spot POTA: tapa la pantalla en la que se este
+    dibujarAvisoRespot();
+    display.display();
+    return;
+  }
 
   switch (pantallaActual) {
     case PANTALLA_INICIO: renderizarPantallaInicio(); break;

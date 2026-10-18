@@ -292,9 +292,11 @@ const char* const TRX_MEMORIAS_PRECARGADAS[TRX_NUM_MEMORIAS] = {
 };
 uint8_t trxMemoriaSel = 0;  // Foco en las listas de memorias (TRX_NUM_MEMORIAS = volver)
 // Editor de textos (memorias y {SU}): rueda de caracteres con el encoder, o las palas
-int8_t editorDestino = 0;   // 0..5 = memoria; -1 = indicativo del corresponsal; -2 = ID y -3 = locator (CONF)
+int8_t editorDestino = 0;   // 0..5 = memoria; -1 = indicativo del corresponsal; -2 = ID y -3 = locator (CONF);
+                            // -4 = ID del activador (AUTOSPOT)
 #define EDITOR_ID_ESTACION -2
 #define EDITOR_LOCATOR     -3
+#define EDITOR_SPOT        -4  // ID del activador en POTA > AUTOSPOT
 bool editorError = false;   // OK con un ID o locator no valido: se avisa y se sigue editando
 String editorTexto = "";
 uint8_t editorMax = TRX_MEMORIA_MAX;

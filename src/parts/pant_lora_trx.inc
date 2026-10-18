@@ -182,6 +182,7 @@ void dibujarListaMemorias(bool paraEnviar) {
 // Editor: titulo, texto con cursor y, en el pie, la rueda de caracteres (el elegido en video inverso)
 void dibujarEditor() {
   String titulo = editorDestino == EDITOR_ID_ESTACION ? String("TU ID") :
+                  editorDestino == EDITOR_SPOT ? String("ID ACTIVADOR") :
                   editorDestino == EDITOR_LOCATOR ? String("LOCATOR") :
                   editorDestino < 0 ? String("INDICATIVO SU") : "MEMORIA " + String(editorDestino + 1);
   if (editorError) titulo += " NO VALIDO";

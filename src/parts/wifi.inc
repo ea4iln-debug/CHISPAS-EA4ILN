@@ -33,6 +33,8 @@ char nombrePortal[16] = "";
 bool actualizandoWifi = false;     // Se esta descargando (bloquea): la pantalla muestra avisoDescarga
 const char* avisoDescarga = "";
 bool forzarActualizacion = false;  // Pedido con la opcion "actualizar"
+bool spotPendiente = false;        // AUTOSPOT > enviar: se publica en cuanto haya conexion (ver autospot.inc)
+String resultadoSpot = "";         // Lo que paso con el ultimo envio, para el pie de la ficha ("" = nada)
 bool wifiAuto = false;             // CONFIG > WIFI DATOS (NVS "wifiauto"): false = MANUAL
 bool wifiPorPeticion = false;      // ACTUALIZAR en curso (conectar, descargar, hora): al acabar, en MANUAL se apaga
 unsigned long esperaNtpDesdeMs = 0;
@@ -71,7 +73,8 @@ uint8_t paginaSpots = 0;
 uint8_t opcionPantallaProp = OPCION_BARRA_PROP;    // Menu: 0 = ver datos, 1 = actualizar, 2 = barra ant./sig.
 uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;
 uint8_t opcionPantallaSol = OPCION_BARRA_DATOS;
-enum SubDatos { DATOS_MENU, DATOS_PAGINAS, DATOS_PORTAL, DATOS_PARQUES };  // PARQUES: solo en POTA
+// PARQUES, AUTOSPOT y EDITOR_SPOT (el ID del activador): solo en POTA
+enum SubDatos { DATOS_MENU, DATOS_PAGINAS, DATOS_PORTAL, DATOS_PARQUES, DATOS_AUTOSPOT, DATOS_EDITOR_SPOT };
 SubDatos subDatos = DATOS_MENU;
 uint8_t focoPortalDatos = 0;
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
@@ -423,9 +426,17 @@ void quedarseSinConexion() {
   estadoWifi = WIFI_SIN_CONEXION;
   wifiPorPeticion = false;
   forzarActualizacion = false;
-  // PROP, POTA y SOL vuelven a su menu, con el foco en "ABRIR WEBCONF"
-  subDatos = DATOS_MENU;
-  opcionPantallaProp = opcionPantallaSpots = opcionPantallaSol = 0;
+  if (spotPendiente) {
+    // El spot no sale: se dice en la ficha, que se queda a la vista para reintentar
+    spotPendiente = false;
+    resultadoSpot = "SIN CONEXION WIFI";
+    Serial.println(F("[SPOT] SIN CONEXION"));
+  }
+  // PROP, POTA y SOL vuelven a su menu, con el foco en "ABRIR WEBCONF" (salvo desde la ficha del spot)
+  if (subDatos != DATOS_AUTOSPOT) {
+    subDatos = DATOS_MENU;
+    opcionPantallaProp = opcionPantallaSpots = opcionPantallaSol = 0;
+  }
   pantallaPendiente = true;
 }
 

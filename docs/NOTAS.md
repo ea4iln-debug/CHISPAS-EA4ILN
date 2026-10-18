@@ -503,6 +503,30 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   nombre debajo; pie `1/10 IM68mu  >volver` (o `GPS`). Durante la descarga, `DESCARGANDO PARQUES` y la cuenta.
   Probado: descarga en 8–17 s con WiFi de casa, 2497 parques; 20 cercanos desde el locator IM68mu (el más cercano
   a 4,5 km); ACTUALIZAR sigue bajando spots. Búsqueda desde un fijo del GPS **probada por el usuario en la calle** (15 oct 2026).
+- **AUTOSPOT POTA** (18 oct 2026, sin versión nueva; `src/parts/autospot.inc`; **probado en la placa 1 con un spot
+  real**). Publicar el spot propio desde CHISPAS. **Acceso:** en VER PARQUES girar marca un parque (su primera línea
+  en vídeo inverso; antes, girar pasaba página) y pulsar abre la ficha; el pie es `1/20 GPS  >spot`. **Ficha**
+  (lista): PARQUE (gira entre los 20 cercanos), ID (el de la estación; pulsar abre el editor de las memorias, destino
+  `EDITOR_SPOT` = -4, hasta 12 caracteres con `/`, para `/P` o el de un radioclub; solo en RAM), BANDA (160 a 6 m;
+  al cambiarla pone una frecuencia CW habitual), FREC KHZ (de 1 en 1 dentro de la banda, con aceleración),
+  COMENTARIO (NO / QRP / QRT; no se guarda, para que un QRT no cierre la siguiente activación); pie `enviar` /
+  `volver`. Banda y frecuencia en NVS (`chispas`: `spband`, `spfrec`). **Envío:** como ACTUALIZAR (`spotPendiente`
+  en `procesarWifi()`, antes que cualquier descarga; en MANUAL enciende y apaga el WiFi), aviso `ENVIANDO SPOT...`;
+  el resultado queda en el pie hasta tocar algo (`SPOT ENVIADO 1727Z`, `QRT ENVIADO`, `ERROR: HTTP n`,
+  `SIN RESPUESTA DE POTA`, `SIN CONEXION WIFI`; sin conexión, la ficha no se cierra). Mínimo 30 s entre spots.
+  **API:** no documentada para terceros; la misma que Ham2K PoLo y OpenHamClock (comprobado en su código el 18 oct
+  2026): `POST https://api.pota.app/spot`, sin cuenta, JSON `{activator, spotter, frequency (kHz, texto), reference,
+  mode, source, comments}`; `source` = `CHISPAS`, `spotter` = ID de la estación. Las normas de POTA permiten el
+  autospot (docs.pota.app, Rules). **Aviso para renovar:** el spot caduca ~30 min después del último; a los 25 min
+  de uno bueno sin QRT, un pitido (el de prueba del tono, nunca por KEY; no si el motor CW emite) y el aviso
+  `RENOVAR EL SPOT?` encima de cualquier pantalla (no en CW ni LoRa, ni editando, ni con el portal, la OTA o una
+  descarga: espera). `spot` lleva a la ficha con el foco en `enviar` (desde TRX sale antes a su menú, KEY
+  deshabilitada); `ahora no` o atrás: no vuelve a avisar hasta el siguiente spot. **Probado** (placa 1, órdenes
+  serie): parques marcados, ficha, frecuencia a 14062, ID `EA4ILN/P` con el editor, envío con WiFi MANUAL (conecta,
+  HTTP 200, apaga): el spot salió en `api.pota.app/spot/activator` con todos los campos y `source CHISPAS`; luego
+  QRT (HTTP 200): la API lo sigue listando con el comentario QRT y `expire` ~30 min (la web, según las normas, lo
+  quita; no comprobado). **Sin probar:** el aviso de los 25 min, el caso sin conexión y la ficha con el encoder de
+  verdad. RAM 17,3 %, flash 39,5 %.
   **Sin probar:** el refresco a los 30 días y la descarga fallida. Flash +49 KB (38,5 %), RAM +0,7 KB.
   **Reset de fábrica** (14 oct 2026, después de la v1.08b): `resetFabrica()` monta LittleFS y borra también
   `/parques.bin` y `/parques.tmp` (antes los dejaba). Probado en la placa 2 por USB: tras el reset, sin lista; al
@@ -797,7 +821,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   antes), la primera orden serie solo lo quita: no es un evento perdido.
 - **Orden y contenido** (ver tabla en `CLAUDE.md`): `pines`, `morse`, `globales`, `audio`, `motor_cw`, `keyer`,
   `estadisticas`, `echo`, `bme280`, `memoria_nvs`, `bateria`, `oled_comun`, `lora`, `decodificador`, `trx`, `wifi`,
-  `ota`, `datos_web`, `gps` (13 oct 2026), `parques` (14 oct 2026), `pant_inicio_cw`, `pant_lora_trx`, `pant_prop_pota`, `sol`, `conf`, `estados_cw`, `cara`,
+  `ota`, `datos_web`, `gps` (13 oct 2026), `parques` (14 oct 2026), `pant_inicio_cw`, `pant_lora_trx`, `autospot` (18 oct 2026), `pant_prop_pota`, `sol`, `conf`, `estados_cw`, `cara`,
   `entrada`, `eventos`. Rarezas heredadas del orden original: `procesarRecepcionLoRa`, `loraEscuchar` y
   `salirModoLoRa` están al final de `trx.inc`; `actualizarPantalla()` (el reparto del dibujo) está al final de
   `conf.inc`; el dibujo de cada pantalla está en `pant_*.inc`, lejos de su lógica.

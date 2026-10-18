@@ -80,6 +80,7 @@ inline bool depuActiva(uint8_t bit) { return (depuracion & bit) != 0; }
 #include "parts/parques.inc"
 #include "parts/pant_inicio_cw.inc"
 #include "parts/pant_lora_trx.inc"
+#include "parts/autospot.inc"
 #include "parts/pant_prop_pota.inc"
 #include "parts/sol.inc"
 #include "parts/conf.inc"
@@ -415,6 +416,7 @@ void loop() {
   procesarQSO();
   procesarTrx();
   procesarWifi();
+  procesarAutospot();
   procesarOta();
   procesarGps();
   procesarBME();

@@ -42,7 +42,7 @@ struct ParqueCercano {
 };
 ParqueCercano parquesCercanos[PARQUES_CERCANOS];
 uint8_t numParquesCercanos = 0;
-uint8_t paginaParques = 0;
+uint8_t parqueSel = 0;                   // Parque marcado en VER PARQUES (pulsar: AUTOSPOT con el)
 bool parquesFsMontado = false;
 bool parquesDesdeGps = false;            // Origen de la ultima busqueda (si no, el locator)
 uint32_t parquesEnLista = 0, parquesFecha = 0;  // De la cabecera; 0 = no hay lista
@@ -211,7 +211,7 @@ void descargarParques() {
  */
 bool buscarParquesCercanos() {
   numParquesCercanos = 0;
-  paginaParques = 0;
+  parqueSel = 0;
   float lat, lon;
   parquesDesdeGps = gpsHayPosicion;
   if (gpsHayPosicion) { lat = gpsLat; lon = gpsLon; }
@@ -245,10 +245,6 @@ bool buscarParquesCercanos() {
   return numParquesCercanos > 0;
 }
 
-uint8_t paginasParques() {
-  return max(1, ((int)numParquesCercanos + PARQUES_POR_PAGINA - 1) / PARQUES_POR_PAGINA);
-}
-
 // Rumbo en 8 puntos, en castellano (O = oeste)
 const char* rumboCardinal(uint16_t grados) {
   static const char* const PUNTOS[8] = { "N", "NE", "E", "SE", "S", "SO", "O", "NO" };
@@ -257,6 +253,7 @@ const char* rumboCardinal(uint16_t grados) {
 
 /**
  * Paginas de VER PARQUES: dos parques por pagina, cada uno en dos lineas ("ES-0072    12km SO" y el nombre).
+ * Girar mueve el parque marcado (su primera linea en video inverso); pulsar abre AUTOSPOT con el.
  * Sin lista o sin posicion, el aviso
  */
 void dibujarPaginasParques() {
@@ -280,7 +277,7 @@ void dibujarPaginasParques() {
   }
   display.setTextWrap(false);
   for (uint8_t i = 0; i < PARQUES_POR_PAGINA; i++) {
-    uint8_t idx = paginaParques * PARQUES_POR_PAGINA + i;
+    uint8_t idx = (parqueSel / PARQUES_POR_PAGINA) * PARQUES_POR_PAGINA + i;
     if (idx >= numParquesCercanos) break;
     const ParqueCercano& p = parquesCercanos[idx];
     char dist[8];
@@ -289,11 +286,14 @@ void dibujarPaginasParques() {
     char linea[24];
     snprintf(linea, sizeof(linea), "ES-%04u %10s %-2s", p.numero, dist, rumboCardinal(p.rumbo));
     display.setCursor(0, 12 + i * 20);
+    if (idx == parqueSel) display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     display.print(linea);
+    display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 22 + i * 20);
     display.print(p.nombre);
   }
   display.setTextWrap(true);
-  // El pie dice de donde se ha medido: GPS o el locator
-  dibujarPiePaginas(paginaParques, paginasParques(), parquesDesdeGps ? "GPS" : locatorEstacion);
+  // El pie dice de donde se ha medido (GPS o el locator) y que pulsar lleva al spot
+  dibujarPieCentrado(String(parqueSel + 1) + "/" + String(numParquesCercanos) + " " +
+                     (parquesDesdeGps ? String("GPS") : String(locatorEstacion)) + "  >spot");
 }
