@@ -183,6 +183,7 @@ void dibujarListaMemorias(bool paraEnviar) {
 void dibujarEditor() {
   String titulo = editorDestino == EDITOR_ID_ESTACION ? String("TU ID") :
                   editorDestino == EDITOR_SPOT ? String("ID ACTIVADOR") :
+                  editorDestino == EDITOR_SPOT_TEXTO ? String("COMENTARIO") :
                   editorDestino == EDITOR_LOCATOR ? String("LOCATOR") :
                   editorDestino < 0 ? String("INDICATIVO SU") : "MEMORIA " + String(editorDestino + 1);
   if (editorError) titulo += " NO VALIDO";

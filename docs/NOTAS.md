@@ -509,8 +509,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   (lista): PARQUE (gira entre los 20 cercanos), ID (el de la estación; pulsar abre el editor de las memorias, destino
   `EDITOR_SPOT` = -4, hasta 12 caracteres con `/`, para `/P` o el de un radioclub; solo en RAM), BANDA (160 a 6 m;
   al cambiarla pone una frecuencia CW habitual), FREC KHZ (de 1 en 1 dentro de la banda, con aceleración),
-  COMENTARIO (NO / QRP / QRT; no se guarda, para que un QRT no cierre la siguiente activación); pie `enviar` /
-  `volver`. Banda y frecuencia en NVS (`chispas`: `spband`, `spfrec`). **Envío:** como ACTUALIZAR (`spotPendiente`
+  COMENTARIO (NO / QRP / QRT / TEXTO; no se guarda, para que un QRT no cierre la siguiente activación) y TEXTO
+  (comentario propio de hasta 30 caracteres con el editor, destino `EDITOR_SPOT_TEXTO` = -5: letras, cifras, signos
+  y espacios, sin variables; se guarda en NVS `sptexto`; al dar OK con algo escrito, COMENTARIO pasa a TEXTO; en la
+  lista, 14 caracteres con `..`; añadido el 18 oct 2026 a petición del usuario, probado en la placa 1 sin enviar:
+  "5W" editado y conservado tras reiniciar); pie `enviar` / `volver`. Banda y frecuencia en NVS (`chispas`: `spband`, `spfrec`). **Envío:** como ACTUALIZAR (`spotPendiente`
   en `procesarWifi()`, antes que cualquier descarga; en MANUAL enciende y apaga el WiFi), aviso `ENVIANDO SPOT...`;
   el resultado queda en el pie hasta tocar algo (`SPOT ENVIADO 1727Z`, `QRT ENVIADO`, `ERROR: HTTP n`,
   `SIN RESPUESTA DE POTA`, `SIN CONEXION WIFI`; sin conexión, la ficha no se cierra). Mínimo 30 s entre spots.
@@ -524,8 +527,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   deshabilitada); `ahora no` o atrás: no vuelve a avisar hasta el siguiente spot. **Probado** (placa 1, órdenes
   serie): parques marcados, ficha, frecuencia a 14062, ID `EA4ILN/P` con el editor, envío con WiFi MANUAL (conecta,
   HTTP 200, apaga): el spot salió en `api.pota.app/spot/activator` con todos los campos y `source CHISPAS`; luego
-  QRT (HTTP 200): la API lo sigue listando con el comentario QRT y `expire` ~30 min (la web, según las normas, lo
-  quita; no comprobado). **Sin probar:** el aviso de los 25 min, el caso sin conexión y la ficha con el encoder de
+  QRT (HTTP 200): la API lo sigue listando con el comentario QRT y `expire` ~30 min, pero **la web oculta la
+  activación en unos minutos** (comprobado por el usuario). **Sin probar:** el aviso de los 25 min, el caso sin conexión y la ficha con el encoder de
   verdad. RAM 17,3 %, flash 39,5 %.
   **Sin probar:** el refresco a los 30 días y la descarga fallida. Flash +49 KB (38,5 %), RAM +0,7 KB.
   **Reset de fábrica** (14 oct 2026, después de la v1.08b): `resetFabrica()` monta LittleFS y borra también

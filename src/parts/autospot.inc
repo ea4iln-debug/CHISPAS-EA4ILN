@@ -7,7 +7,8 @@
 // AUTOSPOT POTA
 // ============================================================================
 // POTA > VER PARQUES > pulsar abre la ficha con el parque marcado: PARQUE, ID (el de la estacion; editable para
-// anadir /P o poner el de un radioclub), BANDA, FREC KHZ y COMENTARIO (NO, QRP o QRT). "enviar" publica el spot con
+// anadir /P o poner el de un radioclub), BANDA, FREC KHZ, COMENTARIO (NO, QRP, QRT o TEXTO) y TEXTO (el comentario
+// propio, con el editor; se guarda). "enviar" publica el spot con
 // el WiFi como ACTUALIZAR (en MANUAL lo enciende y al acabar lo apaga); sin conexion se dice en la ficha y se
 // reintenta a mano. La API no esta documentada para terceros: es la que usan Ham2K PoLo u OpenHamClock (POST sin
 // cuenta a api.pota.app/spot; la frecuencia en kHz, como texto). Las normas de POTA permiten el autospot; aqui solo
@@ -19,6 +20,7 @@
 #define SPOT_ESPERA_MS (30UL * 1000)
 #define SPOT_AVISO_MS  (25UL * 60 * 1000)
 #define SPOT_ID_MAX    12  // "EA8/EA4ILN/P"
+#define SPOT_TEXTO_MAX 30  // Comentario propio (NVS "sptexto")
 
 // Bandas de la ficha: limites en kHz (region 1) y una frecuencia CW habitual, la que se pone al cambiar de banda
 struct BandaSpot { const char* nombre; uint16_t minKhz, maxKhz, tipicaKhz; };
@@ -31,12 +33,13 @@ const BandaSpot BANDAS_SPOT[] = {
 #define N_BANDAS_SPOT (sizeof(BANDAS_SPOT) / sizeof(BANDAS_SPOT[0]))
 #define BANDA_SPOT_DEFECTO 4  // 20M
 
-enum ComentarioSpot { SPOT_COM_NO, SPOT_COM_QRP, SPOT_COM_QRT };
-const char* const TEXTOS_COMENTARIO_SPOT[] = { "", "QRP", "QRT" };
+enum ComentarioSpot { SPOT_COM_NO, SPOT_COM_QRP, SPOT_COM_QRT, SPOT_COM_TEXTO };
+const char* const TEXTOS_COMENTARIO_SPOT[] = { "", "QRP", "QRT" };  // TEXTO: spotTexto
 
-// Ficha: 0 parque, 1 ID, 2 banda, 3 frecuencia, 4 comentario; en el pie 5 enviar y 6 volver
-#define N_OPCIONES_SPOT 5
-const char* const NOMBRES_OPCIONES_SPOT[N_OPCIONES_SPOT] = { "PARQUE", "ID", "BANDA", "FREC KHZ", "COMENTARIO" };
+// Ficha: 0 parque, 1 ID, 2 banda, 3 frecuencia, 4 comentario, 5 texto; en el pie 6 enviar y 7 volver
+#define N_OPCIONES_SPOT 6
+const char* const NOMBRES_OPCIONES_SPOT[N_OPCIONES_SPOT] = { "PARQUE", "ID", "BANDA", "FREC KHZ", "COMENTARIO",
+                                                             "TEXTO" };
 #define FOCO_SPOT_ENVIAR (N_OPCIONES_SPOT)
 #define FOCO_SPOT_VOLVER (N_OPCIONES_SPOT + 1)
 
@@ -46,6 +49,7 @@ uint8_t spotComentario = SPOT_COM_NO;     // No se guarda: un QRT olvidado cerra
 char spotParque[12] = "";                 // "ES-0072"
 uint8_t spotParqueIdx = 0;                // En parquesCercanos
 char spotId[SPOT_ID_MAX + 1] = "";        // Vacio = aun no se ha abierto la ficha: se pone el de la estacion
+char spotTexto[SPOT_TEXTO_MAX + 1] = "";  // Comentario propio
 uint8_t focoSpot = 3;
 bool spotNvsLeido = false;
 unsigned long spotUltimoMs = 0;           // Ultimo spot bueno (0 = ninguno)
@@ -63,6 +67,7 @@ void leerSpotNVS() {
   prefs.begin(NVS_ENTRENADOR, true);
   spotBanda = min(prefs.getUChar("spband", BANDA_SPOT_DEFECTO), (uint8_t)(N_BANDAS_SPOT - 1));
   spotFrecKhz = prefs.getUShort("spfrec", BANDAS_SPOT[spotBanda].tipicaKhz);
+  if (prefs.isKey("sptexto")) prefs.getString("sptexto", spotTexto, sizeof(spotTexto));  // Sin la clave, el core avisa
   prefs.end();
   const BandaSpot& b = BANDAS_SPOT[spotBanda];
   if (spotFrecKhz < b.minKhz || spotFrecKhz > b.maxKhz) spotFrecKhz = b.tipicaKhz;
@@ -92,18 +97,29 @@ void abrirAutospot(uint8_t idxParque) {
   subDatos = DATOS_AUTOSPOT;
 }
 
-void autospotAbrirEditor() {
-  editorDestino = EDITOR_SPOT;
-  editorTexto = String(spotId);
-  editorMax = SPOT_ID_MAX;
+// ID del activador (EDITOR_SPOT) o comentario propio (EDITOR_SPOT_TEXTO)
+void autospotAbrirEditor(int8_t destino) {
+  bool esTexto = destino == EDITOR_SPOT_TEXTO;
+  editorDestino = destino;
+  editorTexto = String(esTexto ? spotTexto : spotId);
+  editorMax = esTexto ? SPOT_TEXTO_MAX : SPOT_ID_MAX;
   editorSel = 0;
   editorError = false;
   subDatos = DATOS_EDITOR_SPOT;
 }
 
-// OK: como el ID de CONF (3 o mas letras y cifras, y "/"); si no vale, se avisa y se sigue editando
+// OK con el ID: como el de CONF (3 o mas letras y cifras, y "/"); si no vale, se avisa y se sigue editando.
+// OK con el texto: se guarda en la NVS y, si no esta vacio, el comentario pasa a TEXTO
 void autospotCerrarEditor(bool guardar) {
-  if (guardar) {
+  if (guardar && editorDestino == EDITOR_SPOT_TEXTO) {
+    String texto = editorTexto;
+    texto.trim();
+    strlcpy(spotTexto, texto.c_str(), sizeof(spotTexto));
+    prefs.begin(NVS_ENTRENADOR, false);
+    prefs.putString("sptexto", spotTexto);
+    prefs.end();
+    if (spotTexto[0]) spotComentario = SPOT_COM_TEXTO;
+  } else if (guardar) {
     String id = editorTexto;
     id.trim();
     id.toUpperCase();
@@ -165,7 +181,7 @@ void enviarSpotPota() {
   doc["reference"] = spotParque;
   doc["mode"] = "CW";
   doc["source"] = SPOT_FUENTE;
-  doc["comments"] = TEXTOS_COMENTARIO_SPOT[spotComentario];
+  doc["comments"] = spotComentario == SPOT_COM_TEXTO ? spotTexto : TEXTOS_COMENTARIO_SPOT[spotComentario];
   String cuerpo;
   serializeJson(doc, cuerpo);
 
@@ -213,7 +229,15 @@ String valorOpcionSpot(uint8_t i) {
     case 1: return String(spotId);
     case 2: return String(BANDAS_SPOT[spotBanda].nombre);
     case 3: return String(spotFrecKhz);
-    case 4: return spotComentario == SPOT_COM_NO ? String("NO") : String(TEXTOS_COMENTARIO_SPOT[spotComentario]);
+    case 4:
+      if (spotComentario == SPOT_COM_NO) return String("NO");
+      if (spotComentario == SPOT_COM_TEXTO) return String("TEXTO");
+      return String(TEXTOS_COMENTARIO_SPOT[spotComentario]);
+    case 5: {
+      // Lo que cabe a la derecha de "TEXTO": 14 caracteres (con ".." si sigue)
+      String t = spotTexto[0] ? String(spotTexto) : String("-");
+      return t.length() > 14 ? t.substring(0, 12) + ".." : t;
+    }
     default: return String("");
   }
 }
@@ -234,7 +258,7 @@ bool avisoRespotPermitido() {
   if (pantallaActual == PANTALLA_CONFIG && subConf != CONF_MENU && subConf != CONF_CONFIG) return false;
   bool pantallaDatos = pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
                        pantallaActual == PANTALLA_SOL;
-  if (pantallaDatos && (subDatos == DATOS_PORTAL || subDatos == DATOS_EDITOR_SPOT)) return false;
+  if (pantallaDatos && (subDatos == DATOS_PORTAL || subDatos == DATOS_EDITOR_SPOT)) return false;  // ID o texto
   return true;
 }
 

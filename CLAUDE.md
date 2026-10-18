@@ -132,9 +132,9 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   CAZADOR / ACTIVADOR; con ACTIVADOR llamas tú CQ y CHISPAS es el cazador (indicativo parcial, rellamada a los 8 s,
   copia mal tu indicativo, AGN?); probado en la placa 1 con `m`. Detalle en NOTAS: "QSO SIM".
 - **AUTOSPOT POTA** (18 oct, sin versión nueva; `autospot.inc`): VER PARQUES > girar marca un parque > pulsar abre la
-  ficha (PARQUE, ID editable para /P o radioclub, BANDA, FREC KHZ, COMENTARIO NO/QRP/QRT) > enviar (POST sin cuenta a
+  ficha (PARQUE, ID editable para /P o radioclub, BANDA, FREC KHZ, COMENTARIO NO/QRP/QRT/TEXTO, TEXTO propio) > enviar (POST sin cuenta a
   `api.pota.app/spot`, API no documentada, la de Ham2K PoLo). Aviso con pitido a los 25 min para renovarlo.
-  **Probado en la placa 1 con un spot real** (EA4ILN/P en ES-2218 y luego QRT, HTTP 200). Sin probar: el aviso de
+  **Probado en la placa 1 con un spot real** (EA4ILN/P en ES-2218 y luego QRT, HTTP 200; la web lo oculta en minutos). Sin probar: el aviso de
   los 25 min y sin conexión. CAT con el transceptor: al ROADMAP para una PCB nueva. Detalle en NOTAS: "Parques".
 
 ## Pendiente (detalle en NOTAS: "Pendiente")

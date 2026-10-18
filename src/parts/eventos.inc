@@ -505,8 +505,8 @@ void procesarBoton() {
         break;
 
       case DATOS_AUTOSPOT:
-        // Ficha. Foco: 0 parque, 1 ID, 2 banda, 3 frecuencia (los tres giran al editar), 4 comentario, 5 enviar,
-        // 6 volver. El resultado del ultimo envio ocupa el pie hasta tocar algo
+        // Ficha. Foco: 0 parque, 1 ID, 2 banda, 3 frecuencia (los tres giran al editar), 4 comentario, 5 texto,
+        // 6 enviar, 7 volver. El resultado del ultimo envio ocupa el pie hasta tocar algo
         resultadoSpot = "";
         if (atras) subDatos = DATOS_PARQUES;
         else if (giro != 0) {
@@ -514,8 +514,9 @@ void procesarBoton() {
           else focoSpot = (focoSpot + FOCO_SPOT_VOLVER + 1 + giro) % (FOCO_SPOT_VOLVER + 1);
         } else if (pulsa) {
           switch (focoSpot) {
-            case 1: autospotAbrirEditor(); break;
-            case 4: spotComentario = (spotComentario + 1) % (SPOT_COM_QRT + 1); break;
+            case 1: autospotAbrirEditor(EDITOR_SPOT); break;
+            case 4: spotComentario = (spotComentario + 1) % (SPOT_COM_TEXTO + 1); break;
+            case 5: autospotAbrirEditor(EDITOR_SPOT_TEXTO); break;
             case FOCO_SPOT_ENVIAR: pedirEnvioSpot(); break;
             case FOCO_SPOT_VOLVER: subDatos = DATOS_PARQUES; break;
             default: editandoValor = !editandoValor; break;  // 0, 2 y 3
