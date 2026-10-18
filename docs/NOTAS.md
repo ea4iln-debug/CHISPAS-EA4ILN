@@ -618,6 +618,17 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
       `DECOD_PALABRA_X` (1,7×) esa pausa, nunca menos de 5 puntos. Con un vídeo de YouTube de la NOAA llegó a partir y
       juntar palabras ("OF FSH ORE WA TERS"), pero **el usuario confirma (11 oct 2026) que corta las palabras
       perfectamente** con la v1.02b: no hace falta afinar las pausas.
+    - **Prueba con W1AW (18 oct 2026, placa 1, v1.30b + arreglos; MP3 de code practice de la ARRL por GPIO6):**
+      20 WPM: **734/734 caracteres** bien (signos y palabras incluidos), tono fijado en AUTO a 750 Hz, 19 wpm,
+      nivel ~72 % con umbral ~58 %. **10 WPM (Farnsworth):** letras todas bien pero **cada letra separada por un
+      espacio**. Medido con los tiempos del log: letras a 14,9 WPM (punto 80 ms) y pausa entre letras de 555 ms
+      (6,9 puntos); a 20 WPM, punto 62 ms y pausa 193 ms (3,1). Causa: `huecoLetraMs` solo aprendía de pausas
+      que no habían dado espacio; con la primera ya por encima de 1,7× la media inicial (3 puntos), no aprendía
+      nunca. **Arreglo:** si la pausa ya dio fin de palabra (`huecoTrasPalabra`), la media sube también con peso
+      0,1, contando como mucho el triple de la media (una pausa larga entre pasadas no la dispara). **Probado:**
+      10 y 20 WPM seguidos, **1107/1107 letras**; palabras bien salvo las 2–3 primeras letras sueltas al empezar
+      ("N O W"), un "ACOIL." y, al pasar de 10 a 20 WPM, unas 8 palabras juntas mientras la media baja (~4 s; se
+      deja así). El wpm de la pantalla es la velocidad de las letras (14 en el texto de 10 WPM Farnsworth): correcto.
   - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
     **Probado con emisora real el 12 oct 2026:** manipular y decodificar en la misma sesión, sin descodificar lo propio.
   - **TUNE** (v0.9e): portadora continua por KEY de 1–10 s (`trxTuneSeg`, NVS
@@ -674,8 +685,12 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   retraso); al entrar y salir de las pantallas con sonido, un pulso casi imperceptible (se deja así: alargar el
   nivel medio retrasaría el primer tono); pitido de prueba bien; qso sim con QSB, RUIDO, TORMENTA y QRM bien.
   **Decodificador** (TRX > DECODIFICAR sin señal): ninguna letra falsa, pero la barra de nivel queda en ~10 % (con
-  el PWM estaba a 0): algo del GPIO7 llega al GPIO6 o a su masa. **Falta probar con CW real**; si empeora, parar
-  la síntesis en DECODIFICAR (no necesita tono local) o en todo TRX salvo el tono local de OPERAR/QSO.
+  el PWM estaba a 0): algo del GPIO7 llega al GPIO6 o a su masa. **Probado con CW (W1AW) el 18 oct 2026:** en
+  silencio, el serie da `nivel 0%` (umbral 4–5 %) y ninguna letra en ~2 min; con señal, perfecto (ver DECODIFICAR):
+  **no hace falta parar la síntesis**. **Hora de la cabecera parpadeando al decodificar** (18 oct 2026, placa 1):
+  `horaLocalValida()` usaba `getLocalTime(&t, 0)`, que en el core 2.0.17 da false si cambia el milisegundo entre
+  sus dos `millis()` (más probable con la ISR a 16 kHz); ahora `time()` + `localtime_r()` (también en la pista de
+  hora del portal, `wifi.inc`). Probado: 2 min decodificando a 20 WPM sin parpadeo.
   **Auriculares de la placa 1: solo sonaba el derecho** (anillo, por R3). **Resuelto el 16 oct 2026:** eran los
   cables T y TN cruzados en el jack (ver "Placa perforada"), no la síntesis.
 - **Tono** (montado y probado el 10 oct 2026, placa 1): GPIO7 (PWM, `frecTonoHz`) → R1 1 kΩ → RV1 10 kΩ log (pat. 3;

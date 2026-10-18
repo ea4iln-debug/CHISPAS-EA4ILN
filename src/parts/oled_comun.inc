@@ -7,7 +7,11 @@
 // DIBUJO EN LA OLED: CABECERA, PIES Y PIEZAS COMUNES (cabecera en mayusculas, pies en minusculas)
 // ============================================================================
 bool horaLocalValida(struct tm& t) {
-  return getLocalTime(&t, 0) && t.tm_year > 120;  // Sin sincronizar el reloj empieza en 1970
+  // Sin getLocalTime(&t, 0): en el core 2.0.17, si cambia el milisegundo entre sus dos millis() (mas probable con
+  // la ISR del audio a 16 kHz) no lee la hora y da false, y la hora de la cabecera parpadeaba al decodificar
+  time_t ahora = time(nullptr);
+  localtime_r(&ahora, &t);
+  return t.tm_year > 120;  // Sin sincronizar el reloj empieza en 1970
 }
 
 // Fuente de la hora del reloj del sistema, de menos a mas exacta. Si concurren varias, se queda la mas exacta: GPS

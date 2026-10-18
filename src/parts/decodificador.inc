@@ -77,6 +77,7 @@ void tareaDecodFn(void* parametro) {
   char patron[9];
   uint8_t largo = 0;
   bool espacioPendiente = false;
+  bool huecoTrasPalabra = false;  // El silencio en curso ya dio fin de palabra
   bool saturado = false;
   float huecoLetraMs = 3 * puntoMs;  // Pausa media entre letras (media movil): da el fin de palabra
 
@@ -165,7 +166,14 @@ void tareaDecodFn(void* parametro) {
             // letras: su media da el fin de palabra
             if (espacioPendiente && silencioMs >= 2 * puntoMs) {
               huecoLetraMs = constrain(0.75f * huecoLetraMs + 0.25f * silencioMs, 3 * puntoMs, 15 * puntoMs);
+            } else if (huecoTrasPalabra) {
+              // Pausa que ya dio fin de palabra: sube la media despacio. Si no, con pausas entre letras largas
+              // (Farnsworth: W1AW por debajo de 18 wpm) cada letra saldria suelta y la media no aprenderia nunca.
+              // Como mucho cuenta el triple de la media, para que una pausa larga entre pasadas no la dispare
+              float s = min((float)silencioMs, 3 * huecoLetraMs);
+              huecoLetraMs = constrain(0.9f * huecoLetraMs + 0.1f * s, 3 * puntoMs, 15 * puntoMs);
             }
+            huecoTrasPalabra = false;
             bool raya = marcaMs > 2 * puntoMs;
             if (largo < 8) patron[largo] = raya ? '-' : '.';
             if (largo < 8) largo++;
@@ -185,6 +193,7 @@ void tareaDecodFn(void* parametro) {
         } else if (espacioPendiente && silencioMs >= max(5 * puntoMs, DECOD_PALABRA_X * huecoLetraMs)) {
           decodEnviarCaracter(' ');
           espacioPendiente = false;
+          huecoTrasPalabra = true;
         }
       }
       tono = hayTono;

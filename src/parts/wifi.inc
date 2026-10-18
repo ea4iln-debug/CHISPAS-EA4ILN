@@ -171,7 +171,7 @@ class ParametroHora : public WiFiManagerParameter {
   const char* getCustomHTML() const override { return pista; }
   void actualizarPista() {
     struct tm t;
-    if (getLocalTime(&t, 0) && t.tm_year > 120) {
+    if (horaLocalValida(t)) {
       snprintf(pista, sizeof(pista), "placeholder='%02d:%02d %02d-%02d-%04d'",
                t.tm_hour, t.tm_min, t.tm_mday, t.tm_mon + 1, t.tm_year + 1900);
     }
