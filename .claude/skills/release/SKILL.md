@@ -28,6 +28,10 @@ de publicación.** Detalle e historial en `docs/NOTAS.md`, sección "Releases y 
 
 Si se han cambiado librerías, regenerar antes `docs/LICENCIAS_TERCEROS.txt`.
 
-## Probar el OTA sin publicar
-Compilar temporalmente con `FW_VERSION "0.99"`, cargar por USB y en CONF > CONFIG > ACTUALIZAR FW instalar la
-última release. Volver a dejar la versión real (no hacer commit del 0.99).
+## Probar el OTA (después de publicar)
+Bajar la placa a la **última estable publicada** (decisión del usuario, 18 oct 2026; nada de compilar un 0.99):
+`gh release download v<estable> -p "chispas-<estable>-usb.bin"`, partirlo como `web/preparar.py` (`TROZOS`:
+`0x0`–`0x8000`, `0x8000`–`0x9000`, `0xE000`–`0x10000`, `0x10000`–fin; la NVS de `0x9000` no se toca) y grabarlo con
+`python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 --port COMx write_flash 0x0 bl.bin
+0x8000 pt.bin 0xE000 ota.bin 0x10000 app.bin` (sin `-I`: esptool carga su módulo de su carpeta). Luego CONF >
+CONFIG > ACTUALIZAR FW e instalar.

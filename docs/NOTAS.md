@@ -116,6 +116,14 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   **OTA 1.20 → 1.31b probado en la placa 1 (18 oct):** se le cargó la app de la release 1.20 por USB sin tocar la
   NVS (`esptool write_flash 0xE000 boot_app0.bin 0x10000 chispas-1.20.bin`; indicativo conservado) y desde
   ACTUALIZAR FW encontró la v1.31b, la bajó e instaló y arrancó con ella (unos 35 s).
+  **v1.32b (beta), publicada el 18 oct 2026** (prerelease): AUTOSPOT POTA con activación en curso, comentario
+  propio, menú spot/volver en los parques; manual (HTML y PDF), web (novedades de la beta, funciones) y README al
+  día. https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.32b. Binario de la release probado por USB
+  en la placa 1 antes de publicar. **OTA 1.20 → 1.32b probado en la placa 1 (18 oct):** la estable 1.20 se cargó
+  por USB partiendo su `-usb.bin` como la web (`0x0` bootloader, `0x8000` particiones, `0xE000` otadata,
+  `0x10000` app; la NVS de `0x9000` sin tocar), y ACTUALIZAR FW encontró la v1.32b, la bajó e instaló (30 s) y
+  arrancó con ella. Desde ahora, **para probar el OTA se baja a la estable del momento, no a un 0.99** (decisión
+  del usuario). El primer intento de conectar falló (WiFi del móvil, 15 s); al reintentar, bien.
 - **Web de instalación por USB (16 oct 2026):** https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (GitHub Pages,
   fuente "GitHub Actions", activada con `gh api -X POST repos/.../pages -f build_type=workflow`). `web/index.html`
   con **ESP Web Tools 10.4.0** (unpkg, `<esp-web-install-button>`; Chrome/Edge de escritorio). La Action
