@@ -163,10 +163,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   fondo **blanco** (se probó crema: con fondo en `html` los márgenes salían blancos; con `@page { background }`
   cubría la hoja, pero el usuario prefirió blanco). Enlazado desde la barra y la portada de `index.html`, y desde
   la barra de funciones y hardware; hardware tiene ahora "Inicio" en la barra y "Volver a la página principal" al
-  final, como el manual. **Si cambia el manual, regenerar el PDF** (las imágenes salen de `docs/img/`, así que se
-  imprime desde una copia con `img/`):
-  `chrome --headless --no-pdf-header-footer --virtual-time-budget=15000 --print-to-pdf=<ruta absoluta> file:///<copia>/manual.html`
-  (la ruta del PDF, absoluta: con relativa falla). Sin poppler no se puede leer el PDF con Read.
+  final, como el manual. **Si cambia el manual, regenerar el PDF** con **`./web/manual.sh`** (skill
+  **`manual`**): trabaja en una copia en `.pio/manual` con `img/` (las imágenes salen de `docs/img/`) e imprime con
+  Chrome/Edge sin interfaz (ruta del PDF absoluta: con relativa falla); `--vista <ids>` saca la rejilla de poses
+  del robot y capturas por sección, `--imprimir` simula la maqueta del PDF. Sin poppler, Read no abre el PDF, y
+  pdf.js en Chrome sin interfaz se quedó colgado (probado el 18 oct).
   **Portada nueva y página de funciones (16 oct 2026, petición del usuario):** `index.html` deja de ser solo de
   instalación. Portada "CHISPAS, tu compañero para CW y POTA" con la OLED en carrusel (marco en verde oliva),
   etiqueta amarilla "En desarrollo temprano" y tres botones (Qué hace CHISPAS, Constrúyelo, Instálalo). Orden:
