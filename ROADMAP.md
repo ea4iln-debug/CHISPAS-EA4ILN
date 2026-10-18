@@ -113,6 +113,14 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
   o desandando. Aparcado porque **sin brújula** el NEO-6M solo da el rumbo de marcha (inútil parado o a menos de
   ~3 km/h); hace falta magnetómetro y acelerómetro (compensar la inclinación) en una futura versión de la PCB, p. ej.
   en Wire1 con el BME280. Consumo estimado: GPS siempre despierto, ~70 mA, unas 40 h con 3000 mAh (frente a ~100 h).
+- **CAT con el transceptor** (18 oct 2026, aparcado hasta una PCB nueva): leer la frecuencia y el modo (para el
+  autospot POTA y TRX), QSY a un spot con un clic. Radios del usuario: **Icom CI-V** (IC-705, 7300…; un hilo, jack
+  de 3,5 mm) y **FT-817/818** (serie TTL a 5 V por ACC, mini-DIN 8), y quizá otra por concretar. Un conector CAT de
+  3 hilos (TX, RX, GND) en el UART2 con dos pines libres (33, 34, 40 o 3): CI-V uniendo TX y RX con diodo y pull-up,
+  FT-817 con divisor de 5 a 3,3 V en la RX; tipo por puente o en CONF > CAT (NO / ICOM / FT-817, dirección CI-V,
+  velocidad). Software: un `cat.inc` (~200 líneas por protocolo; CI-V `0x03`, FT-817 trama de 5 bytes). Radios
+  **solo USB** (FT-891, QMX…): no viables, el USB del S3 (GPIO19/20) lo usa el encoder. Con la PCB actual se puede
+  probar con cables a los pines libres.
 
 ### Instalación y estructura del firmware (ideas)
 - ~~**Web de instalación por USB**~~ **Hecha el 16 oct 2026**: https://ea4iln-debug.github.io/CHISPAS-EA4ILN/
