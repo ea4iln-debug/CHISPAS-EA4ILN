@@ -64,8 +64,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 
 ## Releases y OTA
 - **Versión:** `#define FW_VERSION` (y `@version` de la cabecera de `main.cpp`). Formato `X.YYb` (b = beta; sin letra,
-  final): `compararVersiones()` ordena 1.00b < 1.01b < 1.01. **Preguntar siempre al usuario antes de subirla** y
-  antes de publicar una release (las releases llegan a las placas por OTA).
+  final): `compararVersiones()` ordena 1.00b < 1.01b < 1.01. **Una sola pregunta al usuario, antes de subirla:
+  si se publica** (las releases llegan a las placas por OTA). Desde el 18 oct 2026, con el sí se hace todo seguido
+  (versión, borrador, publicar, web) sin más confirmaciones; antes se preguntaba en cada paso (notas, borrador,
+  publicar). Procedimiento en la skill `release`.
 - **Primera release: v1.00b (beta), 11 oct 2026**, publicada como prerelease: https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.00b
   (con `gh`, instalado en el segundo equipo: `C:\Program Files\GitHub CLI\gh.exe`, sesión de ea4iln-debug).
   **v1.01b (beta)**, 11 oct 2026, también prerelease; en el primer equipo no hay `gh`: se creó con la API REST y la
@@ -1157,8 +1159,8 @@ Fuera de LCSC (Amazon o AliExpress): Heltec V3, BME280 (no BMP280), GPS NEO-6M, 
   placa se reinicia vuelve a abrir el puerto. `-f "DIAG|DECOD"`, `-f "^\$G"` (NMEA), `-s 30`, `-e d` (orden serie).
 - Permisos compartidos de Claude Code en `.claude/settings.json` (13 oct 2026): permitidos sin preguntar
   `compilar.sh`, `pio run`, `serie.py`, los scripts de `docs/`, git de lectura y `gh release list/view`; piden
-  confirmación `publicar.sh`, `gh release create/edit/delete` y `git push`. Lo personal de cada equipo, en
-  `.claude/settings.local.json` (no se sube).
+  confirmación `publicar.sh`, `gh release create/edit/delete` y `git push` (cambiado el 14 y el 18 oct: ver
+  "Revisión del flujo de trabajo" más abajo). Lo personal de cada equipo, en `.claude/settings.local.json` (no se sube).
 - Skills del proyecto en `.claude/skills/` (13 oct 2026; viajan por Git; en cada sesión solo se carga su
   descripción, y el texto entero cuando hace falta o con `/nombre`): `cerrar-tarea` (compilar, revisar diff,
   NOTAS + CLAUDE.md, commit, push, resumen probado/razonado), `placa` (identificar la placa por la MAC, cargar el
@@ -1168,5 +1170,23 @@ Fuera de LCSC (Amazon o AliExpress): Heltec V3, BME280 (no BMP280), GPS NEO-6M, 
   CLAUDE.md los procedimientos de release y de PDF.
 - Ojo con los heredocs de Bash: la herramienta reduce las barras invertidas dobles a una (un `'\0'` acabó como
   byte nulo en el archivo). Para código con barras invertidas, editar con la herramienta Edit o Write.
+- **Revisión del flujo de trabajo (18 oct 2026)**, a petición del usuario por comportamientos raros en las últimas
+  versiones. Lo que se vio en las sesiones del 18 oct y lo que se cambió:
+  - Demasiadas preguntas (15 en la sesión del AUTOSPOT, algunas repetidas) y tres confirmaciones por release (notas,
+    borrador, publicar). El usuario decide: **solo se le pregunta si se publica versión**; el resto lo decide Claude
+    y lo cuenta en el resumen ("Decidido por Claude" en `cerrar-tarea`). Memorias de Claude actualizadas.
+  - Casi 250 órdenes con `cd /c/proyectos/CHISPAS-EA4ILN &&` delante: el Bash ya arranca ahí y el `cd` hace la orden
+    compuesta, que no casa con los permisos (de ahí las reglas sueltas que se iban acumulando en
+    `settings.local.json`, ya vaciado). Regla en CLAUDE.md.
+  - Ediciones con `sed -i` y Python por heredoc que fallaron (f-string con barra invertida, comilla sin cerrar,
+    subcadena no encontrada): regla de editar con Edit o Write.
+  - Release: el `FW_VERSION "0.99"` de una prueba de OTA se coló en un commit (1.31b) y la web se quedó en la beta
+    anterior con la 1.32b. La skill `release` prueba el OTA con la estable publicada y solo cuando toca, y rehace la
+    web con el push *después* de `--publicar`, comprobando `manifest-beta.json`.
+  - `settings.json`: `publicar.sh` deja de pedir confirmación (la pregunta va antes); se permiten `git stash`,
+    `git describe/rev-parse/ls-files`, `gh release download`, `gh run list/view`, `gh workflow run web.yml` y los
+    scripts de `hardware/herramientas/`. Siguen pidiendo confirmación `gh release create/edit/delete` y el push forzado.
+  - Skill `placa`: el COM se saca siempre de `pio device list`; placa desconocida, se carga y se apunta la MAC; las
+    comprobaciones físicas se piden en texto, juntas. Skill `manual`: el PDF se regenera sin esperar aprobación.
 - No reescribir `main.cpp` con `Get-Content`/`Set-Content` de PowerShell 5.1: lee el UTF-8 sin BOM como ANSI y
   rompe las tildes (y añade BOM). Usar Edit, o Python con `encoding="utf-8"`.

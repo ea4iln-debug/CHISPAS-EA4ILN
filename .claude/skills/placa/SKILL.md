@@ -6,11 +6,12 @@ description: Cargar el firmware de Chispas en una placa por USB y comprobarlo - 
 # Probar en placa
 
 ## 1. Qué placa hay conectada
-- Ver los puertos: `~/.platformio/penv/Scripts/pio.exe device list`. El de la Heltec es el CP210x (VID 10C4, PID EA60;
-  COM16 en el equipo 1 y COM23 en el 2, pero puede cambiar). Si no hay ninguno, pedir al usuario que la conecte.
+- Ver los puertos: `~/.platformio/penv/Scripts/pio.exe device list`. El de la Heltec es el CP210x (VID 10C4, PID
+  EA60). **El número de COM cambia** (16, 23…): sacarlo siempre de la lista, nunca de memoria. Si no hay ninguno,
+  pedir al usuario en una línea que la conecte.
 - Las dos placas tienen el mismo adaptador; se distinguen por la MAC del ESP32, que `pio run -t upload` imprime
-  (`MAC: ...`). Tabla en `docs/NOTAS.md`, sección "Estado actual" (MAC de cada placa). Si la tabla no la tiene aún,
-  **preguntar al usuario qué placa es** antes de cargar y, tras cargar, apuntar la MAC.
+  (`MAC: ...`). Si la MAC no es ninguna de las de abajo, es una placa nueva: cargar igual (mismo entorno) y apuntar
+  su MAC en NOTAS, sin preguntar.
 - Entornos: las dos placas llevan encoder → `heltec_wifi_lora_32_V3`. Nombres desde el 15 oct 2026: **placa 1 =
   placa perforada** (MAC `3c:0f:02:ee:08:c0`), **placa 2 = protoboard** (MAC `3c:0f:02:ee:50:74`, OLED con defecto).
   `heltec_sin_encoder` existio hasta la v1.10; desde la 1.20 hay un solo entorno.
@@ -28,8 +29,12 @@ description: Cargar el firmware de Chispas en una placa por USB y comprobarlo - 
 - Órdenes serie (con ORDENES SERIE en SI en DEPURACION): `-e p` vuelca la OLED; `d`, `i`, `k`, `l`, `a` simulan el
   encoder. Captura de pantalla: `~/.platformio/penv/Scripts/python.exe docs/captura_oled.py --salida <png>` y
   mirar el PNG.
-- Lo que no se ve por serie (audio, LED, pantalla real, palas, KEY), pedírselo al usuario con una pregunta concreta
-  ("¿suena el tono al pulsar DIT?").
+- Las palas se simulan con `-e "m<texto>"` (entra como lo manipulado). Antes de pedir nada al usuario, probar todo
+  lo que se pueda por serie y con capturas.
+- Lo que no se ve por serie (audio, LED, pantalla real, palas de verdad, KEY), pedírselo al usuario en texto, todo
+  junto y concreto ("¿suena el tono al pulsar DIT?"), no con AskUserQuestion: es una comprobación, no una decisión.
+- Si la placa no conecta al WiFi o falta algo del entorno, buscar otra forma de probar (datos guardados, orden serie)
+  o dejarlo como pendiente en el resumen, en vez de parar a preguntar.
 
 ## 4. Informar
 Separar lo **probado en placa** (con qué placa y versión) de lo **razonado**. Si se ha cambiado un ajuste de la

@@ -15,6 +15,8 @@ Estado, decisiones, piezas LCSC y siguiente paso: **`docs/NOTAS.md`, sección "P
   cables borrados sin querer). Si todo está bien: commit y push.
 - Lo que necesita medidas exactas (colocar piezas, contorno) lo hace Claude con scripts del Python de KiCad, con el
   **editor de placas cerrado** (si está abierto, KiCad pisa el archivo al guardar).
+- Las decisiones de diseño (piezas, huellas, colocación, rutado) las toma Claude con criterio (Basic antes que
+  Extended, stock, coste) y las explica en el resumen; no se pregunta. Los pedidos y compras los hace el usuario.
 - Al terminar una sesión larga: actualizar NOTAS "PCB" (estado y siguiente paso) y CLAUDE.md.
 
 ## Herramientas (`hardware/herramientas/`, desde Git Bash)

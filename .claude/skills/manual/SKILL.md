@@ -40,7 +40,7 @@ Documentación (CC BY-NC-SA 4.0). Detalle y decisiones en `docs/NOTAS.md`, "Rele
 ```
 - Mirar las capturas con Read antes de dar nada por bueno. Read **no abre PDF** (no hay poppler) y pdf.js en Chrome
   sin interfaz se queda colgado: revisar la maqueta con `--imprimir` y pedir al usuario que mire el PDF.
-- Al terminar, enseñar el HTML en el navegador (`cmd //c start "" .pio/manual/manual.html`, con las imágenes) y,
-  si lo aprueba, el PDF. **Regenerar el PDF siempre que cambie el manual** y subir los dos juntos (la Action de la
-  web se lanza con `web/**` y `docs/*.pdf`).
+- **Regenerar el PDF siempre que cambie el manual**, sin esperar aprobación, y subir los dos juntos (la Action de
+  la web se lanza con `web/**` y `docs/*.pdf`). Al terminar, abrir el HTML en el navegador
+  (`cmd //c start "" .pio/manual/manual.html`) y decir al usuario qué secciones cambiaron, para que las mire.
 - Si cambian las funciones del firmware, revisar también la sección del manual que las explica.

@@ -23,8 +23,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 
 ## Versiones, releases y OTA (detalle en NOTAS: "Releases y OTA")
 - `#define FW_VERSION` y `@version` en la cabecera de `main.cpp`. Formato `X.YYb` (b = beta; sin letra, final).
-  **Preguntar siempre al usuario antes de subir la versión y antes de publicar una release** (llegan por OTA).
-  Procedimiento: skill **`release`** (`./publicar.sh` en tres pasos, borrador antes de publicar).
+  **Única pregunta al usuario: si se publica versión** (una vez, antes de tocar `FW_VERSION`; las releases llegan por
+  OTA). Con el sí, todo seguido: skill **`release`** (`./publicar.sh`, borrador y publicar, web).
 - OTA: CONF > CONFIG > ACTUALIZAR FW; TLS con `include/certificados_github.h`.
 - **Web de instalación por USB** (16 oct): https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (`web/`, ESP Web Tools; probada en la placa 1);
   la Action `web.yml` la rehace sola al publicar una release (parte el `-usb.bin` para conservar la NVS). Selector
@@ -165,16 +165,23 @@ encoder (quitada en la 1.20). Reinicio de la OTA sin avance: probado el 16 oct (
 
 ## Cómo trabajar
 - Responder en español, directo y sin relleno. Separar lo probado en placa de lo razonado.
+- **Solo se pregunta si se publica una versión** (18 oct). Las decisiones de diseño las toma Claude (la opción
+  razonable, coherente con el estilo y lo ya decidido) y las cuenta en el resumen para que el usuario las corrija.
+  Lo que solo puede hacer o ver el usuario (conectar la placa, oír el audio, palas de verdad) se le pide en texto,
+  todo junto, después de probar lo posible por serie (`m<texto>`, capturas).
 - Compilar antes de dar un cambio por bueno, con **`./compilar.sh`**:
   solo saca errores, avisos de `src/`, RAM, flash y OK/FALLO; la salida completa queda en `.pio/compilar.log`. Cambios con diff claro; no reestructurar sin avisar.
 - Antes de afirmar algo sobre RadioLib, WiFiManager o el core de Espressif, comprobar la versión instalada.
 - Leer el serie sin reiniciar la placa: **`serie.py`** (busca el CP210x, DTR/RTS a False, hora y log en
   `.pio/serie-*.log`; `-f REGEX` filtra, `-s N` segundos, `-e TEXTO` envía órdenes serie).
-- Permisos de Claude Code compartidos en `.claude/settings.json` (viaja por Git): compilar, serie, git de lectura
-  sin preguntar; también commit y push (los hace Claude cuando le parezca, sin preguntar; 14 oct). `publicar.sh`,
-  `gh release create/edit/delete` y `git push --force` siempre preguntan: **solo las releases se consultan**.
-- **Heredocs de Bash:** la herramienta reduce `\\` a `\` (un `\n` acaba como salto de línea real y un `'\0'` como
-  byte nulo). Código con barras invertidas: usar Edit o Write.
+- Permisos de Claude Code compartidos en `.claude/settings.json` (viaja por Git): compilar, serie, git, commit, push
+  y `publicar.sh` sin confirmación (la pregunta de publicar va antes, con AskUserQuestion). Solo piden confirmación
+  `gh release create/edit/delete` sueltos y `git push --force`.
+- **Bash ya arranca en la raíz del proyecto: no poner `cd /c/proyectos/CHISPAS-EA4ILN &&` delante** (convierte la
+  orden en compuesta, no casa con los permisos y obliga a confirmar). Para otra carpeta, rutas absolutas.
+- **Editar archivos con Edit o Write**, no con `sed -i` ni scripts de Python por heredoc (con las barras invertidas,
+  las comillas y las tildes se han roto varias veces). La herramienta reduce `\\` a `\` en los heredocs (un `\n`
+  acaba como salto de línea real y un `'\0'` como byte nulo). Scripts de ayuda: archivo en el scratchpad con Write.
 - **No reescribir el código (`main.cpp`, `parts/*.inc`) con `Get-Content`/`Set-Content` de PowerShell 5.1** (rompe
   las tildes y añade BOM). Desde Bash, `pio` y `python` no están en el PATH:
   `~/.platformio/penv/Scripts/pio.exe` y `~/.platformio/penv/Scripts/python.exe`.
