@@ -21,6 +21,9 @@ de publicación.** Detalle e historial en `docs/NOTAS.md`, sección "Releases y 
    instalación se deja. Enseñar las notas al usuario.
 3. Con su confirmación: `./publicar.sh --subir` → release en **borrador** (las placas no la ven). Pasarle el enlace.
 4. Con su confirmación: `./publicar.sh --publicar` → publicada (etiqueta `v<ver>`, prerelease si es beta).
+   Si es beta, rehacer antes "Novedades de la beta" en `web/index.html` (respecto a la última final) y hacer commit
+   **sin push**; el push, *después* de `--publicar` (la release rehace la web desde el commit de la etiqueta; el
+   push la vuelve a hacer desde `main` con el texto nuevo).
 5. Anotar la release en NOTAS ("Releases y OTA") y el "Estado actual" de CLAUDE.md.
 
 Si se han cambiado librerías, regenerar antes `docs/LICENCIAS_TERCEROS.txt`.

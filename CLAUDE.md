@@ -35,7 +35,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `m<texto>` simula las palas, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (18 oct 2026)
-- **v1.30b** publicada (beta, 16 oct; ver abajo; en la web como beta). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
+- **v1.31b** publicada (beta, 18 oct; los arreglos del 18 oct de abajo; en la web como beta; en la placa 1 por USB).
+  Antes, **v1.30b** (beta, 16 oct; ver abajo). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
   y batería a 4,985. En la placa 1 por USB y en la placa 2 por OTA (16 oct; antes, reinicio por OTA sin avance probado).
   Antes, v1.10 (15 oct, primera final; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance). **Nombres de las placas desde el 15 oct** (antes, al revés; lo anterior en NOTAS usa los viejos):
   **placa 1 = placa perforada** (MAC `08:c0`, montada y probada el 15 oct) y **placa 2 = protoboard** (MAC `50:74`,
@@ -119,7 +120,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   ajuste TEXTO (grupos, indicativos, QSO POTA; Duo sin probar con dos placas); TX LIBRE > menu > RITMO; batería al
   100 % desde 4,15 V. Detalle en NOTAS: "Audio sintetizado". Auricular izquierdo de la placa 1: T y TN cruzados
   en el jack (arreglado, 16 oct).
-- **Después de la 1.30b (18 oct, en la placa 1 por USB, sin versión nueva):** decodificador probado con W1AW (20 WPM
+- **Después de la 1.30b (18 oct; van en la v1.31b):** decodificador probado con W1AW (20 WPM
   perfecto; la síntesis no le afecta); fin de palabra arreglado con Farnsworth (10 WPM de W1AW salía letra a letra);
   hora de la cabecera que parpadeaba al decodificar (`getLocalTime(&t, 0)` del core). **Decodificador con ruido**
   (18 oct, sin cambios): bien hasta CONTEST MEDIUM de la RSGB, pocos errores en HARD, ilegible en INTENSE; el usuario
@@ -132,7 +133,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
-3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar). Los arreglos del 18 oct van en la próxima versión.
+3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se

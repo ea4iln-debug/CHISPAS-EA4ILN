@@ -107,6 +107,12 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   el entorno `github-pages` solo admitía la rama `main` y el evento de release corre en la etiqueta. Se añadió la
   regla de etiquetas `v*` al entorno (`gh api -X POST .../environments/github-pages/deployment-branch-policies
   -f name='v*' -f type=tag`) y se relanzó a mano (`gh workflow run web.yml`): web con estable 1.20 y beta 1.30b.
+  **v1.31b (beta), publicada el 18 oct 2026** (prerelease): los arreglos del 18 oct (fin de palabra con Farnsworth
+  en el decodificador, hora de la cabecera sin parpadeo, orden serie `m<texto>`, QSO SIM con ROL). Antes de
+  publicar, en la placa 1 por USB (arranque v1.31b por captura de la OLED). https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.31b.
+  Novedades de la web rehechas (QSO SIM con los dos roles, decodificador). **Orden para la web:** el evento de
+  release la rehace desde el commit de la etiqueta, así que el commit con el texto nuevo de `web/` se sube
+  *después* de `--publicar` (su push la rehace desde `main` con la release ya publicada). Las dos Actions, bien.
 - **Web de instalación por USB (16 oct 2026):** https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (GitHub Pages,
   fuente "GitHub Actions", activada con `gh api -X POST repos/.../pages -f build_type=workflow`). `web/index.html`
   con **ESP Web Tools 10.4.0** (unpkg, `<esp-web-install-button>`; Chrome/Edge de escritorio). La Action
