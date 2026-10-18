@@ -23,7 +23,10 @@ de publicación.** Detalle e historial en `docs/NOTAS.md`, sección "Releases y 
 4. Con su confirmación: `./publicar.sh --publicar` → publicada (etiqueta `v<ver>`, prerelease si es beta).
    Si es beta, rehacer antes "Novedades de la beta" en `web/index.html` (respecto a la última final) y hacer commit
    **sin push**; el push, *después* de `--publicar` (la release rehace la web desde el commit de la etiqueta; el
-   push la vuelve a hacer desde `main` con el texto nuevo).
+   push la vuelve a hacer desde `main` con el texto nuevo). **Si la etiqueta cae en el mismo commit que ya se
+   desplegó con un push** (todo empujado antes de `--publicar`), Pages da el despliegue de la release por repetido
+   (mismo `pages_build_version`) y la web se queda con la beta anterior (pasó con la 1.32b): comprobar
+   `manifest-beta.json` y, si hace falta, `gh workflow run web.yml --ref main` con un commit nuevo en `main`.
 5. Anotar la release en NOTAS ("Releases y OTA") y el "Estado actual" de CLAUDE.md.
 
 Si se han cambiado librerías, regenerar antes `docs/LICENCIAS_TERCEROS.txt`.
