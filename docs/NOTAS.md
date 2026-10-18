@@ -860,8 +860,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    sin encoder se queda en la v1.10. La versión es **1.20 y no 1.2**: `compararVersiones()` compara cada número por
    separado y "1.2" (1, 2) sería menor que "1.10" (1, 10). Compila: RAM 17,1 %, flash 38,6 %.
 9. **Auricular izquierdo de la placa 1**: resuelto el 16 oct 2026 (T y TN cruzados en el jack; ver "Placa perforada").
-10. **Siguiente:** decodificador con CW real (nivel ~10 % en silencio con la síntesis); Duo TEXTO con dos placas; QSO SIM
-   (probado sin palas el 18 oct 2026 con la orden serie `m`), TX LIBRE > RITMO y la práctica QSO POTA del Koch manipulando con las palas.
+10. **Siguiente:** Duo TEXTO con dos placas; QSO SIM en los dos roles (probado sin palas el 18 oct 2026 con la orden
+   serie `m`), TX LIBRE > RITMO y la práctica QSO POTA del Koch manipulando con las palas; instalar la beta desde la web
+   (sin probar). (El decodificador con CW real quedó probado el 18 oct 2026 con W1AW y con ruido: ver DECODIFICAR.)
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).
