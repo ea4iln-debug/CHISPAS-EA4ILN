@@ -1,0 +1,1500 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-NC-SA-4.0 -->
+<!-- Copyright (C) 2026 EA4ILN -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de CHISPAS</title>
+<meta name="description" content="Manual de usuario de CHISPAS: qué es el CW, cómo se maneja el aparato y qué hace cada función, explicado para quien no lo ha usado nunca.">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M18 2 6 18h8l-2 12 14-18h-9z' fill='%23ff8a3d'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* Mismos colores y piezas que index.html, funciones.html y hardware.html; al imprimir (PDF), fondo blanco */
+  :root {
+    --fondo: #0b0d12; --fondo2: #11141b; --tarjeta: #151922; --borde: #252b38; --borde2: #343c4d;
+    --texto: #e9ecf2; --suave: #a7afc0; --tenue: #6b7489;
+    --acento: #ff8a3d; --acento2: #ffb36b; --ok: #5be3a0; --azul: #59b8ff;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--fondo); color: var(--texto); overflow-x: hidden;
+    font: 16px/1.65 "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(900px 500px at 75% -10%, rgba(255, 138, 61, 0.16), transparent 60%),
+      radial-gradient(700px 400px at 0% 30%, rgba(91, 160, 255, 0.07), transparent 60%),
+      radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0) 0 0 / 22px 22px;
+  }
+  a { color: var(--acento2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .envoltura { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  header { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(10px);
+    background: rgba(11, 13, 18, 0.72); border-bottom: 1px solid var(--borde); }
+  .barra { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .marca { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; color: var(--texto); }
+  .marca:hover { text-decoration: none; }
+  .marca small { font-family: "JetBrains Mono", monospace; font-weight: 500; font-size: 0.75rem; color: var(--tenue);
+    border: 1px solid var(--borde2); border-radius: 6px; padding: 1px 6px; }
+  .marca .beta { font-family: "JetBrains Mono", monospace; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--acento); border: 1px solid rgba(255, 138, 61, 0.5); border-radius: 5px; padding: 0 5px; margin-left: -4px; }
+  .enlaces { display: flex; gap: 18px; font-size: 0.95rem; align-items: center; }
+  .enlaces a { color: var(--suave); }
+  .enlaces a:hover { color: var(--texto); text-decoration: none; }
+  .menu { display: none; position: relative; border: 0; background: none; margin: 0; }
+  .menu summary { list-style: none; cursor: pointer; display: grid; place-items: center; width: 38px; height: 38px;
+    padding: 0; border: 1px solid var(--borde2); border-radius: 10px; color: var(--texto); }
+  .menu summary::-webkit-details-marker { display: none; }
+  .menu[open] summary { border-color: var(--acento); color: var(--acento2); }
+  .menu > .menu-lista { position: absolute; right: 0; top: calc(100% + 10px); min-width: 210px; display: flex;
+    flex-direction: column; padding: 8px; background: var(--fondo2); border: 1px solid var(--borde2); border-radius: 12px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5); }
+  .menu-lista a { padding: 10px 12px; border-radius: 8px; color: var(--texto); font-size: 1rem; }
+  .menu-lista a:hover { background: var(--tarjeta); text-decoration: none; }
+  @media (max-width: 860px) {
+    .enlaces { gap: 14px; }
+    .enlaces > a:not(.siempre) { display: none; }
+    .menu { display: block; }
+  }
+  .boton { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: #1a0d03;
+    background: linear-gradient(180deg, var(--acento2), var(--acento)); border-radius: 12px; padding: 12px 20px;
+    box-shadow: 0 8px 28px rgba(255, 138, 61, 0.35); }
+  .boton:hover { text-decoration: none; filter: brightness(1.05); }
+
+  /* Portada del manual */
+  .portada { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: center;
+    padding: 56px 0 32px; }
+  .portada .etiqueta { font-family: "JetBrains Mono", monospace; font-size: 0.8rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--acento2); }
+  h1 { font-size: clamp(2.3rem, 5.5vw, 4rem); line-height: 1.04; margin: 10px 0 16px; letter-spacing: -0.03em; }
+  h1 .brillo { background: linear-gradient(90deg, var(--acento), var(--acento2)); -webkit-background-clip: text;
+    background-clip: text; color: transparent; }
+  .lema { color: var(--suave); font-size: 1.15rem; margin: 0 0 22px; max-width: 32em; }
+  .version { color: var(--tenue); font-size: 0.92rem; margin: 18px 0 0; }
+  .portada-dibujo { position: relative; }
+  .portada-dibujo .foto { width: 100%; height: auto; border-radius: 18px; border: 1px solid var(--borde2); display: block; }
+  .portada-dibujo .robot-portada { position: absolute; width: 46%; left: -18%; bottom: -8%; }
+  .portada-dibujo figcaption { color: var(--tenue); font-size: 0.85rem; margin-top: 10px; text-align: right; }
+
+  /* Indice */
+  .indice { background: linear-gradient(180deg, var(--tarjeta), var(--fondo2)); border: 1px solid var(--borde);
+    border-radius: 16px; padding: 22px 26px; margin: 8px 0 24px; }
+  .indice h2 { margin: 0 0 10px; font-size: 1.1rem; }
+  .indice ol { columns: 2; column-gap: 32px; margin: 0; padding-left: 1.4em; }
+  .indice li { margin: 3px 0; break-inside: avoid; color: var(--tenue); }
+  .indice a { color: var(--texto); }
+
+  /* Secciones: texto a la izquierda y CHISPAS en el margen derecho */
+  .seccion { border-top: 1px solid var(--borde); padding: 44px 0 20px; scroll-margin-top: 70px; }
+  .cuerpo { padding-right: 230px; max-width: 980px; }
+  .cuerpo::after { content: ""; display: block; clear: both; }
+  .seccion h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); letter-spacing: -0.02em; margin: 0 0 14px; line-height: 1.15; }
+  .seccion h2 .num { font-family: "JetBrains Mono", monospace; color: var(--acento); font-size: 0.7em; margin-right: 10px;
+    vertical-align: 0.12em; }
+  .seccion h3 { font-size: 1.25rem; margin: 30px 0 8px; letter-spacing: -0.01em; scroll-margin-top: 70px; }
+  .seccion h4 { font-size: 1.02rem; margin: 20px 0 6px; color: var(--acento2); }
+  .seccion p, .seccion li { color: var(--suave); }
+  .seccion b, .seccion strong { color: var(--texto); font-weight: 600; }
+  .seccion ul, .seccion ol { padding-left: 1.3em; }
+  .seccion li { margin: 5px 0; }
+  .entrada { font-size: 1.08rem; color: var(--texto) !important; }
+  .robot { float: right; clear: right; width: 190px; margin: 0 -230px 18px 0; text-align: center; }
+  .robot svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .robot figcaption { font-size: 0.86rem; line-height: 1.4; color: var(--suave); font-style: italic; margin-top: 4px; }
+  .mono, kbd { font-family: "JetBrains Mono", monospace; font-size: 0.88em; color: var(--texto); }
+  kbd { border: 1px solid var(--borde2); border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; background: var(--fondo2);
+    white-space: nowrap; }
+  .chip-beta { font-family: "JetBrains Mono", monospace; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--acento2); border: 1px dashed rgba(255, 138, 61, 0.55); border-radius: 6px;
+    padding: 0 6px; vertical-align: 0.15em; white-space: nowrap; }
+  .caja { border: 1px solid var(--borde2); border-left: 4px solid var(--azul); border-radius: 10px; padding: 12px 16px;
+    margin: 16px 0; background: rgba(89, 184, 255, 0.06); }
+  .caja.truco { border-left-color: var(--ok); background: rgba(91, 227, 160, 0.06); }
+  .caja.ojo { border-left-color: var(--acento); background: rgba(255, 138, 61, 0.07); }
+  .caja p { margin: 0; }
+  .caja p + p { margin-top: 6px; }
+  .caja .titulo-caja { font-weight: 700; color: var(--texto); margin-right: 6px; }
+
+  /* Capturas de la pantalla de CHISPAS */
+  .galeria { display: flex; flex-wrap: wrap; gap: 14px; margin: 16px 0; }
+  .pantalla { margin: 0; flex: 1 1 220px; max-width: 300px; }
+  .pantalla img { width: 100%; height: auto; display: block; image-rendering: pixelated; border-radius: 10px;
+    border: 6px solid #1c212c; box-shadow: 0 0 0 1px var(--borde2), 0 10px 26px rgba(0, 0, 0, 0.35); }
+  .pantalla figcaption { font-size: 0.85rem; color: var(--tenue); margin-top: 6px; }
+
+  /* Tablas */
+  .tabla { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.95rem; }
+  .tabla th, .tabla td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--borde); }
+  .tabla th { color: var(--texto); font-weight: 600; background: var(--fondo2); }
+  .tabla td { color: var(--suave); }
+  .tabla td:first-child { color: var(--texto); white-space: nowrap; font-family: "JetBrains Mono", monospace; font-size: 0.88em; }
+
+  /* Alfabeto Morse */
+  .morse { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; margin: 16px 0;
+    padding: 0; list-style: none; }
+  .morse li { display: flex; align-items: baseline; gap: 10px; background: var(--fondo2); border: 1px solid var(--borde);
+    border-radius: 8px; padding: 5px 10px; margin: 0; }
+  .morse b { font-family: "JetBrains Mono", monospace; font-size: 1.05rem; min-width: 1.1em; color: var(--texto); }
+  .morse span { font-family: "JetBrains Mono", monospace; color: var(--acento2); letter-spacing: 0.12em; font-size: 1.05rem; }
+
+  /* Dialogo de un QSO */
+  .dialogo { margin: 16px 0; display: flex; flex-direction: column; gap: 8px; }
+  .dialogo div { max-width: 88%; border-radius: 12px; padding: 8px 12px; font-size: 0.95rem; }
+  .dialogo .el { align-self: flex-start; background: var(--tarjeta); border: 1px solid var(--borde2); }
+  .dialogo .tu { align-self: flex-end; background: rgba(255, 138, 61, 0.1); border: 1px solid rgba(255, 138, 61, 0.35); }
+  .dialogo .quien { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tenue); }
+  .dialogo .cw { font-family: "JetBrains Mono", monospace; color: var(--texto); }
+  .dialogo .nota { color: var(--suave); font-size: 0.88rem; }
+
+  /* Mapa de pantallas */
+  .ruta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 14px 0; padding: 0; list-style: none; }
+  .ruta li { margin: 0; font-family: "JetBrains Mono", monospace; font-size: 0.9rem; color: var(--texto);
+    border: 1px solid var(--borde2); background: var(--fondo2); border-radius: 999px; padding: 3px 12px; }
+  .ruta li.flecha { border: 0; background: none; padding: 0 2px; color: var(--tenue); }
+
+  /* Dibujo de los mandos */
+  .mandos { width: 100%; height: auto; display: block; margin: 12px 0 4px; }
+  .mandos .caja-f { fill: #4f5a3a; stroke: #2a2f20; stroke-width: 2; }
+  .mandos .cara-f { fill: #5d6845; stroke: #2a2f20; stroke-width: 2; }
+  .mandos .lin { stroke: var(--tenue); stroke-width: 1.4; fill: none; }
+  .mandos .etq { fill: var(--texto); font: 600 13px "Space Grotesk", sans-serif; }
+  .mandos .etq2 { fill: var(--suave); font: 400 12px "Space Grotesk", sans-serif; }
+  .nota-dibujo { font-size: 0.85rem; color: var(--tenue); margin: 0 0 12px; }
+
+  /* CHISPAS: colores propios, iguales en la web y en el PDF */
+  .r-m { fill: #cfd8e4; stroke: #1b1f29; stroke-width: 2.5; stroke-linejoin: round; }
+  .r-d { fill: #0d1118; stroke: #1b1f29; stroke-width: 2; }
+  .r-a { fill: #ff8a3d; stroke: #1b1f29; stroke-width: 2.5; stroke-linejoin: round; }
+  .r-p { fill: #3a4252; stroke: #1b1f29; stroke-width: 2.5; }
+  .r-o { fill: #59b8ff; }
+  .r-ob { fill: none; stroke: #59b8ff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .r-l { fill: none; stroke: #1b1f29; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .r-al { fill: none; stroke: #ff8a3d; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+  .r-b1 { fill: none; stroke: #1b1f29; stroke-width: 11; stroke-linecap: round; stroke-linejoin: round; }
+  .r-b2 { fill: none; stroke: #cfd8e4; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+  .r-t { font: 700 10px "JetBrains Mono", monospace; fill: #ff8a3d; text-anchor: middle; }
+  .r-bo { fill: #ffffff; stroke: #1b1f29; stroke-width: 2; stroke-linejoin: round; }
+  .r-bt { font: 700 11px "JetBrains Mono", monospace; fill: #1b1f29; text-anchor: middle; }
+  .r-z { font: 700 14px "Space Grotesk", sans-serif; fill: #59b8ff; }
+
+  .cierre { text-align: center; padding: 40px 0 10px; }
+  .cierre .robot-fin { width: 170px; margin: 0 auto; display: block; }
+  .cierre p { color: var(--suave); }
+  footer { border-top: 1px solid var(--borde); margin-top: 40px; padding: 26px 0 40px; color: var(--tenue); font-size: 0.9rem; }
+  footer .envoltura { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+
+  @media (max-width: 900px) {
+    .portada { grid-template-columns: minmax(0, 1fr); padding-top: 36px; }
+    .portada-dibujo .robot-portada { width: 34%; left: -4%; bottom: -10%; }
+    .cuerpo { padding-right: 0; }
+    .robot { width: 128px; margin: 0 0 10px 14px; }
+    .robot figcaption { font-size: 0.78rem; }
+    .indice ol { columns: 1; }
+  }
+  @media (max-width: 520px) {
+    .robot { width: 108px; }
+    .tabla td:first-child { white-space: normal; }
+  }
+
+  /* PDF: A4, fondo blanco, una seccion por pagina y CHISPAS en el margen */
+  @page { size: A4; margin: 15mm 14mm 16mm 16mm;
+    @bottom-center { content: counter(page); font: 9pt "Space Grotesk", sans-serif; color: #7a8293; } }
+  @page :first { @bottom-center { content: none; } }
+  @media print {
+    :root { --fondo: #ffffff; --fondo2: #f4f5f8; --tarjeta: #f7f8fa; --borde: #dde1e8; --borde2: #c9ced8;
+      --texto: #14171f; --suave: #3c4352; --tenue: #6b7385; --acento: #d9601a; --acento2: #c4560f; color-scheme: light; }
+    body { background: #fff; font-size: 10.5pt; line-height: 1.5; }
+    body::before, header, footer, .solo-web { display: none !important; }
+    .envoltura { max-width: none; padding: 0; }
+    .portada { min-height: 262mm; grid-template-columns: minmax(0, 1fr); align-content: center; padding: 0; gap: 18mm; }
+    .portada-dibujo { width: 72%; margin: 0 auto !important; }
+    .portada-dibujo .robot-portada { width: 36%; left: -14%; bottom: -10%; }
+    h1 { font-size: 40pt; }
+    .indice { break-before: page; background: none; }
+    .indice ol { columns: 1; font-size: 12pt; }
+    .seccion { break-before: page; border-top: 0; padding: 0; }
+    .cuerpo { padding-right: 44mm; max-width: none; }
+    .robot { width: 38mm; margin-right: -44mm; break-inside: avoid; }
+    .robot figcaption { font-size: 8pt; color: #4b5263; }
+    .seccion h3, .seccion h4 { break-after: avoid; }
+    .galeria, .pantalla, .caja, .dialogo, .morse li, .tabla tr, .mandos { break-inside: avoid; }
+    .pantalla { flex: 0 1 46%; max-width: 62mm; }
+    .pantalla img { box-shadow: none; }
+    .morse { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    .morse li { padding: 3px 8px; gap: 8px; }
+    .morse span { white-space: nowrap; letter-spacing: 0.04em; font-size: 0.95rem; }
+    .boton { display: none; }
+    a { color: var(--texto); }
+    .cierre { break-before: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Piezas de CHISPAS, el robot del manual: cuerpo comun y caras; cada dibujo anade brazos y accesorios -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="r-base">
+      <line x1="80" y1="40" x2="80" y2="16" class="r-l" stroke-width="3"/>
+      <circle cx="80" cy="12" r="5.5" class="r-a"/>
+      <circle cx="40" cy="66" r="6.5" class="r-a"/>
+      <circle cx="120" cy="66" r="6.5" class="r-a"/>
+      <rect x="68" y="92" width="24" height="10" class="r-m"/>
+      <rect x="60" y="146" width="13" height="22" rx="3" class="r-m"/>
+      <rect x="87" y="146" width="13" height="22" rx="3" class="r-m"/>
+      <rect x="53" y="164" width="24" height="11" rx="5" class="r-p"/>
+      <rect x="83" y="164" width="24" height="11" rx="5" class="r-p"/>
+      <rect x="48" y="100" width="64" height="50" rx="11" class="r-m"/>
+      <rect x="57" y="108" width="46" height="15" rx="3" class="r-d"/>
+      <text x="80" y="119.5" class="r-t">CQ</text>
+      <path d="M58 131h16M58 136h16M58 141h16" class="r-l" stroke-width="2"/>
+      <circle cx="95" cy="137" r="7" class="r-a"/>
+      <line x1="95" y1="137" x2="95" y2="131" class="r-l" stroke-width="2"/>
+      <rect x="42" y="38" width="76" height="56" rx="14" class="r-m"/>
+      <rect x="50" y="46" width="60" height="40" rx="8" class="r-d"/>
+    </g>
+    <g id="x-normal">
+      <rect x="58" y="53" width="17" height="15" rx="4" class="r-o"/>
+      <rect x="85" y="53" width="17" height="15" rx="4" class="r-o"/>
+      <path d="M72 75 Q80 81 88 75" class="r-ob"/>
+    </g>
+    <g id="x-feliz">
+      <path d="M58 64 Q66.5 52 75 64M85 64 Q93.5 52 102 64" class="r-ob" stroke-width="3.5"/>
+      <path d="M70 71 Q80 84 90 71 Z" class="r-o"/>
+    </g>
+    <g id="x-cerrados">
+      <path d="M58 61 Q66.5 67 75 61M85 61 Q93.5 67 102 61" class="r-ob"/>
+      <path d="M75 76 Q80 79 85 76" class="r-ob"/>
+    </g>
+    <g id="x-guino">
+      <rect x="58" y="53" width="17" height="15" rx="4" class="r-o"/>
+      <path d="M85 62 Q93.5 54 102 62" class="r-ob" stroke-width="3.5"/>
+      <path d="M70 74 Q80 82 90 74" class="r-ob"/>
+    </g>
+    <g id="x-sorpresa">
+      <circle cx="66.5" cy="60" r="8" class="r-o"/>
+      <circle cx="93.5" cy="60" r="8" class="r-o"/>
+      <ellipse cx="80" cy="78" rx="4" ry="4.5" class="r-o"/>
+    </g>
+    <g id="x-concentrado">
+      <rect x="58" y="58" width="17" height="8" rx="3" class="r-o"/>
+      <rect x="85" y="58" width="17" height="8" rx="3" class="r-o"/>
+      <path d="M73 77 L87 77" class="r-ob"/>
+      <circle cx="87" cy="80" r="3" fill="#ff8a3d"/>
+    </g>
+    <g id="x-preocupado">
+      <rect x="58" y="56" width="17" height="13" rx="4" class="r-o"/>
+      <rect x="85" y="56" width="17" height="13" rx="4" class="r-o"/>
+      <path d="M58 52 L74 49M86 49 L102 52" class="r-ob" stroke-width="2.5"/>
+      <path d="M70 79 q3.3 -3 6.6 0 t6.6 0 t6.6 0" class="r-ob" stroke-width="2.5"/>
+    </g>
+    <g id="x-gafas">
+      <rect x="55" y="53" width="22" height="14" rx="5" fill="#1b1f29" stroke="#ff8a3d" stroke-width="2"/>
+      <rect x="83" y="53" width="22" height="14" rx="5" fill="#1b1f29" stroke="#ff8a3d" stroke-width="2"/>
+      <path d="M77 58 L83 58" stroke="#ff8a3d" stroke-width="2"/>
+      <path d="M59 56 l5 0M87 56 l5 0" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M70 74 Q80 82 90 74" class="r-ob"/>
+    </g>
+    <g id="x-duda">
+      <rect x="58" y="53" width="17" height="15" rx="4" class="r-o"/>
+      <rect x="87" y="57" width="13" height="10" rx="3" class="r-o"/>
+      <path d="M86 51 L101 53" class="r-ob" stroke-width="2.5"/>
+      <path d="M72 78 Q76 74 80 78 T88 77" class="r-ob" stroke-width="2.5"/>
+    </g>
+    <g id="x-travieso">
+      <path d="M60 54 L73 61 L60 68M100 54 L87 61 L100 68" class="r-ob" stroke-width="3.5"/>
+      <path d="M71 73 Q80 85 89 73 Z" class="r-o"/>
+    </g>
+  </defs>
+</svg>
+
+<header>
+  <div class="envoltura barra">
+    <a class="marca" href="./">
+      <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 2 6 18h8l-2 12 14-18h-9z" fill="#ff8a3d"/></svg>
+      CHISPAS <span class="beta">Beta</span> <small>EA4ILN</small>
+    </a>
+    <nav class="enlaces">
+      <a href="./">Inicio</a>
+      <a href="funciones.html">Funciones</a>
+      <a href="hardware.html">Hardware</a>
+      <a href="docs/manual_chispas.pdf" class="siempre">PDF</a>
+      <details class="menu">
+        <summary aria-label="Menú"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <div class="menu-lista">
+          <a href="./">Inicio</a>
+          <a href="funciones.html">Funciones</a>
+          <a href="hardware.html">Hardware</a>
+          <a href="docs/manual_chispas.pdf" download>Descargar en PDF</a>
+        </div>
+      </details>
+    </nav>
+  </div>
+</header>
+
+<main class="envoltura">
+
+  <!-- ============================== PORTADA ============================== -->
+  <section class="portada">
+    <div>
+      <span class="etiqueta">Manual de usuario</span>
+      <h1>Manual de <span class="brillo">CHISPAS</span></h1>
+      <p class="lema">El compañero de bolsillo para aprender telegrafía, practicarla y llevarla a la radio.</p>
+      <a class="boton solo-web" href="docs/manual_chispas.pdf" download>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        Descargar en PDF</a>
+      <p class="version">Para la versión 1.31b (beta) · octubre de 2026</p>
+    </div>
+    <figure class="portada-dibujo" style="margin:0">
+      <img class="foto" src="img/chispas_campo.jpg?__SELLO__" width="1077" height="992" alt="Concepto de CHISPAS en una caja verde oliva, sobre una roca en el campo, junto a unas palas y una libreta">
+      <svg class="robot-portada" viewBox="0 0 160 190" role="img" aria-label="CHISPAS saluda y dice CQ">
+        <g class="r-bo"><rect x="2" y="0" width="48" height="24" rx="9"/><path d="M34 23 L44 33 L41 23" /></g>
+        <text x="26" y="16.5" class="r-bt">CQ CQ</text>
+        <use href="#r-base"/><use href="#x-feliz"/>
+        <path class="r-b1" d="M52 114 Q38 126 40 142"/><path class="r-b2" d="M52 114 Q38 126 40 142"/>
+        <circle cx="40" cy="143" r="6" class="r-m"/>
+        <path class="r-b1" d="M108 114 Q124 104 128 82"/><path class="r-b2" d="M108 114 Q124 104 128 82"/>
+        <circle cx="128" cy="79" r="6" class="r-m"/>
+        <path d="M138 70 q7 8 2 18M145 63 q11 13 3 28" class="r-al"/>
+      </svg>
+      <figcaption>¡A CHISPAS le gusta el campo!</figcaption>
+    </figure>
+  </section>
+
+  <nav class="indice" aria-label="Índice">
+    <h2>Índice</h2>
+    <ol>
+      <li><a href="#cw">El CW en cinco minutos</a></li>
+      <li><a href="#chispas">Qué es CHISPAS</a></li>
+      <li><a href="#primeros-pasos">Primeros pasos</a></li>
+      <li><a href="#entrenador">Entrenador CW: Koch, Echo, TX libre y QSO SIM</a></li>
+      <li><a href="#lora">LoRa: practicar con un amigo</a></li>
+      <li><a href="#trx">Con tu transceptor</a></li>
+      <li><a href="#prop">Propagación</a></li>
+      <li><a href="#pota">POTA: spots y parques</a></li>
+      <li><a href="#sol">Sol, tiempo y GPS</a></li>
+      <li><a href="#conf">Configuración</a></li>
+      <li><a href="#actualizar">Actualizaciones</a></li>
+      <li><a href="#cara">La cara de CHISPAS y la batería</a></li>
+      <li><a href="#problemas">Si algo no va</a></li>
+      <li><a href="#glosario">Glosario</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================== 1. CW ============================== -->
+  <section class="seccion" id="cw">
+    <div class="cuerpo">
+      <h2><span class="num">01</span>El CW en cinco minutos</h2>
+
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS emite puntos y rayas por su antena">
+          <path d="M71 7 l-6 -4M89 7 l6 -4" class="r-al"/>
+          <circle cx="98" cy="16" r="3.2" fill="#ff8a3d"/>
+          <rect x="105" y="10" width="13" height="5.5" rx="2.5" fill="#ff8a3d"/>
+          <circle cx="125" cy="10" r="3.2" fill="#ff8a3d"/>
+          <rect x="132" y="3" width="13" height="5.5" rx="2.5" fill="#ff8a3d"/>
+          <use href="#r-base"/><use href="#x-guino"/>
+          <path class="r-b1" d="M52 114 Q36 120 46 134"/><path class="r-b2" d="M52 114 Q36 120 46 134"/>
+          <circle cx="47" cy="135" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q122 102 126 88"/><path class="r-b2" d="M108 114 Q122 102 126 88"/>
+          <circle cx="127" cy="86" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Punto, raya… y ya estás hablando con medio mundo.»</figcaption>
+      </figure>
+
+      <p class="entrada">CW es el nombre que damos los radioaficionados a transmitir en código Morse. Es el modo más
+        antiguo de la radio y, más de un siglo después, sigue más vivo que nunca.</p>
+
+      <h3>Puntos y rayas</h3>
+      <p>El código Morse representa cada letra y cada número con una combinación de dos sonidos: uno corto, el
+        <b>punto</b> (se dice «ti» o «dit»), y uno largo, la <b>raya</b> («ta» o «dah»). La A es <span class="mono">·−</span>
+        («ti-taa»), la N es <span class="mono">−·</span> («taa-ti») y la famosa SOS es <span class="mono">··· −−− ···</span>.</p>
+      <p>Lo que hace que el Morse se entienda es el <b>ritmo</b>. Todo se mide con la duración de un punto:</p>
+      <ul>
+        <li>Una raya dura lo que <b>tres puntos</b>.</li>
+        <li>Entre los puntos y rayas de una misma letra, silencio de <b>un punto</b>.</li>
+        <li>Entre dos letras, silencio de <b>tres puntos</b>.</li>
+        <li>Entre dos palabras, silencio de <b>siete puntos</b>.</li>
+      </ul>
+      <p>La velocidad se mide en <b>palabras por minuto</b> (en la pantalla de CHISPAS, <span class="mono">WPM</span>).
+        Una conversación tranquila va a 15–20 palabras por minuto; los veteranos pasan de 30.</p>
+
+      <ul class="morse" aria-label="Alfabeto Morse">
+        <li><b>A</b><span>·−</span></li><li><b>B</b><span>−···</span></li><li><b>C</b><span>−·−·</span></li>
+        <li><b>D</b><span>−··</span></li><li><b>E</b><span>·</span></li><li><b>F</b><span>··−·</span></li>
+        <li><b>G</b><span>−−·</span></li><li><b>H</b><span>····</span></li><li><b>I</b><span>··</span></li>
+        <li><b>J</b><span>·−−−</span></li><li><b>K</b><span>−·−</span></li><li><b>L</b><span>·−··</span></li>
+        <li><b>M</b><span>−−</span></li><li><b>N</b><span>−·</span></li><li><b>O</b><span>−−−</span></li>
+        <li><b>P</b><span>·−−·</span></li><li><b>Q</b><span>−−·−</span></li><li><b>R</b><span>·−·</span></li>
+        <li><b>S</b><span>···</span></li><li><b>T</b><span>−</span></li><li><b>U</b><span>··−</span></li>
+        <li><b>V</b><span>···−</span></li><li><b>W</b><span>·−−</span></li><li><b>X</b><span>−··−</span></li>
+        <li><b>Y</b><span>−·−−</span></li><li><b>Z</b><span>−−··</span></li><li><b>1</b><span>·−−−−</span></li>
+        <li><b>2</b><span>··−−−</span></li><li><b>3</b><span>···−−</span></li><li><b>4</b><span>····−</span></li>
+        <li><b>5</b><span>·····</span></li><li><b>6</b><span>−····</span></li><li><b>7</b><span>−−···</span></li>
+        <li><b>8</b><span>−−−··</span></li><li><b>9</b><span>−−−−·</span></li><li><b>0</b><span>−−−−−</span></li>
+        <li><b>?</b><span>··−−··</span></li><li><b>/</b><span>−··−·</span></li><li><b>.</b><span>·−·−·−</span></li>
+        <li><b>,</b><span>−−··−−</span></li><li><b>=</b><span>−···−</span></li>
+      </ul>
+
+      <div class="caja ojo"><p><span class="titulo-caja">No te aprendas la tabla.</span> Parece mentira, pero es el
+        error más común. Si memorizas «la K es raya-punto-raya», cuando la oigas tendrás que contar y traducir, y a
+        partir de cierta velocidad no da tiempo. El Morse se aprende <b>de oído</b>: cada letra tiene su propia
+        «musiquilla», y con práctica la reconoces como reconoces una palabra. La tabla está aquí solo para curiosos.</p></div>
+
+      <h3>¿Por qué sigue usándose?</h3>
+      <ul>
+        <li><b>Llega muy lejos con muy poca potencia.</b> Una señal de CW se entiende cuando la voz ya es solo ruido.</li>
+        <li><b>Los equipos son sencillos y pequeños</b>: ideales para llevar a la montaña.</li>
+        <li><b>Es un idioma universal.</b> Con un puñado de abreviaturas (<span class="mono">CQ</span>,
+          <span class="mono">73</span>, <span class="mono">5NN</span>…) charlas con un japonés o un brasileño sin
+          hablar su idioma.</li>
+        <li>Y porque <b>es divertido</b>: hay algo de magia en entender un mensaje hecho solo de pitidos.</li>
+      </ul>
+
+      <h3>Cómo se aprende hoy: el método Koch</h3>
+      <p>El método que usa CHISPAS es el de <b>Koch</b>, el mismo de la conocida web LCWO. Su idea es sencilla:</p>
+      <ol>
+        <li>Desde el primer día oyes las letras a <b>velocidad real</b> (20 palabras por minuto o más), para que tu
+          oído aprenda su sonido y no a contar puntos.</li>
+        <li>Empiezas con solo <b>dos letras</b>: la K y la M.</li>
+        <li>Cuando copias bien (un 90 % de aciertos o más), añades <b>una letra nueva</b>. Y así hasta las 40.</li>
+      </ol>
+      <p>Para que no sea agobiante al principio, se puede usar el truco <b>Farnsworth</b>: cada letra suena rápida,
+        pero con más silencio entre letras para darte tiempo a pensar. Según mejoras, ese silencio se acorta.</p>
+
+      <h3>Manipular: llave y palas</h3>
+      <p>Para transmitir hace falta un <b>manipulador</b>. El clásico es la <b>llave vertical</b>: una palanca que
+        subes y bajas, y tú marcas la duración de cada punto y cada raya. Lo más usado hoy son las <b>palas</b>: dos
+        palancas, una que hace puntos y otra que hace rayas. Las palas van a un <b>keyer</b>, un circuito que genera
+        puntos y rayas perfectos; tú solo decides cuándo empieza cada uno. Si aprietas las dos palas a la vez, el
+        keyer alterna punto y raya («iámbico»). CHISPAS lleva un keyer dentro.</p>
+
+      <h3>El QSO y los parques: POTA</h3>
+      <p>Un <b>QSO</b> es una conversación por radio. En CW suelen ser cortas y siguen un guion: alguien llama
+        (<span class="mono">CQ</span>), otro contesta con su <b>indicativo</b> (la «matrícula» de cada
+        radioaficionado), se pasan el informe de señal (<span class="mono">5NN</span> quiere decir «te recibo
+        perfectamente») y se despiden con <span class="mono">73</span> («saludos»).</p>
+      <p><b>POTA</b> (<i>Parks on the Air</i>, «parques en el aire») es una actividad muy popular: unos salen a emitir
+        desde un parque natural (son los <b>activadores</b>) y otros intentan contactar con ellos desde casa (los
+        <b>cazadores</b>). CHISPAS está pensado para ambos.</p>
+    </div>
+  </section>
+
+  <!-- ============================== 2. QUE ES ============================== -->
+  <section class="seccion" id="chispas">
+    <div class="cuerpo">
+      <h2><span class="num">02</span>Qué es CHISPAS</h2>
+
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS se presenta con una reverencia">
+          <g class="r-bo"><rect x="96" y="0" width="62" height="24" rx="9"/><path d="M110 23 L104 33 L118 23"/></g>
+          <text x="127" y="16.5" class="r-bt">¡HOLA!</text>
+          <use href="#r-base"/><use href="#x-feliz"/>
+          <path class="r-b1" d="M52 114 Q36 112 30 96"/><path class="r-b2" d="M52 114 Q36 112 30 96"/>
+          <circle cx="29" cy="93" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q118 128 100 134"/><path class="r-b2" d="M108 114 Q118 128 100 134"/>
+          <circle cx="99" cy="134" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Soy CHISPAS. Te acompaño por el manual. Prometo no ponerme (demasiado) pesado.»</figcaption>
+      </figure>
+
+      <p class="entrada">CHISPAS es un aparato pequeño con una pantalla, un mando
+        giratorio, un botón y un altavoz. Funciona con batería y se recarga por USB, como un móvil.</p>
+      <p>En los barcos, «Chispas» era el apodo del radiotelegrafista de a bordo, el que mandaba y recibía los
+        mensajes en Morse. Este CHISPAS hace un poco de todo eso:</p>
+      <ul>
+        <li><b>Te enseña CW</b> desde cero con el método Koch, y te ayuda a pasar del oído a la mano.</li>
+        <li><b>Te deja practicar</b> solo, con un amigo que tenga otro CHISPAS, o simulando un QSO completo.</li>
+        <li><b>Se conecta a tu transceptor</b>: manipula por ti, guarda mensajes y te escribe en pantalla el CW que
+          recibes.</li>
+        <li><b>Te informa</b>: cómo está la propagación, quién está activando un parque ahora mismo, qué parques
+          tienes cerca, a qué hora sale y se pone el sol y si se acerca una tormenta.</li>
+      </ul>
+
+      <div class="caja"><p><span class="titulo-caja">¿Necesito licencia?</span> Para aprender y practicar con
+        CHISPAS, no: el entrenador funciona solo, y la radio LoRa que usa para hablar con otro CHISPAS va en una banda
+        de uso libre. Solo necesitas licencia de radioaficionado para <b>emitir con tu transceptor</b>.</p></div>
+
+      <h3>Qué necesitas</h3>
+      <table class="tabla">
+        <tr><th>Para…</th><th>Necesitas</th></tr>
+        <tr><td>Aprender a copiar</td><td>Solo CHISPAS. Unos auriculares ayudan a concentrarse.</td></tr>
+        <tr><td>Aprender a manipular</td><td>Unas palas (o una llave) con clavija de 3,5 mm.</td></tr>
+        <tr><td>Practicar con un amigo</td><td>Dos CHISPAS.</td></tr>
+        <tr><td>Salir al aire</td><td>Tu transceptor, los cables y tu licencia.</td></tr>
+        <tr><td>Propagación y POTA</td><td>Una red WiFi (la de casa o la del móvil compartiendo datos).</td></tr>
+        <tr><td>Hora exacta, posición y tiempo</td><td>Que tu CHISPAS lleve el GPS y el sensor de ambiente, que son
+          opcionales. Sin ellos, todo lo demás funciona igual.</td></tr>
+      </table>
+
+      <div class="caja ojo"><p><span class="titulo-caja">Lo marcado como <span class="chip-beta">beta</span></span> está
+        en la versión de pruebas (1.31b), todavía no en la versión estable. Puedes elegir cuál instalar (ver
+        <a href="#actualizar">Actualizaciones</a>).</p></div>
+    </div>
+  </section>
+
+  <!-- ============================== 3. PRIMEROS PASOS ============================== -->
+  <section class="seccion" id="primeros-pasos">
+    <div class="cuerpo">
+      <h2><span class="num">03</span>Primeros pasos</h2>
+
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS gira un mando enorme">
+          <path d="M112 124 A 26 26 0 0 1 152 118" class="r-al"/>
+          <path d="M146 112 l6 6 l-8 3" class="r-al"/>
+          <use href="#r-base"/><use href="#x-concentrado"/>
+          <circle cx="138" cy="150" r="18" fill="#2a303d" stroke="#1b1f29" stroke-width="2.5"/>
+          <circle cx="138" cy="150" r="12" fill="#363d4d"/>
+          <line x1="138" y1="150" x2="138" y2="135" stroke="#ff8a3d" stroke-width="3" stroke-linecap="round"/>
+          <path class="r-b1" d="M52 114 Q38 124 44 138"/><path class="r-b2" d="M52 114 Q38 124 44 138"/>
+          <circle cx="45" cy="139" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 116 Q124 118 128 134"/><path class="r-b2" d="M108 116 Q124 118 128 134"/>
+          <circle cx="129" cy="136" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Girar y pulsar. Es más fácil que programar una lavadora.»</figcaption>
+      </figure>
+
+      <h3>Los mandos</h3>
+      <p>Todo CHISPAS se maneja con <b>un mando y un botón</b>:</p>
+      <ul>
+        <li><kbd>GIRAR</kbd> el mando mueve la flechita <span class="mono">&gt;</span> por la pantalla.</li>
+        <li><kbd>PULSAR</kbd> el mando (se hunde como un botón) elige lo que está señalado.</li>
+        <li>El botón <kbd>PRG</kbd>, pulsado un momento, es <b>volver atrás</b>.</li>
+        <li><kbd>PRG</kbd> mantenido unos segundos pone CHISPAS a <b>dormir</b> (es como apagarlo).</li>
+      </ul>
+
+      <svg class="mandos" viewBox="0 -96 640 456" role="img" aria-label="Dibujo de CHISPAS visto desde detrás, desde arriba y desde delante, con sus mandos y conectores">
+        <rect x="150" y="-58" width="340" height="56" rx="10" class="cara-f"/>
+        <circle cx="250" cy="-30" r="10" fill="#1d2129" stroke="#c0c6cf" stroke-width="3"/>
+        <circle cx="340" cy="-30" r="10" fill="#1d2129" stroke="#c0c6cf" stroke-width="3"/>
+        <path d="M250 -40 V-72M340 -40 V-72" class="lin"/>
+        <text x="250" y="-78" text-anchor="middle" class="etq">KEY OUT</text>
+        <text x="340" y="-78" text-anchor="middle" class="etq">DECOD</text>
+        <text x="372" y="-26" class="etq2">al transceptor</text>
+        <text x="560" y="-34" text-anchor="middle" class="etq2">Detrás</text>
+        <rect x="150" y="36" width="340" height="170" rx="14" class="caja-f"/>
+        <rect x="143" y="176" width="9" height="20" rx="3" fill="#1d2129" stroke="#c0c6cf" stroke-width="2"/>
+        <path d="M143 186 H110 V200 H20" class="lin"/>
+        <text x="20" y="192" class="etq">USB-C</text>
+        <text x="20" y="216" class="etq2">para cargar</text>
+        <rect x="196" y="66" width="118" height="70" rx="6" fill="#0b0d12" stroke="#1b1f29" stroke-width="2"/>
+        <path d="M206 82h70M206 96h90M206 110h56M206 124h80" stroke="#59b8ff" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+        <circle cx="172" cy="100" r="9" fill="#d93a2b" stroke="#2a2f20" stroke-width="2"/>
+        <circle cx="372" cy="100" r="27" fill="#1d2129" stroke="#0e1014" stroke-width="2"/>
+        <line x1="372" y1="100" x2="372" y2="80" stroke="#e9ecf2" stroke-width="3" stroke-linecap="round"/>
+        <g fill="#2a2f20">
+          <circle cx="428" cy="70" r="3"/><circle cx="442" cy="70" r="3"/><circle cx="456" cy="70" r="3"/><circle cx="470" cy="70" r="3"/>
+          <circle cx="428" cy="84" r="3"/><circle cx="442" cy="84" r="3"/><circle cx="456" cy="84" r="3"/><circle cx="470" cy="84" r="3"/>
+          <circle cx="428" cy="98" r="3"/><circle cx="442" cy="98" r="3"/><circle cx="456" cy="98" r="3"/><circle cx="470" cy="98" r="3"/>
+          <circle cx="428" cy="112" r="3"/><circle cx="442" cy="112" r="3"/><circle cx="456" cy="112" r="3"/><circle cx="470" cy="112" r="3"/>
+          <circle cx="428" cy="126" r="3"/><circle cx="442" cy="126" r="3"/><circle cx="456" cy="126" r="3"/><circle cx="470" cy="126" r="3"/>
+        </g>
+        <text x="320" y="186" text-anchor="middle" fill="#e6dfc4" style="font:700 22px 'Space Grotesk',sans-serif;letter-spacing:2px">CHISPAS</text>
+        <rect x="150" y="222" width="340" height="66" rx="10" class="cara-f"/>
+        <circle cx="218" cy="255" r="10" fill="#1d2129" stroke="#c0c6cf" stroke-width="3"/>
+        <circle cx="298" cy="255" r="10" fill="#1d2129" stroke="#c0c6cf" stroke-width="3"/>
+        <circle cx="390" cy="255" r="17" fill="#1d2129" stroke="#0e1014" stroke-width="2"/>
+        <line x1="390" y1="255" x2="390" y2="242" stroke="#e9ecf2" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M172 100 H110 V70 H20" class="lin"/>
+        <text x="20" y="62" class="etq">Botón PRG</text>
+        <text x="20" y="88" class="etq2">corto: atrás</text>
+        <text x="20" y="104" class="etq2">largo: dormir</text>
+        <path d="M255 136 V150 H110 V160 H20" class="lin"/>
+        <text x="20" y="152" class="etq">Pantalla</text>
+        <path d="M399 100 H500 V70 H620" class="lin"/>
+        <text x="620" y="62" text-anchor="end" class="etq">Mando</text>
+        <text x="620" y="88" text-anchor="end" class="etq2">girar: mover</text>
+        <text x="620" y="104" text-anchor="end" class="etq2">pulsar: elegir</text>
+        <path d="M478 126 H520 V160 H620" class="lin"/>
+        <text x="620" y="152" text-anchor="end" class="etq">Altavoz</text>
+        <path d="M218 265 V312" class="lin"/>
+        <text x="218" y="330" text-anchor="middle" class="etq">Palas</text>
+        <text x="218" y="346" text-anchor="middle" class="etq2">KEY IN</text>
+        <path d="M298 265 V312" class="lin"/>
+        <text x="298" y="330" text-anchor="middle" class="etq">Auriculares</text>
+        <text x="298" y="346" text-anchor="middle" class="etq2">SND OUT</text>
+        <path d="M390 272 V312" class="lin"/>
+        <text x="390" y="330" text-anchor="middle" class="etq">Volumen</text>
+        <text x="560" y="250" text-anchor="middle" class="etq2">Arriba</text>
+        <text x="560" y="266" text-anchor="middle" class="etq2">y delante</text>
+      </svg>
+      <p class="nota-dibujo">Dibujo orientativo: la caja aún está en diseño y la posición de cada cosa puede cambiar.</p>
+      <p>Al enchufar los <b>auriculares</b>, el altavoz se calla. El <b>volumen</b> se ajusta con su rueda.</p>
+
+      <h3>Encender, apagar y cargar</h3>
+      <ul>
+        <li><b>Encender:</b> pulsa <kbd>PRG</kbd> o el mando. CHISPAS se despierta en la pantalla de inicio.</li>
+        <li><b>Apagar:</b> mantén pulsado <kbd>PRG</kbd>. Avisa en pantalla y se duerme. Dormido gasta tan poco que
+          la batería dura semanas.</li>
+        <li><b>Se duerme solo</b> si pasa un rato sin que lo toques (30 minutos de serie; se cambia en
+          <a href="#conf">Configuración</a>). Mientras practicas o usas la radio no se duerme nunca.</li>
+        <li><b>Cargar:</b> con un cable USB-C y un cargador de móvil.</li>
+      </ul>
+
+      <h3>Lo que ves en pantalla</h3>
+      <p>La línea de arriba (la <b>cabecera</b>) siempre dice lo mismo: la <b>hora</b>, el <b>nombre de la
+        pantalla</b> en la que estás y la <b>batería</b>. Si CHISPAS está enchufado y sin batería, en lugar del
+        porcentaje pone <span class="mono">PWR</span>. Si la hora es la universal (UTC, la que usan los
+        radioaficionados), lleva una <span class="mono">Z</span> detrás: <span class="mono">12:05Z</span>.</p>
+      <p>Hay cuatro tipos de pantalla, y todas se manejan igual:</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/cw.png?__SELLO__" width="512" height="256" alt="Menú del entrenador CW con KOCH, ECHO y QSO SIM"><figcaption><b>Menú:</b> título resaltado y opciones entre <span class="mono">&lt; &gt;</span>. Gira hasta una y pulsa.</figcaption></figure>
+        <figure class="pantalla"><img src="img/koch.png?__SELLO__" width="512" height="256" alt="Lista de ajustes del Koch"><figcaption><b>Lista de ajustes:</b> nombre a la izquierda y valor a la derecha. Abajo, <span class="mono">iniciar</span> y <span class="mono">volver</span>.</figcaption></figure>
+        <figure class="pantalla"><img src="img/prop.png?__SELLO__" width="512" height="256" alt="Página de índices de propagación"><figcaption><b>Páginas de datos:</b> girar pasa de página; pulsar vuelve. Abajo, en qué página estás (<span class="mono">1/2</span>).</figcaption></figure>
+        <figure class="pantalla"><img src="img/tx_libre.png?__SELLO__" width="512" height="256" alt="Pantalla de TX libre"><figcaption><b>Práctica:</b> el pie lleva <span class="mono">menu</span>, que abre los ajustes sin salir de la práctica.</figcaption></figure>
+      </div>
+
+      <h4>Cambiar un valor</h4>
+      <p>En una lista de ajustes, gira hasta el ajuste y pulsa: el valor se pone <b>resaltado</b>. Gira para
+        cambiarlo y pulsa otra vez para dejarlo. Si giras deprisa, los números saltan de cinco en cinco.</p>
+
+      <h3>Las pantallas principales</h3>
+      <p>CHISPAS tiene ocho pantallas principales, en fila. En cada una, abajo, están <span class="mono">ant.</span>
+        (la anterior) y <span class="mono">sig.</span> (la siguiente): gira hasta una de ellas y pulsa. Desde cualquier
+        pantalla, <kbd>PRG</kbd> te devuelve al inicio.</p>
+      <ul class="ruta" aria-label="Orden de las pantallas">
+        <li>INICIO</li><li class="flecha">→</li><li>CW</li><li class="flecha">→</li><li>LORA</li><li class="flecha">→</li>
+        <li>TRX</li><li class="flecha">→</li><li>PROP</li><li class="flecha">→</li><li>POTA</li><li class="flecha">→</li>
+        <li>SOL</li><li class="flecha">→</li><li>CONF</li>
+      </ul>
+      <table class="tabla">
+        <tr><th>Pantalla</th><th>Para qué sirve</th></tr>
+        <tr><td>INICIO</td><td>Portada con el nombre y la versión.</td></tr>
+        <tr><td>CW</td><td>El entrenador: aprender a copiar (Koch), a repetir (Echo), manipular libre y simular un QSO.</td></tr>
+        <tr><td>LORA</td><td>Practicar con otro CHISPAS por radio.</td></tr>
+        <tr><td>TRX</td><td>Trabajar con tu transceptor.</td></tr>
+        <tr><td>PROP</td><td>Cómo están las bandas.</td></tr>
+        <tr><td>POTA</td><td>Quién está activando un parque y qué parques tienes cerca.</td></tr>
+        <tr><td>SOL</td><td>Salida y puesta del sol, línea gris y, si lo lleva sensor ambiental, sus datos.</td></tr>
+        <tr><td>CONF</td><td>Configuración y estado del aparato.</td></tr>
+      </table>
+
+      <h3>Lo primero: tu indicativo, tu locator y el WiFi</h3>
+      <p>Antes de nada, dile a CHISPAS quién eres y dónde estás. Ve a <b>CONF › CONFIG</b>:</p>
+      <ol>
+        <li><b>ID:</b> tu indicativo. De fábrica trae <span class="mono">EA4ILN</span>, el del autor de CHISPAS:
+          cámbialo por el tuyo, porque es el que sale en la portada, en las memorias y en lo que mandas por LoRa. Si
+          aún no tienes indicativo, pon tu nombre o lo que quieras.</li>
+        <li><b>LOCATOR:</b> el código de tu zona (por ejemplo <span class="mono">IN80dk</span>). Es como un código
+          postal de radioaficionado: busca en internet «locator» y tus coordenadas. Sirve para calcular la hora
+          del sol y la distancia a los parques. Si tu CHISPAS lleva GPS, lo pone solo.</li>
+        <li><b>WiFi:</b> elige <b>WEBCONF</b>. CHISPAS crea su propia red WiFi y te enseña su nombre
+          (<span class="mono">Chispas-</span> y cuatro letras o cifras) y la clave, <span class="mono">chispas73</span>.
+          Conéctate a ella con el móvil (o escanea el código QR que sale con <span class="mono">ver qr</span>); si no
+          se abre sola la página, entra en <span class="mono">192.168.4.1</span> con el navegador. Allí eliges tu red
+          WiFi y escribes su clave. En la misma página puedes poner el indicativo, el locator, la hora y las memorias
+          con el teclado del móvil, que es más cómodo.</li>
+      </ol>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/webconf.png?__SELLO__" width="512" height="256" alt="Pantalla de WEBCONF con red, clave y dirección web"><figcaption>WEBCONF: los datos para conectarte desde el móvil.</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 4. ENTRENADOR ============================== -->
+  <section class="seccion" id="entrenador">
+    <div class="cuerpo">
+      <h2><span class="num">04</span>Entrenador CW</h2>
+      <p class="entrada">La pantalla <b>CW</b> es el corazón de CHISPAS. Tiene cuatro modos: <b>KOCH</b> para
+        aprender a copiar, <b>ECHO</b> para aprender a responder, <b>TX LIBRE</b> (abajo, en el pie) para manipular a
+        tu aire y <b>QSO SIM</b> para hacer un QSO de práctica.</p>
+
+      <h3 id="koch">Koch: aprender a copiar</h3>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS con auriculares copia letras en una libreta y suda">
+          <path d="M38 66 C36 20 124 20 122 66" fill="none" stroke="#1b1f29" stroke-width="6"/>
+          <use href="#r-base"/><use href="#x-concentrado"/>
+          <rect x="31" y="54" width="13" height="24" rx="5" class="r-p"/>
+          <rect x="116" y="54" width="13" height="24" rx="5" class="r-p"/>
+          <path d="M131 36 q6 9 0 12 q-6 -3 0 -12Z" fill="#59b8ff" stroke="#1b1f29" stroke-width="1.5"/>
+          <g transform="rotate(-8 73 132)">
+            <rect x="55" y="116" width="36" height="32" rx="2" fill="#ffffff" stroke="#1b1f29" stroke-width="2"/>
+            <path d="M59 124h28M59 131h28M59 138h28" stroke="#c9ced8" stroke-width="1.2"/>
+            <text x="60" y="129" style="font:700 7px 'JetBrains Mono',monospace" fill="#1b1f29">KMKMM</text>
+            <text x="60" y="136" style="font:700 7px 'JetBrains Mono',monospace" fill="#1b1f29">MK?KM</text>
+          </g>
+          <path class="r-b1" d="M52 114 Q40 132 56 144"/><path class="r-b2" d="M52 114 Q40 132 56 144"/>
+          <circle cx="57" cy="144" r="6" class="r-m"/>
+          <path d="M93 131 L110 112" stroke="#ff8a3d" stroke-width="4" stroke-linecap="round"/>
+          <path d="M93 131 l-3 4" stroke="#1b1f29" stroke-width="2" stroke-linecap="round"/>
+          <path class="r-b1" d="M108 114 Q122 130 98 128"/><path class="r-b2" d="M108 114 Q122 130 98 128"/>
+          <circle cx="97" cy="128" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«¿Eso era una U… o una R? ¡Siguiente, siguiente!»</figcaption>
+      </figure>
+      <p>CHISPAS te manda grupos de letras al azar y tú los apuntas en un papel. Al acabar comparas lo que has
+        escrito con lo que sonaba y CHISPAS apunta tus aciertos. Así se hace:</p>
+      <ol>
+        <li>Entra en <b>CW › KOCH (RX)</b>. Verás la lista de ajustes (abajo te explicamos cada uno).</li>
+        <li>Elige <span class="mono">iniciar</span>. Empiezan a sonar los grupos. Copia lo que oigas; si no reconoces
+          una letra, pon un hueco y sigue: <b>no te pares</b>, que se te escapa la siguiente.</li>
+        <li>Puedes hacer <span class="mono">pausa</span> o <span class="mono">salir</span> cuando quieras.</li>
+        <li>Al acabar, CHISPAS te enseña los <b>grupos emitidos</b>. Compáralos con tu papel y elige cómo corregir:
+          <ul>
+            <li><b>x letra:</b> vas marcando, una a una, las letras que fallaste. Es más lento, pero CHISPAS aprende
+              qué letras te cuestan.</li>
+            <li><b>total:</b> solo dices cuántos fallos has tenido. Rápido.</li>
+            <li><b>rep.:</b> repite la misma tanda.</li>
+          </ul></li>
+        <li>Con <span class="mono">ok</span> se guarda el resultado de la lección en porcentaje.</li>
+      </ol>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/koch_practica.png?__SELLO__" width="512" height="256" alt="Práctica del Koch: grupo 4 de 10"><figcaption>Durante la práctica: el grupo que suena y cuántos llevas.</figcaption></figure>
+        <figure class="pantalla"><img src="img/koch_listado.png?__SELLO__" width="512" height="256" alt="Grupos emitidos al terminar"><figcaption>Al terminar: los grupos que sonaron, para corregir.</figcaption></figure>
+      </div>
+      <div class="caja truco"><p><span class="titulo-caja">¿Cuándo paso a la siguiente lección?</span> Cuando
+        aciertes un <b>90 %</b> o más. Entonces sube una <b>LECCION</b> y aparecerá una letra nueva. No tengas
+        prisa: diez minutos al día rinden más que una hora el domingo.</p></div>
+
+      <h4>Los ajustes del Koch</h4>
+      <table class="tabla">
+        <tr><th>Ajuste</th><th>Qué hace</th></tr>
+        <tr><td>WPM</td><td>Velocidad de cada letra. Recomendado: 20 o más desde el principio.</td></tr>
+        <tr><td>ESPACIADO</td><td>Silencio extra entre letras (el truco Farnsworth). 100 % es lo normal; 200 %, el doble de hueco. Bájalo según mejores.</td></tr>
+        <tr><td>LECCION</td><td>Cuántas letras conoces. La 1 tiene K y M; cada lección añade una, hasta 40.</td></tr>
+        <tr><td>CARACTERES</td><td>Letras por grupo (5 es lo habitual).</td></tr>
+        <tr><td>GRUPOS</td><td>Cuántos grupos dura la tanda.</td></tr>
+        <tr><td>TEXTO <span class="chip-beta">beta</span></td><td><b>GRUPOS</b> (letras al azar, lo de siempre), <b>INDICAT.</b> (indicativos inventados, cada uno suena dos veces, como en el aire) o <b>QSO POTA</b> (frases típicas de un QSO en un parque). Las dos últimas usan todo el alfabeto: para cuando ya lo conoces entero.</td></tr>
+        <tr><td>REFUERZO</td><td>Las letras que más fallas salen más a menudo: <b>NO</b>, <b>SUAVE</b> o <b>FUERTE</b>. Necesita que hayas corregido letra a letra alguna vez.</td></tr>
+        <tr><td>ESTADISTICAS</td><td>Tus <b>letras con más errores</b>, los totales y el resultado de cada lección. En la última página puedes borrarlas.</td></tr>
+      </table>
+
+      <h3 id="echo">Echo: oír y responder</h3>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS guiña un ojo mientras un loro en su hombro repite K K K">
+          <g class="r-bo"><rect x="104" y="20" width="54" height="24" rx="9"/><path d="M126 43 L128 54 L136 43"/></g>
+          <text x="131" y="36.5" class="r-bt">−·− !</text>
+          <use href="#r-base"/><use href="#x-guino"/>
+          <path d="M120 96 l-8 16 l10 -7 z" fill="#2f9e5b" stroke="#1b1f29" stroke-width="2" stroke-linejoin="round"/>
+          <ellipse cx="125" cy="86" rx="9" ry="13" fill="#3fbf6b" stroke="#1b1f29" stroke-width="2"/>
+          <ellipse cx="122" cy="88" rx="5" ry="8" fill="#2f9e5b"/>
+          <circle cx="127" cy="70" r="7.5" fill="#3fbf6b" stroke="#1b1f29" stroke-width="2"/>
+          <circle cx="129" cy="68.5" r="2.4" fill="#fff"/><circle cx="129.6" cy="68.5" r="1.2" fill="#1b1f29"/>
+          <path d="M133.5 70 l7 2.5 l-6 4 z" fill="#ff8a3d" stroke="#1b1f29" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M121 99 v3M127 99 v3" stroke="#ff8a3d" stroke-width="2.4" stroke-linecap="round"/>
+          <path class="r-b1" d="M52 114 Q40 126 44 140"/><path class="r-b2" d="M52 114 Q40 126 44 140"/>
+          <circle cx="45" cy="141" r="6" class="r-m"/>
+          <path class="r-b1" d="M106 118 Q118 130 110 142"/><path class="r-b2" d="M106 118 Q118 130 110 142"/>
+          <circle cx="110" cy="143" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Echo: oír y repetir. Mi loro ya va por la lección 12.»</figcaption>
+      </figure>
+      <p>Copiar en papel está bien, pero en un QSO de verdad tienes que <b>contestar</b>. En el Echo, CHISPAS te
+        manda de una a cinco letras y tú las <b>repites con las palas</b>. Si aciertas, «BIEN!» y otro reto. Si fallas,
+        te enseña lo que has mandado y te pide el mismo otra vez.</p>
+      <p>Entra en <b>CW › ECHO (TX)</b>. Tiene sus propios ajustes, parecidos a los del Koch: velocidad, espaciado,
+        lección, <b>LETRAS</b> (cuántas por reto), <b>VER LETRA</b> (si la letra sale en pantalla o solo suena: sin
+        verla es más difícil), <b>RETOS</b> (cuántos por tanda), refuerzo y estadísticas. Durante la práctica puedes
+        <span class="mono">repetir</span> el reto (no cuenta como fallo).</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/echo_practica.png?__SELLO__" width="512" height="256" alt="Práctica del Echo: reto 1 de 10, letra M"><figcaption>Echo: suena la M y es tu turno.</figcaption></figure>
+        <figure class="pantalla"><img src="img/echo.png?__SELLO__" width="512" height="256" alt="Ajustes del Echo"><figcaption>Parte de los ajustes del Echo.</figcaption></figure>
+      </div>
+
+      <h3 id="tx-libre">TX libre: manipular a tu aire</h3>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS manipula unas palas a toda velocidad">
+          <text x="128" y="34" class="r-t" style="font-size:11px">ti-ti-taa</text>
+          <use href="#r-base"/><use href="#x-concentrado"/>
+          <rect x="110" y="158" width="44" height="14" rx="3" fill="#2a303d" stroke="#1b1f29" stroke-width="2.5"/>
+          <rect x="122" y="138" width="7" height="22" rx="2" fill="#d9a441" stroke="#1b1f29" stroke-width="2"/>
+          <rect x="133" y="138" width="7" height="22" rx="2" fill="#d9a441" stroke="#1b1f29" stroke-width="2"/>
+          <path class="r-b1" d="M52 114 Q38 124 44 140"/><path class="r-b2" d="M52 114 Q38 124 44 140"/>
+          <circle cx="45" cy="141" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q126 114 126 132"/><path class="r-b2" d="M108 114 Q126 114 126 132"/>
+          <circle cx="126" cy="134" r="6" class="r-m"/>
+          <path d="M144 126 l7 -5M146 134 l8 0M144 142 l7 4" class="r-al"/>
+        </svg>
+        <figcaption>«Modo B, por supuesto. Soy un robot con clase.»</figcaption>
+      </figure>
+      <p>En <b>CW › tx libre</b> (en el centro del pie) conectas tus palas y manipulas lo que quieras. Oyes tu propio
+        tono y <b>CHISPAS escribe en pantalla lo que mandas</b>. Es el mejor espejo: si sale una letra que no
+        querías, o un <span class="mono">*</span> (algo que no es ninguna letra), sabes que algo has hecho mal.
+        <span class="mono">borrar</span> limpia la pantalla.</p>
+      <p>En <span class="mono">menu</span> están los ajustes:</p>
+      <ul>
+        <li><b>WPM:</b> la velocidad de tu keyer.</li>
+        <li><b>MODO A / B:</b> dos formas de comportarse cuando aprietas las dos palas a la vez. Es cuestión de
+          costumbre; si no sabes cuál usar, empieza por la A.</li>
+        <li><b>PALAS NORM / INV:</b> cambia qué pala hace puntos y cuál rayas. Útil para zurdos.</li>
+        <li><b>RITMO</b> <span class="chip-beta">beta</span>: tu profesor particular. Con palas, el keyer hace los
+          puntos y las rayas perfectos, así que lo único que depende de ti son los <b>silencios</b>. RITMO los mide y
+          te lo cuenta en tres páginas: <b>ESPACIOS</b> (si separas bien las letras y las palabras), <b>RESUMEN</b>
+          (letras mandadas, cuántas no se entendieron, titubeos y tu velocidad real) y <b>CONSEJO</b> («letras
+          juntas», «palabras largas», «buen ritmo»…).</li>
+      </ul>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/tx_libre_menu.png?__SELLO__" width="512" height="256" alt="Menú de TX libre"><figcaption>El menú de TX libre.</figcaption></figure>
+      </div>
+
+      <h3 id="qso-sim">QSO SIM: un QSO POTA de práctica <span class="chip-beta">beta</span></h3>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS con sombrero de explorador caza un 5NN con un cazamariposas">
+          <use href="#r-base"/><use href="#x-feliz"/>
+          <path d="M56 40 Q58 22 80 22 Q102 22 104 40 Z" fill="#b8a06a" stroke="#1b1f29" stroke-width="2.5" stroke-linejoin="round"/>
+          <ellipse cx="80" cy="40" rx="44" ry="6" fill="#b8a06a" stroke="#1b1f29" stroke-width="2.5"/>
+          <path d="M58 33 Q80 29 102 33" stroke="#ff8a3d" stroke-width="3" fill="none"/>
+          <line x1="125" y1="98" x2="139" y2="47" stroke="#8b6b3d" stroke-width="4" stroke-linecap="round"/>
+          <ellipse cx="140" cy="34" rx="16" ry="13" fill="rgba(255,255,255,0.85)" stroke="#1b1f29" stroke-width="2"/>
+          <path d="M129 25 L151 43M125 34 L155 34M132 45 L148 23" stroke="#1b1f29" stroke-width="0.8" opacity="0.35"/>
+          <text x="140" y="38" class="r-t" style="font-size:10px;fill:#d9601a">5NN</text>
+          <path class="r-b1" d="M52 114 Q40 124 42 138"/><path class="r-b2" d="M52 114 Q40 124 42 138"/>
+          <circle cx="42" cy="139" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q122 112 124 101"/><path class="r-b2" d="M108 114 Q122 112 124 101"/>
+          <circle cx="124" cy="99" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Hoy he cazado un 5NN precioso. Lo suelto, que es de la especie protegida.»</figcaption>
+      </figure>
+      <p>El simulador hace un QSO POTA completo contigo, como si estuvieras en la radio. Tú manipulas con las palas y
+        CHISPAS hace de corresponsal: escucha lo que mandas, lo entiende y te contesta. Entra en <b>CW › QSO SIM</b>.</p>
+      <p>Lo primero es elegir tu <b>ROL</b>:</p>
+
+      <h4>Rol CAZADOR: CHISPAS está en un parque y tú le llamas</h4>
+      <div class="dialogo">
+        <div class="el"><span class="quien">CHISPAS (activador)</span><span class="cw">CQ POTA DE ‹ACTIVADOR› ‹ACTIVADOR› K</span></div>
+        <div class="tu"><span class="quien">Tú</span><span class="cw">‹TU INDICATIVO›</span></div>
+        <div class="el"><span class="quien">CHISPAS</span><span class="cw">‹TU INDICATIVO› GM 5NN 5NN BK</span><br><span class="nota">Te da el informe (y buenos días, tardes o noches según la hora).</span></div>
+        <div class="tu"><span class="quien">Tú</span><span class="cw">BK TU 5NN 5NN 73 BK</span><br><span class="nota">Basta con que incluyas 5NN o 599.</span></div>
+        <div class="el"><span class="quien">CHISPAS</span><span class="cw">TU ‹PARQUE› 73 E E</span></div>
+        <div class="tu"><span class="quien">Tú</span><span class="cw">E E</span><br><span class="nota">Opcional: es el «hasta luego» del CW.</span></div>
+      </div>
+      <p>Igual que en la radio, a veces no te copia. Si no entiende tu indicativo, te devuelve lo que ha entendido
+        con una interrogación (<span class="mono">EA4?</span>) o te pide que repitas
+        (<span class="mono">AGN?</span>). Si olvidas el informe, te lo pide (<span class="mono">RST?</span>). Y si eres
+        tú el que no ha copiado, manda <span class="mono">AGN</span> o <span class="mono">?</span> y te lo repite.</p>
+
+      <h4>Rol ACTIVADOR: tú estás en el parque y CHISPAS te llama</h4>
+      <p>Ahora llamas tú: <span class="mono">CQ POTA DE ‹TU INDICATIVO› K</span>. Un cazador inventado te contesta, y
+        aquí CHISPAS se pone travieso, como los pile-ups de verdad:</p>
+      <ul>
+        <li>A veces solo te da <b>parte de su indicativo</b> (<span class="mono">9A4</span>). Pídele el resto con
+          <span class="mono">9A4?</span>.</li>
+        <li>Si tardas en contestarle, <b>vuelve a llamar</b>.</li>
+        <li>A veces <b>copia mal tu indicativo</b>. Mándaselo otra vez para que lo corrija.</li>
+      </ul>
+      <p>Tu informe tiene que llevar <b>su indicativo y 5NN</b>. Luego te despides (<span class="mono">TU 73</span>) y
+        él cierra con <span class="mono">E E</span>.</p>
+
+      <div class="caja"><p><span class="titulo-caja">Cuándo te toca a ti.</span> CHISPAS sabe que has acabado tu turno
+        cuando llevas unos <b>3 segundos sin manipular</b>. Lo que manipules mientras él está transmitiendo se
+        pierde, así que espera a que termine, como en la radio.</p></div>
+
+      <h4>Los ajustes del QSO SIM</h4>
+      <table class="tabla">
+        <tr><th>Ajuste</th><th>Qué hace</th></tr>
+        <tr><td>ROL</td><td>CAZADOR o ACTIVADOR.</td></tr>
+        <tr><td>WPM ACTIVADOR / CAZADOR</td><td>A qué velocidad te transmite CHISPAS.</td></tr>
+        <tr><td>ESPACIADO</td><td>Silencio extra entre sus letras.</td></tr>
+        <tr><td>WPM PALAS</td><td>La velocidad de tu keyer (la misma de TX libre).</td></tr>
+        <tr><td>VER TEXTO</td><td>Si lo que te manda sale escrito o solo suena (más difícil, más real).</td></tr>
+        <tr><td>QSB</td><td>La señal sube y baja, como cuando la propagación juega contigo.</td></tr>
+        <tr><td>RUIDO</td><td>Ruido de fondo de banda.</td></tr>
+        <tr><td>TORMENTA</td><td>Chasquidos de estática, como con una tormenta cerca.</td></tr>
+        <tr><td>QRM</td><td>Un pitido de otra estación cerca de la frecuencia, que va y viene.</td></tr>
+      </table>
+      <p>Las cuatro últimas van de <b>NO</b> a <b>SUAVE</b> o <b>FUERTE</b>. Al terminar, CHISPAS te dice con quién
+        has hecho el QSO, cuánto has tardado, cuántas veces habéis tenido que repetir y a qué velocidad real has
+        manipulado.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/qso_sim.png?__SELLO__" width="512" height="256" alt="Ajustes de las condiciones de banda del QSO SIM"><figcaption>Las condiciones de banda del simulador.</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 5. LORA ============================== -->
+  <section class="seccion" id="lora">
+    <div class="cuerpo">
+      <h2><span class="num">05</span>LoRa: practicar con un amigo</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS habla por un teléfono de lata cuya cuerda termina en ondas de radio">
+          <path d="M134 70 Q144 82 148 74" fill="none" stroke="#1b1f29" stroke-width="1.6"/>
+          <path d="M150 64 q6 8 0 16M155 58 q9 14 0 28" class="r-al"/>
+          <use href="#r-base"/><use href="#x-guino"/>
+          <rect x="121" y="56" width="13" height="18" rx="2" fill="#c0c6cf" stroke="#1b1f29" stroke-width="2"/>
+          <path d="M121 61h13M121 69h13" stroke="#8a93a6" stroke-width="1.2"/>
+          <path class="r-b1" d="M52 114 Q36 120 46 134"/><path class="r-b2" d="M52 114 Q36 120 46 134"/>
+          <circle cx="47" cy="135" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q134 104 130 80"/><path class="r-b2" d="M108 114 Q134 104 130 80"/>
+          <circle cx="130" cy="78" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«LoRa es como el teléfono de latas, pero sin cuerda. Y sin latas.»</figcaption>
+      </figure>
+      <p class="entrada">Dos CHISPAS pueden hablarse por radio, sin internet y sin licencia, con <b>LoRa</b>: una radio
+        de poco consumo en una banda de uso libre. Sirve para practicar con un compañero en casa, en el radioclub o en
+        el campo.</p>
+      <p>Las dos personas entran en la pantalla <b>LORA</b> y eligen el mismo modo. El alcance depende del terreno y
+        de lo que haya en medio.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/lora.png?__SELLO__" width="512" height="256" alt="Menú LoRa"><figcaption>El menú de LoRa.</figcaption></figure>
+      </div>
+
+      <h3>Práctica Duo</h3>
+      <p>Uno manda y el otro copia. Quien manda pulsa <span class="mono">enviar</span>: el grupo suena en los dos
+        CHISPAS, a la velocidad que haya elegido quien lo manda, y en el del compañero queda oculto hasta que pulse
+        <span class="mono">ver</span>, para comprobar si lo ha copiado bien. Arriba a la derecha sale la intensidad de
+        la señal recibida.</p>
+      <p>En <span class="mono">menu</span>: velocidad, espaciado, lección y <b>TEXTO</b> <span class="chip-beta">beta</span>
+        (grupos de letras, indicativos o frases de QSO, como en el Koch).</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/duo.png?__SELLO__" width="512" height="256" alt="Práctica Duo enviando un grupo"><figcaption>Práctica Duo: lo enviado (TX) y lo recibido (RX).</figcaption></figure>
+      </div>
+
+      <h3>QSO libre</h3>
+      <p>Una charla en CW de verdad, de CHISPAS a CHISPAS. Manipulas con tus palas y, cada vez que terminas una
+        palabra, sale hacia tu compañero, que la oye en su CHISPAS. Arriba ves lo que recibes y abajo lo que mandas.
+        Si tocas las palas mientras suena algo, lo cortas y puedes contestar enseguida (eso se llama
+        <i>break-in</i>).</p>
+      <p>En <span class="mono">menu</span>: velocidad y <b>VER LO RECIBIDO</b> (si lo dices que no, lo que llega solo
+        suena: a copiar de oído).</p>
+    </div>
+  </section>
+
+  <!-- ============================== 6. TRX ============================== -->
+  <section class="seccion" id="trx">
+    <div class="cuerpo">
+      <h2><span class="num">06</span>Con tu transceptor</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS, sorprendido, enchufa un cable que echa chispas">
+          <path d="M131 136 Q136 172 112 180 Q90 186 70 183" fill="none" stroke="#1b1f29" stroke-width="3.5" stroke-linecap="round"/>
+          <use href="#r-base"/><use href="#x-sorpresa"/>
+          <rect x="126" y="118" width="10" height="17" rx="2" fill="#c0c6cf" stroke="#1b1f29" stroke-width="2"/>
+          <rect x="129" y="106" width="4" height="13" fill="#e9ecf2" stroke="#1b1f29" stroke-width="1.6"/>
+          <path d="M131 99 v-6M124 102 l-5 -4M138 102 l5 -4M122 108 l-6 0M140 108 l6 0" class="r-al"/>
+          <path class="r-b1" d="M52 114 Q38 106 36 92"/><path class="r-b2" d="M52 114 Q38 106 36 92"/>
+          <circle cx="36" cy="89" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 116 Q124 130 129 138"/><path class="r-b2" d="M108 116 Q124 130 129 138"/>
+          <circle cx="131" cy="139" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Por eso me llamo CHISPAS.»</figcaption>
+      </figure>
+      <p class="entrada">Con dos cables de audio estéreo (mini-jack de 3,5 mm), CHISPAS se convierte en el ayudante de tu emisora: manipula por ti, guarda
+        mensajes, ajusta el acoplador y te escribe en pantalla el CW que recibes. Todo en la pantalla <b>TRX</b>.</p>
+
+      <h3>Conectarlo</h3>
+      <ul>
+        <li><b>KEY OUT</b> va a la entrada de manipulador de tu transceptor. Pon el transceptor en modo <b>llave
+          recta</b> (en inglés <i>straight key</i>): el keyer lo pone CHISPAS.</li>
+        <li><b>DECOD</b> va a la salida de auriculares o de altavoz externo del transceptor. Solo hace falta para
+          decodificar.</li>
+      </ul>
+      <div class="caja ojo"><p><span class="titulo-caja">Recuerda:</span> para emitir con tu transceptor necesitas
+        licencia de radioaficionado. Para todo lo demás de este manual, no.</p></div>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/trx.png?__SELLO__" width="512" height="256" alt="Menú del transceptor"><figcaption>El menú TRX: DECODIFICAR, OPERAR, QSO y, en el pie, memorias.</figcaption></figure>
+      </div>
+
+      <h3>Operar</h3>
+      <p>Manipulas con tus palas y CHISPAS manipula el transceptor. Arriba ves la velocidad, si oyes tu tono por
+        CHISPAS y la duración del <i>tune</i>. Abajo: <span class="mono">mem</span> (memorias),
+        <span class="mono">tune</span> y <span class="mono">menu</span>.</p>
+      <p>En <span class="mono">menu</span>: <b>WPM</b> (tu velocidad), <b>TONO LOCAL</b> (si quieres oír tu CW
+        también en CHISPAS mientras transmites), <b>TUNE</b> (cuántos segundos dura) y <b>SU</b>, el indicativo de
+        la estación con la que hablas, que usan las memorias.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/trx_operar.png?__SELLO__" width="512" height="256" alt="Pantalla OPERAR"><figcaption>OPERAR: tus ajustes arriba y el indicativo del corresponsal (SU).</figcaption></figure>
+      </div>
+
+      <h3>Memorias</h3>
+      <p>Seis mensajes guardados que se mandan con un clic: vienen preparados con una llamada (CQ), una respuesta, el
+        informe, <span class="mono">HW?</span>, <span class="mono">TNX 73</span> y <span class="mono">73 SK</span>.
+        Dentro llevan dos comodines: <span class="mono">{MI}</span>, que se cambia por tu indicativo, y
+        <span class="mono">{SU}</span>, por el de tu corresponsal. Si tu CHISPAS tiene sensor de ambiente,
+        <span class="mono">{WX}</span> se cambia por la temperatura (<span class="mono">WX 18C</span>).</p>
+      <p>Para mandar una, pulsa <span class="mono">mem</span> en OPERAR o en QSO, elige y pulsa. Si tocas las palas,
+        se corta. Para cambiarlas, entra en <b>TRX › memorias</b> y elige una: se abre el editor. Abajo hay una rueda
+        con letras, números, signos, espacio, los comodines, borrar y OK: gira hasta lo que quieras y pulsa. También
+        puedes escribirlas con las palas (más rápido) o desde el móvil con WEBCONF (más cómodo todavía).</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/trx_memorias.png?__SELLO__" width="512" height="256" alt="Lista de memorias"><figcaption>Las memorias, con sus comodines {MI} y {SU}.</figcaption></figure>
+      </div>
+
+      <h3>Tune</h3>
+      <p>Pulsando <span class="mono">tune</span>, CHISPAS emite una portadora continua durante unos segundos (de 1 a
+        10, a tu gusto) para que ajustes el acoplador de antena o la potencia. Si pulsas otra vez o tocas una pala,
+        se para.</p>
+
+      <h3 id="decodificar">Decodificar</h3>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS mira puntos y rayas con una lupa">
+          <use href="#r-base"/><use href="#x-concentrado"/>
+          <line x1="124" y1="110" x2="136" y2="96" stroke="#8b6b3d" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="144" cy="86" r="13" fill="rgba(89,184,255,0.22)" stroke="#1b1f29" stroke-width="3"/>
+          <rect x="135" y="84" width="11" height="4.5" rx="2" fill="#ff8a3d"/>
+          <circle cx="152" cy="86.2" r="2.4" fill="#ff8a3d"/>
+          <path class="r-b1" d="M52 114 Q40 108 56 98"/><path class="r-b2" d="M52 114 Q40 108 56 98"/>
+          <circle cx="58" cy="97" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q122 124 124 112"/><path class="r-b2" d="M108 114 Q122 124 124 112"/>
+          <circle cx="124" cy="111" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Elemental, querido corresponsal: eso era una K.»</figcaption>
+      </figure>
+      <p>Con <b>DECOD</b> conectado, CHISPAS escucha el audio del transceptor y <b>escribe en pantalla el CW que
+        recibe</b>. Se adapta solo a la velocidad del que transmite (de 5 a 50 palabras por minuto) y busca solo el
+        tono, aunque también puedes fijarlo en <span class="mono">menu</span>.</p>
+      <p>Arriba se ve la velocidad que ha medido, el tono (con una <span class="mono">A</span> si lo busca solo) y una
+        <b>barra de nivel</b>. Sube el volumen del transceptor hasta que la barra se mueva bien con la señal, sin
+        llegar a <span class="mono">SATURA</span>. Con solo ruido de banda, CHISPAS no se inventa letras.</p>
+      <div class="caja truco"><p><span class="titulo-caja">Lo que sí y lo que no.</span> Con señales limpias y firmes
+        copia muy bien, incluso a 20 palabras por minuto o más. Con mucho ruido, desvanecimientos fuertes o varias
+        estaciones a la vez, se equivoca: ahí tu oído sigue siendo mejor. Úsalo como ayuda, no como sustituto.</p></div>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/trx_decodificar.png?__SELLO__" width="512" height="256" alt="Pantalla de decodificar con la barra de nivel"><figcaption>DECODIFICAR: velocidad, tono y barra de nivel.</figcaption></figure>
+      </div>
+
+      <h3>QSO</h3>
+      <p>Junta las dos cosas: arriba, lo que <b>recibes</b> decodificado; abajo, lo que <b>mandas</b> con las palas.
+        Con memorias y tune a mano. CHISPAS no decodifica lo que mandas tú.</p>
+
+      <div class="caja ojo"><p><span class="titulo-caja">Seguridad.</span> Si por lo que sea la portadora se queda
+        puesta más de 10 segundos seguidos (fuera del tune), CHISPAS la corta y avisa. Ni tu transceptor ni tu
+        factura de la luz sufrirán.</p></div>
+    </div>
+  </section>
+
+  <!-- ============================== 7. PROP ============================== -->
+  <section class="seccion" id="prop">
+    <div class="cuerpo">
+      <h2><span class="num">07</span>Propagación</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS surfea sobre una ola">
+          <path d="M0 180 Q20 168 40 180 T80 180 T120 180 T160 180 L160 190 L0 190 Z" fill="#2f7fd6" stroke="#1b1f29" stroke-width="2"/>
+          <use href="#r-base"/><use href="#x-feliz"/>
+          <ellipse cx="80" cy="176" rx="44" ry="5.5" fill="#ff8a3d" stroke="#1b1f29" stroke-width="2.5" transform="rotate(-5 80 176)"/>
+          <path class="r-b1" d="M52 114 Q36 108 24 112"/><path class="r-b2" d="M52 114 Q36 108 24 112"/>
+          <circle cx="22" cy="112" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q124 106 138 100"/><path class="r-b2" d="M108 114 Q124 106 138 100"/>
+          <circle cx="140" cy="99" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«20 metros está abierta. ¡A surfear la ionosfera!»</figcaption>
+      </figure>
+      <p class="entrada">Las ondas de radio de onda corta llegan lejos porque rebotan en la ionosfera, una capa de la
+        atmósfera que depende del sol. Unos días las bandas están «abiertas» y otros, «cerradas». La pantalla
+        <b>PROP</b> te lo dice antes de encender la emisora.</p>
+      <p>Necesita WiFi: entra en PROP y pulsa <span class="mono">ACTUALIZAR</span>. Los datos vienen de hamqsl.com,
+        que los renueva cada hora. Luego, en <span class="mono">VER DATOS</span>, hay dos páginas:</p>
+      <ul>
+        <li><b>INDICES:</b> el flujo solar (<span class="mono">SFI</span>) y las manchas solares
+          (<span class="mono">SSN</span>): cuanto más altos, mejor para las bandas altas. Los índices
+          <span class="mono">A</span> y <span class="mono">K</span> miden lo revuelto que está el campo magnético de la
+          Tierra: cuanto más bajos, mejor. <span class="mono">XR</span> son los rayos X del sol.</li>
+        <li><b>BANDAS:</b> cómo están las bandas de día (<span class="mono">D</span>) y de noche
+          (<span class="mono">N</span>): <span class="mono">Good</span> (buena), <span class="mono">Fair</span>
+          (regular) o <span class="mono">Poor</span> (mala).</li>
+      </ul>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/prop.png?__SELLO__" width="512" height="256" alt="Índices de propagación"><figcaption>Página 1: índices.</figcaption></figure>
+        <figure class="pantalla"><img src="img/prop2.png?__SELLO__" width="512" height="256" alt="Condiciones por banda de día y de noche"><figcaption>Página 2: bandas de día y de noche.</figcaption></figure>
+      </div>
+      <div class="caja"><p><span class="titulo-caja">Mientras descarga.</span> Al actualizar, CHISPAS pone un aviso a
+        pantalla completa y durante unos segundos no responde al mando. Es normal: está bajando los datos. Luego apaga
+        el WiFi para ahorrar batería (se puede cambiar, ver <a href="#conf">WIFI DATOS</a>).</p></div>
+    </div>
+  </section>
+
+  <!-- ============================== 8. POTA ============================== -->
+  <section class="seccion" id="pota">
+    <div class="cuerpo">
+      <h2><span class="num">08</span>POTA: spots y parques</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS de excursión con mochila y bastón junto a un árbol">
+          <rect x="100" y="104" width="24" height="40" rx="6" fill="#6f7a45" stroke="#1b1f29" stroke-width="2.5"/>
+          <rect x="98" y="96" width="28" height="10" rx="5" fill="#b8a06a" stroke="#1b1f29" stroke-width="2.5"/>
+          <rect x="138" y="150" width="7" height="26" fill="#8b6b3d" stroke="#1b1f29" stroke-width="2"/>
+          <polygon points="126,156 157,156 141.5,120" fill="#3c8f5a" stroke="#1b1f29" stroke-width="2" stroke-linejoin="round"/>
+          <polygon points="129,138 154,138 141.5,104" fill="#3c8f5a" stroke="#1b1f29" stroke-width="2" stroke-linejoin="round"/>
+          <use href="#r-base"/><use href="#x-feliz"/>
+          <line x1="30" y1="96" x2="22" y2="178" stroke="#8b6b3d" stroke-width="4" stroke-linecap="round"/>
+          <path class="r-b1" d="M52 114 Q40 118 29 112"/><path class="r-b2" d="M52 114 Q40 118 29 112"/>
+          <circle cx="28" cy="111" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 116 Q116 130 112 142"/><path class="r-b2" d="M108 116 Q116 130 112 142"/>
+          <circle cx="112" cy="143" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«¿El parque más cercano? A 1,9 km. Voy andando, que me sobra batería.»</figcaption>
+      </figure>
+      <p class="entrada">Para cazadores y para activadores. La pantalla <b>POTA</b> tiene tres opciones.</p>
+
+      <h3>VER SPOTS</h3>
+      <p>Un <b>spot</b> es un aviso de que alguien está activando un parque ahora mismo. CHISPAS te enseña los de CW de
+        todo el mundo: indicativo del activador, frecuencia (en kHz) y referencia del parque. Abajo, la antigüedad de
+        la lista (<span class="mono">AHORA</span>, <span class="mono">12MIN</span>…). Pulsa
+        <span class="mono">ACTUALIZAR</span> para traer los últimos; necesita WiFi.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/pota.png?__SELLO__" width="512" height="256" alt="Lista de spots POTA"><figcaption>Spots: indicativo, frecuencia y parque.</figcaption></figure>
+      </div>
+
+      <h3>VER PARQUES</h3>
+      <p>Los <b>20 parques POTA más cercanos</b> a ti, con la distancia y la dirección en la que están
+        (<span class="mono">N</span>, <span class="mono">SO</span>…). Lo calcula desde tu posición del GPS o, si no
+        lo hay, desde tu locator. <b>Funciona sin conexión</b>, en mitad del monte: CHISPAS guarda la lista de
+        parques de España y la renueva sola una vez al mes, la primera vez que te conectas en POTA.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/parques.png?__SELLO__" width="512" height="256" alt="Parques cercanos con distancia y rumbo"><figcaption>Parques cercanos: referencia, distancia, dirección y nombre.</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 9. SOL ============================== -->
+  <section class="seccion" id="sol">
+    <div class="cuerpo">
+      <h2><span class="num">09</span>Sol, tiempo y GPS</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS con gafas de sol y un helado ante la puesta de sol">
+          <path d="M118 176 A 22 22 0 0 1 162 176 Z" fill="#ffb36b" stroke="#1b1f29" stroke-width="2"/>
+          <path d="M140 146 v-8M120 154 l-6 -5M160 154 l6 -5" class="r-al"/>
+          <line x1="0" y1="176" x2="160" y2="176" stroke="#1b1f29" stroke-width="2"/>
+          <use href="#r-base"/><use href="#x-gafas"/>
+          <polygon points="124,114 136,114 130,129" fill="#d9a441" stroke="#1b1f29" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="130" cy="109" r="7" fill="#ff9ec4" stroke="#1b1f29" stroke-width="2"/>
+          <path class="r-b1" d="M52 114 Q36 120 46 134"/><path class="r-b2" d="M52 114 Q36 120 46 134"/>
+          <circle cx="47" cy="135" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 116 Q122 132 128 130"/><path class="r-b2" d="M108 116 Q122 132 128 130"/>
+          <circle cx="130" cy="130" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«La línea gris: la hora mágica del DX. Y del helado.»</figcaption>
+      </figure>
+      <p class="entrada">La pantalla <b>SOL</b> calcula a qué hora sale y se pone el sol donde estás (con tu locator) y
+        cuándo es la <b>línea gris</b>.</p>
+      <div class="caja"><p><span class="titulo-caja">¿Qué es la línea gris?</span> Es la franja del amanecer y del
+        atardecer, cuando el sol está justo en el horizonte. Durante ese rato, las bandas bajas (80 y 40 metros) se
+        abren a distancias muy grandes. Los cazadores de DX (contactos lejanos) la esperan como agua de mayo.</p></div>
+      <p>Tiene varias páginas:</p>
+      <ul>
+        <li><b>HOY:</b> salida y puesta del sol y las dos líneas grises del día (<span class="mono">GRIS AM</span> y
+          <span class="mono">GRIS PM</span>).</li>
+        <li><b>AHORA:</b> a qué altura está el sol en este momento y si estás en línea gris.</li>
+        <li><b>MAÑANA:</b> lo mismo para mañana, para planear la salida.</li>
+        <li><b>AMBIENTE:</b> solo si tu CHISPAS lleva sensor (ver abajo).</li>
+      </ul>
+      <p>Necesita saber la hora. Si no la tiene, al pulsar <span class="mono">ACTUALIZAR</span> la pide por WiFi.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/sol.png?__SELLO__" width="512" height="256" alt="Salida y puesta del sol y líneas grises de hoy"><figcaption>Hoy: sol y línea gris.</figcaption></figure>
+      </div>
+
+      <h3 id="ambiente">Ambiente y aviso de tormenta (opcional)</h3>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS preocupado bajo un paraguas, con una nube y un rayo cerca">
+          <circle cx="24" cy="24" r="10" fill="#8a93a6" stroke="#1b1f29" stroke-width="2"/>
+          <circle cx="40" cy="17" r="12" fill="#8a93a6" stroke="#1b1f29" stroke-width="2"/>
+          <circle cx="54" cy="25" r="9" fill="#8a93a6" stroke="#1b1f29" stroke-width="2"/>
+          <rect x="22" y="22" width="34" height="12" fill="#8a93a6"/>
+          <path d="M14 34h46" stroke="#1b1f29" stroke-width="2"/>
+          <polygon points="38,36 31,50 37,50 32,63 46,45 40,45 44,36" fill="#ffd23d" stroke="#1b1f29" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M18 42 l-3 7M24 46 l-3 7M54 40 l-3 7" stroke="#59b8ff" stroke-width="2" stroke-linecap="round"/>
+          <use href="#r-base"/><use href="#x-preocupado"/>
+          <line x1="124" y1="40" x2="124" y2="106" stroke="#1b1f29" stroke-width="3"/>
+          <path d="M90 42 Q124 2 158 42 Q149.5 36 141 42 Q132.5 36 124 42 Q115.5 36 107 42 Q98.5 36 90 42 Z" class="r-a"/>
+          <path d="M36 74 q5 8 0 11 q-5 -3 0 -11Z" fill="#59b8ff" stroke="#1b1f29" stroke-width="1.5"/>
+          <path class="r-b1" d="M52 114 Q40 124 44 138"/><path class="r-b2" d="M52 114 Q40 124 44 138"/>
+          <circle cx="45" cy="139" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q120 116 124 108"/><path class="r-b2" d="M108 114 Q120 116 124 108"/>
+          <circle cx="124" cy="106" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«La presión cae en picado… ¿alguien ha visto dónde dejé la antena?»</figcaption>
+      </figure>
+      <p>Si tu CHISPAS lleva el <b>sensor de ambiente</b>, la página AMBIENTE de SOL muestra la temperatura, la
+        humedad, la presión y cómo ha cambiado la presión en las últimas tres horas.</p>
+      <p>Si la presión baja deprisa, suele venir mal tiempo. Entonces CHISPAS cambia el nombre de la pantalla en la
+        cabecera por <span class="mono">TORM!</span>. Muy útil en una activación en el monte: es hora de recoger la
+        antena.</p>
+      <ul>
+        <li>Para que la presión sea exacta, dile a qué altitud estás en <b>CONF › CONFIG › ALTITUD</b> (si lleva GPS,
+          lo hace solo).</li>
+        <li>La temperatura sale un poco alta: el propio aparato da algo de calor.</li>
+      </ul>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/ambiente.png?__SELLO__" width="512" height="256" alt="Página de ambiente con temperatura, humedad y presión"><figcaption>AMBIENTE: temperatura, humedad, presión y tendencia.</figcaption></figure>
+      </div>
+
+      <h3 id="gps">GPS (opcional)</h3>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS sujeta un mapa al revés con cara de duda">
+          <text x="132" y="44" style="font:700 26px 'Space Grotesk',sans-serif" fill="#ff8a3d">?</text>
+          <use href="#r-base"/><use href="#x-duda"/>
+          <rect x="50" y="108" width="60" height="38" rx="2" fill="#f3ead2" stroke="#1b1f29" stroke-width="2"/>
+          <path d="M70 108v38M90 108v38" stroke="#c9b98f" stroke-width="1.5"/>
+          <path d="M56 120 q8 -6 14 4 t16 0" fill="none" stroke="#3c8f5a" stroke-width="2"/>
+          <path d="M98 118 L102 132 L106 118 Z" fill="#d93a2b" stroke="#1b1f29" stroke-width="1.2"/>
+          <text x="102" y="141" transform="rotate(180 102 138)" style="font:700 9px 'Space Grotesk',sans-serif" fill="#1b1f29" text-anchor="middle">N</text>
+          <path class="r-b1" d="M52 112 Q40 120 50 127"/><path class="r-b2" d="M52 112 Q40 120 50 127"/>
+          <circle cx="51" cy="127" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 112 Q120 120 110 127"/><path class="r-b2" d="M108 112 Q120 120 110 127"/>
+          <circle cx="109" cy="127" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Con GPS sé dónde estoy.»</figcaption>
+      </figure>
+      <p>Si tu CHISPAS lleva <b>GPS</b>, te da tres cosas sin que hagas nada:</p>
+      <ul>
+        <li><b>La hora exacta</b>, sin WiFi.</li>
+        <li><b>Tu locator</b> allá donde vayas, para que SOL y los parques cercanos sean siempre de donde estás (en
+          <b>CONF › CONFIG › LOCATOR</b>, <span class="mono">AUTO (GPS)</span>).</li>
+        <li><b>La altitud</b>, para que la presión del sensor de ambiente salga bien.</li>
+      </ul>
+      <p>Para ahorrar batería, el GPS duerme casi siempre y se despierta un ratito cada diez minutos. Necesita ver el
+        cielo: dentro de casa, lejos de la ventana, puede no encontrar satélites. Su estado está en
+        <b>CONF › STATUS</b>, en la página GPS.</p>
+    </div>
+  </section>
+
+  <!-- ============================== 10. CONF ============================== -->
+  <section class="seccion" id="conf">
+    <div class="cuerpo">
+      <h2><span class="num">10</span>Configuración</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS con una llave inglesa y un engranaje flotando">
+          <circle cx="28" cy="40" r="11" fill="none" stroke="#9aa3b5" stroke-width="7" stroke-dasharray="4.3 3.3"/>
+          <circle cx="28" cy="40" r="8" fill="#9aa3b5" stroke="#1b1f29" stroke-width="1.5"/>
+          <circle cx="28" cy="40" r="3" fill="#0b0d12"/>
+          <use href="#r-base"/><use href="#x-guino"/>
+          <line x1="129" y1="86" x2="141" y2="64" stroke="#9aa3b5" stroke-width="6" stroke-linecap="round"/>
+          <path d="M136 56 a9 9 0 1 0 14 7 l-6 -1 l-2 -6 z" fill="#9aa3b5" stroke="#1b1f29" stroke-width="2" stroke-linejoin="round"/>
+          <path class="r-b1" d="M52 114 Q36 120 46 134"/><path class="r-b2" d="M52 114 Q36 120 46 134"/>
+          <circle cx="47" cy="135" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q126 108 128 90"/><path class="r-b2" d="M108 114 Q126 108 128 90"/>
+          <circle cx="128" cy="88" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Un par de ajustes y quedo a tu gusto. Sin tornillos.»</figcaption>
+      </figure>
+      <p class="entrada">La pantalla <b>CONF</b> tiene dos opciones: <b>CONFIG</b>, para ajustar el aparato, y
+        <b>STATUS</b>, para ver cómo está.</p>
+
+      <h3>CONFIG</h3>
+      <table class="tabla">
+        <tr><th>Ajuste</th><th>Qué hace</th></tr>
+        <tr><td>ID</td><td>Tu indicativo. Se usa en las memorias (<span class="mono">{MI}</span>), en lo que mandas por LoRa y en el QSO SIM, y sale en la portada. De fábrica trae <span class="mono">EA4ILN</span>: cámbialo por el tuyo.</td></tr>
+        <tr><td>LOCATOR</td><td>Tu zona. Con GPS, elige <span class="mono">AUTO (GPS)</span> o <span class="mono">MANUAL</span>.</td></tr>
+        <tr><td>ALTITUD</td><td>Pon a qué altura estás para que la presión del sensor de ambiente sea exacta.</td></tr>
+        <tr><td>HORA</td><td>Si la cabecera enseña la hora local o la universal (UTC).</td></tr>
+        <tr><td>RELOJ</td><td>De dónde saca la hora CHISPAS (GPS, internet o a mano) y, al pulsar, ponerla a mano.</td></tr>
+        <tr><td>TONO</td><td>El tono del pitido, en hercios. Al cambiarlo suena para que lo oigas.</td></tr>
+        <tr><td>ACELERACION</td><td>Cuánto saltan los números al girar deprisa (o que no salten).</td></tr>
+        <tr><td>SALVAPANTALLAS</td><td>Cuándo sale la cara de CHISPAS si no lo tocas (o nunca).</td></tr>
+        <tr><td>APAGADO</td><td>A los cuántos minutos se duerme solo (o nunca).</td></tr>
+        <tr><td>WIFI DATOS</td><td><b>MANUAL</b> (de serie): el WiFi solo se enciende cuando pulsas ACTUALIZAR en PROP, POTA o SOL, y se apaga al terminar. <b>AUTO</b>: se conecta al entrar en esas pantallas y refresca solo, pero gasta más batería.</td></tr>
+        <tr><td>WEBCONF</td><td>Abre la red WiFi de CHISPAS para configurarlo desde el móvil (ver <a href="#primeros-pasos">Primeros pasos</a>).</td></tr>
+        <tr><td>ACTUALIZAR FW</td><td>Busca una versión nueva (ver <a href="#actualizar">Actualizaciones</a>).</td></tr>
+        <tr><td>FABRICA</td><td>Lo borra <b>todo</b> y lo deja como nuevo. Pide que lo confirmes dos veces.</td></tr>
+      </table>
+      <div class="caja"><p><span class="titulo-caja">La hora.</span> CHISPAS se queda con la hora más fiable que
+        tenga: la del GPS, si lo lleva; si no, la de internet al conectarse al WiFi; y si no, la que pongas a mano.</p></div>
+
+      <h3>STATUS</h3>
+      <p>Varias páginas con el estado del aparato: tu estación (indicativo, locator, hora y versión), la batería, la
+        red WiFi guardada, el sensor y el GPS si los lleva. Gira para pasar página.</p>
+    </div>
+  </section>
+
+  <!-- ============================== 11. OTA ============================== -->
+  <section class="seccion" id="actualizar">
+    <div class="cuerpo">
+      <h2><span class="num">11</span>Actualizaciones</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS, emocionado, sujeta un regalo mientras baja una flecha">
+          <path d="M136 6 V36M126 26 L136 37 L146 26" class="r-al" stroke-width="4"/>
+          <use href="#r-base"/><use href="#x-sorpresa"/>
+          <ellipse cx="73" cy="104" rx="7" ry="5" fill="none" stroke="#59b8ff" stroke-width="3.5"/>
+          <ellipse cx="87" cy="104" rx="7" ry="5" fill="none" stroke="#59b8ff" stroke-width="3.5"/>
+          <rect x="58" y="116" width="44" height="32" rx="2" class="r-a"/>
+          <rect x="55" y="108" width="50" height="10" rx="2" class="r-a"/>
+          <rect x="76" y="108" width="8" height="40" fill="#59b8ff" stroke="#1b1f29" stroke-width="2"/>
+          <path class="r-b1" d="M52 114 Q42 126 56 132"/><path class="r-b2" d="M52 114 Q42 126 56 132"/>
+          <circle cx="57" cy="132" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q118 126 104 132"/><path class="r-b2" d="M108 114 Q118 126 104 132"/>
+          <circle cx="103" cy="132" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«¡Firmware nuevo! Es como un regalo, pero sin papel que tirar.»</figcaption>
+      </figure>
+      <p class="entrada">CHISPAS mejora con cada versión, y las nuevas se instalan sin herramientas ni cables raros.
+        Tus ajustes, estadísticas y memorias <b>se conservan</b>.</p>
+
+      <h3>Por WiFi, desde el propio CHISPAS</h3>
+      <ol>
+        <li>Ve a <b>CONF › CONFIG › ACTUALIZAR FW</b>.</li>
+        <li>CHISPAS se conecta y busca si hay una versión más nueva.</li>
+        <li>Si la hay, elige <span class="mono">instalar</span>. Tarda un par de minutos y se reinicia solo.</li>
+      </ol>
+      <p>Para no quedarse a medias, no instala si la batería está por debajo del 30 % (salvo que esté enchufado).
+        Además, cuando se conecta en PROP o POTA mira una vez al día si hay versión nueva y te avisa
+        (<span class="mono">FW NUEVO</span>).</p>
+
+      <h3>Por USB, desde la web</h3>
+      <p>En la <a href="./#instalar-seccion">web de CHISPAS</a> se instala desde el navegador (Chrome o Edge) con un
+        cable USB-C, sin instalar ningún programa. Es la forma de poner CHISPAS en una placa nueva.</p>
+
+      <div class="caja"><p><span class="titulo-caja">Estable o beta.</span> La versión <b>estable</b> está probada y
+        es la recomendada. La <b>beta</b> trae lo último, pero puede tener algún fallo. En la web eliges cuál
+        instalar.</p></div>
+    </div>
+  </section>
+
+  <!-- ============================== 12. CARA ============================== -->
+  <section class="seccion" id="cara">
+    <div class="cuerpo">
+      <h2><span class="num">12</span>La cara de CHISPAS y la batería</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS pone caras divertidas con las manos en alto">
+          <path d="M20 60 l4 -8 l4 8 l-4 8 z M140 40 l3 -6 l3 6 l-3 6 z M148 120 l3 -6 l3 6 l-3 6 z" fill="#ffb36b"/>
+          <use href="#r-base"/><use href="#x-travieso"/>
+          <path class="r-b1" d="M52 114 Q36 100 34 86"/><path class="r-b2" d="M52 114 Q36 100 34 86"/>
+          <circle cx="34" cy="83" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q124 100 126 86"/><path class="r-b2" d="M108 114 Q124 100 126 86"/>
+          <circle cx="126" cy="83" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«Si no me tocas, pongo caras. Es mi forma de decir "aquí sigo".»</figcaption>
+      </figure>
+      <p class="entrada">Si dejas CHISPAS un rato sin tocar en una pantalla de información, la pantalla se convierte
+        en una <b>cara</b> que mira, parpadea y hace gestos.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/cara.png?__SELLO__" width="512" height="256" alt="La cara de CHISPAS sonriendo"><figcaption>La cara de CHISPAS.</figcaption></figure>
+      </div>
+      <p>No es solo para decorar: los gestos cuentan cosas.</p>
+      <ul>
+        <li>Hace gestos de radioaficionado: saca una <b>antena</b>, se pone <b>auriculares</b>, dice
+          <span class="mono">CQ</span> o <span class="mono">73</span> en un bocadillo o <b>guiña los ojos en
+          Morse</b> (fíjate bien: a veces es una K o un 73).</li>
+        <li>Está más contento si acabas de hacer una buena lección de Koch o si la propagación es buena.</li>
+        <li>En la <b>línea gris</b> llama CQ más a menudo.</li>
+        <li>Pone cara de <b>cansado</b> con poca batería y de <b>preocupado</b>, con nube y rayo, si viene una
+          tormenta.</li>
+      </ul>
+      <p>Cualquier giro o pulsación la quita, sin hacer nada más: vuelves a la pantalla donde estabas. No sale mientras
+        practicas ni en la radio. Se configura en <b>CONF › CONFIG › SALVAPANTALLAS</b>.</p>
+
+      <h3>Cuidar la batería</h3>
+      <ul>
+        <li>Duérmelo con <kbd>PRG</kbd> mantenido cuando no lo uses. Si se te olvida, se duerme solo.</li>
+        <li>Deja <b>WIFI DATOS</b> en <span class="mono">MANUAL</span>: el WiFi es lo que más gasta.</li>
+        <li>El porcentaje de batería solo es fiable con el cable desenchufado: al cargar, indica un poco más.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================== 13. PROBLEMAS ============================== -->
+  <section class="seccion" id="problemas">
+    <div class="cuerpo">
+      <h2><span class="num">13</span>Si algo no va</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS dormido con gorro de dormir">
+          <use href="#r-base"/><use href="#x-cerrados"/>
+          <polygon points="50,42 110,42 132,18" fill="#59b8ff" stroke="#1b1f29" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M60 42 L118 30" stroke="#ffffff" stroke-width="3" opacity="0.6"/>
+          <circle cx="134" cy="17" r="6" fill="#ffffff" stroke="#1b1f29" stroke-width="2"/>
+          <text x="128" y="64" class="r-z">Z</text>
+          <text x="140" y="52" class="r-z" style="font-size:11px">z</text>
+          <text x="148" y="42" class="r-z" style="font-size:9px">z</text>
+          <path class="r-b1" d="M52 114 Q44 128 46 142"/><path class="r-b2" d="M52 114 Q44 128 46 142"/>
+          <circle cx="46" cy="143" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q116 128 114 142"/><path class="r-b2" d="M108 114 Q116 128 114 142"/>
+          <circle cx="114" cy="143" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«¿No responde? Igual está dormido. Como yo. Pulsa PRG.»</figcaption>
+      </figure>
+      <table class="tabla">
+        <tr><th>Lo que pasa</th><th>Qué hacer</th></tr>
+        <tr><td>La pantalla está negra</td><td>Está dormido: pulsa <kbd>PRG</kbd> o el mando. Si no despierta, cárgalo.</td></tr>
+        <tr><td>No oigo nada</td><td>Sube el volumen. Si tienes auriculares puestos, el altavoz se calla.</td></tr>
+        <tr><td>Las palas van al revés</td><td>CW › tx libre › menu › PALAS: <span class="mono">INV</span>.</td></tr>
+        <tr><td>Sale un <span class="mono">*</span> al manipular</td><td>Lo que has mandado no es ninguna letra. Prueba RITMO en TX libre para ver qué falla.</td></tr>
+        <tr><td>La emisora manda punto-raya sin parar</td><td>Está en modo iámbico: ponla en llave recta (<i>straight key</i>).</td></tr>
+        <tr><td>PROP o POTA dicen <span class="mono">ACTUALIZAR EN EL MENU</span></td><td>Con WIFI DATOS en MANUAL, los datos se piden a mano: pulsa ACTUALIZAR.</td></tr>
+        <tr><td>No se conecta al WiFi</td><td>Abre WEBCONF y vuelve a elegir tu red y su clave.</td></tr>
+        <tr><td>Se queda parado unos segundos</td><td>Si es al actualizar, es normal: está descargando.</td></tr>
+        <tr><td>El decodificador no saca nada</td><td>Comprueba el cable de DECOD y sube el volumen del transceptor hasta que la barra se mueva.</td></tr>
+        <tr><td>Sale <span class="mono">TORM!</span> en la cabecera</td><td>La presión baja deprisa. Si acabas de subir a un monte, puede ser por la altura: ajusta la ALTITUD.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================== 14. GLOSARIO ============================== -->
+  <section class="seccion" id="glosario">
+    <div class="cuerpo">
+      <h2><span class="num">14</span>Glosario</h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS lee un libro gordo con gafas de leer">
+          <use href="#r-base"/><use href="#x-normal"/>
+          <circle cx="66.5" cy="60.5" r="11" fill="none" stroke="#ff8a3d" stroke-width="2.5"/>
+          <circle cx="93.5" cy="60.5" r="11" fill="none" stroke="#ff8a3d" stroke-width="2.5"/>
+          <path d="M77.5 60 L82.5 60" stroke="#ff8a3d" stroke-width="2.5"/>
+          <polygon points="54,118 80,124 80,150 54,144" fill="#ffffff" stroke="#1b1f29" stroke-width="2" stroke-linejoin="round"/>
+          <polygon points="106,118 80,124 80,150 106,144" fill="#ffffff" stroke="#1b1f29" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M58 127l18 4M58 133l18 4M84 131l18 -4M84 137l18 -4" stroke="#9aa3b5" stroke-width="1.4"/>
+          <text x="67" y="141" style="font:700 6px 'JetBrains Mono',monospace" fill="#d9601a" transform="rotate(12 67 141)">QRZ?</text>
+          <path class="r-b1" d="M52 114 Q42 126 55 136"/><path class="r-b2" d="M52 114 Q42 126 55 136"/>
+          <circle cx="55" cy="136" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q118 126 105 136"/><path class="r-b2" d="M108 114 Q118 126 105 136"/>
+          <circle cx="105" cy="136" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«QRM, QSB, QRZ… las Q no muerden. Casi nunca.»</figcaption>
+      </figure>
+      <table class="tabla">
+        <tr><th>Término</th><th>Significado</th></tr>
+        <tr><td>5NN / 599</td><td>Informe de señal: «te recibo perfectamente». 5NN es 599 abreviado (la N es un 9 corto).</td></tr>
+        <tr><td>73</td><td>Saludos. Así se despide todo el mundo.</td></tr>
+        <tr><td>AGN</td><td>Otra vez, repite.</td></tr>
+        <tr><td>BK</td><td>Te paso el turno (<i>break</i>).</td></tr>
+        <tr><td>CQ</td><td>Llamada general: «¿hay alguien que quiera hablar?».</td></tr>
+        <tr><td>CW</td><td>Transmisión en código Morse.</td></tr>
+        <tr><td>DX</td><td>Contacto con una estación lejana.</td></tr>
+        <tr><td>E E</td><td>Dos puntos sueltos: un «hasta luego» informal al final de un QSO.</td></tr>
+        <tr><td>Farnsworth</td><td>Letras rápidas con más silencio entre ellas, para aprender.</td></tr>
+        <tr><td>Indicativo</td><td>El nombre oficial de cada radioaficionado (la «matrícula»).</td></tr>
+        <tr><td>Keyer</td><td>Circuito que convierte las pulsaciones de las palas en puntos y rayas perfectos.</td></tr>
+        <tr><td>Koch</td><td>Método para aprender Morse de oído, a velocidad real y letra a letra.</td></tr>
+        <tr><td>Línea gris</td><td>Franja del amanecer y del atardecer, buena para el DX en bandas bajas.</td></tr>
+        <tr><td>Locator</td><td>Código que indica tu zona (por ejemplo <span class="mono">IN80dk</span>).</td></tr>
+        <tr><td>LoRa</td><td>Radio digital de bajo consumo que usa CHISPAS para hablar con otro CHISPAS.</td></tr>
+        <tr><td>Palas</td><td>Manipulador con dos palancas: una hace puntos y otra rayas.</td></tr>
+        <tr><td>POTA</td><td><i>Parks on the Air</i>: emitir desde parques naturales (activador) o contactar con ellos (cazador).</td></tr>
+        <tr><td>QRM</td><td>Interferencia de otras estaciones.</td></tr>
+        <tr><td>QRZ?</td><td>¿Quién me llama?</td></tr>
+        <tr><td>QSB</td><td>La señal sube y baja (desvanecimiento).</td></tr>
+        <tr><td>QSO</td><td>Un contacto, una conversación por radio.</td></tr>
+        <tr><td>RST</td><td>Informe de señal: legibilidad, fuerza y tono.</td></tr>
+        <tr><td>SK</td><td>Fin del contacto.</td></tr>
+        <tr><td>Spot</td><td>Aviso de que una estación está transmitiendo, con su frecuencia.</td></tr>
+        <tr><td>TU</td><td>Gracias (<i>thank you</i>).</td></tr>
+        <tr><td>WPM</td><td>Palabras por minuto: la velocidad del CW.</td></tr>
+      </table>
+    </div>
+
+    <div class="cierre">
+      <svg class="robot-fin" viewBox="0 0 160 190" role="img" aria-label="CHISPAS se despide con un 73">
+        <g class="r-bo"><rect x="2" y="0" width="44" height="24" rx="9"/><path d="M32 23 L44 33 L40 23"/></g>
+        <text x="24" y="16.5" class="r-bt">73!</text>
+        <use href="#r-base"/><use href="#x-feliz"/>
+        <path class="r-b1" d="M52 114 Q38 126 40 142"/><path class="r-b2" d="M52 114 Q38 126 40 142"/>
+        <circle cx="40" cy="143" r="6" class="r-m"/>
+        <path class="r-b1" d="M108 114 Q124 104 128 82"/><path class="r-b2" d="M108 114 Q124 104 128 82"/>
+        <circle cx="128" cy="79" r="6" class="r-m"/>
+        <path d="M138 70 q7 8 2 18M145 63 q11 13 3 28" class="r-al"/>
+      </svg>
+      <p>Y hasta aquí el manual. Ahora, a practicar: diez minutos al día y en unos meses estarás en el aire.<br>
+        <b>73 y buenos QSO.</b></p>
+      <p class="solo-web"><a href="./">← Volver a la página principal</a> ·
+        <a href="docs/manual_chispas.pdf" download>Descargar en PDF</a></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>Software libre GPL-3.0-or-later · documentación CC BY-NC-SA 4.0.</span>
+    <span><a href="./">Inicio</a> · <a href="funciones.html">Funciones</a> ·
+      <a href="https://github.com/ea4iln-debug/CHISPAS-EA4ILN">GitHub</a> · 73 de EA4ILN</span>
+  </div>
+</footer>
+<script>
+  // Menu del movil: se cierra al elegir una opcion o al tocar fuera
+  for (const menu of document.querySelectorAll(".menu")) {
+    menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => (menu.open = false)));
+    document.addEventListener("click", (e) => { if (!menu.contains(e.target)) menu.open = false; });
+  }
+</script>
+</body>
+</html>

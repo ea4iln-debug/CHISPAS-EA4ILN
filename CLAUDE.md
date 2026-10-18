@@ -32,6 +32,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   `web/index.html`, **rehacerlo con cada beta**. Portada de presentación (16 oct): qué hace, Constrúyelo (caja en 3D,
   concepto) e Instálalo; `web/funciones.html` explica cada función. En la web, **CHISPAS en mayúsculas y en masculino**. **Página de hardware** (`web/hardware.html`, 16 oct): fases, piezas,
   pines y PCB (sin Gerber hasta probarla); imágenes de la PCB con `hardware/herramientas/imagenes_web.sh` (rehacerlas si cambia).
+  **Manual de usuario** (18 oct): `web/manual.html` y `docs/manual_chispas.pdf` (**regenerar el PDF si cambia**;
+  cómo, en NOTAS); mascota: el robot CHISPAS; la entrada de audio se llama DECOD.
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `m<texto>` simula las palas, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (18 oct 2026)

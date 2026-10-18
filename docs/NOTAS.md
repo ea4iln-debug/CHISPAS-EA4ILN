@@ -152,6 +152,21 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `placa_perforada.jpg` (foto del usuario, reducida a 1020 px); la Action se
   lanza también al cambiar `docs/*.pdf` o `docs/img/`. En el móvil las tablas pasan a fichas apiladas. Probada en
   local con Chrome sin interfaz (1280 y 500 px; Chrome no baja de ~500 px de ventana).
+  **Manual de usuario (18 oct 2026, petición del usuario):** `web/manual.html` (CC-BY-NC-SA-4.0) y el mismo en PDF,
+  `docs/manual_chispas.pdf` (A4, ~32 páginas; lo copia `preparar.py` a `docs/` de la web). Para quien nunca ha
+  usado un CHISPAS: introducción al CW, qué es, primeros pasos (dibujo de mandos y conectores: KEY OUT y DECOD
+  detrás, USB-C a la izquierda), cada función, problemas y glosario; sin datos técnicos ni personales (capturas
+  sin indicativo ni locator propios; ejemplos con huecos ‹TU INDICATIVO›). La mascota es **CHISPAS** (robot en SVG
+  con la cara del salvapantallas, 22 poses con humor en el margen; piezas comunes en `<defs>`: `#r-base` y caras
+  `#x-*`). Decisiones del usuario: el robot se llama CHISPAS (no "Chispín"), en masculino; la entrada de audio se
+  llama **DECOD** (no SND IN); indicativo de fábrica **EA4ILN** (se deja; el manual avisa de cambiarlo); PDF con
+  fondo **blanco** (se probó crema: con fondo en `html` los márgenes salían blancos; con `@page { background }`
+  cubría la hoja, pero el usuario prefirió blanco). Enlazado desde la barra y la portada de `index.html`, y desde
+  la barra de funciones y hardware; hardware tiene ahora "Inicio" en la barra y "Volver a la página principal" al
+  final, como el manual. **Si cambia el manual, regenerar el PDF** (las imágenes salen de `docs/img/`, así que se
+  imprime desde una copia con `img/`):
+  `chrome --headless --no-pdf-header-footer --virtual-time-budget=15000 --print-to-pdf=<ruta absoluta> file:///<copia>/manual.html`
+  (la ruta del PDF, absoluta: con relativa falla). Sin poppler no se puede leer el PDF con Read.
   **Portada nueva y página de funciones (16 oct 2026, petición del usuario):** `index.html` deja de ser solo de
   instalación. Portada "CHISPAS, tu compañero para CW y POTA" con la OLED en carrusel (marco en verde oliva),
   etiqueta amarilla "En desarrollo temprano" y tres botones (Qué hace CHISPAS, Constrúyelo, Instálalo). Orden:
