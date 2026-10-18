@@ -70,7 +70,7 @@ GitHub.
 | **QSO libre por LoRa** | QSO con las palas entre dos Chispas: cada palabra se envía al terminarla y lo recibido suena cuando dejas de manipular (si manipulas mientras suena, se corta). | ✅ |
 | **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`, `{WX}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez. | ✅ |
 | **Propagación** | Índices solares y condiciones por banda de [hamqsl.com](https://www.hamqsl.com/). | ✅ |
-| **Spots POTA** | Activaciones en CW publicadas en [pota.app](https://pota.app/). **Autospot** (beta): desde los parques cercanos, publicas tu propio spot (parque, indicativo, banda, frecuencia, QRP/QRT o un comentario propio) y CHISPAS te avisa a los 25 min para renovarlo. | ✅ |
+| **Spots POTA** | Activaciones en CW publicadas en [pota.app](https://pota.app/). **Autospot** (beta): desde los parques cercanos, publicas tu propio spot (parque, indicativo, banda, frecuencia, QRP/QRT o un comentario propio) y CHISPAS te avisa a los 25 min para renovarlo. La **activación en curso** (duración, spots, botón de QRT) no se olvida aunque apagues. | ✅ |
 | **Sol y línea gris** | Salida y puesta del sol y ventanas de línea gris de hoy y de mañana, y altura actual del sol, para el locator de la estación. Funciona sin conexión. | ✅ |
 | **Sensor ambiental (BME280)** | Temperatura, humedad y presión; tendencia de la presión en 3 h con **aviso de tormenta**; altitud barométrica calibrable (útil en SOTA); la temperatura en las memorias con `{WX}`. Opcional: sin sensor, Chispas funciona igual. | ✅ |
 | **Configuración en el aparato** | Indicativo, locator, altitud, aceleración del encoder, apagado automático, tono y reset de fábrica, con el encoder. Página STATUS con estación, sistema, WiFi, memoria, arranque y sensor. | ✅ |
@@ -304,7 +304,8 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | <img src="docs/img/prop_menu.png" width="256" alt="Menú de propagación"><br>Propagación: menú | <img src="docs/img/prop.png" width="256" alt="Índices"><br>Índices | <img src="docs/img/prop2.png" width="256" alt="Condiciones por banda"><br>Condiciones por banda |
 | <img src="docs/img/pota_menu.png" width="256" alt="Menú POTA"><br>POTA: menú | <img src="docs/img/pota.png" width="256" alt="Spots POTA"><br>Spots POTA | <img src="docs/img/sol_menu.png" width="256" alt="Menú del sol"><br>Sol: menú |
 | <img src="docs/img/sol.png" width="256" alt="Sol hoy"><br>Sol: hoy | <img src="docs/img/sol_ahora.png" width="256" alt="Sol ahora"><br>Sol: ahora | <img src="docs/img/sol_manana.png" width="256" alt="Sol mañana"><br>Sol: mañana |
-| <img src="docs/img/ambiente.png" width="256" alt="Ambiente: temperatura, humedad, presión, tendencia y altitud"><br>Ambiente (BME280) | <img src="docs/img/parques.png" width="256" alt="Parques POTA cercanos"><br>POTA: parques cercanos | |
+| <img src="docs/img/ambiente.png" width="256" alt="Ambiente: temperatura, humedad, presión, tendencia y altitud"><br>Ambiente (BME280) | <img src="docs/img/parques.png" width="256" alt="Parques POTA cercanos"><br>POTA: parques cercanos | <img src="docs/img/parques_menu.png" width="256" alt="Parque marcado: spot o volver"><br>POTA: spot desde un parque |
+| <img src="docs/img/spot_ficha.png" width="256" alt="Ficha del autospot"><br>Autospot: ficha | <img src="docs/img/spot_activacion.png" width="256" alt="Activación en curso"><br>Autospot: activación en curso | <img src="docs/img/inicio_activando.png" width="256" alt="Inicio con la activación en curso"><br>Inicio: activando |
 
 ### Configuración
 

@@ -503,9 +503,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   nombre debajo; pie `1/10 IM68mu  >volver` (o `GPS`). Durante la descarga, `DESCARGANDO PARQUES` y la cuenta.
   Probado: descarga en 8–17 s con WiFi de casa, 2497 parques; 20 cercanos desde el locator IM68mu (el más cercano
   a 4,5 km); ACTUALIZAR sigue bajando spots. Búsqueda desde un fijo del GPS **probada por el usuario en la calle** (15 oct 2026).
-- **AUTOSPOT POTA** (18 oct 2026, sin versión nueva; `src/parts/autospot.inc`; **probado en la placa 1 con un spot
-  real**). Publicar el spot propio desde CHISPAS. **Acceso:** en VER PARQUES girar marca un parque (su primera línea
-  en vídeo inverso; antes, girar pasaba página) y pulsar abre la ficha; el pie es `1/20 GPS  >spot`. **Ficha**
+- **AUTOSPOT POTA** (18 oct 2026, **v1.32b**; `src/parts/autospot.inc`; **probado en la placa 1 con spots
+  reales**). Publicar el spot propio desde CHISPAS. **Acceso:** en VER PARQUES girar marca un parque (su primera línea
+  en vídeo inverso; antes, girar pasaba página) y pulsar abre en el pie `spot` / `volver` (`menuParques`; atrás lo
+  cierra; pedido por el usuario para poder salir con el encoder); `spot` abre la ficha. Pie de la lista:
+  `1/20 GPS  >menu`. **Ficha**
   (lista): PARQUE (gira entre los 20 cercanos), ID (el de la estación; pulsar abre el editor de las memorias, destino
   `EDITOR_SPOT` = -4, hasta 12 caracteres con `/`, para `/P` o el de un radioclub; solo en RAM), BANDA (160 a 6 m;
   al cambiarla pone una frecuencia CW habitual), FREC KHZ (de 1 en 1 dentro de la banda, con aceleración),
@@ -523,12 +525,28 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   autospot (docs.pota.app, Rules). **Aviso para renovar:** el spot caduca ~30 min después del último; a los 25 min
   de uno bueno sin QRT, un pitido (el de prueba del tono, nunca por KEY; no si el motor CW emite) y el aviso
   `RENOVAR EL SPOT?` encima de cualquier pantalla (no en CW ni LoRa, ni editando, ni con el portal, la OTA o una
-  descarga: espera). `spot` lleva a la ficha con el foco en `enviar` (desde TRX sale antes a su menú, KEY
-  deshabilitada); `ahora no` o atrás: no vuelve a avisar hasta el siguiente spot. **Probado** (placa 1, órdenes
+  descarga: espera). `spot` lleva a la ficha con el foco en `spot` (desde TRX sale antes a su menú, KEY
+  deshabilitada); `ahora no` o atrás: no vuelve a avisar hasta el siguiente spot.
+  **Activación en curso** (v1.32b, pedida por el usuario para poder mandar el QRT si la abandona): el primer spot
+  bueno sin QRT la abre; se guarda en NVS (`act`, `actpq`, `actid`, `actini` y `actult` en epoch UTC, `actn`), así
+  que sobrevive a dormir y apagar (sin hora, los tiempos van por `millis()` de ese arranque). Mientras dura: el menú
+  de POTA pone el parque (`< ES-1078 >`) en lugar de VER PARQUES y abre su ficha; Inicio dice `ACTIVANDO ES-1078`
+  en lugar de indicativo y versión; la ficha tiene una línea de estado en negativo (`ES-1078 0:42 ULT 12M`:
+  parque, duración y minutos desde el último spot, redibujada cada minuto), 3 filas (`dibujarListaOpciones` admite
+  ahora `filas` e `y0`) con BANDA, FREC KHZ, COMENTARIO, TEXTO, SPOTS, INICIO (UTC), ID y CERRAR (`SIN QRT`, pulsar
+  dos veces) y el pie `spot  qrt  volver`. `qrt` manda el spot con comentario QRT (sin tocar COMENTARIO) y la
+  cierra; un spot con COMENTARIO QRT también. El aviso de los 25 min va por el último spot de la activación (tras
+  reiniciar, si ya pasaron, sale una vez). Atrás o `volver` desde la ficha de la activación: al menú. **Probado** (placa 1, órdenes
   serie): parques marcados, ficha, frecuencia a 14062, ID `EA4ILN/P` con el editor, envío con WiFi MANUAL (conecta,
   HTTP 200, apaga): el spot salió en `api.pota.app/spot/activator` con todos los campos y `source CHISPAS`; luego
   QRT (HTTP 200): la API lo sigue listando con el comentario QRT y `expire` ~30 min, pero **la web oculta la
-  activación en unos minutos** (comprobado por el usuario). **Sin probar:** el aviso de los 25 min, el caso sin conexión y la ficha con el encoder de
+  activación en unos minutos** (comprobado por el usuario). Activación en curso (v1.32b, placa 1, 18 oct 2026):
+  menú spot/volver de los parques; primer intento `SIN CONEXION WIFI` (no conectó en 15 s; la ficha se quedó, bien);
+  reintento: spot EA4ILN en ES-1078 (HTTP 200), activación abierta, menú, Inicio y ficha correctos; **reinicio**:
+  `[SPOT] ACTIVACION EN CURSO: EA4ILN ES-1078, 1 SPOTS` e Inicio con ACTIVANDO; `qrt`: HTTP 200 con `QRT`,
+  activación cerrada, menú otra vez con VER PARQUES. **Sin probar:** el aviso de los 25 min (el usuario lo probará
+  en una activación real) y CERRAR sin QRT. Capturas para el manual y el README con los datos reales (EA4ILN y
+  parques de Badajoz: decisión del usuario, a diferencia de las de antes, desde IN80dk). **Sin probar:** el aviso de los 25 min, el caso sin conexión y la ficha con el encoder de
   verdad. RAM 17,3 %, flash 39,5 %.
   **Sin probar:** el refresco a los 30 días y la descarga fallida. Flash +49 KB (38,5 %), RAM +0,7 KB.
   **Reset de fábrica** (14 oct 2026, después de la v1.08b): `resetFabrica()` monta LittleFS y borra también

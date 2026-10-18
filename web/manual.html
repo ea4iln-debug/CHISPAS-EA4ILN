@@ -350,7 +350,7 @@
       <a class="boton solo-web" href="docs/manual_chispas.pdf" download>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
         Descargar en PDF</a>
-      <p class="version">Para la versión 1.31b (beta) · octubre de 2026</p>
+      <p class="version">Para la versión 1.32b (beta) · octubre de 2026</p>
     </div>
     <figure class="portada-dibujo" style="margin:0">
       <img class="foto" src="img/chispas_campo.jpg?__SELLO__" width="1077" height="992" alt="Concepto de CHISPAS en una caja verde oliva, sobre una roca en el campo, junto a unas palas y una libreta">
@@ -378,7 +378,7 @@
       <li><a href="#lora">LoRa: practicar con un amigo</a></li>
       <li><a href="#trx">Con tu transceptor</a></li>
       <li><a href="#prop">Propagación</a></li>
-      <li><a href="#pota">POTA: spots y parques</a></li>
+      <li><a href="#pota">POTA: spots, parques y autospot</a></li>
       <li><a href="#sol">Sol, tiempo y GPS</a></li>
       <li><a href="#conf">Configuración</a></li>
       <li><a href="#actualizar">Actualizaciones</a></li>
@@ -535,7 +535,7 @@
       </table>
 
       <div class="caja ojo"><p><span class="titulo-caja">Lo marcado como <span class="chip-beta">beta</span></span> está
-        en la versión de pruebas (1.31b), todavía no en la versión estable. Puedes elegir cuál instalar (ver
+        en la versión de pruebas (1.32b), todavía no en la versión estable. Puedes elegir cuál instalar (ver
         <a href="#actualizar">Actualizaciones</a>).</p></div>
     </div>
   </section>
@@ -1101,7 +1101,7 @@
   <!-- ============================== 8. POTA ============================== -->
   <section class="seccion" id="pota">
     <div class="cuerpo">
-      <h2><span class="num">08</span>POTA: spots y parques</h2>
+      <h2><span class="num">08</span>POTA: spots, parques y autospot</h2>
       <figure class="robot">
         <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS de excursión con mochila y bastón junto a un árbol">
           <rect x="100" y="104" width="24" height="40" rx="6" fill="#6f7a45" stroke="#1b1f29" stroke-width="2.5"/>
@@ -1134,9 +1134,62 @@
         (<span class="mono">N</span>, <span class="mono">SO</span>…). Lo calcula desde tu posición del GPS o, si no
         lo hay, desde tu locator. <b>Funciona sin conexión</b>, en mitad del monte: CHISPAS guarda la lista de
         parques de España y la renueva sola una vez al mes, la primera vez que te conectas en POTA.</p>
+      <p>Gira para marcar un parque (sale resaltado). Al pulsar, abajo aparecen dos opciones:
+        <span class="mono">spot</span>, para anunciar tu activación en ese parque (lo explicamos justo debajo), y
+        <span class="mono">volver</span>, para regresar al menú.</p>
       <div class="galeria">
         <figure class="pantalla"><img src="img/parques.png?__SELLO__" width="512" height="256" alt="Parques cercanos con distancia y rumbo"><figcaption>Parques cercanos: referencia, distancia, dirección y nombre.</figcaption></figure>
+        <figure class="pantalla"><img src="img/parques_menu.png?__SELLO__" width="512" height="256" alt="Parque marcado con las opciones spot y volver"><figcaption>Pulsando sobre un parque: spot o volver.</figcaption></figure>
       </div>
+
+      <h3 id="autospot">AUTOSPOT: anuncia tu activación <span class="chip-beta">beta</span></h3>
+      <p>Si vas a activar un parque, CHISPAS puede publicar tu propio spot en la web de POTA para que los cazadores
+        te encuentren. Elige el parque en <span class="mono">VER PARQUES</span>, pulsa y elige
+        <span class="mono">spot</span>. Se abre una ficha con lo que se va a publicar:</p>
+      <table class="tabla">
+        <tr><th>Opción</th><th>Qué es</th></tr>
+        <tr><td>PARQUE</td><td>El parque que marcaste. Puedes cambiarlo por otro de los cercanos.</td></tr>
+        <tr><td>ID</td><td>Tu indicativo. Pulsa para cambiarlo: por ejemplo, para añadir <span class="mono">/P</span> o para poner el de tu radioclub.</td></tr>
+        <tr><td>BANDA</td><td>De 160 a 6 metros. Al cambiarla, CHISPAS pone una frecuencia de CW habitual en esa banda.</td></tr>
+        <tr><td>FREC KHZ</td><td>La frecuencia en la que vas a estar, en kHz. Gira para ajustarla (de 1 en 1, más deprisa si giras rápido). CHISPAS recuerda la última.</td></tr>
+        <tr><td>COMENTARIO</td><td><b>NO</b> (sin comentario), <b>QRP</b>, <b>QRT</b> (has terminado) o <b>TEXTO</b> (el tuyo).</td></tr>
+        <tr><td>TEXTO</td><td>Tu comentario, hasta 30 caracteres (por ejemplo, <span class="mono">5W EFHW</span>). Se escribe con la rueda de letras, como las memorias, y se queda guardado.</td></tr>
+      </table>
+      <p>Pulsa <span class="mono">enviar</span>: CHISPAS se conecta al WiFi (el del móvil compartiendo datos sirve),
+        publica el spot y te dice abajo cómo ha ido (<span class="mono">SPOT ENVIADO 1825Z</span>, o
+        <span class="mono">SIN CONEXION WIFI</span> si no hay red: vuelve a intentarlo cuando la haya).</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/spot_ficha.png?__SELLO__" width="512" height="256" alt="Ficha del spot: parque, ID, banda y frecuencia"><figcaption>La ficha del spot.</figcaption></figure>
+        <figure class="pantalla"><img src="img/spot_ficha2.png?__SELLO__" width="512" height="256" alt="Ficha del spot: comentario y texto propio"><figcaption>Más abajo, el comentario y tu texto.</figcaption></figure>
+      </div>
+
+      <h3>La activación en curso</h3>
+      <p>Con el primer spot empieza tu <b>activación</b>, y CHISPAS no la olvida aunque lo apagues o se duerma:
+        la portada de Inicio dice <span class="mono">ACTIVANDO</span> y el parque, y en el menú de POTA el parque
+        sustituye a <span class="mono">VER PARQUES</span>. Al elegirlo ves la ficha de la activación: arriba, el
+        parque, el tiempo que llevas y los minutos desde tu último spot; debajo, la banda, la frecuencia y el
+        comentario (para cambiar de frecuencia y volver a anunciarte), cuántos spots llevas, a qué hora empezaste
+        (UTC) y con qué indicativo.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/inicio_activando.png?__SELLO__" width="512" height="256" alt="Inicio con la activación en curso"><figcaption>Inicio te recuerda que estás activando.</figcaption></figure>
+        <figure class="pantalla"><img src="img/pota_menu_activacion.png?__SELLO__" width="512" height="256" alt="Menú de POTA con el parque de la activación"><figcaption>El parque, en el menú de POTA.</figcaption></figure>
+        <figure class="pantalla"><img src="img/spot_activacion.png?__SELLO__" width="512" height="256" alt="Ficha de la activación con la duración"><figcaption>La activación: parque, duración y último spot.</figcaption></figure>
+        <figure class="pantalla"><img src="img/spot_activacion2.png?__SELLO__" width="512" height="256" alt="Ficha de la activación: inicio, indicativo y cerrar"><figcaption>Abajo, spot, qrt y volver.</figcaption></figure>
+      </div>
+      <p>Abajo tienes tres botones: <span class="mono">spot</span> vuelve a publicar tu spot (con la banda y la
+        frecuencia que haya en la ficha), <span class="mono">qrt</span> publica un spot con QRT, que quita tu
+        activación de la web de POTA en unos minutos, y la cierra, y <span class="mono">volver</span> regresa al menú. Si no puedes
+        mandar el QRT (por ejemplo, porque no tienes cobertura), la opción <span class="mono">CERRAR</span> cierra la
+        activación solo en CHISPAS: púlsala dos veces.</p>
+      <p><b>Tu spot caduca:</b> la web de POTA lo quita unos 30 minutos después del último. Por eso, a los
+        25 minutos CHISPAS pita y te pregunta <span class="mono">RENOVAR EL SPOT?</span> estés en la pantalla que
+        estés (salvo practicando en CW o LoRa). Elige <span class="mono">spot</span> y te lleva a la ficha, listo
+        para enviarlo; con <span class="mono">ahora no</span> no vuelve a preguntar hasta tu siguiente spot.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/spot_qrt.png?__SELLO__" width="512" height="256" alt="QRT enviado"><figcaption>Con qrt, la activación se cierra.</figcaption></figure>
+      </div>
+      <p class="nota">CHISPAS solo publica cuando tú lo pides, y deja al menos 30 segundos entre dos spots. Las
+        normas de POTA permiten que el activador se anuncie a sí mismo.</p>
     </div>
   </section>
 

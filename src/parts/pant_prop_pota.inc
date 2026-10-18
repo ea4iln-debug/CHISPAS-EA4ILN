@@ -160,7 +160,9 @@ void renderizarPantallaSpots() {
     return;
   }
   if (subDatos == DATOS_MENU) {
-    dibujarMenuDatos(" POTA ", opcionPantallaSpots, "< VER SPOTS >", "< ACTUALIZAR >", estado, "< VER PARQUES >");
+    // Con una activacion en curso, la opcion del medio es su parque (abre su ficha)
+    String medio = actActiva ? "< " + String(spotParque) + " >" : String("< VER PARQUES >");
+    dibujarMenuDatos(" POTA ", opcionPantallaSpots, "< VER SPOTS >", "< ACTUALIZAR >", estado, medio.c_str());
     return;
   }
   if (subDatos == DATOS_PARQUES) {

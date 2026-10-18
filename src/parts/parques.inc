@@ -42,7 +42,9 @@ struct ParqueCercano {
 };
 ParqueCercano parquesCercanos[PARQUES_CERCANOS];
 uint8_t numParquesCercanos = 0;
-uint8_t parqueSel = 0;                   // Parque marcado en VER PARQUES (pulsar: AUTOSPOT con el)
+uint8_t parqueSel = 0;                   // Parque marcado en VER PARQUES
+bool menuParques = false;                // Pulsar sobre un parque: el pie pasa a spot / volver
+uint8_t focoMenuParques = 0;             // 0 spot, 1 volver
 bool parquesFsMontado = false;
 bool parquesDesdeGps = false;            // Origen de la ultima busqueda (si no, el locator)
 uint32_t parquesEnLista = 0, parquesFecha = 0;  // De la cabecera; 0 = no hay lista
@@ -212,6 +214,7 @@ void descargarParques() {
 bool buscarParquesCercanos() {
   numParquesCercanos = 0;
   parqueSel = 0;
+  menuParques = false;
   float lat, lon;
   parquesDesdeGps = gpsHayPosicion;
   if (gpsHayPosicion) { lat = gpsLat; lon = gpsLon; }
@@ -253,7 +256,8 @@ const char* rumboCardinal(uint16_t grados) {
 
 /**
  * Paginas de VER PARQUES: dos parques por pagina, cada uno en dos lineas ("ES-0072    12km SO" y el nombre).
- * Girar mueve el parque marcado (su primera linea en video inverso); pulsar abre AUTOSPOT con el.
+ * Girar mueve el parque marcado (su primera linea en video inverso); pulsar abre en el pie "spot" (AUTOSPOT con
+ * ese parque) y "volver" (al menu).
  * Sin lista o sin posicion, el aviso
  */
 void dibujarPaginasParques() {
@@ -293,7 +297,8 @@ void dibujarPaginasParques() {
     display.print(p.nombre);
   }
   display.setTextWrap(true);
-  // El pie dice de donde se ha medido (GPS o el locator) y que pulsar lleva al spot
-  dibujarPieCentrado(String(parqueSel + 1) + "/" + String(numParquesCercanos) + " " +
-                     (parquesDesdeGps ? String("GPS") : String(locatorEstacion)) + "  >spot");
+  // El pie dice de donde se ha medido (GPS o el locator); al pulsar, spot / volver
+  if (menuParques) dibujarPieDos(focoMenuParques == 0, "spot", focoMenuParques == 1, "volver");
+  else dibujarPieCentrado(String(parqueSel + 1) + "/" + String(numParquesCercanos) + " " +
+                          (parquesDesdeGps ? String("GPS") : String(locatorEstacion)) + "  >menu");
 }

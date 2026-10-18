@@ -212,15 +212,16 @@ void dibujarPieDos(bool foco1, const char* op1, bool foco2, const char* op2) {
 /**
  * Lista de opciones como CONF > CONFIG: 4 a la vista, nombre a la izquierda, valor a la derecha y barra de
  * desplazamiento. foco >= n = el foco esta en el pie (la lista se queda al final). editables: bit i = la
- * opcion i se edita girando (su valor sale en video inverso mientras se edita). El pie lo pone quien llama
+ * opcion i se edita girando (su valor sale en video inverso mientras se edita). El pie lo pone quien llama.
+ * filas e y0: menos filas, mas abajo (AUTOSPOT con activacion deja arriba una linea de estado)
  */
 void dibujarListaOpciones(const char* const* nombres, uint8_t n, uint8_t foco, String (*valor)(uint8_t),
-                          uint32_t editables) {
+                          uint32_t editables, uint8_t filas = 4, int16_t y0 = 12) {
   uint8_t primera = 0;
-  if (n > 4) primera = foco < n ? max(0, (int)foco - 3) : n - 4;
-  for (uint8_t k = 0; k < 4 && primera + k < n; k++) {
+  if (n > filas) primera = foco < n ? max(0, (int)foco - (filas - 1)) : n - filas;
+  for (uint8_t k = 0; k < filas && primera + k < n; k++) {
     uint8_t i = primera + k;
-    int16_t y = 12 + k * 10;
+    int16_t y = y0 + k * 10;
     display.setCursor(0, y);
     display.print(foco == i ? '>' : ' ');
     display.print(nombres[i]);
@@ -230,11 +231,11 @@ void dibujarListaOpciones(const char* const* nombres, uint8_t n, uint8_t foco, S
     if (editables & (1UL << i)) imprimirValor(foco == i, v);
     else display.print(v);
   }
-  if (n > 4) {
+  if (n > filas) {
     // Barra de desplazamiento: 2 px a la derecha, con el tramo de lista que se ve
-    const int16_t yBarra = 12, altoBarra = 38;
-    int16_t altoTramo = altoBarra * 4 / n;
-    int16_t yTramo = yBarra + (altoBarra - altoTramo) * primera / (n - 4);
+    const int16_t yBarra = y0, altoBarra = filas * 10 - 2;
+    int16_t altoTramo = altoBarra * filas / n;
+    int16_t yTramo = yBarra + (altoBarra - altoTramo) * primera / (n - filas);
     display.drawFastVLine(127, yBarra, altoBarra, SSD1306_WHITE);
     display.fillRect(125, yTramo, 3, altoTramo, SSD1306_WHITE);
   }

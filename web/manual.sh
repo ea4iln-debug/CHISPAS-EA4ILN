@@ -53,7 +53,7 @@ EOF
     captura robots.html robots.png 1400 1500
     for s in "$@"; do
       if [ "$s" = portada ]; then oculta=".seccion{display:none}"; else oculta=".portada,.indice,.seccion:not(#$s){display:none}"; fi
-      sed "s#</style>#$oculta</style>#" "$TMP/manual.html" > "$TMP/s_$s.html"
+      sed "s|</style>|$oculta</style>|" "$TMP/manual.html" > "$TMP/s_$s.html"
       captura "s_$s.html" "s_$s.png" 1280 4200
     done
     ;;

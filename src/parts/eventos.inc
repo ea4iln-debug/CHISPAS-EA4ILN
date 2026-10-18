@@ -44,7 +44,7 @@ void procesarBoton() {
   bool ejeLarga = (ev == ENC_LARGA);
   bool atras = (ev == BOTON_CORTA);
 
-  // Aviso de renovar el spot POTA (tapa cualquier pantalla): "spot" lleva a la ficha con el foco en "enviar";
+  // Aviso de renovar el spot POTA (tapa cualquier pantalla): "spot" lleva a la ficha con el foco en "spot";
   // desde TRX, antes se sale a su menu (KEY deshabilitada). "ahora no" o atras: no se vuelve a avisar
   if (avisoRespot) {
     if (giro != 0) {
@@ -56,11 +56,8 @@ void procesarBoton() {
           decodEnAjustes = false;
           trxSalirAlMenu();
         }
-        editandoValor = false;
         if (pantallaActual != PANTALLA_SPOTS) entrarEnPantalla(PANTALLA_SPOTS);
-        subDatos = DATOS_AUTOSPOT;
-        focoSpot = FOCO_SPOT_ENVIAR;
-        resultadoSpot = "";
+        abrirActivacion(FOCO_ACT_SPOT);
       }
     }
     actualizarPantalla();
@@ -463,8 +460,13 @@ void procesarBoton() {
           if (opcion == barra) {
             navegarDesdeBarra();
           } else if (esPota && opcion == 1) {
-            buscarParquesCercanos();
-            subDatos = DATOS_PARQUES;
+            // VER PARQUES o, con una activacion en curso, su ficha
+            if (actActiva) {
+              abrirActivacion(FOCO_ACT_SPOT);
+            } else {
+              buscarParquesCercanos();
+              subDatos = DATOS_PARQUES;
+            }
           } else if (estadoWifi == WIFI_SIN_CONEXION) {
             if (op == 0) {
               abrirPortalWifi();
@@ -496,33 +498,71 @@ void procesarBoton() {
         break;
 
       case DATOS_PARQUES:
-        // Girar marca otro parque; pulsar abre AUTOSPOT con el (sin parques, vuelve al menu)
-        if (atras || ejeLarga || (pulsa && numParquesCercanos == 0)) subDatos = DATOS_MENU;
-        else if (pulsa) abrirAutospot(parqueSel);
-        else if (giro != 0 && numParquesCercanos > 0) {
+        // Girar marca otro parque; pulsar abre spot / volver en el pie (sin parques, vuelve al menu)
+        if (menuParques) {
+          if (atras) menuParques = false;
+          else if (giro != 0) focoMenuParques = (focoMenuParques + 1) % 2;
+          else if (pulsa || ejeLarga) {
+            menuParques = false;
+            if (focoMenuParques == 0) abrirAutospot(parqueSel);
+            else subDatos = DATOS_MENU;
+          }
+        } else if (atras || ejeLarga || (pulsa && numParquesCercanos == 0)) {
+          subDatos = DATOS_MENU;
+        } else if (pulsa) {
+          menuParques = true;
+          focoMenuParques = 0;
+        } else if (giro != 0 && numParquesCercanos > 0) {
           parqueSel = (parqueSel + numParquesCercanos + giro) % numParquesCercanos;
         }
         break;
 
-      case DATOS_AUTOSPOT:
-        // Ficha. Foco: 0 parque, 1 ID, 2 banda, 3 frecuencia (los tres giran al editar), 4 comentario, 5 texto,
-        // 6 enviar, 7 volver. El resultado del ultimo envio ocupa el pie hasta tocar algo
+      case DATOS_AUTOSPOT: {
+        // Ficha. El resultado del ultimo envio ocupa el pie hasta tocar algo. Sin activacion, foco: 0 parque, 1 ID,
+        // 2 banda, 3 frecuencia (0, 2 y 3 giran al editar), 4 comentario, 5 texto, 6 enviar, 7 volver (a los
+        // parques). Con activacion: 0 banda, 1 frecuencia (giran al editar), 2 comentario, 3 texto, 4-6 consulta,
+        // 7 cerrar (sin QRT: pulsar dos veces), 8 spot, 9 qrt, 10 volver (al menu)
         resultadoSpot = "";
-        if (atras) subDatos = DATOS_PARQUES;
-        else if (giro != 0) {
+        bool confirmaba = confirmandoCerrar;
+        confirmandoCerrar = false;
+        uint8_t nFoco = actActiva ? FOCO_ACT_VOLVER + 1 : FOCO_SPOT_VOLVER + 1;
+        if (atras) {
+          subDatos = actActiva ? DATOS_MENU : DATOS_PARQUES;
+        } else if (giro != 0) {
           if (editandoValor) ajustarOpcionSpot(giro);
-          else focoSpot = (focoSpot + FOCO_SPOT_VOLVER + 1 + giro) % (FOCO_SPOT_VOLVER + 1);
+          else focoSpot = (focoSpot + nFoco + giro) % nFoco;
+        } else if (pulsa && actActiva) {
+          switch (focoSpot) {
+            case 0: case 1: editandoValor = !editandoValor; break;
+            case 2: spotComentario = (spotComentario + 1) % (SPOT_COM_TEXTO + 1); break;
+            case 3: autospotAbrirEditor(EDITOR_SPOT_TEXTO); break;
+            case FOCO_ACT_CERRAR:
+              if (confirmaba) {
+                cerrarActivacion();
+                focoSpot = FOCO_SPOT_VOLVER;
+                resultadoSpot = "ACTIVACION CERRADA";
+              } else {
+                confirmandoCerrar = true;
+                resultadoSpot = "PULSA OTRA VEZ";
+              }
+              break;
+            case FOCO_ACT_SPOT: pedirEnvioSpot(false); break;
+            case FOCO_ACT_QRT: pedirEnvioSpot(true); break;
+            case FOCO_ACT_VOLVER: subDatos = DATOS_MENU; break;
+            default: break;  // Consulta
+          }
         } else if (pulsa) {
           switch (focoSpot) {
             case 1: autospotAbrirEditor(EDITOR_SPOT); break;
             case 4: spotComentario = (spotComentario + 1) % (SPOT_COM_TEXTO + 1); break;
             case 5: autospotAbrirEditor(EDITOR_SPOT_TEXTO); break;
-            case FOCO_SPOT_ENVIAR: pedirEnvioSpot(); break;
+            case FOCO_SPOT_ENVIAR: pedirEnvioSpot(false); break;
             case FOCO_SPOT_VOLVER: subDatos = DATOS_PARQUES; break;
             default: editandoValor = !editandoValor; break;  // 0, 2 y 3
           }
         }
         break;
+      }
 
       case DATOS_EDITOR_SPOT:
         // Como el de CONF: girar recorre la rueda; pulsar aplica. PRG = ESC, larga = OK

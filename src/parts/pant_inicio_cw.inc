@@ -6,6 +6,9 @@
 // ============================================================================
 // DIBUJO DE LAS PANTALLAS
 // ============================================================================
+extern bool actActiva;  // Activacion POTA en curso (autospot.inc)
+extern char spotParque[];
+
 void renderizarPantallaInicio() {
   int16_t x1, y1;
   uint16_t w, h;
@@ -22,8 +25,9 @@ void renderizarPantallaInicio() {
   display.print(titulo);
   display.setTextSize(1);
 
-  // Indicativo y version, en pequeno
-  String linea = "de " + String(indicativoEstacion) + "  v" + FW_VERSION;
+  // Indicativo y version, en pequeno; con una activacion POTA en curso, su parque (para no olvidar el QRT)
+  String linea = actActiva ? "ACTIVANDO " + String(spotParque)
+                           : "de " + String(indicativoEstacion) + "  v" + FW_VERSION;
   display.getTextBounds(linea.c_str(), 0, 0, &x1, &y1, &w, &h);
   display.setCursor((128 - w) / 2, 38);
   display.print(linea);

@@ -37,8 +37,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `m<texto>` simula las palas, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (18 oct 2026)
-- **v1.31b** publicada (beta, 18 oct; los arreglos del 18 oct de abajo; en la web como beta; en la placa 1 por USB).
-  Antes, **v1.30b** (beta, 16 oct; ver abajo). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
+- **v1.32b** (beta, 18 oct): AUTOSPOT POTA con activación en curso (ver abajo). Antes, **v1.31b** (beta, 18 oct; los
+  arreglos del 18 oct de abajo). Antes, **v1.30b** (beta, 16 oct; ver abajo). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
   y batería a 4,985. En la placa 1 por USB y en la placa 2 por OTA (16 oct; antes, reinicio por OTA sin avance probado).
   Antes, v1.10 (15 oct, primera final; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance). **Nombres de las placas desde el 15 oct** (antes, al revés; lo anterior en NOTAS usa los viejos):
   **placa 1 = placa perforada** (MAC `08:c0`, montada y probada el 15 oct) y **placa 2 = protoboard** (MAC `50:74`,
@@ -131,17 +131,19 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   `m<texto>` (entra como lo manipulado; `serie.py -e "mEA4ILN"`); audio realista. **Ajuste ROL** (18 oct):
   CAZADOR / ACTIVADOR; con ACTIVADOR llamas tú CQ y CHISPAS es el cazador (indicativo parcial, rellamada a los 8 s,
   copia mal tu indicativo, AGN?); probado en la placa 1 con `m`. Detalle en NOTAS: "QSO SIM".
-- **AUTOSPOT POTA** (18 oct, sin versión nueva; `autospot.inc`): VER PARQUES > girar marca un parque > pulsar abre la
+- **AUTOSPOT POTA** (18 oct, **v1.32b**; `autospot.inc`): VER PARQUES > girar marca un parque > pulsar > spot abre la
   ficha (PARQUE, ID editable para /P o radioclub, BANDA, FREC KHZ, COMENTARIO NO/QRP/QRT/TEXTO, TEXTO propio) > enviar (POST sin cuenta a
   `api.pota.app/spot`, API no documentada, la de Ham2K PoLo). Aviso con pitido a los 25 min para renovarlo.
-  **Probado en la placa 1 con un spot real** (EA4ILN/P en ES-2218 y luego QRT, HTTP 200; la web lo oculta en minutos). Sin probar: el aviso de
-  los 25 min y sin conexión. CAT con el transceptor: al ROADMAP para una PCB nueva. Detalle en NOTAS: "Parques".
+  **Activación en curso** (NVS, sobrevive a apagar): el menú POTA muestra el parque, Inicio dice ACTIVANDO, ficha con
+  duración y último spot, botones spot/qrt/volver y CERRAR sin QRT. **Probado en la placa 1 con spots reales** (spot,
+  reinicio, qrt; sin conexión también); la web oculta el QRT en minutos. Sin probar: el aviso de los 25 min (lo
+  probará el usuario en una activación). Manual, web y README al día. CAT: al ROADMAP. Detalle en NOTAS: "Parques".
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).
-4. AUTOSPOT: probar el aviso de los 25 min y el caso sin conexión en una activación; explicarlo en el manual (y su PDF).
+4. AUTOSPOT: probar el aviso de los 25 min (y su captura `spot_aviso.png` para el manual) y CERRAR sin QRT en una activación real.
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se
