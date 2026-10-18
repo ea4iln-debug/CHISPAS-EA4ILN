@@ -32,7 +32,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   `web/index.html`, **rehacerlo con cada beta**. Portada de presentación (16 oct): qué hace, Constrúyelo (caja en 3D,
   concepto) e Instálalo; `web/funciones.html` explica cada función. En la web, **CHISPAS en mayúsculas y en masculino**. **Página de hardware** (`web/hardware.html`, 16 oct): fases, piezas,
   pines y PCB (sin Gerber hasta probarla); imágenes de la PCB con `hardware/herramientas/imagenes_web.sh` (rehacerlas si cambia).
-- Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
+- Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `m<texto>` simula las palas, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (18 oct 2026)
 - **v1.30b** publicada (beta, 16 oct; ver abajo; en la web como beta). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
@@ -124,12 +124,13 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   hora de la cabecera que parpadeaba al decodificar (`getLocalTime(&t, 0)` del core). **Decodificador con ruido**
   (18 oct, sin cambios): bien hasta CONTEST MEDIUM de la RSGB, pocos errores en HARD, ilegible en INTENSE; el usuario
   lo da por bueno. Detalle en NOTAS: "DECODIFICAR".
+  **QSO SIM** (18 oct): QSO completo y caminos de error en la placa 1 sin palas, con la orden serie nueva
+  `m<texto>` (entra como lo manipulado; `serie.py -e "mEA4ILN"`); audio realista. Detalle en NOTAS: "QSO SIM".
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
-3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM manipulando con las
-   palas; instalar la beta desde la web (sin probar). Los arreglos del 18 oct van en la próxima versión.
+3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar). Los arreglos del 18 oct van en la próxima versión.
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se

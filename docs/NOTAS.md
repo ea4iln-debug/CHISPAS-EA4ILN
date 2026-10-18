@@ -171,7 +171,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   estado (`FW NUEVO: v1.01b`) y en la lista de CONFIG. Particiones `default_8MB.csv` (app0/app1 de 3,2 MB).
 - **Depuración** (desde la v1.01b, en el aparato: CONF > CONFIG > DEPURACION; antes eran `#define DEPURACION_*` y
   había que recompilar): lista `CONF_DEPURACION` con ORDENES SERIE (`p` vuelca la OLED para
-  `docs/captura_oled.py`; `d`, `i`, `k`, `l`, `a` simulan el encoder), DIAG (1 MIN) (`[DIAG]`), DECOD (2 S)
+  `docs/captura_oled.py`; `d`, `i`, `k`, `l`, `a` simulan el encoder; desde el 18 oct 2026, `m<texto>` + salto de línea entra como lo descodificado de las palas: `serie.py -e "mEA4ILN"`), DIAG (1 MIN) (`[DIAG]`), DECOD (2 S)
   (`[DECOD]`) y RETRASO CW (`[CW ...]`); pulsar cambia SI/NO. Variable `depuracion` (bits `DEPU_*`,
   `depuActiva()`), NVS `depu` en `chispas`, todo apagado por defecto; sobrevive al reinicio (el script de capturas
   reinicia la placa) y el reset de fábrica lo apaga. En CONFIG la opción muestra SI si hay alguna activa. Para rehacer
@@ -357,7 +357,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     en TX LIBRE y con "borrar" (`ritmoBorrar`, lo hace la tarea). Probado en la placa 1: menú y páginas sin datos
     (capturas por serie); **falta probar manipulando con las palas**.
   - **QSO SIM** (16 oct 2026, v1.30b; `src/parts/qso_sim.inc`; probado en la placa 1 de oído con QSB, RUIDO,
-    TORMENTA y QRM; **falta manipularlo con las palas**): simulador de QSO
+    TORMENTA y QRM; **18 oct 2026: QSO completo en la placa 1 sin palas**, con la orden serie `m`): simulador de QSO
     POTA, Chispas de activador y el usuario de cazador con las palas. En el menú CW es la tercera opción (`opcionPantalla3`
     = 2; hasta la v1.30b iba en el centro del pie como "qso sim"). Ajustes: WPM
     ACTIVADOR (`simWpm`, 18), ESPACIADO (150 %), WPM PALAS (`keyerWpm`, el de TX LIBRE), VER TEXTO, QSB (NO / SUAVE /
@@ -370,6 +370,13 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     mientras suena); pie repetir / salir. Resultado: `CON <A> <PARQUE>`, tiempo, repeticiones y velocidad real (como
     RITMO). QSB provisional: baja el ciclo del PWM (`cicloTono`, ciclo = asin(amplitud)/π) con dos senos de 5,3 y
     2,1 s; desde el 16 oct, con el audio sigma-delta: volumen real y ajustes RUIDO, TORMENTA y QRM (ver "Audio sintetizado").
+    **Prueba del 18 oct 2026 (placa 1, sin versión nueva, todo en SUAVE):** el usuario no manipula, así que se añadió
+    la orden serie `m<texto>` (`procesarOrdenesSerie()` en `main.cpp`: mete el texto en mayúsculas y un espacio en
+    `colaKeyerTexto` y pone `keyerUltimoUsoMs`). QSO 1 con LA1JHR/P: `EA4ILN EA4ILN` → informe; `BK TU 5NN 5NN 73 BK`
+    → `TU ES0033 73 E E`; `E E` → QSO HECHO (1:17, 0 rep., velocidad `--`, normal sin palas). QSO 2 con N5EVN:
+    `EA4IL` y `TU 73` (sin 5NN) dan las dos repeticiones (2 rep.), y sin `E E` acaba solo a los 6 s. Audio "bien,
+    realista" según el usuario. Activador extranjero con parque ES: **se deja así** (decisión del usuario).
+    Falta solo manipularlo con las palas de verdad (fin de turno y velocidad real).
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso
@@ -811,8 +818,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
    sin encoder se queda en la v1.10. La versión es **1.20 y no 1.2**: `compararVersiones()` compara cada número por
    separado y "1.2" (1, 2) sería menor que "1.10" (1, 10). Compila: RAM 17,1 %, flash 38,6 %.
 9. **Auricular izquierdo de la placa 1**: resuelto el 16 oct 2026 (T y TN cruzados en el jack; ver "Placa perforada").
-10. **Siguiente:** decodificador con CW real (nivel ~10 % en silencio con la síntesis); Duo TEXTO con dos placas; QSO SIM,
-   TX LIBRE > RITMO y la práctica QSO POTA del Koch manipulando con las palas.
+10. **Siguiente:** decodificador con CW real (nivel ~10 % en silencio con la síntesis); Duo TEXTO con dos placas; QSO SIM
+   (probado sin palas el 18 oct 2026 con la orden serie `m`), TX LIBRE > RITMO y la práctica QSO POTA del Koch manipulando con las palas.
 
 ## Decisiones tomadas
 - Aspecto: mantener el estilo actual de pantallas (fuente 5×7, sin imitar Meshtastic).

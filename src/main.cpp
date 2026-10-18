@@ -362,10 +362,24 @@ void procesarBrillo() {
 // Ordenes por serie para capturas y pruebas desde el PC. 'p' vuelca el buffer de la OLED (1024 bytes, formato
 // del SSD1306: byte = x + (y / 8) * 128, bit = y % 8) en hexadecimal entre dos marcas; docs/captura_oled.py lo
 // guarda en PNG (es la copia en RAM: no ve si el panel esta negro o atenuado). 'd' derecha, 'i' izquierda,
-// 'k' pulsar, 'l' pulsacion larga del eje y 'a' atras (PRG corto) simulan el encoder
+// 'k' pulsar, 'l' pulsacion larga del eje y 'a' atras (PRG corto) simulan el encoder. 'm' seguido de un texto
+// y salto de linea lo "manipula": entra como lo descodificado de las palas (para probar QSO SIM, Echo... sin palas)
 void procesarOrdenesSerie() {
   if (!Serial.available()) return;
   int c = Serial.read();
+  if (c == 'm') {
+    String texto = Serial.readStringUntil('\n');
+    texto.trim();
+    texto.toUpperCase();
+    for (uint16_t i = 0; i < texto.length(); i++) {
+      char ch = texto[i];
+      xQueueSend(colaKeyerTexto, &ch, 0);
+    }
+    char espacio = ' ';
+    xQueueSend(colaKeyerTexto, &espacio, 0);
+    keyerUltimoUsoMs = millis();
+    return;
+  }
   switch (c) {
     case 'd': eventoSerie = ENC_DERECHA; return;
     case 'i': eventoSerie = ENC_IZQUIERDA; return;
