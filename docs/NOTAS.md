@@ -124,6 +124,12 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `0x10000` app; la NVS de `0x9000` sin tocar), y ACTUALIZAR FW encontró la v1.32b, la bajó e instaló (30 s) y
   arrancó con ella. Desde ahora, **para probar el OTA se baja a la estable del momento, no a un 0.99** (decisión
   del usuario). El primer intento de conectar falló (WiFi del móvil, 15 s); al reintentar, bien.
+  **v1.33b (beta), publicada el 18 oct 2026** (prerelease): pantalla TIEMPO (Open-Meteo) con AMBIENTE, SOL con 3
+  páginas; manual (HTML y PDF, portada 1.33b), web (novedades: tarjeta Tiempo; sonido y consumo juntos en "Y
+  además" para seguir con 4 tarjetas), funciones y README al día; `sol_ahora.png` del README con el contador
+  corregido a mano a "2/3" (copiando el glifo de otra captura) para no publicar el locator real del GPS.
+  https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.33b. Binario cargado por USB en la placa 1 antes
+  de publicar (arranca como v1.33b). OTA desde la 1.20 sin probar con esta versión.
 - **Web de instalación por USB (16 oct 2026):** https://ea4iln-debug.github.io/CHISPAS-EA4ILN/ (GitHub Pages,
   fuente "GitHub Actions", activada con `gh api -X POST repos/.../pages -f build_type=workflow`). `web/index.html`
   con **ESP Web Tools 10.4.0** (unpkg, `<esp-web-install-button>`; Chrome/Edge de escritorio). La Action
