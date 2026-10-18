@@ -636,8 +636,13 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
         el ruido o la mano del bug.
       - RSGB GB2RS Morse Practice (750 Hz, ~19 WPM, manipulación perfecta), un minuto por nivel: sin ruido,
         LOCAL WIDE, DX NARROW y VHF THERMAL, copia casi perfecta (una G perdida en "BACKROUND", una D en "EN.");
-        wpm fijo 17–20 y el umbral sube solo con el ruido (hasta 71 %). **Pendiente:** los niveles de ruido más
-        altos (interrumpido por un problema de audio del PC). Al filtrar el log, no tirar las líneas con
+        wpm fijo 17–20 y el umbral sube solo con el ruido (hasta 71 %). CONTEST EASY y MEDIUM: perfecto (con "/";
+        alguna lectura suelta de tono en 550/950/1000 Hz sin efecto; umbral 61–68 % con picos de 80 %). CONTEST
+        HARD: 2–3 errores en ~80 caracteres (S → I por un punto perdido, K → `*`). CONTEST INTENSE: ilegible
+        ("OTQA*S*BEY*TTUBE C*NNELADS…") y el wpm salta de 11 a 21, como la estación débil del vídeo: allí fallaba
+        sobre todo por el ruido. **El usuario lo da por bueno (18 oct 2026): no se toca.** Posibles mejoras si
+        algún día hiciera falta: filtro más estrecho o umbral que no suba tanto con el ruido. El guion (`-....-`)
+        parece no estar en el diccionario (sale `*`; sin comprobar). Al filtrar el log, no tirar las líneas con
         `[GPS]`/`[BME]`/`[DIAG]`: llevan delante letras decodificadas.
   - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
     **Probado con emisora real el 12 oct 2026:** manipular y decodificar en la misma sesión, sin descodificar lo propio.

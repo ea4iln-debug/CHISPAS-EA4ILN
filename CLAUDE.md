@@ -121,12 +121,14 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   en el jack (arreglado, 16 oct).
 - **Después de la 1.30b (18 oct, en la placa 1 por USB, sin versión nueva):** decodificador probado con W1AW (20 WPM
   perfecto; la síntesis no le afecta); fin de palabra arreglado con Farnsworth (10 WPM de W1AW salía letra a letra);
-  hora de la cabecera que parpadeaba al decodificar (`getLocalTime(&t, 0)` del core). Detalle en NOTAS: "DECODIFICAR".
+  hora de la cabecera que parpadeaba al decodificar (`getLocalTime(&t, 0)` del core). **Decodificador con ruido**
+  (18 oct, sin cambios): bien hasta CONTEST MEDIUM de la RSGB, pocos errores en HARD, ilegible en INTENSE; el usuario
+  lo da por bueno. Detalle en NOTAS: "DECODIFICAR".
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
-3. **Siguiente:** decodificador con ruido o QSB (vídeo); Duo TEXTO (dos placas) y QSO SIM manipulando con las
+3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM manipulando con las
    palas; instalar la beta desde la web (sin probar). Los arreglos del 18 oct van en la próxima versión.
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
