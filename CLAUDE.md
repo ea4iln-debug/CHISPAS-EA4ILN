@@ -56,7 +56,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   **Su P1 (encoder) va CLK, SW, DT** (cable con DT y SW cruzados); el plano, desde el 15 oct, CLK, DT, SW con cable recto.
 
 ## Arquitectura (detalle en NOTAS: "Funciones" y "Manejo")
-- Pantallas `PANTALLA_*`: 1 Inicio, 2 CW, 3 LoRa, 4 TRX, 5 PROP, 6 POTA, 7 Sol, 8 CONF. Cabecera: hora, nombre corto,
+- Pantallas `PANTALLA_*`: 1 Inicio, 2 CW, 3 LoRa, 4 TRX, 5 PROP, 6 POTA, 7 Sol, 8 TIEMPO (cabecera `WX`), 9 CONF. Cabecera: hora, nombre corto,
   batería (`PWR` sin batería).
 - **Estilo común (v0.9h):** menús con título en negativo (`dibujarTituloMenu()`) y opciones `< ... >`; ajustes en
   listas (`dibujarListaOpciones()`); datos en páginas (`dibujarPiePaginas()`); pantallas de manipular/escuchar con
@@ -96,7 +96,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 | `lora` `decodificador` `trx` | TX/RX, Duo y QSO; tarea `decod`; TRX + `procesarRecepcionLoRa`, `salirModoLoRa` |
 | `wifi` `ota` `datos_web` `gps` `parques` | WiFi, NTP, portal y QR; OTA; hamqsl, POTA, `procesarWifi`; GPS (ventanas, hora, locator, altitud); parques POTA cercanos (LittleFS) |
 | `pant_inicio_cw` `pant_lora_trx` `autospot` `pant_prop_pota` | Dibujo de Inicio y CW; de LoRa y TRX; autospot POTA y aviso de renovarlo; menús y páginas de PROP y POTA |
-| `sol` `conf` `estados_cw` | SOL y ambiente; CONF, STATUS, OTA y `actualizarPantalla()`; máquina de estados CW |
+| `sol` `tiempo` | SOL y línea gris; TIEMPO (Open-Meteo) y AMBIENTE (`procesarBME`) |
+| `conf` `estados_cw` | CONF, STATUS, OTA y `actualizarPantalla()`; máquina de estados CW |
 | `cara` `entrada` `eventos` | Salvapantallas; encoder, ISR y eventos de botón; `procesarBoton()` |
 - Archivo nuevo en `src/parts/`: extensión `.inc`, cabecera SPDX, y su `#include` en `main.cpp` detrás de lo que use.
 
@@ -139,12 +140,17 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   duración y último spot, botones spot/qrt/volver y CERRAR sin QRT. **Probado en la placa 1 con spots reales** (spot,
   reinicio, qrt; sin conexión también); la web oculta el QRT en minutos. Sin probar: el aviso de los 25 min (lo
   probará el usuario en una activación). Manual, web y README al día. CAT: al ROADMAP. Detalle en NOTAS: "Parques".
+- **TIEMPO** (18 oct, sin versión nueva; `tiempo.inc`): pantalla 8 tras SOL (cabecera `WX`), datos de **Open-Meteo**
+  (sin clave, por el locator/GPS, ~3 KB; AEMET descartado de momento: clave por usuario y por municipio). AHORA,
+  HORAS (cada 3 h hasta 12 h), MAÑANA y AMBIENTE (sale de SOL, que queda con 3 páginas). Probado en la placa 1
+  (MANUAL); manual, PDF, web y README al día. Detalle en NOTAS: "Funciones".
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).
-4. AUTOSPOT: probar el aviso de los 25 min (y su captura `spot_aviso.png` para el manual) y CERRAR sin QRT en una activación real.
+4. TIEMPO: probar WIFI DATOS AUTO (refresco cada 30 min); sale en la próxima versión (preguntar cuál).
+5. AUTOSPOT: probar el aviso de los 25 min (y su captura `spot_aviso.png` para el manual) y CERRAR sin QRT en una activación real.
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se

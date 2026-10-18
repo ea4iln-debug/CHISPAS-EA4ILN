@@ -162,6 +162,7 @@ void entrarEnPantalla(uint8_t pantalla, bool haciaAtras = false) {
   else if (pantalla == PANTALLA_PROPAGACION) { opcionPantallaProp = OPCION_BARRA_PROP; subDatos = DATOS_MENU; }
   else if (pantalla == PANTALLA_SPOTS) { opcionPantallaSpots = OPCION_BARRA_SPOTS; subDatos = DATOS_MENU; }
   else if (pantalla == PANTALLA_SOL) { opcionPantallaSol = OPCION_BARRA_DATOS; subDatos = DATOS_MENU; }
+  else if (pantalla == PANTALLA_TIEMPO) { opcionPantallaTiempo = OPCION_BARRA_DATOS; subDatos = DATOS_MENU; }
   else if (pantalla == PANTALLA_CONFIG) {
     opcionPantallaConfig = OPCION_BARRA_CONFIG;
     subConf = CONF_MENU;

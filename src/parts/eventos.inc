@@ -436,17 +436,23 @@ void procesarBoton() {
     }
 
   } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
-             pantallaActual == PANTALLA_SOL) {
+             pantallaActual == PANTALLA_SOL || pantallaActual == PANTALLA_TIEMPO) {
     // Menu: [sig.] -> [VER DATOS] -> [ACTUALIZAR] -> [ant.] (sin conexion: ABRIR WEBCONF y REINTENTAR).
     // POTA tiene ademas VER PARQUES en medio, con o sin conexion (la lista esta en la flash).
     // Paginas: girar pasa pagina y pulsar (o atras) vuelve al menu
     bool esProp = (pantallaActual == PANTALLA_PROPAGACION);
     bool esSol = (pantallaActual == PANTALLA_SOL);
-    bool esPota = !esProp && !esSol;
-    uint8_t& opcion = esProp ? opcionPantallaProp : (esSol ? opcionPantallaSol : opcionPantallaSpots);
+    bool esTiempo = (pantallaActual == PANTALLA_TIEMPO);
+    bool esPota = !esProp && !esSol && !esTiempo;
+    uint8_t* pOpcion = &opcionPantallaSpots;
+    uint8_t* pPagina = &paginaSpots;
+    uint8_t paginas = paginasSpots();
+    if (esProp) { pOpcion = &opcionPantallaProp; pPagina = &paginaPropagacion; paginas = 2; }
+    else if (esSol) { pOpcion = &opcionPantallaSol; pPagina = &paginaSol; paginas = PAGINAS_SOL; }
+    else if (esTiempo) { pOpcion = &opcionPantallaTiempo; pPagina = &paginaTiempo; paginas = paginasTiempo(); }
+    uint8_t& opcion = *pOpcion;
+    uint8_t& pagina = *pPagina;
     uint8_t barra = esPota ? OPCION_BARRA_SPOTS : OPCION_BARRA_DATOS;
-    uint8_t& pagina = esProp ? paginaPropagacion : (esSol ? paginaSol : paginaSpots);
-    uint8_t paginas = esProp ? 2 : (esSol ? paginasSol() : paginasSpots());
     if (avisoWifiVisible()) {
       // Conectando o esperando la hora tras ACTUALIZAR: atras o pulsar cancela (la descarga en si no se ve: bloquea)
       if (atras || pulsa) terminarPeticionWifi();

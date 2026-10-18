@@ -73,12 +73,14 @@ uint8_t paginaSpots = 0;
 uint8_t opcionPantallaProp = OPCION_BARRA_PROP;    // Menu: 0 = ver datos, 1 = actualizar, 2 = barra ant./sig.
 uint8_t opcionPantallaSpots = OPCION_BARRA_SPOTS;
 uint8_t opcionPantallaSol = OPCION_BARRA_DATOS;
+uint8_t opcionPantallaTiempo = OPCION_BARRA_DATOS;
 // PARQUES, AUTOSPOT y EDITOR_SPOT (el ID del activador): solo en POTA
 enum SubDatos { DATOS_MENU, DATOS_PAGINAS, DATOS_PORTAL, DATOS_PARQUES, DATOS_AUTOSPOT, DATOS_EDITOR_SPOT };
 SubDatos subDatos = DATOS_MENU;
 uint8_t focoPortalDatos = 0;
 uint8_t paginaPropagacion = 0;              // 0 = indices, 1 = condiciones por banda
 uint8_t paginaSol = 0;                      // 0 = hoy, 1 = ahora, 2 = manana
+uint8_t paginaTiempo = 0;                   // 0 = ahora, 1 = horas, 2 = manana, 3 = ambiente (BME280)
 void dibujarVistaPortal(uint8_t foco);      // Definidas con la pantalla CONF
 bool procesarVistaPortal(uint8_t& foco, int8_t giro, bool pulsa, bool atras);
 
@@ -432,10 +434,10 @@ void quedarseSinConexion() {
     resultadoSpot = "SIN CONEXION WIFI";
     Serial.println(F("[SPOT] SIN CONEXION"));
   }
-  // PROP, POTA y SOL vuelven a su menu, con el foco en "ABRIR WEBCONF" (salvo desde la ficha del spot)
+  // PROP, POTA, SOL y TIEMPO vuelven a su menu, con el foco en "ABRIR WEBCONF" (salvo desde la ficha del spot)
   if (subDatos != DATOS_AUTOSPOT) {
     subDatos = DATOS_MENU;
-    opcionPantallaProp = opcionPantallaSpots = opcionPantallaSol = 0;
+    opcionPantallaProp = opcionPantallaSpots = opcionPantallaSol = opcionPantallaTiempo = 0;
   }
   pantallaPendiente = true;
 }

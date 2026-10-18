@@ -410,7 +410,7 @@ bool avisoRespotPermitido() {
   if (pantallaActual == PANTALLA_TRX && subTrx == TRX_EDITOR) return false;
   if (pantallaActual == PANTALLA_CONFIG && subConf != CONF_MENU && subConf != CONF_CONFIG) return false;
   bool pantallaDatos = pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
-                       pantallaActual == PANTALLA_SOL;
+                       pantallaActual == PANTALLA_SOL || pantallaActual == PANTALLA_TIEMPO;
   if (pantallaDatos && (subDatos == DATOS_PORTAL || subDatos == DATOS_EDITOR_SPOT)) return false;  // ID o texto
   return true;
 }

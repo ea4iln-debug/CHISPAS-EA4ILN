@@ -83,6 +83,7 @@ inline bool depuActiva(uint8_t bit) { return (depuracion & bit) != 0; }
 #include "parts/autospot.inc"
 #include "parts/pant_prop_pota.inc"
 #include "parts/sol.inc"
+#include "parts/tiempo.inc"
 #include "parts/conf.inc"
 #include "parts/estados_cw.inc"
 #include "parts/qso_sim.inc"

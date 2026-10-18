@@ -94,6 +94,8 @@ void actualizarSpotsPota() {
 bool tocaDescargarParques();  // Definidas con los parques POTA
 void descargarParques();
 void enviarSpotPota();        // Definida con el autospot
+bool tocaActualizarTiempo();  // Definidas con la pantalla TIEMPO
+void actualizarTiempo();
 
 /**
  * Opcion "actualizar" (y REINTENTAR) de PROP y POTA: descarga en cuanto haya conexion; sin WiFi lo enciende.
@@ -145,7 +147,7 @@ void terminarDescarga() {
  */
 void procesarWifi() {
   static uint8_t pantallaAnterior = 0;
-  // En AUTO, PROP y POTA encienden el WiFi al entrar; SOL tambien, pero solo si aun no hay hora (para
+  // En AUTO, PROP, POTA y TIEMPO encienden el WiFi al entrar; SOL tambien, pero solo si aun no hay hora (para
   // sincronizarla por NTP). En MANUAL, ninguna: solo ACTUALIZAR. Si no conecta, su menu ofrece ABRIR WEBCONF y
   // REINTENTAR. En CONF y SOL el WiFi solo sigue encendido si el portal esta abierto: si se llega con el WiFi
   // conectado (desde PROP o POTA) se apaga, porque no se usa (eran unos 40 mA de mas, medido). Al cambiar de
@@ -153,7 +155,8 @@ void procesarWifi() {
   if (pantallaActual != pantallaAnterior) {
     struct tm hora;
     bool solSinHora = pantallaActual == PANTALLA_SOL && !horaLocalValida(hora);
-    bool enDatos = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS || solSinHora);
+    bool enDatos = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
+                    pantallaActual == PANTALLA_TIEMPO || solSinHora);
     bool conPortal = estadoWifi == WIFI_PORTAL &&
                      (pantallaActual == PANTALLA_CONFIG || pantallaActual == PANTALLA_SOL);
     bool encender = wifiAuto && enDatos;
@@ -181,9 +184,9 @@ void procesarWifi() {
       } else if (!wm.getConfigPortalActive()) {
         Serial.println(F("[WIFI] PORTAL CERRADO POR TIEMPO"));
         apagarWifi();
-        // En PROP, POTA o SOL se vuelve a su menu sin conexion (ABRIR WEBCONF y REINTENTAR)
+        // En PROP, POTA, SOL o TIEMPO se vuelve a su menu sin conexion (ABRIR WEBCONF y REINTENTAR)
         if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
-            pantallaActual == PANTALLA_SOL) {
+            pantallaActual == PANTALLA_SOL || pantallaActual == PANTALLA_TIEMPO) {
           quedarseSinConexion();
         }
         pantallaPendiente = true;
@@ -200,6 +203,8 @@ void procesarWifi() {
       // En MANUAL solo se descarga lo pedido; en AUTO, ademas, la primera vez y al cumplirse el refresco
       bool enProp = pantallaActual == PANTALLA_PROPAGACION;
       bool enPota = pantallaActual == PANTALLA_SPOTS;
+      bool enTiempo = pantallaActual == PANTALLA_TIEMPO;
+      bool tocaTiempo = enTiempo && (forzarActualizacion || tocaActualizarTiempo());
       bool tocaPropagacion = enProp &&
           (forzarActualizacion || (wifiAuto && (propagacion.intentoMs == 0 ||
                                                 millis() - propagacion.intentoMs > REFRESCO_PROPAGACION_MS)));
@@ -212,11 +217,12 @@ void procesarWifi() {
         empezarDescarga("ENVIANDO SPOT...");
         enviarSpotPota();
         terminarDescarga();
-      } else if (tocaPropagacion || tocaPota) {
+      } else if (tocaPropagacion || tocaPota || tocaTiempo) {
         forzarActualizacion = false;
         empezarDescarga("DESCARGANDO...");
         if (tocaPropagacion) actualizarPropagacion();
         if (tocaPota) actualizarSpotsPota();
+        if (tocaTiempo) actualizarTiempo();
         terminarDescarga();
       } else if (enPota && tocaDescargarParques()) {
         // Lista de parques: si no la hay o tiene mas de un mes (despues de los spots, ya con la hora del NTP)
@@ -224,8 +230,8 @@ void procesarWifi() {
         descargarParques();
         terminarDescarga();
       }
-      // Aviso de version nueva: una vez al dia, aprovechando el WiFi de PROP o POTA
-      if ((enProp || enPota) && (!otaComprobada || millis() - otaComprobadaMs > OTA_COMPROBACION_MS)) {
+      // Aviso de version nueva: una vez al dia, aprovechando el WiFi de PROP, POTA o TIEMPO
+      if ((enProp || enPota || enTiempo) && (!otaComprobada || millis() - otaComprobadaMs > OTA_COMPROBACION_MS)) {
         empezarDescarga("BUSCANDO FW NUEVO...");
         buscarActualizacion();
         terminarDescarga();

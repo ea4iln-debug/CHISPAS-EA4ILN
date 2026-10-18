@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 EA4ILN
-// Chispas, parte de main.cpp: pantalla SOL: sol, linea gris y ambiente.
+// Chispas, parte de main.cpp: pantalla SOL: sol y linea gris.
 // Se incluye desde main.cpp en su orden (una sola unidad de compilacion); no compila suelta.
 
 // ============================================================================
@@ -101,86 +101,8 @@ void dibujarDiaSol(time_t instante, float lat, float lon, int difLocal) {
   display.print(linea);
 }
 
-const char* const NOMBRES_PAGINAS_SOL[4] = { "HOY", "AHORA", "MA\xA4" "ANA", "AMBIENTE" };  // 0xA4 = enye en CP437
-#define PAGINA_SOL_AMBIENTE 3  // Solo con el BME280
-
-uint8_t paginasSol() {
-  return bmeDireccion != 0 ? 4 : 3;
-}
-
-/**
- * Lee el BME280 cada minuto (cada 2 s con AMBIENTE a la vista), guarda una muestra de presion cada 10 min y
- * activa o quita el aviso de tormenta (bajada de BME_TORMENTA_HPA en 3 h)
- */
-void procesarBME() {
-  if (bmeDireccion == 0) return;
-  bool aLaVista = pantallaActual == PANTALLA_SOL && subDatos == DATOS_PAGINAS && paginaSol == PAGINA_SOL_AMBIENTE;
-  if (millis() - bmeUltimaLecturaMs < (aLaVista ? BME_LECTURA_VISTA_MS : BME_LECTURA_MS)) return;
-  bmeUltimaLecturaMs = millis();
-  bool ok = bmeMedir();
-  if (aLaVista) pantallaPendiente = true;
-  if (!ok || (bmeHistN > 0 && millis() - bmeUltimaMuestraMs < BME_HIST_INTERVALO_MS)) return;
-
-  bmeUltimaMuestraMs = millis();
-  if (bmeHistN == BME_HIST_N) {
-    memmove(bmeHist, bmeHist + 1, (BME_HIST_N - 1) * sizeof(float));
-    bmeHistN--;
-  }
-  // Con la altitud del GPS, la muestra va reducida a nivel del mar: subir a un monte no parece una bajada de
-  // presion (3 hPa son unos 25 m). Al pasar de un tipo de muestra al otro, el historial empieza de nuevo
-  bool nivelMar = !isnan(gpsAltRef);
-  if (nivelMar != bmeHistNivelMar) {
-    if (bmeHistN > 0) Serial.println(nivelMar ? F("[BME] HISTORIAL A NIVEL DEL MAR (ALTITUD DEL GPS): EMPIEZA DE NUEVO")
-                                              : F("[BME] HISTORIAL SIN ALTITUD: EMPIEZA DE NUEVO"));
-    bmeHistN = 0;
-    bmeHistNivelMar = nivelMar;
-  }
-  bmeHist[bmeHistN++] = nivelMar ? qnhParaAltitud(gpsAltRef) : bmePresionHpa;
-  float tend = bmeTendencia3h();
-  bool aviso = !isnan(tend) && tend <= -BME_TORMENTA_HPA;
-  if (aviso != avisoTormenta) {
-    avisoTormenta = aviso;
-    pantallaPendiente = true;
-    Serial.printf(aviso ? "[BME] AVISO DE TORMENTA: %.1f HPA EN 3 H\n" : "[BME] FIN DEL AVISO (%.1f HPA EN 3 H)\n", tend);
-  }
-  Serial.printf("[BME] T %.1f C  HR %.0f %%  P %.2f HPA  ALT %.0f M  TEND %.1f HPA/3H (%u MUESTRAS)\n", bmeTempC,
-                bmeConHumedad ? bmeHumedad : 0.0f, bmePresionHpa, altitudBarometrica(), isnan(tend) ? 0.0f : tend,
-                bmeHistN);
-}
-
-// Pagina AMBIENTE de SOL: temperatura, humedad, presion, tendencia (aviso de tormenta) y altitud
-void dibujarPaginaAmbiente() {
-  if (isnan(bmePresionHpa)) {
-    dibujarSinDatos("SIN LECTURA DEL SENSOR");
-    return;
-  }
-  char linea[32];
-  if (bmeConHumedad) snprintf(linea, sizeof(linea), "T %.1fC   HR %.0f%%", bmeTempC, bmeHumedad);
-  else snprintf(linea, sizeof(linea), "T %.1fC   HR --", bmeTempC);
-  display.setCursor(0, 12);
-  display.print(linea);
-  snprintf(linea, sizeof(linea), "P %.1f HPA", bmePresionHpa);
-  display.setCursor(0, 22);
-  display.print(linea);
-
-  float tend = bmeTendencia3h();
-  if (isnan(tend)) {
-    uint16_t minutos = bmeHistN > 0 ? (bmeHistN - 1) * (BME_HIST_INTERVALO_MS / 60000UL) : 0;
-    snprintf(linea, sizeof(linea), "3H: FALTAN %u MIN", BME_TEND_MIN_MIN - minutos);
-  } else {
-    const char* texto = avisoTormenta ? "TORMENTA?" :
-                        tend <= -BME_TEND_CAMBIO_HPA ? "BAJANDO" : tend >= BME_TEND_CAMBIO_HPA ? "SUBIENDO" : "ESTABLE";
-    snprintf(linea, sizeof(linea), "3H %+.1f HPA %s", tend, texto);
-  }
-  display.setCursor(0, 32);
-  display.print(linea);
-
-  // Sin calibrar, la altitud sale con la atmosfera estandar (se calibra en CONFIG > ALTITUD)
-  if (qnhCalibrado) snprintf(linea, sizeof(linea), "ALT %.0fM  QNH %.1f", altitudBarometrica(), qnhHpa);
-  else snprintf(linea, sizeof(linea), "ALT %.0fM (QNH STD)", altitudBarometrica());
-  display.setCursor(0, 42);
-  display.print(linea);
-}
+const char* const NOMBRES_PAGINAS_SOL[3] = { "HOY", "AHORA", "MA\xA4" "ANA" };  // 0xA4 = enye en CP437
+#define PAGINAS_SOL 3  // La pagina AMBIENTE (BME280) esta en TIEMPO
 
 // SOL: "actualizar" despierta el GPS (si lo hay) y, si la hora no viene de el, la sincroniza por NTP (enciende el
 // WiFi si hace falta; en MANUAL se apaga al llegar la hora o a los WIFI_ESPERA_NTP_MS)
@@ -231,10 +153,8 @@ void renderizarPantallaSol() {
     return;
   }
 
-  // Paginas (AMBIENTE no necesita hora ni locator)
-  if (paginaSol == PAGINA_SOL_AMBIENTE) {
-    dibujarPaginaAmbiente();
-  } else if (!locatorOk) {
+  // Paginas
+  if (!locatorOk) {
     dibujarSinDatos("LOCATOR NO VALIDO");
     display.setCursor(0, 32);
     display.print(F("CAMBIALO EN CONFIG"));
@@ -272,6 +192,6 @@ void renderizarPantallaSol() {
       dibujarDiaSol(ahora + (paginaSol == 2 ? 86400 : 0), lat, lon, difLocal);
     }
   }
-  dibujarPiePaginas(paginaSol, paginasSol(), NOMBRES_PAGINAS_SOL[paginaSol]);
+  dibujarPiePaginas(paginaSol, PAGINAS_SOL, NOMBRES_PAGINAS_SOL[paginaSol]);
 }
 

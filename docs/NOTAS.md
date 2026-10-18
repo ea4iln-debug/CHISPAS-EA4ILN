@@ -585,12 +585,32 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `bmeTendencia3h()`: cambio escalado a 3 h, desde 60 min de historial; ±1 hPa = BAJANDO/SUBIENDO; ≤ -3 hPa =
   `avisoTormenta` (la cabecera pone "TORM!" en vez del nombre; `[BME] AVISO DE TORMENTA` por serie). Ojo: al
   cambiar de altitud (subir a un monte) la presión baja y puede dar un falso aviso; con el GPS, el historial va a nivel del mar (ver GPS).
-  Página **AMBIENTE** (4/4 de SOL, solo con sensor, `paginasSol()`; no necesita hora ni locator). **CONFIG > ALTITUD**
+  Página **AMBIENTE** (4/4 de SOL hasta el 18 oct 2026; desde entonces 4/4 de TIEMPO, `paginasTiempo()`; solo con
+  sensor; no necesita hora, locator ni WiFi). **CONFIG > ALTITUD**
   (`OC_ALTITUD`): muestra la altitud ("?" sin calibrar); pulsar, girar hasta la altitud real y pulsar calcula el QNH
   (`qnhParaAltitud()`, NVS `qnh` en `estacion`; sin él, 1013,25). STATUS página 6 **SENSOR**. Macro **{WX}**
   (`textoWx()`): "WX 18C", "WX MINUS 3C" bajo cero (el guion no está en la tabla Morse), vacío sin sensor; en la
   rueda del editor, en el portal y en `trxLimpiarTexto()`. Por serie cada 10 min: `[BME] T ... P ... TEND ...`.
   La temperatura sale alta por el calor de la placa (en la primera lectura, 25,8 °C dentro de casa).
+- **TIEMPO** (18 oct 2026, sin versión nueva; `src/parts/tiempo.inc`; **probado en la placa 1 el 18 oct 2026**):
+  pantalla 8 (CONF pasa a 9, `TOTAL_PANTALLAS` 9), detrás de SOL. Cabecera **`WX`**: "TIEMPO" (36 px) se monta
+  sobre "BAT:100%" y "METEO" queda pegado (visto en la OLED). Menú VER DATOS / ACTUALIZAR como PROP (sin conexión,
+  ABRIR WEBCONF / REINTENTAR), estado `OPEN-METEO <edad>`. Páginas AHORA (cielo, T, HR, presión, viento y resumen de
+  hoy), HORAS (+3, +6, +9 y +12 h desde la hora en curso: cielo corto, T y % de lluvia), MAÑANA (cielo, máx/mín,
+  % y mm de lluvia, viento máximo y rumbo dominante) y AMBIENTE (movida desde SOL con `procesarBME()` y
+  `dibujarPaginaAmbiente()`). Textos de los códigos WMO en castellano (largo ≤ 21 y corto de 6 caracteres).
+  **Proveedor (decisión del usuario, 18 oct):** Open-Meteo: sin clave, por lat/lon (`locatorALatLon(locatorEstacion)`,
+  que con GPS es su locator), una petición HTTPS de unos 3 KB (`setInsecure()`, como hamqsl y POTA), mundial, gratis
+  para uso no comercial (unas 10 000 llamadas al día), datos CC BY 4.0 (se cita en el menú, README y manual).
+  `timezone=auto`: las horas vienen en la hora local del sitio, no hace falta la hora del aparato. **AEMET OpenData
+  descartado de momento** (se podría añadir como fuente opcional): clave por usuario (no se puede meter en un repo
+  público), predicción por municipio INE (habría que bajar el maestro de municipios a LittleFS, como los parques),
+  dos peticiones por consulta (la primera da la URL de los datos), horaria de decenas de KB en ISO-8859-15 y sin
+  "tiempo actual" (la observación va por estación). Uso permitido citando a AEMET como autora.
+  WiFi: en AUTO enciende al entrar y refresca cada 30 min (`REFRESCO_TIEMPO_MS`); en MANUAL, ACTUALIZAR. También
+  sirve para la comprobación diaria de FW nuevo. Prueba: descarga en 2 s (`[WIFI] TIEMPO: 21:15 18.5 C, CUBIERTO`),
+  WiFi apagado al acabar (MANUAL), las cuatro páginas vistas con capturas y SOL con 3 páginas. RAM y flash sin
+  cambio apreciable (17,4 % y 39,8 %). Sin probar: AUTO con refresco y sin BME280 (3 páginas).
 - **GPS NEO-6M** (13 oct 2026, sin versión nueva; `src/parts/gps.inc`; **probado en la placa 1 el 13 oct 2026**):
   UART1 a 9600 bd (47 recibe su TX, 39 va a su RX), siempre alimentado. Estados `GPS_DETECTANDO` → `AUSENTE` (sin
   NMEA con checksum bueno en 6 s: `Serial1.end()` y todo como sin GPS) o `BUSCANDO` / `CON_FIJO` / `DORMIDO`.

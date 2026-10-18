@@ -656,13 +656,13 @@
         cambiarlo y pulsa otra vez para dejarlo. Si giras deprisa, los números saltan de cinco en cinco.</p>
 
       <h3>Las pantallas principales</h3>
-      <p>CHISPAS tiene ocho pantallas principales, en fila. En cada una, abajo, están <span class="mono">ant.</span>
+      <p>CHISPAS tiene nueve pantallas principales, en fila. En cada una, abajo, están <span class="mono">ant.</span>
         (la anterior) y <span class="mono">sig.</span> (la siguiente): gira hasta una de ellas y pulsa. Desde cualquier
         pantalla, <kbd>PRG</kbd> te devuelve al inicio.</p>
       <ul class="ruta" aria-label="Orden de las pantallas">
         <li>INICIO</li><li class="flecha">→</li><li>CW</li><li class="flecha">→</li><li>LORA</li><li class="flecha">→</li>
         <li>TRX</li><li class="flecha">→</li><li>PROP</li><li class="flecha">→</li><li>POTA</li><li class="flecha">→</li>
-        <li>SOL</li><li class="flecha">→</li><li>CONF</li>
+        <li>SOL</li><li class="flecha">→</li><li>TIEMPO</li><li class="flecha">→</li><li>CONF</li>
       </ul>
       <table class="tabla">
         <tr><th>Pantalla</th><th>Para qué sirve</th></tr>
@@ -672,7 +672,8 @@
         <tr><td>TRX</td><td>Trabajar con tu transceptor.</td></tr>
         <tr><td>PROP</td><td>Cómo están las bandas.</td></tr>
         <tr><td>POTA</td><td>Quién está activando un parque y qué parques tienes cerca.</td></tr>
-        <tr><td>SOL</td><td>Salida y puesta del sol, línea gris y, si lo lleva sensor ambiental, sus datos.</td></tr>
+        <tr><td>SOL</td><td>Salida y puesta del sol y línea gris.</td></tr>
+        <tr><td>TIEMPO <span class="chip-beta">beta</span></td><td>El tiempo que hace y el que va a hacer y, si lleva sensor ambiental, sus datos. En la cabecera se llama <span class="mono">WX</span>.</td></tr>
         <tr><td>CONF</td><td>Configuración y estado del aparato.</td></tr>
       </table>
 
@@ -1223,11 +1224,29 @@
           <span class="mono">GRIS PM</span>).</li>
         <li><b>AHORA:</b> a qué altura está el sol en este momento y si estás en línea gris.</li>
         <li><b>MAÑANA:</b> lo mismo para mañana, para planear la salida.</li>
-        <li><b>AMBIENTE:</b> solo si tu CHISPAS lleva sensor (ver abajo).</li>
       </ul>
       <p>Necesita saber la hora. Si no la tiene, al pulsar <span class="mono">ACTUALIZAR</span> la pide por WiFi.</p>
       <div class="galeria">
         <figure class="pantalla"><img src="img/sol.png?__SELLO__" width="512" height="256" alt="Salida y puesta del sol y líneas grises de hoy"><figcaption>Hoy: sol y línea gris.</figcaption></figure>
+      </div>
+
+      <h3 id="tiempo">TIEMPO: el parte meteorológico <span class="chip-beta">beta</span></h3>
+      <p>La pantalla <b>TIEMPO</b> (<span class="mono">WX</span> en la cabecera, como dicen los radioaficionados) te
+        dice el tiempo que hace donde estás y el que va a hacer. Lo baja por WiFi con <span class="mono">ACTUALIZAR</span>
+        para el sitio de tu locator (con GPS, donde estés). Los datos son de <b>Open-Meteo</b>, un servicio gratuito; en
+        el menú ves cuánto hace que los bajaste.</p>
+      <ul>
+        <li><b>AHORA:</b> cómo está el cielo, la temperatura, la humedad, la presión, el viento (de dónde viene y a qué
+          velocidad) y el resumen de hoy: mínima, máxima y probabilidad de lluvia.</li>
+        <li><b>HORAS:</b> lo que viene en las próximas doce horas, de tres en tres: cielo, temperatura y probabilidad
+          de lluvia.</li>
+        <li><b>MAÑANA:</b> máxima y mínima, lluvia y viento de mañana. Ideal para decidir si sales a activar.</li>
+        <li><b>AMBIENTE:</b> solo si tu CHISPAS lleva sensor (ver abajo). No necesita WiFi.</li>
+      </ul>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/tiempo.png?__SELLO__" width="512" height="256" alt="Tiempo de ahora: cielo, temperatura, humedad, presión, viento y resumen de hoy"><figcaption>AHORA: el tiempo que hace.</figcaption></figure>
+        <figure class="pantalla"><img src="img/tiempo_horas.png?__SELLO__" width="512" height="256" alt="Previsión cada tres horas con cielo, temperatura y probabilidad de lluvia"><figcaption>HORAS: las próximas doce horas.</figcaption></figure>
+        <figure class="pantalla"><img src="img/tiempo_manana.png?__SELLO__" width="512" height="256" alt="Previsión de mañana con máxima, mínima, lluvia y viento"><figcaption>MAÑANA: para planear la salida.</figcaption></figure>
       </div>
 
       <h3 id="ambiente">Ambiente y aviso de tormenta (opcional)</h3>
@@ -1251,7 +1270,7 @@
         </svg>
         <figcaption>«La presión cae en picado… ¿alguien ha visto dónde dejé la antena?»</figcaption>
       </figure>
-      <p>Si tu CHISPAS lleva el <b>sensor de ambiente</b>, la página AMBIENTE de SOL muestra la temperatura, la
+      <p>Si tu CHISPAS lleva el <b>sensor de ambiente</b>, la página AMBIENTE de TIEMPO muestra la temperatura, la
         humedad, la presión y cómo ha cambiado la presión en las últimas tres horas.</p>
       <p>Si la presión baja deprisa, suele venir mal tiempo. Entonces CHISPAS cambia el nombre de la pantalla en la
         cabecera por <span class="mono">TORM!</span>. Muy útil en una activación en el monte: es hora de recoger la
@@ -1329,7 +1348,7 @@
         <tr><td>ACELERACION</td><td>Cuánto saltan los números al girar deprisa (o que no salten).</td></tr>
         <tr><td>SALVAPANTALLAS</td><td>Cuándo sale la cara de CHISPAS si no lo tocas (o nunca).</td></tr>
         <tr><td>APAGADO</td><td>A los cuántos minutos se duerme solo (o nunca).</td></tr>
-        <tr><td>WIFI DATOS</td><td><b>MANUAL</b> (de serie): el WiFi solo se enciende cuando pulsas ACTUALIZAR en PROP, POTA o SOL, y se apaga al terminar. <b>AUTO</b>: se conecta al entrar en esas pantallas y refresca solo, pero gasta más batería.</td></tr>
+        <tr><td>WIFI DATOS</td><td><b>MANUAL</b> (de serie): el WiFi solo se enciende cuando pulsas ACTUALIZAR en PROP, POTA, SOL o TIEMPO, y se apaga al terminar. <b>AUTO</b>: se conecta al entrar en esas pantallas y refresca solo, pero gasta más batería.</td></tr>
         <tr><td>WEBCONF</td><td>Abre la red WiFi de CHISPAS para configurarlo desde el móvil (ver <a href="#primeros-pasos">Primeros pasos</a>).</td></tr>
         <tr><td>ACTUALIZAR FW</td><td>Busca una versión nueva (ver <a href="#actualizar">Actualizaciones</a>).</td></tr>
         <tr><td>FABRICA</td><td>Lo borra <b>todo</b> y lo deja como nuevo. Pide que lo confirmes dos veces.</td></tr>

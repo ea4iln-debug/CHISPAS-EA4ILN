@@ -437,7 +437,7 @@ bool caraPermitida() {
   if (pantallaActual == PANTALLA_CW || pantallaActual == PANTALLA_LORA || pantallaActual == PANTALLA_TRX) return false;
   if (pantallaActual == PANTALLA_CONFIG && (subConf == CONF_PORTAL || subConf == CONF_OTA)) return false;
   bool pantallaDatos = pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
-                       pantallaActual == PANTALLA_SOL;
+                       pantallaActual == PANTALLA_SOL || pantallaActual == PANTALLA_TIEMPO;
   if (pantallaDatos && subDatos == DATOS_PORTAL) return false;
   return true;
 }

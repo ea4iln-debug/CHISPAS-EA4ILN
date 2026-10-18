@@ -139,6 +139,7 @@ void dibujarEncabezado() {
       case PANTALLA_PROPAGACION: nombre = "PROP."; break;
       case PANTALLA_SPOTS:       nombre = "POTA";  break;
       case PANTALLA_SOL:         nombre = "SOL";   break;
+      case PANTALLA_TIEMPO:      nombre = "WX";    break;  // TIEMPO: no cabe con "BAT:100%" (METEO queda pegado)
       case PANTALLA_CONFIG:      nombre = "CONF."; break;
     }
     if (avisoTormenta) nombre = "TORM!";  // Presion bajando deprisa (BME280): el aviso sustituye al nombre

@@ -259,14 +259,15 @@ muy larga (2,5 s) = dormir.
 
 | N.º | Pantalla | Contenido |
 |---|---|---|
-| 1 | **Inicio** | Nombre, indicativo y versión. Tras unos segundos sin uso aparece la cara de Chispas (también en PROP., POTA, SOL y CONF.). |
+| 1 | **Inicio** | Nombre, indicativo y versión. Tras unos segundos sin uso aparece la cara de Chispas (también en PROP., POTA, SOL, TIEMPO y CONF.). |
 | 2 | **CW** | Entrenador: `KOCH (RX)`, `ECHO (TX)`, `QSO SIM` (simulador de QSO POTA) y `tx libre` en el pie (keyer), con ajustes, práctica y estadísticas |
 | 3 | **LoRa** | `PRÁCTICA DUO` (grupos en pareja) y `QSO LIBRE` (con las palas) |
 | 4 | **TRX** | Transceptor: `DECODIFICAR`, `OPERAR` (por KEY, con tune), `QSO` y `memorias` |
 | 5 | **PROP.** | Propagación: índices solares y condiciones por banda |
 | 6 | **POTA** | Spots de activaciones en CW, parques POTA más cercanos (con el GPS o el locator) y autospot desde un parque |
-| 7 | **SOL** | Sol y línea gris: hoy, ahora y mañana; con el BME280, también AMBIENTE |
-| 8 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización, depuración y fábrica) y `STATUS` |
+| 7 | **SOL** | Sol y línea gris: hoy, ahora y mañana |
+| 8 | **TIEMPO** (`WX` en la cabecera) | Tiempo de [Open-Meteo](https://open-meteo.com/) (CC BY 4.0) para el locator o el GPS: ahora, próximas 12 h cada 3 h y mañana; con el BME280, también AMBIENTE |
+| 9 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización, depuración y fábrica) y `STATUS` |
 
 La cabecera muestra la hora (local o UTC, a elegir), el nombre de la pantalla y la batería (`PWR` si no hay batería).
 Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captura_oled.py) (necesita
@@ -304,6 +305,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | <img src="docs/img/prop_menu.png" width="256" alt="Menú de propagación"><br>Propagación: menú | <img src="docs/img/prop.png" width="256" alt="Índices"><br>Índices | <img src="docs/img/prop2.png" width="256" alt="Condiciones por banda"><br>Condiciones por banda |
 | <img src="docs/img/pota_menu.png" width="256" alt="Menú POTA"><br>POTA: menú | <img src="docs/img/pota.png" width="256" alt="Spots POTA"><br>Spots POTA | <img src="docs/img/sol_menu.png" width="256" alt="Menú del sol"><br>Sol: menú |
 | <img src="docs/img/sol.png" width="256" alt="Sol hoy"><br>Sol: hoy | <img src="docs/img/sol_ahora.png" width="256" alt="Sol ahora"><br>Sol: ahora | <img src="docs/img/sol_manana.png" width="256" alt="Sol mañana"><br>Sol: mañana |
+| <img src="docs/img/tiempo.png" width="256" alt="Tiempo ahora"><br>Tiempo: ahora | <img src="docs/img/tiempo_horas.png" width="256" alt="Tiempo en las próximas 12 horas"><br>Tiempo: horas | <img src="docs/img/tiempo_manana.png" width="256" alt="Tiempo de mañana"><br>Tiempo: mañana |
 | <img src="docs/img/ambiente.png" width="256" alt="Ambiente: temperatura, humedad, presión, tendencia y altitud"><br>Ambiente (BME280) | <img src="docs/img/parques.png" width="256" alt="Parques POTA cercanos"><br>POTA: parques cercanos | <img src="docs/img/parques_menu.png" width="256" alt="Parque marcado: spot o volver"><br>POTA: spot desde un parque |
 | <img src="docs/img/spot_ficha.png" width="256" alt="Ficha del autospot"><br>Autospot: ficha | <img src="docs/img/spot_activacion.png" width="256" alt="Activación en curso"><br>Autospot: activación en curso | <img src="docs/img/inicio_activando.png" width="256" alt="Inicio con la activación en curso"><br>Inicio: activando |
 
@@ -336,7 +338,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | **ACELERACION** | Salto de los valores al girar rápido: `NO` o x2 a x5 |
 | **SALVAPANTALLAS** | Tiempo sin uso antes de que salga la cara: `NO`, 15 s, 30 s, 1, 2 o 5 min |
 | **APAGADO** | Minutos sin uso antes de dormir: nunca, 5, 10, 15, 30, 60 o 120 (nunca en CW, LoRa ni TRX) |
-| **WIFI DATOS** | `MANUAL` (por defecto): PROP., POTA y SOL solo encienden el WiFi al pulsar **ACTUALIZAR** (`CONECTANDO WIFI...`, `DESCARGANDO...`; mientras conecta, **cancelar**) y lo apagan al terminar; los datos se quedan hasta la siguiente vez (en los spots, su antigüedad en el pie). `AUTO`: se conecta al entrar en esas pantallas y refresca solo (POTA cada 2 min, PROP. cada hora) |
+| **WIFI DATOS** | `MANUAL` (por defecto): PROP., POTA, SOL y TIEMPO solo encienden el WiFi al pulsar **ACTUALIZAR** (`CONECTANDO WIFI...`, `DESCARGANDO...`; mientras conecta, **cancelar**) y lo apagan al terminar; los datos se quedan hasta la siguiente vez (en los spots, su antigüedad en el pie). `AUTO`: se conecta al entrar en esas pantallas y refresca solo (POTA cada 2 min, PROP. cada hora) |
 | **WEBCONF** | Abre el portal WiFi (ver abajo) |
 | **ACTUALIZAR FW** | Actualización por OTA (ver [arriba](#actualizar-por-wifi-ota)) |
 | **DEPURACION** | Mensajes y órdenes por serie para pruebas: órdenes serie, diagnóstico, decodificador y retraso CW (todo en `NO` por defecto) |

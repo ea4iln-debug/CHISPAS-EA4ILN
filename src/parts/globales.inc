@@ -26,8 +26,9 @@ uint8_t pantallaActual = 1;
 #define PANTALLA_PROPAGACION 5
 #define PANTALLA_SPOTS       6
 #define PANTALLA_SOL         7
-#define PANTALLA_CONFIG      8
-const uint8_t TOTAL_PANTALLAS = 8;
+#define PANTALLA_TIEMPO      8  // Tiempo y prevision (Open-Meteo) y ambiente (BME280)
+#define PANTALLA_CONFIG      9
+const uint8_t TOTAL_PANTALLAS = 9;
 uint8_t opcionNavegacionP1234 = 1;  // 0 = "ant.", 1 = "sig."
 
 String estadoLoraStr = "INICIANDO...";
