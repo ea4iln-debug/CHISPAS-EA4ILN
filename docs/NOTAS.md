@@ -377,6 +377,23 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     `EA4IL` y `TU 73` (sin 5NN) dan las dos repeticiones (2 rep.), y sin `E E` acaba solo a los 6 s. Audio "bien,
     realista" según el usuario. Activador extranjero con parque ES: **se deja así** (decisión del usuario).
     Falta solo manipularlo con las palas de verdad (fin de turno y velocidad real).
+    **ROL ACTIVADOR (18 oct 2026, petición del usuario, sin versión nueva):** primer ajuste de la lista, **ROL**
+    = CAZADOR (lo de antes) / ACTIVADOR (tu rol; NVS `srol`); con ACTIVADOR el segundo se llama WPM CAZADOR. Los
+    índices de `opcionSim` corren uno (0 rol … 9 iniciar, 10 volver). Un solo QSO (decisión del usuario, no una
+    activación en serie). Empiezas tú: arriba `LLAMA: CQ POTA DE <MI> K` hasta que llamas; vale cualquier cosa con
+    `CQ` o `QRZ` (sin eso, nadie contesta y sigues). El cazador (indicativo al azar sin `/P`) da su indicativo una o
+    dos veces; tu informe necesita su indicativo y `5NN`/`599` → `BK TU 5NN 5NN 73 BK`; tu despedida (cualquier cosa,
+    `TU 73 QRZ` incluido) → `E E` o `73 E E` y resultado (`CON <CAZADOR>`). Dificultades (las tres que eligió el
+    usuario): **indicativo parcial** (25 %: solo `9A4`; con `9A4?`, `QRZ?` o `AGN` lo da entero; si no lo pides, lo
+    da igual y cuenta repetición), **llama tarde** (si no contestas a su indicativo en 8 s, vuelve a llamar;
+    `SIM_CAZADOR_TARDE_MS`; lo demás se repite a los 20 s) y **copia mal tu indicativo** (25 %: `BK EA4HLN? 5NN 5NN
+    BK`, una letra del sufijo cambiada; hay que mandarle el tuyo → `R R TU 5NN 5NN 73 BK`); además un `AGN?` tras tu
+    informe (15 %, una vez por QSO, no cuenta). Informe sin su indicativo → lo vuelve a dar; sin 5NN → `RST? BK` (las
+    dos cuentan). En la despedida `QRZ` no pide repetir (solo `?` o `AGN`): fallo visto en la prueba y arreglado.
+    **Probado en la placa 1 por USB (18 oct 2026) con la orden `m`:** lista con ROL y WPM CAZADOR; QSO 1 con 9A4MXH
+    (parcial → `9A4?` → entero; vuelve a llamar al tardar; copia mala `EA4HLN?` → corregida → `R R TU…`); QSO 2 con
+    M2VUR (`M2VUR GM BK` → `RST? BK`; con 5NN → `BK TU…`; `TU 73 QRZ` → QSO HECHO 1:11, 1 rep.). Lo que se manipula
+    mientras el cazador emite se pierde (keyer en pausa, igual que en el rol cazador). Sin oír ni con palas.
 - **Motor CW** (v0.6a/b): tarea FreeRTOS `motorCW` en el núcleo 1 con prioridad 3 (`loop()` tiene 1), plazos absolutos
   sobre ticks de 1 ms. API: `motorCWEmitir()`, `motorCWDetener()` (corta enseguida con una notificación),
   `motorCWOcupado()`, `motorCWFinMs`. Solo las tareas llaman a `conmutarEmisionMorse()`. `DEBUG_CW` mide el retraso

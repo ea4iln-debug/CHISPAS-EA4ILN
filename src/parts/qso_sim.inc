@@ -13,11 +13,14 @@
 // Con QSB, el volumen del activador sube y baja (simNivelQsb); con RUIDO, TORMENTA y QRM se oye la banda
 // Lo manipulado se compara sin espacios (una pausa larga parte el indicativo) y solo se buscan las palabras
 // clave: para empezar a manipular basta. "AGN" o "?" piden que repita. Si no te entiende, pide lo que falta
+//
+// Con ROL ACTIVADOR se cambian los papeles: tu llamas y Chispas es el cazador (ver "Rol activador", abajo)
 #define SIM_FIN_TURNO_MS     3000   // Silencio que cierra tu turno (o 25 puntos, si es mas)
 #define SIM_SIN_RESPUESTA_MS 20000  // Sin manipular nada: vuelve a llamar (o repite)
 #define SIM_DESPEDIDA_MS     6000   // En la despedida, sin manipular: se acaba
+#define SIM_CAZADOR_TARDE_MS 8000   // Rol activador: si no contestas a su indicativo, el cazador vuelve a llamar
 
-String simIndicativo = "";  // El del activador
+String simIndicativo = "";  // El de Chispas (activador o cazador)
 String simParque = "";
 String simEmitido = "";     // Lo ultimo que ha emitido Chispas (para "repetir")
 String simRespuesta = "";   // Lo manipulado en este turno
@@ -25,6 +28,12 @@ unsigned long simInicioTurnoMs = 0, simInicioMs = 0, simDuracionMs = 0;
 uint8_t simRepeticiones = 0;  // Veces que el activador no te entendio
 uint32_t simWpmReal = 0;      // Velocidad real de tu manipulacion (como en RITMO), al acabar
 float simQsbFase1 = 0, simQsbFase2 = 0;  // Al azar en cada QSO
+// Rol activador: lo que hace el cazador
+bool simCazParcial = false;     // Ha dado solo parte de su indicativo ("EA3"): falta que se lo pidas
+bool simCazMalCopiado = false;  // Ha copiado mal tu indicativo: falta que se lo corrijas
+bool simCazPidioAgn = false;    // Ya ha pedido "AGN?" una vez en este QSO
+bool simCazLlamando = false;    // Lo ultimo que emitio fue su indicativo (si tardas, vuelve a llamar)
+bool simAcabarAlEmitir = false; // Su "E E" final: al acabar de sonar, resultado
 
 // QSB: el volumen del activador baja y sube despacio, con dos senos de periodos que no encajan (5,3 y 2,1 s)
 // para que no se repita igual. Profundidad: SUAVE, hasta -8 dB; FUERTE, hasta -26 dB (casi desaparece).
@@ -67,6 +76,7 @@ const char* simSaludo() {
 void simEmitir(const String& texto) {
   simEmitido = texto;
   simRespuesta = "";
+  simCazLlamando = false;
   keyerPausar();
   audioQsb = simNivelQsb();  // Ya para el primer elemento (luego lo sigue procesarSim)
   motorCWEmitir(texto.c_str(), simWpm, simEspaciado, "SIM");
@@ -101,6 +111,20 @@ void iniciarSim() {
   faseSim = FASE_LLAMADA;
   opcionPracticaSim = 0;
   ritmoBorrar = true;  // Para la velocidad real del resultado
+  simCazParcial = simCazMalCopiado = simCazPidioAgn = simCazLlamando = simAcabarAlEmitir = false;
+  if (simRol == SIM_ROL_ACTIVADOR) {
+    // El cazador llama desde casa: sin "/P". Empiezas tu con el CQ
+    if (simIndicativo.endsWith("/P")) simIndicativo.remove(simIndicativo.length() - 2);
+    simParque = "";
+    simEmitido = "";
+    simRespuesta = "";
+    keyerReanudar();
+    estadoSim = SIM_ESCUCHANDO;
+    simInicioTurnoMs = millis();
+    pantallaPendiente = true;
+    Serial.printf("\n[SIM] ACTIVADOR: cazador %s\n", simIndicativo.c_str());
+    return;
+  }
   simLlamar();
 }
 
@@ -124,7 +148,8 @@ void simTerminar() {
   simDuracionMs = millis() - simInicioMs;
   const RitmoKeyer& r = ritmoKeyer;
   simWpmReal = r.msReal > 0 ? (uint32_t)lroundf((float)keyerWpm * r.msIdeal / r.msReal) : 0;
-  Serial.printf("\n[SIM] QSO con %s %s: %lus, %u rep., %lu WPM\n", simIndicativo.c_str(), simParque.c_str(),
+  Serial.printf("\n[SIM] QSO con %s %s: %lus, %u rep., %lu WPM\n", simIndicativo.c_str(),
+                simRol == SIM_ROL_ACTIVADOR ? "(cazador)" : simParque.c_str(),
                 simDuracionMs / 1000, simRepeticiones, (unsigned long)simWpmReal);
   estadoSim = SIM_FIN;
   opcionPracticaSim = 0;
@@ -139,11 +164,121 @@ uint8_t simPrefijoComun(const String& r) {
   return n;
 }
 
+// ----------------------------------------------------------------------------
+// Rol activador: tu llamas y Chispas es el cazador
+// ----------------------------------------------------------------------------
+//   LLAMADA:    "CQ POTA DE EA4ILN/P K" (o "QRZ")  -> su indicativo, una o dos veces
+//   INFORME:    "EA3XYZ GM 5NN BK" (su indicativo y 5NN o 599) -> "BK TU 5NN 5NN 73 BK"
+//   DESPEDIDA:  "TU 73" (cualquier cosa)            -> "E E" y resultado
+// Para que no sea siempre igual, a veces el cazador:
+//   - da solo el principio de su indicativo ("EA3"): pidelo con "EA3?", "QRZ?" o "AGN" (si no, lo da entero y cuenta)
+//   - tarda en oirte: si no contestas a su indicativo en 8 s, vuelve a llamar
+//   - copia mal tu indicativo ("BK EA4ILM? 5NN 5NN BK"): mandale el tuyo bien (si no, lo repite y cuenta)
+//   - pide "AGN?" tras tu informe (una vez por QSO, no cuenta)
+// Si a tu informe le falta su indicativo, lo vuelve a dar; si le falta el 5NN, "RST? BK". Las dos cuentan
+
+// Principio del indicativo hasta su cifra: "EA3XYZ" -> "EA3"
+String simIndicativoParcial(const String& ind) {
+  for (uint16_t i = 1; i < ind.length(); i++) {
+    if (isDigit(ind[i])) return ind.substring(0, i + 1);
+  }
+  return ind.substring(0, min((unsigned)3, ind.length()));
+}
+
+// Tu indicativo con una letra del sufijo cambiada: "EA4ILN" -> "EA4ILM"
+String simIndicativoMalCopiado() {
+  String m = indicativoEstacion;
+  int16_t cifra = -1;
+  for (uint16_t i = 1; i < m.length(); i++) if (isDigit(m[i])) cifra = i;
+  uint8_t n = 0;
+  int16_t pos = -1;
+  for (int16_t i = cifra + 1; i < (int16_t)m.length(); i++) {
+    if (isAlpha(m[i]) && random(++n) == 0) pos = i;  // Una letra al azar del sufijo
+  }
+  if (pos < 0) pos = m.length() - 1;
+  char c;
+  do c = 'A' + random(26); while (c == m[pos]);
+  m.setCharAt(pos, c);
+  return m;
+}
+
+// El cazador da su indicativo (o el principio, si le toca); si tardas, vuelve a llamar
+void simCazadorLlama(bool dosVeces) {
+  String ind = simCazParcial ? simIndicativoParcial(simIndicativo) : simIndicativo;
+  simEmitir(dosVeces ? ind + " " + ind : ind);
+  simCazLlamando = true;
+}
+
+void simEvaluarActivador(const String& r) {
+  bool pide = r.indexOf('?') >= 0 || r.indexOf("AGN") >= 0 || r.indexOf("QRZ") >= 0;
+
+  if (faseSim == FASE_LLAMADA) {
+    if (r.indexOf("CQ") >= 0 || r.indexOf("QRZ") >= 0) {
+      faseSim = FASE_INFORME;
+      simCazParcial = random(100) < 25;
+      simCazadorLlama(!simCazParcial && random(2) == 0);
+    } else {
+      // Sin CQ nadie contesta: sigues llamando
+      simRespuesta = "";
+      simInicioTurnoMs = millis();
+      pantallaPendiente = true;
+    }
+
+  } else if (faseSim == FASE_INFORME) {
+    if (simCazMalCopiado) {
+      if (indicativoEstacion[0] && r.indexOf(indicativoEstacion) >= 0) {
+        simCazMalCopiado = false;
+        faseSim = FASE_DESPEDIDA;
+        simEmitir("R R TU 5NN 5NN 73 BK");
+      } else {
+        if (!pide) simRepeticiones++;
+        simEmitir(simEmitido);
+      }
+    } else if (simCazParcial) {
+      // Se lo pidas o no, ahora lo da entero (si no lo pediste, cuenta)
+      if (!pide) simRepeticiones++;
+      simCazParcial = false;
+      simCazadorLlama(true);
+    } else {
+      bool suIndicativo = r.indexOf(simIndicativo) >= 0;
+      bool informe = r.indexOf("5NN") >= 0 || r.indexOf("599") >= 0;
+      if (suIndicativo && informe) {
+        uint8_t dado = random(100);
+        if (!simCazPidioAgn && dado < 15) {
+          simCazPidioAgn = true;
+          simEmitir("AGN?");
+        } else if (indicativoEstacion[0] && dado < 40) {
+          simCazMalCopiado = true;
+          simEmitir("BK " + simIndicativoMalCopiado() + "? 5NN 5NN BK");
+        } else {
+          faseSim = FASE_DESPEDIDA;
+          simEmitir("BK TU 5NN 5NN 73 BK");
+        }
+      } else if (pide && !informe) {
+        simCazadorLlama(true);  // "QRZ?", "AGN": no cuenta
+      } else {
+        simRepeticiones++;
+        if (suIndicativo) simEmitir("RST? BK");
+        else simCazadorLlama(true);
+      }
+    }
+
+  } else {  // FASE_DESPEDIDA ("TU 73 QRZ" es despedirse: aqui QRZ no pide nada)
+    if (r.indexOf('?') >= 0 || r.indexOf("AGN") >= 0) {
+      simEmitir(simEmitido);
+    } else {
+      simEmitir(random(2) ? "E E" : "73 E E");
+      simAcabarAlEmitir = true;
+    }
+  }
+}
+
 // Fin de tu turno: segun la fase y lo manipulado, el activador sigue o pide lo que falta
 void simEvaluar() {
   String r = simRespuesta;
   r.replace(" ", "");
   Serial.printf("\n[SIM] %s\n", simRespuesta.c_str());
+  if (simRol == SIM_ROL_ACTIVADOR) { simEvaluarActivador(r); return; }
 
   if (faseSim == FASE_DESPEDIDA) { simTerminar(); return; }
   if (r == "?" || r.indexOf("AGN") >= 0) { simEmitir(simEmitido); return; }  // Lo pides tu: no cuenta
@@ -184,6 +319,7 @@ void procesarSim() {
   simAplicarBanda();
   if (!enSim) return;
   if (estadoSim == SIM_EMITIENDO && !motorCWOcupado()) {
+    if (simAcabarAlEmitir) { simTerminar(); return; }  // El "E E" del cazador
     keyerReanudar();  // Tu turno
     estadoSim = SIM_ESCUCHANDO;
     simInicioTurnoMs = millis();
@@ -195,6 +331,14 @@ void procesarSim() {
     if (r.length() > 0) {
       uint32_t finTurno = max((uint32_t)SIM_FIN_TURNO_MS, (uint32_t)(25 * 1200 / keyerWpm));
       if (ahora - keyerUltimoUsoMs >= finTurno) simEvaluar();
+    } else if (simRol == SIM_ROL_ACTIVADOR) {
+      // El cazador no se va: si tardas, vuelve a llamar (8 s) o repite lo ultimo (20 s). Tu CQ, sin prisa
+      if (faseSim == FASE_LLAMADA) return;
+      uint32_t espera = simCazLlamando ? SIM_CAZADOR_TARDE_MS : SIM_SIN_RESPUESTA_MS;
+      if (ahora - simInicioTurnoMs >= espera) {
+        if (simCazLlamando) simCazadorLlama(false);
+        else simEmitir(simEmitido);
+      }
     } else if (faseSim == FASE_DESPEDIDA) {
       if (ahora - simInicioTurnoMs >= SIM_DESPEDIDA_MS) simTerminar();
     } else if (ahora - simInicioTurnoMs >= SIM_SIN_RESPUESTA_MS) {
@@ -204,20 +348,24 @@ void procesarSim() {
   }
 }
 
-// "repetir": el activador vuelve a emitir lo ultimo (no cuenta)
+// "repetir": Chispas vuelve a emitir lo ultimo (no cuenta). Con rol activador, antes de tu CQ no hay nada
 void simRepetir() {
+  if (simEmitido.length() == 0) return;
   if (estadoSim == SIM_ESCUCHANDO || estadoSim == SIM_EMITIENDO) {
+    bool llamando = simCazLlamando;
     motorCWDetener();
     simEmitir(simEmitido);
+    simCazLlamando = llamando;
   }
 }
 
 // ----------------------------------------------------------------------------
 // Pantallas
 // ----------------------------------------------------------------------------
-#define N_AJUSTES_SIM 8
-const char* const NOMBRES_AJUSTES_SIM[N_AJUSTES_SIM] = {
-  "WPM ACTIVADOR", "ESPACIADO", "WPM PALAS", "VER TEXTO", "QSB", "RUIDO", "TORMENTA", "QRM"
+#define N_AJUSTES_SIM 9
+// El 1 es la velocidad de Chispas: se nombra segun el rol al dibujar
+const char* nombresAjustesSim[N_AJUSTES_SIM] = {
+  "ROL", "WPM ACTIVADOR", "ESPACIADO", "WPM PALAS", "VER TEXTO", "QSB", "RUIDO", "TORMENTA", "QRM"
 };
 
 String textoNivelSim(uint8_t nivel) {
@@ -226,14 +374,15 @@ String textoNivelSim(uint8_t nivel) {
 
 String valorAjusteSim(uint8_t i) {
   switch (i) {
-    case 0: return String(simWpm);
-    case 1: return String(simEspaciado) + "%";
-    case 2: return String(keyerWpm);
-    case 3: return simVerTexto ? String("SI") : String("NO");
-    case 4: return textoNivelSim(simQsb);
-    case 5: return textoNivelSim(simRuido);
-    case 6: return textoNivelSim(simTormenta);
-    case 7: return textoNivelSim(simQrm);
+    case 0: return simRol == SIM_ROL_ACTIVADOR ? String("ACTIVADOR") : String("CAZADOR");
+    case 1: return String(simWpm);
+    case 2: return String(simEspaciado) + "%";
+    case 3: return String(keyerWpm);
+    case 4: return simVerTexto ? String("SI") : String("NO");
+    case 5: return textoNivelSim(simQsb);
+    case 6: return textoNivelSim(simRuido);
+    case 7: return textoNivelSim(simTormenta);
+    case 8: return textoNivelSim(simQrm);
     default: return String("");
   }
 }
@@ -243,14 +392,15 @@ void dibujarPantallaSim() {
   display.setTextColor(SSD1306_WHITE);
 
   if (estadoSim == SIM_AJUSTES) {
-    dibujarListaOpciones(NOMBRES_AJUSTES_SIM, N_AJUSTES_SIM, opcionSim, valorAjusteSim, 0x7);  // 0-2
+    nombresAjustesSim[1] = simRol == SIM_ROL_ACTIVADOR ? "WPM CAZADOR" : "WPM ACTIVADOR";
+    dibujarListaOpciones(nombresAjustesSim, N_AJUSTES_SIM, opcionSim, valorAjusteSim, 0xE);  // 1-3
     dibujarPieDos(opcionSim == N_AJUSTES_SIM, "iniciar", opcionSim == N_AJUSTES_SIM + 1, "volver");
 
   } else if (estadoSim == SIM_FIN) {
     dibujarTituloCentrado(F("- QSO HECHO -"), 12);
     char linea[22];
     display.setCursor(0, 24);
-    display.print("CON " + simIndicativo + " " + simParque);
+    display.print("CON " + simIndicativo + " " + (simRol == SIM_ROL_ACTIVADOR ? String("") : simParque));
     unsigned long s = simDuracionMs / 1000;
     snprintf(linea, sizeof(linea), "TIEMPO %lu:%02lu  REP. %u", s / 60, s % 60, simRepeticiones);
     display.setCursor(0, 33); display.print(linea);
@@ -266,6 +416,7 @@ void dibujarPantallaSim() {
     if (estadoSim == SIM_EMITIENDO && !simVerTexto) {
       for (uint16_t i = 0; i < rx.length(); i++) if (rx[i] != ' ') rx.setCharAt(i, '?');
     }
+    if (rx.length() == 0) rx = "LLAMA: CQ POTA DE " + String(indicativoEstacion) + " K";  // Rol activador, al empezar
     dibujarDosLineasPorPalabras(rx, 11, 8);
 
     display.drawFastHLine(0, 31, 128, SSD1306_WHITE);

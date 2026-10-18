@@ -484,30 +484,31 @@ void procesarBoton() {
 
   } else if (pantallaActual == PANTALLA_CW) {
     if (enSim && estadoSim == SIM_AJUSTES) {
-      // Ajustes del simulador. Foco: 0 wpm activador, 1 espaciado, 2 wpm palas, 3 ver, 4 qsb, 5 ruido,
-      // 6 tormenta, 7 qrm, 8 iniciar, 9 volver
+      // Ajustes del simulador. Foco: 0 rol, 1 wpm de Chispas, 2 espaciado, 3 wpm palas, 4 ver, 5 qsb, 6 ruido,
+      // 7 tormenta, 8 qrm, 9 iniciar, 10 volver
       if (atras) {
         salirDeSim();
       } else if (giro != 0) {
         if (editandoValor) {
           switch (opcionSim) {
-            case 0: ajustarValor(simWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
-            case 1: ajustarValor(simEspaciado, giro * 10, 100, 200); break;
-            case 2: ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
+            case 1: ajustarValor(simWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
+            case 2: ajustarValor(simEspaciado, giro * 10, 100, 200); break;
+            case 3: ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
           }
         } else {
           opcionSim = (opcionSim + N_OPCIONES_SIM + giro) % N_OPCIONES_SIM;
         }
       } else if (pulsa) {
         switch (opcionSim) {
-          case 3: simVerTexto = !simVerTexto; break;
-          case 4: simQsb = (simQsb + 1) % (QSB_FUERTE + 1); break;
-          case 5: simRuido = (simRuido + 1) % (QSB_FUERTE + 1); break;
-          case 6: simTormenta = (simTormenta + 1) % (QSB_FUERTE + 1); break;
-          case 7: simQrm = (simQrm + 1) % (QSB_FUERTE + 1); break;
-          case 8: iniciarSim(); break;
-          case 9: salirDeSim(); break;
-          default: editandoValor = !editandoValor; break;  // 0, 1 y 2
+          case 0: simRol = (simRol == SIM_ROL_CAZADOR) ? SIM_ROL_ACTIVADOR : SIM_ROL_CAZADOR; break;
+          case 4: simVerTexto = !simVerTexto; break;
+          case 5: simQsb = (simQsb + 1) % (QSB_FUERTE + 1); break;
+          case 6: simRuido = (simRuido + 1) % (QSB_FUERTE + 1); break;
+          case 7: simTormenta = (simTormenta + 1) % (QSB_FUERTE + 1); break;
+          case 8: simQrm = (simQrm + 1) % (QSB_FUERTE + 1); break;
+          case 9: iniciarSim(); break;
+          case 10: salirDeSim(); break;
+          default: editandoValor = !editandoValor; break;  // 1, 2 y 3
         }
       }
 
@@ -522,7 +523,7 @@ void procesarBoton() {
       }
 
     } else if (enSim) {
-      // QSO. Foco: 0 repetir (lo ultimo del activador), 1 salir. Las palas funcionan con cualquier foco
+      // QSO. Foco: 0 repetir (lo ultimo de Chispas), 1 salir. Las palas funcionan con cualquier foco
       if (atras || ejeLarga) {
         simAAjustes();
       } else if (giro != 0) {

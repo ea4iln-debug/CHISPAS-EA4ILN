@@ -125,12 +125,14 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   (18 oct, sin cambios): bien hasta CONTEST MEDIUM de la RSGB, pocos errores en HARD, ilegible en INTENSE; el usuario
   lo da por bueno. Detalle en NOTAS: "DECODIFICAR".
   **QSO SIM** (18 oct): QSO completo y caminos de error en la placa 1 sin palas, con la orden serie nueva
-  `m<texto>` (entra como lo manipulado; `serie.py -e "mEA4ILN"`); audio realista. Detalle en NOTAS: "QSO SIM".
+  `m<texto>` (entra como lo manipulado; `serie.py -e "mEA4ILN"`); audio realista. **Ajuste ROL** (18 oct):
+  CAZADOR / ACTIVADOR; con ACTIVADOR llamas tú CQ y CHISPAS es el cazador (indicativo parcial, rellamada a los 8 s,
+  copia mal tu indicativo, AGN?); probado en la placa 1 con `m`. Detalle en NOTAS: "QSO SIM".
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
-3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar). Los arreglos del 18 oct van en la próxima versión.
+3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar). Los arreglos del 18 oct van en la próxima versión.
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se

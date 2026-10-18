@@ -45,6 +45,7 @@ void cargarDatosNVS() {
   simRuido = min(prefs.getUChar("srui", QSB_NO), (uint8_t)QSB_FUERTE);
   simTormenta = min(prefs.getUChar("stor", QSB_NO), (uint8_t)QSB_FUERTE);
   simQrm = min(prefs.getUChar("sqrm", QSB_NO), (uint8_t)QSB_FUERTE);
+  simRol = min(prefs.getUChar("srol", SIM_ROL_CAZADOR), (uint8_t)SIM_ROL_ACTIVADOR);
   echoTotalIntentos = prefs.getUInt("eint", 0);
   echoTotalAciertos = prefs.getUInt("eok", 0);
   echoSesiones = prefs.getUShort("eses", 0);
@@ -170,6 +171,7 @@ void guardarSimNVS() {
   prefs.putUChar("srui", simRuido);
   prefs.putUChar("stor", simTormenta);
   prefs.putUChar("sqrm", simQrm);
+  prefs.putUChar("srol", simRol);
   prefs.end();
 }
 
