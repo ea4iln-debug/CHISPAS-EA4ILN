@@ -629,6 +629,16 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
       10 y 20 WPM seguidos, **1107/1107 letras**; palabras bien salvo las 2–3 primeras letras sueltas al empezar
       ("N O W"), un "ACOIL." y, al pasar de 10 a 20 WPM, unas 8 palabras juntas mientras la media baja (~4 s; se
       deja así). El wpm de la pantalla es la velocidad de las letras (14 en el texto de 10 WPM Farnsworth): correcto.
+    - **Prueba con ruido (18 oct 2026, placa 1, mismo firmware; sin cambios de código):**
+      - Vídeo real de 80 m (YouTube `ey5_2_zdCBQ`, CW Ops, varios operadores con bug): sigue el cambio de
+        estación (500 ↔ 600 Hz). La estación fuerte (nivel 60–67 %, umbral ~50 %) se copia casi entera; la débil
+        (nivel 40–50 %, umbral 30–36 %) da basura y su wpm salta de 14 a 25 (la fuerte, 19–21). Sin separar si es
+        el ruido o la mano del bug.
+      - RSGB GB2RS Morse Practice (750 Hz, ~19 WPM, manipulación perfecta), un minuto por nivel: sin ruido,
+        LOCAL WIDE, DX NARROW y VHF THERMAL, copia casi perfecta (una G perdida en "BACKROUND", una D en "EN.");
+        wpm fijo 17–20 y el umbral sube solo con el ruido (hasta 71 %). **Pendiente:** los niveles de ruido más
+        altos (interrumpido por un problema de audio del PC). Al filtrar el log, no tirar las líneas con
+        `[GPS]`/`[BME]`/`[DIAG]`: llevan delante letras decodificadas.
   - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
     **Probado con emisora real el 12 oct 2026:** manipular y decodificar en la misma sesión, sin descodificar lo propio.
   - **TUNE** (v0.9e): portadora continua por KEY de 1–10 s (`trxTuneSeg`, NVS
