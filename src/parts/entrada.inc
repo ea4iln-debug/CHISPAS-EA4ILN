@@ -28,19 +28,9 @@ Pulsador pulsadorEje = { ENC_SW_PIN, HIGH, 0, false };
  * TIEMPO_ANTIRREBOTE_MS), 2 = larga (>= TIEMPO_PULSACION_LARGA), 0 = nada.
  * Los rebotes dan pulsaciones de menos de TIEMPO_ANTIRREBOTE_MS y se ignoran
  * (el pulsador del encoder rebota al soltar: probado en placa).
- * Un cambio solo vale si se mantiene LECTURAS_CONFIRMAR veces en ~1 ms: el ruido inducido en los
- * cables (con un transceptor cerca, el SW del encoder solo tiene el pull-up interno) es de
- * microsegundos y, con el loop() lento, una sola lectura BAJA bastaba para dar una pulsacion.
  */
-#define LECTURAS_CONFIRMAR 5
 uint8_t leerPulsador(Pulsador& p) {
   bool estadoActual = digitalRead(p.pin);
-  if (estadoActual != p.ultimoEstado) {
-    for (uint8_t i = 0; i < LECTURAS_CONFIRMAR; i++) {
-      delayMicroseconds(200);
-      if (digitalRead(p.pin) != estadoActual) return 0;  // Pico de ruido: se ignora
-    }
-  }
   uint8_t ev = 0;
 
   if (p.ultimoEstado == HIGH && estadoActual == LOW) {

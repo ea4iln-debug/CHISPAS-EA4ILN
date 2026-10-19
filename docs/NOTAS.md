@@ -299,9 +299,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   cable de audio del transceptor iba entremezclado con los del encoder (unos 20 cm). Al separarlos no ha vuelto a
   pasar (probado unos minutos). El SW (GPIO20) es el más sensible: solo tiene el pull-up interno (~45 kΩ), y
   `leerPulsador()` aceptaba una sola lectura BAJA (con el `loop()` lento al decodificar, más de 30 ms entre
-  lecturas ya era una pulsación). Desde ese día, un cambio del pulsador solo vale si se mantiene en 5 lecturas en
-  ~1 ms (`LECTURAS_CONFIRMAR`); compilado, **sin cargar en placa**. Si vuelve a pasar: 10 kΩ de SW a 3V3 y 100 nF de
-  SW a GND en el encoder, 10 nF en CLK y DT, cables cortos y ferrita en el de audio.
+  lecturas ya era una pulsación). **Si vuelve a pasar:** en código, que un cambio del pulsador solo valga si se
+  mantiene ~1 ms (p. ej., 5 lecturas cada 200 µs en `leerPulsador()`; se hizo y se quitó el mismo día, por decisión
+  del usuario, al no repetirse); en hardware, 10 kΩ de SW a 3V3 y 100 nF de SW a GND en el encoder, 10 nF en CLK y
+  DT, cables cortos y ferrita en el de audio.
 - **Sin encoder** (histórico: de la v0.7p a la v1.10; quitado en la 1.20): entorno `heltec_sin_encoder` (`-DSIN_ENCODER`, mismo `main.cpp`).
   `leerEventoBoton()` traduce el PRG: corta = `ENC_DERECHA` (mover), larga = `ENC_PULSA` (ejecutar), muy larga
   (≥ `TIEMPO_PULSACION_DORMIR`, 2,5 s) = dormir. No hay "atrás" (todas las pantallas tienen volver o ant./sig.).
