@@ -294,6 +294,14 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - Entradas: encoder por interrupción en CLK/DT con tabla de cuadratura (`isrEncoder`, en IRAM, lee `GPIO_IN_REG`);
   PRG y pulsador del eje con `leerPulsador()` (antirrebote: el eje rebota al soltar). Eventos `BOTON_CORTA/LARGA` y
   `ENC_DERECHA/IZQUIERDA/PULSA/LARGA`, todos tratados en `procesarBoton()`.
+- **Pulsaciones fantasma con el transceptor (19 oct 2026, placa 1):** al rato de DECODIFICAR con el transceptor
+  recibiendo (sin USB al PC, sin transmitir) salían pulsaciones del eje y algún giro. Causa: diafonía, porque el
+  cable de audio del transceptor iba entremezclado con los del encoder (unos 20 cm). Al separarlos no ha vuelto a
+  pasar (probado unos minutos). El SW (GPIO20) es el más sensible: solo tiene el pull-up interno (~45 kΩ), y
+  `leerPulsador()` aceptaba una sola lectura BAJA (con el `loop()` lento al decodificar, más de 30 ms entre
+  lecturas ya era una pulsación). Desde ese día, un cambio del pulsador solo vale si se mantiene en 5 lecturas en
+  ~1 ms (`LECTURAS_CONFIRMAR`); compilado, **sin cargar en placa**. Si vuelve a pasar: 10 kΩ de SW a 3V3 y 100 nF de
+  SW a GND en el encoder, 10 nF en CLK y DT, cables cortos y ferrita en el de audio.
 - **Sin encoder** (histórico: de la v0.7p a la v1.10; quitado en la 1.20): entorno `heltec_sin_encoder` (`-DSIN_ENCODER`, mismo `main.cpp`).
   `leerEventoBoton()` traduce el PRG: corta = `ENC_DERECHA` (mover), larga = `ENC_PULSA` (ejecutar), muy larga
   (≥ `TIEMPO_PULSACION_DORMIR`, 2,5 s) = dormir. No hay "atrás" (todas las pantallas tienen volver o ant./sig.).

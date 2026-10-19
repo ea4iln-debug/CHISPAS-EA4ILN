@@ -151,6 +151,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).
 4. TIEMPO: probar WIFI DATOS AUTO (refresco cada 30 min).
 5. AUTOSPOT: probar el aviso de los 25 min (y su captura `spot_aviso.png` para el manual) y CERRAR sin QRT en una activación real.
+6. Filtro de pulsaciones fantasma (19 oct; `leerPulsador()`, 5 lecturas en ~1 ms): compilado, sin cargar en placa.
+   La causa era diafonía del cable de audio del transceptor con los del encoder; separados, no pasa (NOTAS: "Manejo").
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se
