@@ -4865,7 +4865,7 @@
 		(embedded_fonts no)
 		(model "${KIPRJMOD}/lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step"
 			(offset
-				(xyz 9.51 12.27 12.7)
+				(xyz 9.51 10.211 12.7)
 			)
 			(scale
 				(xyz 1 1 1)
@@ -4898,7 +4898,7 @@
 		)
 		(model "${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_SPST_PTS810.step"
 			(offset
-				(xyz -7.5 -21.29 12.7)
+				(xyz -7.5 -23.349 12.7)
 			)
 			(scale
 				(xyz 1 1 1)
@@ -4909,7 +4909,7 @@
 		)
 		(model "${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_SPST_PTS810.step"
 			(offset
-				(xyz 7.5 -21.29 12.7)
+				(xyz 7.5 -23.349 12.7)
 			)
 			(scale
 				(xyz 1 1 1)
