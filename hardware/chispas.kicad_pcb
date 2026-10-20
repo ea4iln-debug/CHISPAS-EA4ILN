@@ -4918,6 +4918,17 @@
 				(xyz 0 0 90)
 			)
 		)
+		(model "${KIPRJMOD}/lib/chispas.3dshapes/Heltec_OLED_zona_visible.step"
+			(offset
+				(xyz 0 0 16.7)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "chispas:SW-TH_PEC11R-4XXXF-SXXXX"
 		(layer "F.Cu")

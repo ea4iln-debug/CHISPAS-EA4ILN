@@ -1111,7 +1111,11 @@ el USB asoma 0,66 mm); sus agujeros quedan 2 mm corridos respecto a los pads (de
 23,02 mm (las reales, 22,86).
 **Pulsadores PRG y RST** (no vienen en el STEP): dos PTS810 de la librería de KiCad (4,6 × 3,2 × 2,5 mm) sobre la
 Heltec, a ±7,5 mm del eje y a 3 mm del borde del USB: **posición estimada**, pendiente de medir (`PULSADORES` en
-`gen_heltec.py`). Las piezas de LCSC tienen en la placa el `.wrl` y su `.step` con otro origen
+`gen_heltec.py`).
+**Zona visible de la OLED** (medida por el usuario el 21 oct, USB a la izquierda): de 11 a 37 mm del borde del USB y
+de 8 a 22 mm del borde largo de J2 (26 × 14 mm). El cristal del STEP de la Heltec no casa (empieza a 14,6 mm del
+USB): no fiarse de él. `gen_heltec.py` genera `Heltec_OLED_zona_visible.step`, una lámina de 0,1 mm sobre la OLED
+(z 16,7), con su propio escritor de STEP (`caja_step`: prisma con color, AP214); KiCad la carga bien. Las piezas de LCSC tienen en la placa el `.wrl` y su `.step` con otro origen
 (en Fusion, jacks y encoder salían bajo la placa y corridos): `modelo3d.py` exporta desde una copia con los `.step`
 y correcciones (PJ-307: X −6,25, Z +2,5; encoder: Z +4,5), comprobadas con renders de KiCad. Con el `.step`, el eje
 del encoder llega a 27,5 mm sobre la placa (el real, de 30 mm, a ~30 según lo medido en la placa 1).
