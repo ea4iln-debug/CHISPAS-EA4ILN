@@ -303,6 +303,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   mantiene ~1 ms (p. ej., 5 lecturas cada 200 µs en `leerPulsador()`; se hizo y se quitó el mismo día, por decisión
   del usuario, al no repetirse); en hardware, 10 kΩ de SW a 3V3 y 100 nF de SW a GND en el encoder, 10 nF en CLK y
   DT, cables cortos y ferrita en el de audio.
+  **20 oct 2026: volvieron las pulsaciones fantasma** y se repuso el filtro en `leerPulsador()` (el mismo de 1b88370:
+  un cambio del PRG o del eje solo vale si se mantiene en 5 lecturas cada 200 µs). Probado por el usuario en la placa 1
+  decodificando con el cable de audio cerca: sin pulsaciones fantasma y el eje y el PRG responden igual. Se queda.
+  El giro no lleva filtro (la tabla de cuadratura pide un ciclo completo); si salen giros fantasma, filtrar CLK/DT.
 - **Sin encoder** (histórico: de la v0.7p a la v1.10; quitado en la 1.20): entorno `heltec_sin_encoder` (`-DSIN_ENCODER`, mismo `main.cpp`).
   `leerEventoBoton()` traduce el PRG: corta = `ENC_DERECHA` (mover), larga = `ENC_PULSA` (ejecutar), muy larga
   (≥ `TIEMPO_PULSACION_DORMIR`, 2,5 s) = dormir. No hay "atrás" (todas las pantallas tienen volver o ant./sig.).

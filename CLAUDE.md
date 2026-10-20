@@ -153,7 +153,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 5. AUTOSPOT: probar el aviso de los 25 min (y su captura `spot_aviso.png` para el manual) y CERRAR sin QRT en una activación real.
 
 Pulsaciones fantasma del encoder al decodificar (19 oct): diafonía del cable de audio del transceptor con los del
-encoder; separados, no pasa. Si se repite, filtro y condensadores en NOTAS: "Manejo".
+encoder. Volvieron el 20 oct: filtro de ~1 ms en `leerPulsador()` (PRG y eje), probado en la placa 1, va en la
+próxima versión. Si salen giros fantasma o sigue, filtro de CLK/DT o condensadores (NOTAS: "Manejo").
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se
