@@ -1171,6 +1171,34 @@ Fuera de LCSC (Amazon o AliExpress): Heltec V3, BME280 (no BMP280), GPS NEO-6M, 
 8 Ω, cables XH 4P a Dupont hembra, tiras de pines, separadores M3 y mandos.
 **Siguiente:** recibir las placas, comprobar R7 en la huella y montar la primera.
 
+## Caja (21 oct 2026, primera versión sin imprimir)
+`hardware/herramientas/caja.py` (CadQuery 2.8.0 en `~/.venv-cad`; en otro equipo:
+`~/.platformio/penv/Scripts/python.exe -m venv ~/.venv-cad && ~/.venv-cad/Scripts/python.exe -m pip install cadquery==2.8.0`)
+genera en `hardware/3d/` (fuera de Git) `caja_base` y `caja_tapa` en STEP y STL y `caja.step` (las dos, en color
+oliva), en las coordenadas de `chispas.step`: se superponen en Fusion. Uso:
+`~/.venv-cad/Scripts/python.exe -I hardware/herramientas/caja.py`. Medidas: **139,4 × 64,4 × 35,6 mm**.
+**Decisiones de Claude** (para que el usuario las corrija):
+- Pared y suelo de 2 mm; holgura PCB–pared 0,2; esquinas interiores vivas (la PCB las tiene; pared de 1,2 en ellas).
+- Base con las paredes hasta la tapa; tapa plana de 2 mm con su cara de abajo a 20 mm sobre la PCB (OLED a 1,7).
+- Agujeros partidos para jacks (Ø6,5, rebaje Ø10 por fuera dejando 1,5) y volumen (Ø7,4, rosca M7: asoman 2,8 mm
+  para la tuerca): la mitad de arriba es un tapón que cuelga de la tapa, para poder bajar la PCB con los cañones
+  asomando. USB-C: ranura de 12,5 × 7 abierta por arriba (la cierra la tapa).
+- Sujeción: 4 tornillos M3 × 25 desde abajo (cabeza embutida) por las columnas de la base y los agujeros de la PCB a
+  las torretas de la tapa (Ø2,5 para rosca en plástico; aprietan la PCB entre las dos); 2 M3 × 30 en el compartimento.
+- **Hueco para la batería bajo la PCB**: columnas de 11 mm (unos 8 mm útiles bajo las patillas).
+- **Compartimento a la derecha de 45 mm** para el GPS (marco de 36 × 26 bajo la tapa: módulo de 35 × 25 con la
+  antena hacia arriba, pegado) y el altavoz (aro para uno de Ø28 y rejilla con **73 en Morse**: `--...` y `...--`);
+  rejilla para el BME280 y agujero del SMA (Ø6,6) en la pared de la derecha.
+- Ventana de la OLED con la zona visible medida (+1 mm y chaflán); eje del encoder Ø7,5; agujero de Ø3,5 para el
+  trimmer; **PRG y RST con lengüeta flexible** (1,2 mm, ranura de 0,8) y tetón hasta 0,3 mm del pulsador: la posición
+  de los pulsadores es la estimada (`gen_heltec.py`) y no sé cuál es PRG (rotulado EXIT el de detrás).
+- Rótulos grabados 0,6 mm: KEY OUT, SND IN (DECOD), KEY IN, SND OUT (auriculares), VOL, MENU / CLICK, EXIT, RST,
+  CHISPAS y EA4ILN.
+**Comprobado:** intersección de base y tapa con todas las piezas de `chispas.step` (OCP): sin choques salvo la tuerca
+que el STEP del potenciómetro trae pegada al cuerpo (en la realidad va por fuera de la pared). Vistas en SVG de
+CadQuery pasadas a PNG con Edge sin interfaz. **Sin comprobar:** medidas de batería, altavoz y GPS reales, sin
+interruptor de encendido, impresión y encaje.
+
 ## Cómo trabajar
 - Responder en español, directo y sin relleno.
 - Compilar antes de dar un cambio por bueno. No fiarse de comprobaciones de sintaxis simuladas.

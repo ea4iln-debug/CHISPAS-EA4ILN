@@ -118,7 +118,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - **PCB en curso (15 oct)**: KiCad 10, `hardware/` (5 placas JLCPCB, el mínimo; SMD montado; ver NOTAS: "PCB"). Esquema
   completo; placa de 90 × 60 mm colocada y rutada (DRC limpio salvo serigrafía). Serigrafía hecha y archivos de pedido en `hardware/fabricacion/` (fabricar.py). Pedidos a JLCPCB (5 placas) y LCSC hechos y combinados (15 oct); R7 (volumen) es el ALPS C97444 en esquema y BOM (16 oct, decisión del usuario); para estas 5 placas se compró el CTR C18213426 porque no había stock (lineal, encaje sin comprobar). Siguiente: recibir y montar. Skill **`pcb`** (scripts en `hardware/herramientas/`).
   **Modelo 3D para la caja** (20 oct): `modelo3d.py` → `hardware/3d/chispas.step` (Heltec en sus zócalos; dudas de
-  medidas en NOTAS: "PCB").
+  medidas en NOTAS: "PCB"). **Caja** (21 oct, sin imprimir): `caja.py` (CadQuery en `~/.venv-cad`) → base y tapa en
+  STEP/STL en `hardware/3d/`; decisiones y lo que falta, en NOTAS: "Caja".
 
 - **v1.30b (16 oct, release beta; en la placa 1 por USB):** audio sintetizado por sigma-delta (sin PWM; GPIO7,
   ISR a 16 kHz con el amplificador encendido; pulso casi imperceptible al entrar y salir: se deja); **CW > QSO SIM**
