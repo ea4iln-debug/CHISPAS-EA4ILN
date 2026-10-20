@@ -24,6 +24,15 @@ FILA = 9 * P              # separacion entre filas
 LARGO, ANCHO = 50.2, 25.5  # placa Heltec
 MARGEN_PIN18 = 0.89 * P    # borde de la placa mas alla del pin 18
 
+# Modelos 3D. La Heltec (lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step, de Onshape) tiene el eje X a lo largo,
+# el USB hacia -X, la placa de z -1,65 a 0 y el plastico de las tiras macho hasta z -4,2; sus pines (centro en
+# X -12,27, Y 9,51) se alinean con los pads. Encima de los zocalos de 8,5 mm (C2905422): z = 8,5 + 4,2.
+# En el modelo, del pin 1 al borde del USB hay 2,7 mm (en la huella, 4,76): sin medir en la placa real.
+ZOCALO = 8.5
+MODELOS = [("${KIPRJMOD}/lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step", (9.51, 12.27, ZOCALO + 4.2), -90)] + [
+    ("${KICAD10_3DMODEL_DIR}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x18_P2.54mm_Vertical.step",
+     (x, -8.5 * P, 0), 180) for x in (-FILA / 2, FILA / 2)]   # zocalos: origen en el pin 1, y del 3D hacia arriba
+
 
 def simbolo():
     alto = 19 * P
@@ -87,6 +96,8 @@ def huella():
         rect(x - P / 2, y_pin(18) - P / 2, x + P / 2, y_pin(1) + P / 2, "F.SilkS", 0.12)
     rect(-ANCHO / 2, y_arriba, ANCHO / 2, y_abajo, "F.Fab", 0.1)
     rect(-ANCHO / 2 - 0.25, y_arriba - 0.25, ANCHO / 2 + 0.25, y_abajo + 0.25, "F.CrtYd", 0.05)
+    modelos = [f'  (model "{f}" (offset (xyz {x:.3f} {y:.3f} {z:.3f})) (scale (xyz 1 1 1)) (rotate (xyz 0 0 {rz})))'
+               for f, (x, y, z), rz in MODELOS]
     texto = lambda t, x, y, capa, tam=1.0: (f'  (fp_text user "{t}" (at {x:.2f} {y:.2f}) (layer "{capa}")'
                                             f' (effects (font (size {tam} {tam}) (thickness {tam * 0.15:.2f}))))')
     return f'''(footprint "Heltec_WiFi_LoRa_32_V3"
@@ -105,6 +116,7 @@ def huella():
 {texto("USB", 0, y_abajo - 1.2, "F.SilkS")}
 {texto("OLED (Heltec)", 0, -10, "F.Fab")}
 {chr(10).join(pads)}
+{chr(10).join(modelos)}
 )
 '''
 

@@ -14,3 +14,4 @@ hardware/*.kicad_prl
 hardware/production/
 hardware/.history/
 hardware/.revision/
+hardware/3d/

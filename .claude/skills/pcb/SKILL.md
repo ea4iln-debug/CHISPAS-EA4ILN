@@ -29,6 +29,7 @@ hardware/herramientas/importar_lcsc.sh C123 C456   # simbolo+huella+3D a lib/chi
 "/c/Program Files/KiCad/10.0/bin/python.exe" hardware/herramientas/serigrafia.py # textos de serigrafia (KiCad cerrado)
 "/c/Program Files/KiCad/10.0/bin/python.exe" hardware/herramientas/fabricar.py   # Gerber zip, BOM, CPL y compra en hardware/fabricacion/
 ~/.platformio/penv/Scripts/python.exe -I hardware/herramientas/gen_heltec.py    # simbolo y huella de la Heltec
+"/c/Program Files/KiCad/10.0/bin/python.exe" hardware/herramientas/modelo3d.py   # STEP de la placa montada (para la caja) en hardware/3d/
 ```
 - `entorno.sh` crea `~/.venv-kicad` (easyeda2kicad y pymupdf, versiones en `requisitos.txt`) si falta en el
   equipo; lo llaman `revisar.sh` e `importar_lcsc.sh`, no hace falta ejecutarlo a mano.

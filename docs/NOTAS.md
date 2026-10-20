@@ -1098,6 +1098,17 @@ Volumen con la cara del cuerpo en el borde (rosca M7 de 5 mm: pared de 2 mm + tu
 la clavija no llega al fondo); agujero para el eje del encoder junto a la OLED; agujero pequeño para ajustar el
 trimmer del decodificador (o ajustarlo antes de cerrar); hueco del USB-C algo mayor que la funda del cable; SMA de
 la antena LoRa (cable desde el IPEX de la Heltec).
+**Modelo 3D para la caja (20 oct):** `modelo3d.py` (Python de KiCad, editor cerrado) copia a la U1 los modelos de la
+huella de la Heltec y exporta `hardware/3d/chispas.step` (~10 MB, fuera de Git: se regenera), origen en el centro de
+la placa, Z = 0 en la cara de abajo (cara de arriba a 1,6). La huella (`gen_heltec.py`) lleva tres modelos: la
+Heltec (`lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step`, bajado por el usuario de Onshape; un solo sólido: placa
+de 1,65, plástico de las tiras macho de 2,55 debajo, OLED 4 mm por encima) y dos `PinSocket_1x18` de 8,5 mm.
+Rotación de los modelos en KiCad: el signo va al revés de lo esperado (`rotate z = -90` gira +90°). Alturas sobre la
+cara de arriba de la PCB: zócalos 8,5; placa Heltec 11,05–12,7; OLED arriba a 16,7 (medido en la placa 1: 17);
+USB-C de 12,7 a 15,9. **Dudas:** en el STEP el pin 1 está a 2,7 mm del borde del USB y en la huella a 4,76 (alineado
+por los pines; si el STEP acierta, la Heltec acaba 2 mm antes del borde de la PCB): medir en la Heltec real. Filas del
+STEP a 23,02 mm (las reales, 22,86). El modelo del encoder (genérico `4XXXF`) mide 23 mm de alto; el real
+(eje de 30 mm) llega a ~30.
 
 **Piezas LCSC** (catálogo consultado el 15 oct): R 0805 Basic 10k C17414, 1k C17513, 220 C17557, 330 C17630;
 C 0805 Basic 100n C49678, 1µ C28323, 10µ C15850, 10n C1710; 1N4148W C81598; PC817 SMD C66405 (Extended);

@@ -4863,6 +4863,39 @@
 			(uuid "72d6a989-10f0-4758-b9fb-036bde1d70de")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step"
+			(offset
+				(xyz 9.51 12.27 12.7)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 -90)
+			)
+		)
+		(model "${KICAD10_3DMODEL_DIR}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x18_P2.54mm_Vertical.step"
+			(offset
+				(xyz -11.43 -21.59 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 180)
+			)
+		)
+		(model "${KICAD10_3DMODEL_DIR}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x18_P2.54mm_Vertical.step"
+			(offset
+				(xyz 11.43 -21.59 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 180)
+			)
+		)
 	)
 	(footprint "chispas:SW-TH_PEC11R-4XXXF-SXXXX"
 		(layer "F.Cu")
