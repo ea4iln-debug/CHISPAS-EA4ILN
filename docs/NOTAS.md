@@ -1176,7 +1176,15 @@ Fuera de LCSC (Amazon o AliExpress): Heltec V3, BME280 (no BMP280), GPS NEO-6M, 
 `~/.platformio/penv/Scripts/python.exe -m venv ~/.venv-cad && ~/.venv-cad/Scripts/python.exe -m pip install cadquery==2.8.0`)
 genera en `hardware/3d/` (fuera de Git) `caja_base` y `caja_tapa` en STEP y STL y `caja.step` (las dos, en color
 oliva), en las coordenadas de `chispas.step`: se superponen en Fusion. Uso:
-`~/.venv-cad/Scripts/python.exe -I hardware/herramientas/caja.py`. Medidas: **139,4 × 64,4 × 35,6 mm**.
+`~/.venv-cad/Scripts/python.exe -I hardware/herramientas/caja.py`. Medidas: **139,4 × 64,4 × 31,9 mm**.
+**Cambios del usuario (21 oct):** ventana = pantalla del modelo de la Heltec (bloque de 30,3 × 18,6 × 4 de su STEP,
++0,3 de holgura) y **tapa enrasada con la pantalla** (cara de arriba a 18,3 sobre la cara de abajo de la PCB). Con eso
+la boca del USB-C corta el borde de la tapa (muesca) y hay un vaciado de 1,2 mm bajo la tapa para el USB del modelo
+(2 mm hacia dentro); la lengüeta de los pulsadores llega sola (sin tetón). Altavoz de **20 mm** (aro de 20,6 y rejilla
+Morse más pequeña). Columnas del compartimento: el rebaje de la cabeza (Ø6) era mayor que la columna (Ø5,5) y cortaba
+el suelo alrededor; ahora Ø6,8, metidas 0,2 en las paredes, rebaje Ø5,8. **Ojo:** la pantalla del modelo no casa con
+la zona visible medida en la Heltec real (de X −34 a −8; el modelo, de −28,3 a 2,0): si el modelo está mal, la ventana
+quedará corrida unos 6 mm sobre la pantalla real.
 **Decisiones de Claude** (para que el usuario las corrija):
 - Pared y suelo de 2 mm; holgura PCB–pared 0,2; esquinas interiores vivas (la PCB las tiene; pared de 1,2 en ellas).
 - Base con las paredes hasta la tapa; tapa plana de 2 mm con su cara de abajo a 20 mm sobre la PCB (OLED a 1,7).

@@ -28,7 +28,9 @@ COMP = 45.0                 # largo del compartimento de la derecha (GPS y altav
 COLUMNA = 11.0              # de la cara de arriba del suelo a la cara de abajo de la PCB (hueco de la bateria)
 SUELO = 2.0
 TAPA = 2.0
-Z_TAPA = 20.0               # cara de abajo de la tapa (OLED arriba a 18,3: 1,7 de aire)
+Z_OLED = PCB_TOP + 12.7 + 4.0   # cara de arriba de la pantalla (modelo de la Heltec en sus zocalos)
+Z_TAPA = Z_OLED - TAPA      # cara de abajo de la tapa: la de arriba enrasa con la pantalla (decision del usuario)
+Z_POSTE = Z_TAPA - 5.0      # altura de las columnas del compartimento (la tapa baja a su encuentro)
 R_ESQUINA = 4.0
 
 # Interior (coordenadas del STEP)
@@ -38,7 +40,10 @@ Z_SUELO = -COLUMNA          # cara de arriba del suelo
 Z_BASE = Z_SUELO - SUELO    # cara de abajo de la caja
 
 AGUJEROS_PCB = [P(104, 104), P(186, 104), P(104, 156), P(186, 156)]
-ESQ_COMP = [(X1 - 2.75, Y1 - 2.75), (X1 - 2.75, Y0 + 2.75)]   # columnas del compartimento
+# Columnas del compartimento: metidas 0,2 mm en las paredes y mas anchas que el rebaje de la cabeza (si no, el
+# rebaje cortaba el suelo alrededor y quedaban sueltas)
+R_POSTE = 3.4
+ESQ_COMP = [(X1 - 3.2, Y1 - 3.2), (X1 - 3.2, Y0 + 3.2)]
 
 # Jacks PJ-307: canon de 6 mm a 2,5 mm sobre la PCB. (x de la PCB, lado)
 JACKS = [(115, "detras", "KEY OUT"), (141, "detras", "SND IN"), (115, "delante", "KEY IN"), (133, "delante", "SND OUT")]
@@ -49,8 +54,9 @@ ENCODER = P(162, 130)
 TRIMMER = P(153.6, 103.2)                   # tornillo del 3296W (medido en el render)
 PULSADORES = [P(105.06, 122.5), P(105.06, 137.5)]   # PRG y RST de la Heltec (posicion estimada)
 Z_PULSADOR = PCB_TOP + 12.7 + 2.5           # parte de arriba del pulsador
-OLED = (P(111 - 1, 0)[0], P(137 + 1, 0)[0], P(0, 134.75 + 1)[1], P(0, 120.75 - 1)[1])   # zona visible + 1 mm
-ALTAVOZ = (X1 - 23.0, Y0 + 15.5, 28.6)     # centro y diametro del alojamiento
+# Pantalla del modelo de la Heltec (bloque de 30,3 x 18,6 x 4 mm en su STEP, pasado a estas coordenadas) + 0,3
+OLED = (-28.32 - 0.3, 1.96 + 0.3, -8.75 - 0.3, 9.81 + 0.3)
+ALTAVOZ = (X1 - 23.0, Y0 + 15.5, 20.6)     # centro y diametro del alojamiento (altavoz de 20 mm)
 GPS = (X1 - 44.0, Y1 - 28.2, 36.0, 26.0)   # esquina (x, y) y tamano del marco del GPS (modulo de 35 x 25)
 SMA = (Y0 + 15.0, Z_SUELO + 9.0)            # en la pared de la derecha
 
@@ -115,10 +121,10 @@ for x, y in AGUJEROS_PCB:
     base = base.cut(cq.Workplane("XY").circle(1.7).extrude(40).translate((x, y, Z_BASE - 1)))
     base = base.cut(cq.Workplane("XY").circle(3.0).extrude(3.0 + 1).translate((x, y, Z_BASE - 1)))
 for x, y in ESQ_COMP:
-    col = cq.Workplane("XY").circle(2.75).extrude(14.0 - Z_BASE).translate((x, y, Z_BASE))
+    col = cq.Workplane("XY").circle(R_POSTE).extrude(Z_POSTE - Z_BASE).translate((x, y, Z_BASE))
     base = base.union(col)
     base = base.cut(cq.Workplane("XY").circle(1.7).extrude(40).translate((x, y, Z_BASE - 1)))
-    base = base.cut(cq.Workplane("XY").circle(3.0).extrude(3.0 + 1).translate((x, y, Z_BASE - 1)))
+    base = base.cut(cq.Workplane("XY").circle(2.9).extrude(3.0 + 1).translate((x, y, Z_BASE - 1)))
 
 # ---- Tapa ----
 tapa = caja_redondeada(X0 - PARED, X1 + PARED, Y0 - PARED, Y1 + PARED, Z_TAPA, Z_TAPA + TAPA, R_ESQUINA)
@@ -129,13 +135,16 @@ for x, y in AGUJEROS_PCB:
     tapa = tapa.union(cq.Workplane("XY").circle(3.0).extrude(Z_TAPA - PCB_TOP).translate((x, y, PCB_TOP)))
     tapa = tapa.cut(cq.Workplane("XY").circle(1.25).extrude(Z_TAPA - PCB_TOP - 1).translate((x, y, PCB_TOP - 0.1)))
 for x, y in ESQ_COMP:
-    tapa = tapa.union(cq.Workplane("XY").circle(2.75).extrude(Z_TAPA - 14.2).translate((x, y, 14.2)))
-    tapa = tapa.cut(cq.Workplane("XY").circle(1.25).extrude(Z_TAPA - 14.2 - 0.5).translate((x, y, 14.1)))
-# Ventana de la OLED con chaflan por fuera
+    tapa = tapa.union(cq.Workplane("XY").circle(R_POSTE).extrude(Z_TAPA - Z_POSTE - 0.2).translate((x, y, Z_POSTE + 0.2)))
+    tapa = tapa.cut(cq.Workplane("XY").circle(1.25).extrude(Z_TAPA - Z_POSTE + 1.0).translate((x, y, Z_POSTE)))
+# Ventana de la OLED: la pantalla entra en ella y enrasa con la tapa
 x0, x1, y0, y1 = OLED
 tapa = tapa.cut(prisma(x0, x1, y0, y1, Z_TAPA - 1, Z_TAPA + TAPA + 1))
-tapa = tapa.cut(cq.Workplane("XY").rect(x1 - x0, y1 - y0).workplane(offset=1.0).rect(x1 - x0 + 2, y1 - y0 + 2)
-                .loft().translate(((x0 + x1) / 2, (y0 + y1) / 2, Z_TAPA + TAPA - 1.0)))
+# USB-C: la boca para la funda del cable pasa por encima de la cara de abajo de la tapa: muesca en su borde
+tapa = tapa.cut(prisma(X0 - PARED - 1, X0 + 1, USB["y"] - USB["ancho"] / 2, USB["y"] + USB["ancho"] / 2,
+                       USB["z"] - USB["alto"] / 2, Z_TAPA + TAPA + 1))
+# El USB-C del modelo de la Heltec (alineada por los pines, 2 mm hacia dentro) sube hasta 17,5: vaciado por debajo
+tapa = tapa.cut(prisma(X0 - 0.1, -36.0, -4.8, 4.8, Z_TAPA - 1, PCB_TOP + 12.7 + 3.2 + 0.3))
 # Eje del encoder y ajuste del trimmer
 tapa = tapa.cut(cq.Workplane("XY").circle(3.75).extrude(10).translate((*ENCODER, Z_TAPA - 1)))
 tapa = tapa.cut(cq.Workplane("XY").circle(1.75).extrude(10).translate((*TRIMMER, Z_TAPA - 1)))
@@ -151,20 +160,24 @@ for x, y in PULSADORES:
                   .cut(prisma(x - ancho / 2, x + ancho / 2, ya - 1, yb, Z_TAPA - 2, Z_TAPA + TAPA + 2)))
     tapa = tapa.cut(ranura)
     tapa = tapa.cut(prisma(x - ancho / 2, x + ancho / 2, ya, yb, Z_TAPA - 1, Z_TAPA + 0.8))   # adelgaza a 1,2
-    tapa = tapa.union(cq.Workplane("XY").circle(1.5).extrude(Z_TAPA + 0.8 - (Z_PULSADOR + 0.3))
-                      .translate((x, y, Z_PULSADOR + 0.3)))
+    teton = Z_TAPA + 0.8 - (Z_PULSADOR + 0.3)   # con la tapa enrasada con la OLED, la lengueta ya llega sola
+    if teton > 0.2:
+        tapa = tapa.union(cq.Workplane("XY").circle(1.5).extrude(teton).translate((x, y, Z_PULSADOR + 0.3)))
+    elif teton < 0:
+        print(f"AVISO: la lengueta del pulsador queda {-teton:.1f} mm por debajo de su parte de arriba")
     tapa = tapa.union(cq.Workplane("XY").circle(2.0).extrude(0.6).translate((x, y, Z_TAPA + TAPA)))   # botón
 # Altavoz: aro para centrarlo y rejilla con 73 en Morse (--... ...--)
 ax, ay, ad = ALTAVOZ
 tapa = tapa.union(cq.Workplane("XY").circle(ad / 2 + 1.2).circle(ad / 2).extrude(3.0).translate((ax, ay, Z_TAPA - 3.0)))
-for fila, simbolos in ((3.5, "--..."), (-3.5, "...--")):
-    largo_fila = sum(6 if s == "-" else 2 for s in simbolos) + 1.8 * (len(simbolos) - 1)
+RAYA, PUNTO, HUECO = 3.6, 1.5, 1.2
+for fila, simbolos in ((2.5, "--..."), (-2.5, "...--")):
+    largo_fila = sum(RAYA if s == "-" else PUNTO for s in simbolos) + HUECO * (len(simbolos) - 1)
     x = ax - largo_fila / 2
     for s in simbolos:
-        lon = 6 if s == "-" else 2
-        forma = cq.Workplane("XY").slot2D(lon, 2.0) if s == "-" else cq.Workplane("XY").circle(1.0)
+        lon = RAYA if s == "-" else PUNTO
+        forma = cq.Workplane("XY").slot2D(lon, PUNTO) if s == "-" else cq.Workplane("XY").circle(PUNTO / 2)
         tapa = tapa.cut(forma.extrude(TAPA + 2).translate((x + lon / 2, ay + fila, Z_TAPA - 1)))
-        x += lon + 1.8
+        x += lon + HUECO
 # Marco del GPS (antena hacia arriba, pegado a la tapa)
 gx, gy, gl, ga = GPS
 marco = prisma(gx - 1.2, gx + gl + 1.2, gy - 1.2, gy + ga + 1.2, Z_TAPA - 2.0, Z_TAPA).cut(
