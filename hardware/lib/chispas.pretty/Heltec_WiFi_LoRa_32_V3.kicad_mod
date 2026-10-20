@@ -55,6 +55,6 @@
   (model "${KIPRJMOD}/lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step" (offset (xyz 9.510 12.270 12.700)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 -90)))
   (model "${KICAD10_3DMODEL_DIR}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x18_P2.54mm_Vertical.step" (offset (xyz -11.430 -21.590 0.000)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 180)))
   (model "${KICAD10_3DMODEL_DIR}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x18_P2.54mm_Vertical.step" (offset (xyz 11.430 -21.590 0.000)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 180)))
-  (model "${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_SPST_PTS810.step" (offset (xyz -7.500 -23.349 12.700)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 90)))
-  (model "${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_SPST_PTS810.step" (offset (xyz 7.500 -23.349 12.700)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 90)))
+  (model "${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_SPST_PTS810.step" (offset (xyz -7.500 -21.290 12.700)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 90)))
+  (model "${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_SPST_PTS810.step" (offset (xyz 7.500 -21.290 12.700)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 90)))
 )

@@ -1110,8 +1110,8 @@ el STEP lo tiene a 2,7, mal). El STEP se alinea **por los pines** (decisión del
 2,06 mm hacia dentro respecto a la Heltec real, que va enrasada con el borde de la PCB (su USB asoma 0,66 mm de ella).
 Filas del STEP a 23,02 mm (las reales, 22,86).
 **Pulsadores PRG y RST** (no vienen en el STEP): dos PTS810 de la librería de KiCad (4,6 × 3,2 × 2,5 mm) a ±7,5 mm del
-eje y a 3 mm del borde del USB **de la placa real** (no del modelo, por eso asoman de él): **posición estimada**,
-pendiente de medir (`PULSADORES` en `gen_heltec.py`).
+eje y a 3 mm del borde del USB **del modelo** (van sobre él, decisión del usuario del 21 oct): **posición
+estimada**, pendiente de medir (`PULSADORES` en `gen_heltec.py`).
 **Zona visible de la OLED** (medida por el usuario el 21 oct, USB a la izquierda): de 11 a 37 mm del borde del USB y
 de 8 a 22 mm del borde largo de J2 (26 × 14 mm). Se puso como lámina en el STEP y el usuario la quitó el mismo día.
 Las piezas de LCSC tienen en la placa el `.wrl` y su `.step` con otro origen

@@ -33,8 +33,10 @@ MARGEN_PIN1 = LARGO - 17.89 * P   # del centro del pin 1 al borde del lado del U
 ZOCALO = 8.5
 ALTO_HELTEC = ZOCALO + 4.2   # cara de arriba de la placa Heltec
 # Pulsadores PRG y RST de la Heltec (no estan en su STEP): PTS810 (4,6 x 3,2 x 2,5 mm) a cada lado del USB.
-# Posicion ESTIMADA respecto a la placa real (x, y de la huella, centro del pulsador): pendiente de medir.
-PULSADORES = [(-7.5, 8.5 * P + MARGEN_PIN1 - 3.0), (7.5, 8.5 * P + MARGEN_PIN1 - 3.0)]
+# Van sobre el modelo de la Heltec (decision del usuario, 21 oct): a 3 mm de SU borde del USB, que con la alineacion
+# por los pines queda a 2,7 mm del pin 1. Posicion ESTIMADA (x, y de la huella, centro): pendiente de medir.
+USB_STEP = 8.5 * P + 2.70   # borde del USB del modelo en la huella
+PULSADORES = [(-7.5, USB_STEP - 3.0), (7.5, USB_STEP - 3.0)]
 MODELOS = [("${KIPRJMOD}/lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step", (9.51, 12.27, ALTO_HELTEC), -90)] + [
     ("${KICAD10_3DMODEL_DIR}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x18_P2.54mm_Vertical.step",
      (x, -8.5 * P, 0), 180) for x in (-FILA / 2, FILA / 2)] + [   # zocalos: origen en el pin 1
