@@ -1106,16 +1106,15 @@ de 1,65, plástico de las tiras macho de 2,55 debajo, OLED 4 mm por encima) y do
 Rotación de los modelos en KiCad: el signo va al revés de lo esperado (`rotate z = -90` gira +90°). Alturas sobre la
 cara de arriba de la PCB: zócalos 8,5; placa Heltec 11,05–12,7; OLED arriba a 16,7 (medido en la placa 1: 17);
 USB-C de 12,7 a 15,9. Pin 1 a **4,76 mm** del borde del USB (medido por el usuario, 20 oct: la huella acertaba;
-el STEP lo tiene a 2,7, mal). El STEP se alinea por el contorno de la placa Heltec (enrasada con el borde de la PCB,
-el USB asoma 0,66 mm); sus agujeros quedan 2 mm corridos respecto a los pads (defecto del modelo). Filas del STEP a
-23,02 mm (las reales, 22,86).
-**Pulsadores PRG y RST** (no vienen en el STEP): dos PTS810 de la librería de KiCad (4,6 × 3,2 × 2,5 mm) sobre la
-Heltec, a ±7,5 mm del eje y a 3 mm del borde del USB: **posición estimada**, pendiente de medir (`PULSADORES` en
-`gen_heltec.py`).
+el STEP lo tiene a 2,7, mal). El STEP se alinea **por los pines** (decisión del usuario, 21 oct): su contorno queda
+2,06 mm hacia dentro respecto a la Heltec real, que va enrasada con el borde de la PCB (su USB asoma 0,66 mm de ella).
+Filas del STEP a 23,02 mm (las reales, 22,86).
+**Pulsadores PRG y RST** (no vienen en el STEP): dos PTS810 de la librería de KiCad (4,6 × 3,2 × 2,5 mm) a ±7,5 mm del
+eje y a 3 mm del borde del USB **de la placa real** (no del modelo, por eso asoman de él): **posición estimada**,
+pendiente de medir (`PULSADORES` en `gen_heltec.py`).
 **Zona visible de la OLED** (medida por el usuario el 21 oct, USB a la izquierda): de 11 a 37 mm del borde del USB y
-de 8 a 22 mm del borde largo de J2 (26 × 14 mm). El cristal del STEP de la Heltec no casa (empieza a 14,6 mm del
-USB): no fiarse de él. `gen_heltec.py` genera `Heltec_OLED_zona_visible.step`, una lámina de 0,1 mm sobre la OLED
-(z 16,7), con su propio escritor de STEP (`caja_step`: prisma con color, AP214); KiCad la carga bien. Las piezas de LCSC tienen en la placa el `.wrl` y su `.step` con otro origen
+de 8 a 22 mm del borde largo de J2 (26 × 14 mm). Se puso como lámina en el STEP y el usuario la quitó el mismo día.
+Las piezas de LCSC tienen en la placa el `.wrl` y su `.step` con otro origen
 (en Fusion, jacks y encoder salían bajo la placa y corridos): `modelo3d.py` exporta desde una copia con los `.step`
 y correcciones (PJ-307: X −6,25, Z +2,5; encoder: Z +4,5), comprobadas con renders de KiCad. Con el `.step`, el eje
 del encoder llega a 27,5 mm sobre la placa (el real, de 30 mm, a ~30 según lo medido en la placa 1).

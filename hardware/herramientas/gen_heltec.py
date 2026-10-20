@@ -26,112 +26,20 @@ MARGEN_PIN1 = LARGO - 17.89 * P   # del centro del pin 1 al borde del lado del U
 
 # Modelos 3D. La Heltec (lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step, de Onshape, dominio publico) tiene el
 # eje X a lo largo, el USB hacia -X, la placa de X -36,56 a 13,64 (centro -11,46) e Y -3,24 a 22,26 (centro 9,51),
-# de z -1,65 a 0, y el plastico de las tiras macho hasta z -4,2. Se alinea por el contorno de la placa: sus agujeros
-# no casan con los pads (en el STEP el pin 1 esta a 2,7 mm del borde del USB; en la real, a 4,76).
+# de z -1,65 a 0, y el plastico de las tiras macho hasta z -4,2. Se alinea por los pines (centro en X -12,27,
+# Y 9,51) con los pads (decision del usuario, 21 oct); su contorno queda 2 mm corrido hacia dentro, porque en el STEP
+# el pin 1 esta a 2,7 mm del borde del USB y en la real a 4,76 (la placa Heltec real va enrasada con la PCB).
 # Encima de los zocalos de 8,5 mm (C2905422): z = 8,5 + 4,2. En el 3D de KiCad la y va hacia arriba: y_3D = -y.
 ZOCALO = 8.5
 ALTO_HELTEC = ZOCALO + 4.2   # cara de arriba de la placa Heltec
 # Pulsadores PRG y RST de la Heltec (no estan en su STEP): PTS810 (4,6 x 3,2 x 2,5 mm) a cada lado del USB.
-# Posicion ESTIMADA (x, y de la huella, centro del pulsador): pendiente de medir en la Heltec real.
+# Posicion ESTIMADA respecto a la placa real (x, y de la huella, centro del pulsador): pendiente de medir.
 PULSADORES = [(-7.5, 8.5 * P + MARGEN_PIN1 - 3.0), (7.5, 8.5 * P + MARGEN_PIN1 - 3.0)]
-Y_CENTRO = 8.5 * P + MARGEN_PIN1 - LARGO / 2   # centro de la placa Heltec en la huella
-MODELOS = [("${KIPRJMOD}/lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step",
-            (9.51, 11.46 - Y_CENTRO, ALTO_HELTEC), -90)] + [
+MODELOS = [("${KIPRJMOD}/lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step", (9.51, 12.27, ALTO_HELTEC), -90)] + [
     ("${KICAD10_3DMODEL_DIR}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x18_P2.54mm_Vertical.step",
      (x, -8.5 * P, 0), 180) for x in (-FILA / 2, FILA / 2)] + [   # zocalos: origen en el pin 1
     ("${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_SPST_PTS810.step", (x, -y, ALTO_HELTEC), 90)
-    for x, y in PULSADORES] + [
-    ("${KIPRJMOD}/lib/chispas.3dshapes/Heltec_OLED_zona_visible.step", (0, 0, ALTO_HELTEC + 4.0), 0)]
-
-# Zona visible de la OLED (lo que se ilumina), medida por el usuario el 21 oct con el USB a la izquierda y la
-# pantalla hacia el: de 11 a 37 mm del borde del USB y de 8 a 22 mm del borde largo de abajo (el de J2, x = +ANCHO/2).
-# El cristal del STEP de la Heltec no casa con estas medidas. Se genera una lamina de 0,1 mm encima de la OLED.
-OLED_DESDE_USB = (11.0, 37.0)
-OLED_DESDE_J2 = (8.0, 22.0)
-
-
-def caja_step(nombre, x0, x1, y0, y1, z0, z1, rgb):
-    """STEP (AP214, mm) de un prisma recto con color, en coordenadas del 3D de KiCad."""
-    ents = []
-
-    def e(txt):   # anade una entidad y devuelve su referencia
-        ents.append(txt)
-        return f"#{len(ents)}"
-
-    def punto(p):
-        return e("CARTESIAN_POINT('',(%.4f,%.4f,%.4f))" % tuple(p))
-
-    def direccion(v):
-        lon = max(abs(c) for c in v)
-        return e("DIRECTION('',(%.1f,%.1f,%.1f))" % tuple(c / lon for c in v))
-
-    cx, cy, cz = (x0, x1), (y0, y1), (z0, z1)
-    pts = [(cx[i & 1], cy[(i >> 1) & 1], cz[(i >> 2) & 1]) for i in range(8)]   # bit 0 = x, 1 = y, 2 = z
-    ids_p = [punto(p) for p in pts]
-    vert = [e(f"VERTEX_POINT('',{p})") for p in ids_p]
-    # Caras con los vertices en sentido antihorario vistas desde fuera, y su normal
-    caras = [((0, 2, 3, 1), (0, 0, -1)), ((4, 5, 7, 6), (0, 0, 1)), ((0, 1, 5, 4), (0, -1, 0)),
-             ((2, 6, 7, 3), (0, 1, 0)), ((0, 4, 6, 2), (-1, 0, 0)), ((1, 3, 7, 5), (1, 0, 0))]
-    aristas = {}
-
-    def arista(a, b):   # arista de a a b (se guarda de menor a mayor) y su sentido en el lazo
-        i, j = min(a, b), max(a, b)
-        if (i, j) not in aristas:
-            d = [pts[j][k] - pts[i][k] for k in range(3)]
-            vector = e(f"VECTOR('',{direccion(d)},{max(abs(c) for c in d):.4f})")
-            linea = e(f"LINE('',{ids_p[i]},{vector})")
-            aristas[(i, j)] = e(f"EDGE_CURVE('',{vert[i]},{vert[j]},{linea},.T.)")
-        return aristas[(i, j)], ".T." if a < b else ".F."
-
-    caras_ids = []
-    for vs, n in caras:
-        bordes = []
-        for k in range(4):
-            ec, sentido = arista(vs[k], vs[(k + 1) % 4])
-            bordes.append(e(f"ORIENTED_EDGE('',*,*,{ec},{sentido})"))
-        lazo = e(f"EDGE_LOOP('',({','.join(bordes)}))")
-        ref = [pts[vs[1]][k] - pts[vs[0]][k] for k in range(3)]
-        eje = e(f"AXIS2_PLACEMENT_3D('',{ids_p[vs[0]]},{direccion(n)},{direccion(ref)})")
-        plano = e(f"PLANE('',{eje})")
-        limite = e(f"FACE_OUTER_BOUND('',{lazo},.T.)")
-        caras_ids.append(e(f"ADVANCED_FACE('',({limite}),{plano},.T.)"))
-    cascara = e(f"CLOSED_SHELL('',({','.join(caras_ids)}))")
-    solido = e(f"MANIFOLD_SOLID_BREP('{nombre}',{cascara})")
-    lon_u = e("( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) )")
-    ang_u = e("( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) )")
-    sol_u = e("( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() )")
-    inc = e(f"UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-07),{lon_u},'distance_accuracy_value','')")
-    ctx = e(f"( GEOMETRIC_REPRESENTATION_CONTEXT(3) GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(({inc})) "
-            f"GLOBAL_UNIT_ASSIGNED_CONTEXT(({lon_u},{ang_u},{sol_u})) REPRESENTATION_CONTEXT('','') )")
-    ax0 = e(f"AXIS2_PLACEMENT_3D('',{punto((0, 0, 0))},{direccion((0, 0, 1))},{direccion((1, 0, 0))})")
-    rep = e(f"ADVANCED_BREP_SHAPE_REPRESENTATION('{nombre}',({ax0},{solido}),{ctx})")
-    ac = e("APPLICATION_CONTEXT('automotive design')")
-    e(f"APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,{ac})")
-    pctx = e(f"PRODUCT_CONTEXT('',{ac},'mechanical')")
-    prod = e(f"PRODUCT('{nombre}','{nombre}','',({pctx}))")
-    pdf = e(f"PRODUCT_DEFINITION_FORMATION('','',{prod})")
-    pdc = e(f"PRODUCT_DEFINITION_CONTEXT('part definition',{ac},'design')")
-    pd = e(f"PRODUCT_DEFINITION('design','',{pdf},{pdc})")
-    pds = e(f"PRODUCT_DEFINITION_SHAPE('','',{pd})")
-    e(f"SHAPE_DEFINITION_REPRESENTATION({pds},{rep})")
-    color = e("COLOUR_RGB('',%.3f,%.3f,%.3f)" % tuple(rgb))
-    estilo = e("PRESENTATION_STYLE_ASSIGNMENT((SURFACE_STYLE_USAGE(.BOTH.,SURFACE_SIDE_STYLE('',(SURFACE_STYLE_FILL_AREA("
-               f"FILL_AREA_STYLE('',(FILL_AREA_STYLE_COLOUR('',{color})))))))))")
-    item = e(f"STYLED_ITEM('color',({estilo}),{solido})")
-    e(f"MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('',({item}),{ctx})")
-    datos = "\n".join(f"#{i + 1}={t};" for i, t in enumerate(ents))
-    return ("ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('caja'),'2;1');\n"
-            f"FILE_NAME('{nombre}.step','',(''),(''),'gen_heltec.py','','');\n"
-            "FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));\nENDSEC;\nDATA;\n"
-            f"{datos}\nENDSEC;\nEND-ISO-10303-21;\n")
-
-
-def zona_oled():
-    # En la huella: y_huella = borde del USB - distancia; x = ANCHO/2 - distancia al borde de J2. 3D: y = -y_huella.
-    y_usb = 8.5 * P + MARGEN_PIN1
-    x0, x1 = ANCHO / 2 - OLED_DESDE_J2[1], ANCHO / 2 - OLED_DESDE_J2[0]
-    y0, y1 = -(y_usb - OLED_DESDE_USB[0]), -(y_usb - OLED_DESDE_USB[1])
-    return caja_step("Heltec_OLED_zona_visible", x0, x1, y0, y1, 0, 0.1, (0.2, 0.6, 1.0))
+    for x, y in PULSADORES]
 
 
 def simbolo():
@@ -223,5 +131,4 @@ def huella():
 
 (LIB / "heltec.kicad_sym").write_text(simbolo(), encoding="utf-8")
 (LIB / "chispas.pretty" / "Heltec_WiFi_LoRa_32_V3.kicad_mod").write_text(huella(), encoding="utf-8")
-(LIB / "chispas.3dshapes" / "Heltec_OLED_zona_visible.step").write_text(zona_oled(), encoding="utf-8")
-print("Generados heltec.kicad_sym, Heltec_WiFi_LoRa_32_V3.kicad_mod y Heltec_OLED_zona_visible.step")
+print("Generados heltec.kicad_sym y Heltec_WiFi_LoRa_32_V3.kicad_mod")
