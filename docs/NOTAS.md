@@ -1107,8 +1107,10 @@ Rotación de los modelos en KiCad: el signo va al revés de lo esperado (`rotate
 cara de arriba de la PCB: zócalos 8,5; placa Heltec 11,05–12,7; OLED arriba a 16,7 (medido en la placa 1: 17);
 USB-C de 12,7 a 15,9. **Dudas:** en el STEP el pin 1 está a 2,7 mm del borde del USB y en la huella a 4,76 (alineado
 por los pines; si el STEP acierta, la Heltec acaba 2 mm antes del borde de la PCB): medir en la Heltec real. Filas del
-STEP a 23,02 mm (las reales, 22,86). El modelo del encoder (genérico `4XXXF`) mide 23 mm de alto; el real
-(eje de 30 mm) llega a ~30.
+STEP a 23,02 mm (las reales, 22,86). Las piezas de LCSC tienen en la placa el `.wrl` y su `.step` con otro origen
+(en Fusion, jacks y encoder salían bajo la placa y corridos): `modelo3d.py` exporta desde una copia con los `.step`
+y correcciones (PJ-307: X −6,25, Z +2,5; encoder: Z +4,5), comprobadas con renders de KiCad. Con el `.step`, el eje
+del encoder llega a 27,5 mm sobre la placa (el real, de 30 mm, a ~30 según lo medido en la placa 1).
 
 **Piezas LCSC** (catálogo consultado el 15 oct): R 0805 Basic 10k C17414, 1k C17513, 220 C17557, 330 C17630;
 C 0805 Basic 100n C49678, 1µ C28323, 10µ C15850, 10n C1710; 1N4148W C81598; PC817 SMD C66405 (Extended);
