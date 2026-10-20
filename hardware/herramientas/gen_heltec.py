@@ -22,16 +22,23 @@ TIPO = {(3, 1): "power_out", (3, 2): "power_out", (3, 3): "passive", (2, 1): "pa
 P = 2.54
 FILA = 9 * P              # separacion entre filas
 LARGO, ANCHO = 50.2, 25.5  # placa Heltec
-MARGEN_PIN18 = 0.89 * P    # borde de la placa mas alla del pin 18
+MARGEN_PIN1 = 2.70        # del centro del pin 1 al borde del lado del USB (STEP, comprobado por el usuario el 20 oct;
+                          # hasta entonces 4,76: la PCB v1.0 se hizo con ese valor, ver NOTAS "PCB")
 
-# Modelos 3D. La Heltec (lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step, de Onshape) tiene el eje X a lo largo,
-# el USB hacia -X, la placa de z -1,65 a 0 y el plastico de las tiras macho hasta z -4,2; sus pines (centro en
-# X -12,27, Y 9,51) se alinean con los pads. Encima de los zocalos de 8,5 mm (C2905422): z = 8,5 + 4,2.
-# En el modelo, del pin 1 al borde del USB hay 2,7 mm (en la huella, 4,76): sin medir en la placa real.
+# Modelos 3D. La Heltec (lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step, de Onshape, dominio publico) tiene el
+# eje X a lo largo, el USB hacia -X, la placa de z -1,65 a 0 y el plastico de las tiras macho hasta z -4,2; sus pines
+# (centro en X -12,27, Y 9,51) se alinean con los pads. Encima de los zocalos de 8,5 mm (C2905422): z = 8,5 + 4,2.
+# En el 3D de KiCad la y va hacia arriba: y_3D = -y de la huella.
 ZOCALO = 8.5
-MODELOS = [("${KIPRJMOD}/lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step", (9.51, 12.27, ZOCALO + 4.2), -90)] + [
+ALTO_HELTEC = ZOCALO + 4.2   # cara de arriba de la placa Heltec
+# Pulsadores PRG y RST de la Heltec (no estan en su STEP): PTS810 (4,6 x 3,2 x 2,5 mm) a cada lado del USB.
+# Posicion ESTIMADA (x, y de la huella, centro del pulsador): pendiente de medir en la Heltec real.
+PULSADORES = [(-7.5, 8.5 * P + MARGEN_PIN1 - 3.0), (7.5, 8.5 * P + MARGEN_PIN1 - 3.0)]
+MODELOS = [("${KIPRJMOD}/lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step", (9.51, 12.27, ALTO_HELTEC), -90)] + [
     ("${KICAD10_3DMODEL_DIR}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x18_P2.54mm_Vertical.step",
-     (x, -8.5 * P, 0), 180) for x in (-FILA / 2, FILA / 2)]   # zocalos: origen en el pin 1, y del 3D hacia arriba
+     (x, -8.5 * P, 0), 180) for x in (-FILA / 2, FILA / 2)] + [   # zocalos: origen en el pin 1
+    ("${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_SPST_PTS810.step", (x, -y, ALTO_HELTEC), 90)
+    for x, y in PULSADORES]
 
 
 def simbolo():
@@ -77,8 +84,8 @@ def simbolo():
 def huella():
     # Origen en el centro de la placa Heltec; y crece hacia el USB (abajo).
     y_pin = lambda p: (8.5 - (p - 1)) * P   # pin 1 en y = +21,59 (junto al USB)
-    y_arriba = y_pin(18) - MARGEN_PIN18
-    y_abajo = y_arriba + LARGO
+    y_abajo = y_pin(1) + MARGEN_PIN1
+    y_arriba = y_abajo - LARGO
     pads = []
     for x, base in ((-FILA / 2, 0), (FILA / 2, 18)):
         for p in range(1, 19):

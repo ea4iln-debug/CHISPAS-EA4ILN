@@ -1101,13 +1101,18 @@ la antena LoRa (cable desde el IPEX de la Heltec).
 **Modelo 3D para la caja (20 oct):** `modelo3d.py` (Python de KiCad, editor cerrado) copia a la U1 los modelos de la
 huella de la Heltec y exporta `hardware/3d/chispas.step` (~10 MB, fuera de Git: se regenera), origen en el centro de
 la placa, Z = 0 en la cara de abajo (cara de arriba a 1,6). La huella (`gen_heltec.py`) lleva tres modelos: la
-Heltec (`lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step`, bajado por el usuario de Onshape; un solo sólido: placa
+Heltec (`lib/chispas.3dshapes/Heltec_WiFi_LoRa_32_V3.step`, bajado por el usuario de Onshape, **dominio público**; un solo sólido: placa
 de 1,65, plástico de las tiras macho de 2,55 debajo, OLED 4 mm por encima) y dos `PinSocket_1x18` de 8,5 mm.
 Rotación de los modelos en KiCad: el signo va al revés de lo esperado (`rotate z = -90` gira +90°). Alturas sobre la
 cara de arriba de la PCB: zócalos 8,5; placa Heltec 11,05–12,7; OLED arriba a 16,7 (medido en la placa 1: 17);
-USB-C de 12,7 a 15,9. **Dudas:** en el STEP el pin 1 está a 2,7 mm del borde del USB y en la huella a 4,76 (alineado
-por los pines; si el STEP acierta, la Heltec acaba 2 mm antes del borde de la PCB): medir en la Heltec real. Filas del
-STEP a 23,02 mm (las reales, 22,86). Las piezas de LCSC tienen en la placa el `.wrl` y su `.step` con otro origen
+USB-C de 12,7 a 15,9. Pin 1 a **2,7 mm** del borde del USB, como en el STEP (comprobado por el usuario en Fusion,
+20 oct); la PCB v1.0 se hizo con 4,76, así que **la Heltec acaba 2,06 mm antes del borde de la PCB y la boca del USB-C
+queda ~1,4 mm hacia dentro** (el USB asoma 0,66 de la Heltec). `gen_heltec.py` ya usa 2,7 (`MARGEN_PIN1`): la huella
+de la librería tiene la placa, el patio y el texto USB corridos; la de la placa (lo fabricado) no se ha tocado. En una
+PCB nueva, mover la Heltec 2 mm hacia el borde para enrasar el USB. Filas del STEP a 23,02 mm (las reales, 22,86).
+**Pulsadores PRG y RST** (no vienen en el STEP): dos PTS810 de la librería de KiCad (4,6 × 3,2 × 2,5 mm) sobre la
+Heltec, a ±7,5 mm del eje y a 3 mm del borde del USB: **posición estimada**, pendiente de medir (`PULSADORES` en
+`gen_heltec.py`). Las piezas de LCSC tienen en la placa el `.wrl` y su `.step` con otro origen
 (en Fusion, jacks y encoder salían bajo la placa y corridos): `modelo3d.py` exporta desde una copia con los `.step`
 y correcciones (PJ-307: X −6,25, Z +2,5; encoder: Z +4,5), comprobadas con renders de KiCad. Con el `.step`, el eje
 del encoder llega a 27,5 mm sobre la placa (el real, de 30 mm, a ~30 según lo medido en la placa 1).
