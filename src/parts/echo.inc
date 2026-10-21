@@ -20,7 +20,7 @@ void echoNuevoReto(bool repetirMismo) {
   }
   echoRespuesta = "";
   keyerPausar();
-  motorCWEmitir(echoObjetivo.c_str(), echoWpm, echoEspaciado, "ECHO");
+  motorCWEmitir(echoObjetivo.c_str(), echoWpm, echoEfectiva, "ECHO");
   estadoEcho = ECHO_REPRODUCIENDO;
   pantallaPendiente = true;
 }

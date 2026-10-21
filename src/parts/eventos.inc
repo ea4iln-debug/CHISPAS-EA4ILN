@@ -91,7 +91,7 @@ void procesarBoton() {
       }
 
     } else if (loraEnAjustes) {
-      // Ajustes ("menu"). Duo: 0 wpm, 1 espaciado, 2 leccion, 3 texto, 4 salir, 5 volver.
+      // Ajustes ("menu"). Duo: 0 wpm, 1 efectiva, 2 leccion, 3 texto, 4 salir, 5 volver.
       // QSO: 0 wpm, 1 ver, 2 salir, 3 volver (las palas siguen funcionando)
       bool esDuo = (subpantalla4Activa == 1);
       uint8_t n = esDuo ? N_AJUSTES_DUO : N_AJUSTES_QSO_LORA;
@@ -101,7 +101,7 @@ void procesarBoton() {
         if (editandoValor) {
           if (!esDuo) ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX);
           else if (opcionAjustesLora == 0) ajustarValor(wpmCW, giro, 15, 30);
-          else if (opcionAjustesLora == 1) ajustarValor(espaciadoCW, giro * 10, 100, 200);
+          else if (opcionAjustesLora == 1) ajustarValor(efectivaCW, giro, EFECTIVA_MIN, wpmCW);
           else ajustarValor(leccionCW, giro, 1, 40);
         } else {
           opcionAjustesLora = (opcionAjustesLora + n + 1 + giro) % (n + 1);
@@ -585,7 +585,7 @@ void procesarBoton() {
 
   } else if (pantallaActual == PANTALLA_CW) {
     if (enSim && estadoSim == SIM_AJUSTES) {
-      // Ajustes del simulador. Foco: 0 rol, 1 wpm de Chispas, 2 espaciado, 3 wpm palas, 4 ver, 5 qsb, 6 ruido,
+      // Ajustes del simulador. Foco: 0 rol, 1 wpm de Chispas, 2 efectiva, 3 wpm palas, 4 ver, 5 qsb, 6 ruido,
       // 7 tormenta, 8 qrm, 9 iniciar, 10 volver
       if (atras) {
         salirDeSim();
@@ -593,7 +593,7 @@ void procesarBoton() {
         if (editandoValor) {
           switch (opcionSim) {
             case 1: ajustarValor(simWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
-            case 2: ajustarValor(simEspaciado, giro * 10, 100, 200); break;
+            case 2: ajustarValor(simEfectiva, giro, EFECTIVA_MIN, simWpm); break;
             case 3: ajustarValor(keyerWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
           }
         } else {
@@ -652,14 +652,14 @@ void procesarBoton() {
       }
 
     } else if (enEcho && !echoPracticando) {
-      // Ajustes. Foco: 0 wpm, 1 sp, 2 leccion, 3 letras, 4 ver, 5 retos, 6 refuerzo, 7 estad., 8 iniciar, 9 volver
+      // Ajustes. Foco: 0 wpm, 1 efectiva, 2 leccion, 3 letras, 4 ver, 5 retos, 6 refuerzo, 7 estad., 8 iniciar, 9 volver
       if (atras) {
         salirDeEcho();
       } else if (giro != 0) {
         if (editandoValor) {
           switch (opcionEcho) {
             case 0: ajustarValor(echoWpm, giro, KEYER_WPM_MIN, KEYER_WPM_MAX); break;
-            case 1: ajustarValor(echoEspaciado, giro * 10, 100, 200); break;
+            case 1: ajustarValor(echoEfectiva, giro, EFECTIVA_MIN, echoWpm); break;
             case 2: ajustarValor(echoLeccion, giro, 1, 40); break;
             case 3: ajustarValor(echoLargo, giro, 1, 5); break;
             case 5: ajustarValor(echoRetos, giro * 10, 10, 50); break;
@@ -846,7 +846,7 @@ void procesarBoton() {
       }
 
     } else if (enSubpantallaCW) {
-      // Ajustes del KOCH (lista). Foco: 0 wpm, 1 espaciado, 2 leccion, 3 caracteres, 4 grupos, 5 texto,
+      // Ajustes del KOCH (lista). Foco: 0 wpm, 1 efectiva, 2 leccion, 3 caracteres, 4 grupos, 5 texto,
       // 6 refuerzo, 7 estadisticas, 8 iniciar, 9 volver. Leccion, caracteres y refuerzo solo con texto GRUPOS
       const uint8_t N_FOCO = N_AJUSTES_KOCH + 2;
       if (atras) {
@@ -855,7 +855,7 @@ void procesarBoton() {
         if (editandoValor) {
           switch (opcionSubpantalla) {
             case 0: ajustarValor(wpmCW, giro, 15, 30); break;
-            case 1: ajustarValor(espaciadoCW, giro * 10, 100, 200); break;
+            case 1: ajustarValor(efectivaCW, giro, EFECTIVA_MIN, wpmCW); break;
             case 2: ajustarValor(leccionCW, giro, 1, 40); break;
             case 3: ajustarValor(caracteresCW, giro, 1, 5); break;
             case 4: ajustarValor(gruposCW, giro * 10, 10, 50); break;

@@ -37,14 +37,14 @@ void dibujarDosLineasPorPalabras(const String& t, int16_t y, uint8_t alto) {
 
 // Ajustes ("menu") de PRACTICA DUO y de QSO LIBRE
 #define N_AJUSTES_DUO 5
-const char* const NOMBRES_AJUSTES_DUO[N_AJUSTES_DUO] = { "WPM", "ESPACIADO", "LECCION", "TEXTO", "SALIR" };
+const char* const NOMBRES_AJUSTES_DUO[N_AJUSTES_DUO] = { "WPM", "EFECTIVA", "LECCION", "TEXTO", "SALIR" };
 #define N_AJUSTES_QSO_LORA 3
 const char* const NOMBRES_AJUSTES_QSO_LORA[N_AJUSTES_QSO_LORA] = { "WPM", "VER LO RECIBIDO", "SALIR" };
 
 String valorAjusteDuo(uint8_t i) {
   switch (i) {
     case 0: return String(wpmCW);
-    case 1: return String(espaciadoCW) + "%";
+    case 1: return textoEfectiva(efectivaCW, wpmCW);
     case 2: return String(leccionCW);
     case 3: return String(nombreTexto(textoDuo));
     default: return String("");
@@ -82,7 +82,7 @@ void renderizarPantallaLora() {
   } else if (subpantalla4Activa == 1) {
     display.setTextSize(1);
 
-    // La cabecera ya da el wpm y el espaciado: aqui, la leccion y las letras por grupo, o el texto (se cambian
+    // La cabecera ya da el wpm y la efectiva: aqui, la leccion y las letras por grupo, o el texto (se cambian
     // en "menu"), y el RSSI de la ultima trama recibida (0 = aun no se ha recibido nada)
     display.setCursor(0, 11);
     if (textoDuo == TEXTO_GRUPOS) display.print("LECCION " + String(leccionCW) + " x" + String(caracteresCW));

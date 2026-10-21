@@ -83,7 +83,7 @@ String textoKeyer = "";             // Lo descodificado de la manipulacion
 volatile uint32_t keyerUltimoUsoMs = 0;  // Ultima vez que se pulso una pala o sono un elemento (QSO)
 
 // Modo Echo (pantalla CW > ECHO (TX)): Chispas emite letras de su leccion Koch y hay que repetirlas con las
-// palas. Como el Koch: ajustes propios (wpm, espaciado y leccion independientes), practica de echoRetos retos
+// palas. Como el Koch: ajustes propios (wpm, efectiva y leccion independientes), practica de echoRetos retos
 // y resultado. ECHO_ESPERA = ajustes (sin practica)
 enum EstadoEcho { ECHO_ESPERA, ECHO_REPRODUCIENDO, ECHO_ESCUCHANDO, ECHO_RESULTADO, ECHO_FIN };
 bool enEcho = false;              // Echo abierto (ajustes, practica o estadisticas)
@@ -95,7 +95,7 @@ uint8_t opcionEcho = OPCION_ECHO_INICIAR;  // Ajustes: 0 wpm, 1 sp, 2 leccion, 3
 #define N_OPCIONES_ECHO 10
 uint8_t opcionPracticaEcho = 0;   // Practica: 0 repetir, 1 salir. Resultado: 0 volver, 1 rep.
 uint8_t echoWpm = 20;
-uint16_t echoEspaciado = 200;
+uint8_t echoEfectiva = 10;        // Velocidad efectiva (Farnsworth, como LCWO); >= echoWpm: sin estirar
 uint8_t echoLeccion = 4;
 uint8_t echoLargo = 1;            // Letras por reto (1-5)
 bool echoVerObjetivo = true;      // Ensenar la letra antes de manipularla (para aprender)
@@ -121,7 +121,7 @@ EstadoSim estadoSim = SIM_AJUSTES;
 FaseSim faseSim = FASE_LLAMADA;
 #define OPCION_SIM_INICIAR 9
 #define N_OPCIONES_SIM 11
-uint8_t opcionSim = OPCION_SIM_INICIAR;  // Ajustes: 0 rol, 1 wpm de Chispas, 2 espaciado, 3 wpm palas, 4 ver,
+uint8_t opcionSim = OPCION_SIM_INICIAR;  // Ajustes: 0 rol, 1 wpm de Chispas, 2 efectiva, 3 wpm palas, 4 ver,
                                          // 5 qsb, 6 ruido, 7 tormenta, 8 qrm, 9 iniciar, 10 volver
 // Tu rol en el QSO: cazador (Chispas es el activador) o activador (Chispas es el cazador). NVS "srol"
 #define SIM_ROL_CAZADOR   0
@@ -137,11 +137,15 @@ uint8_t simTormenta = QSB_NO;     // Chasquidos de estatica (NVS "stor")
 uint8_t simQrm = QSB_NO;          // Pitido de interferencia (NVS "sqrm")
 uint8_t opcionPracticaSim = 0;    // QSO: 0 repetir, 1 salir. Resultado: 0 volver, 1 otro
 uint8_t simWpm = 18;              // Velocidad de Chispas (activador o cazador) (NVS "swpm"); la de las palas es keyerWpm
-uint16_t simEspaciado = 150;      // NVS "ssp"
+uint8_t simEfectiva = 15;         // Velocidad efectiva de Chispas (NVS "sef")
 bool simVerTexto = true;          // Ver lo que emite el activador mientras suena (NVS "sver")
 
+// Velocidad efectiva (Farnsworth) de Koch, Duo, Echo y QSO SIM, como en LCWO: las letras suenan a su wpm y los
+// huecos se estiran hasta este ritmo medio. Va de EFECTIVA_MIN al wpm; igual al wpm, sin estirar ("NO")
+#define EFECTIVA_MIN 5
+
 uint8_t wpmCW = 25;
-uint16_t espaciadoCW = 200;
+uint8_t efectivaCW = 10;          // NVS "ef"
 uint8_t leccionCW = 4;
 uint8_t caracteresCW = 5;
 uint8_t gruposCW = 20;
@@ -211,7 +215,7 @@ uint8_t opcionPantalla4 = 2;   // 0=PRACTICA DUO, 1=QSO LIBRE, 2=BARRA INFERIOR 
 uint8_t subpantalla4Activa = 0;
 
 uint8_t opcionDuo4_1 = 0;       // Duo: 0 enviar, 1 ver (solo con un grupo oculto), 2 menu
-// Ajustes ("menu") de Duo (0 wpm, 1 espaciado, 2 leccion, 3 texto, 4 salir, 5 volver) y de QSO (0 wpm, 1 ver, 2 salir,
+// Ajustes ("menu") de Duo (0 wpm, 1 efectiva, 2 leccion, 3 texto, 4 salir, 5 volver) y de QSO (0 wpm, 1 ver, 2 salir,
 // 3 volver). Las palas siguen funcionando en los del QSO
 bool loraEnAjustes = false;
 uint8_t opcionAjustesLora = 0;

@@ -315,7 +315,7 @@ uint8_t siguienteRefuerzo(uint8_t refuerzo) {
 // pie: 8 iniciar, 9 volver
 #define N_AJUSTES_KOCH 8
 const char* const NOMBRES_AJUSTES_KOCH[N_AJUSTES_KOCH] = {
-  "WPM", "ESPACIADO", "LECCION", "CARACTERES", "GRUPOS", "TEXTO", "REFUERZO", "ESTADISTICAS"
+  "WPM", "EFECTIVA", "LECCION", "CARACTERES", "GRUPOS", "TEXTO", "REFUERZO", "ESTADISTICAS"
 };
 
 // Nombre del texto del Koch (y del Duo): en la lista y en la practica
@@ -334,7 +334,7 @@ String valorAjusteKoch(uint8_t i) {
   bool grupos = textoKoch == TEXTO_GRUPOS;
   switch (i) {
     case 0: return String(wpmCW);
-    case 1: return String(espaciadoCW) + "%";
+    case 1: return textoEfectiva(efectivaCW, wpmCW);
     case 2: return grupos ? String(leccionCW) : String("-");
     case 3: return grupos ? String(caracteresCW) : String("-");
     case 4: return String(gruposCW);
@@ -348,13 +348,13 @@ String valorAjusteKoch(uint8_t i) {
 // pie: 8 iniciar, 9 volver
 #define N_AJUSTES_ECHO 8
 const char* const NOMBRES_AJUSTES_ECHO[N_AJUSTES_ECHO] = {
-  "WPM", "ESPACIADO", "LECCION", "LETRAS", "VER LETRA", "RETOS", "REFUERZO", "ESTADISTICAS"
+  "WPM", "EFECTIVA", "LECCION", "LETRAS", "VER LETRA", "RETOS", "REFUERZO", "ESTADISTICAS"
 };
 
 String valorAjusteEcho(uint8_t i) {
   switch (i) {
     case 0: return String(echoWpm);
-    case 1: return String(echoEspaciado) + "%";
+    case 1: return textoEfectiva(echoEfectiva, echoWpm);
     case 2: return String(echoLeccion);
     case 3: return String(echoLargo);
     case 4: return echoVerObjetivo ? String("SI") : String("NO");

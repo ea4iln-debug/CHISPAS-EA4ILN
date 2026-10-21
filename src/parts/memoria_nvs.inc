@@ -15,7 +15,7 @@ extern bool wifiAuto;           // WiFi de PROP, POTA y SOL al entrar (AUTO) o s
 void cargarDatosNVS() {
   prefs.begin(NVS_ENTRENADOR, false);  // Lectura y escritura: en el primer arranque crea el espacio (sin errores)
   wpmCW = prefs.getUChar("wpm", 25);
-  espaciadoCW = prefs.getUShort("sp", 200);
+  efectivaCW = max(prefs.getUChar("ef", 10), (uint8_t)EFECTIVA_MIN);  // Antes "sp", "esp" y "ssp" (espaciado en %)
   leccionCW = prefs.getUChar("leccion", 4);
   caracteresCW = prefs.getUChar("caract", 5);
   gruposCW = prefs.getUChar("grupos", 20);
@@ -29,7 +29,7 @@ void cargarDatosNVS() {
   trxTonoDecodHz = prefs.getUShort("tdec", 0);
   if (trxTonoDecodHz != 0) trxTonoDecodHz = constrain(trxTonoDecodHz, TONO_MIN_HZ, TONO_MAX_HZ);
   echoWpm = constrain(prefs.getUChar("ewpm", 20), KEYER_WPM_MIN, KEYER_WPM_MAX);
-  echoEspaciado = constrain(prefs.getUShort("esp", 200), 100, 200);
+  echoEfectiva = max(prefs.getUChar("eef", 10), (uint8_t)EFECTIVA_MIN);
   echoLeccion = constrain(prefs.getUChar("elecc", 4), 1, 40);
   echoLargo = constrain(prefs.getUChar("elargo", 1), 1, 5);
   echoVerObjetivo = prefs.getBool("ever", true);
@@ -39,7 +39,7 @@ void cargarDatosNVS() {
   textoKoch = min(prefs.getUChar("ktexto", TEXTO_GRUPOS), (uint8_t)TEXTO_QSO);
   textoDuo = min(prefs.getUChar("dtexto", TEXTO_GRUPOS), (uint8_t)TEXTO_QSO);
   simWpm = constrain(prefs.getUChar("swpm", 18), KEYER_WPM_MIN, KEYER_WPM_MAX);
-  simEspaciado = constrain(prefs.getUShort("ssp", 150), 100, 200);
+  simEfectiva = max(prefs.getUChar("sef", 15), (uint8_t)EFECTIVA_MIN);
   simVerTexto = prefs.getBool("sver", true);
   simQsb = min(prefs.getUChar("sqsb", QSB_NO), (uint8_t)QSB_FUERTE);
   simRuido = min(prefs.getUChar("srui", QSB_NO), (uint8_t)QSB_FUERTE);
@@ -89,7 +89,7 @@ void guardarUltimaConfiguracionNVS() {
   prefs.putUChar("ktexto", textoKoch);
   prefs.putUChar("dtexto", textoDuo);
   prefs.putUChar("wpm", wpmCW);
-  prefs.putUShort("sp", espaciadoCW);
+  prefs.putUChar("ef", efectivaCW);
   prefs.putUChar("leccion", leccionCW);
   prefs.putUChar("caract", caracteresCW);
   prefs.putUChar("grupos", gruposCW);
@@ -153,7 +153,7 @@ void guardarTrxNVS() {
 void guardarEchoNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("ewpm", echoWpm);
-  prefs.putUShort("esp", echoEspaciado);
+  prefs.putUChar("eef", echoEfectiva);
   prefs.putUChar("elecc", echoLeccion);
   prefs.putUChar("elargo", echoLargo);
   prefs.putBool("ever", echoVerObjetivo);
@@ -165,7 +165,7 @@ void guardarEchoNVS() {
 void guardarSimNVS() {
   prefs.begin(NVS_ENTRENADOR, false);
   prefs.putUChar("swpm", simWpm);
-  prefs.putUShort("ssp", simEspaciado);
+  prefs.putUChar("sef", simEfectiva);
   prefs.putBool("sver", simVerTexto);
   prefs.putUChar("sqsb", simQsb);
   prefs.putUChar("srui", simRuido);
@@ -191,7 +191,7 @@ void registrarResultadoLeccionNVS(uint8_t lecc, float pct) {
 
   prefs.putUChar("leccion", leccionCW);
   prefs.putUChar("wpm", wpmCW);
-  prefs.putUShort("sp", espaciadoCW);
+  prefs.putUChar("ef", efectivaCW);
   prefs.putUChar("caract", caracteresCW);
   prefs.putUChar("grupos", gruposCW);
 

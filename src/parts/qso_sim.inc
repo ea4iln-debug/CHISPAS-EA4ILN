@@ -79,7 +79,7 @@ void simEmitir(const String& texto) {
   simCazLlamando = false;
   keyerPausar();
   audioQsb = simNivelQsb();  // Ya para el primer elemento (luego lo sigue procesarSim)
-  motorCWEmitir(texto.c_str(), simWpm, simEspaciado, "SIM");
+  motorCWEmitir(texto.c_str(), simWpm, simEfectiva, "SIM");
   estadoSim = SIM_EMITIENDO;
   pantallaPendiente = true;
 }
@@ -365,7 +365,7 @@ void simRepetir() {
 #define N_AJUSTES_SIM 9
 // El 1 es la velocidad de Chispas: se nombra segun el rol al dibujar
 const char* nombresAjustesSim[N_AJUSTES_SIM] = {
-  "ROL", "WPM ACTIVADOR", "ESPACIADO", "WPM PALAS", "VER TEXTO", "QSB", "RUIDO", "TORMENTA", "QRM"
+  "ROL", "WPM ACTIVADOR", "EFECTIVA", "WPM PALAS", "VER TEXTO", "QSB", "RUIDO", "TORMENTA", "QRM"
 };
 
 String textoNivelSim(uint8_t nivel) {
@@ -376,7 +376,7 @@ String valorAjusteSim(uint8_t i) {
   switch (i) {
     case 0: return simRol == SIM_ROL_ACTIVADOR ? String("ACTIVADOR") : String("CAZADOR");
     case 1: return String(simWpm);
-    case 2: return String(simEspaciado) + "%";
+    case 2: return textoEfectiva(simEfectiva, simWpm);
     case 3: return String(keyerWpm);
     case 4: return simVerTexto ? String("SI") : String("NO");
     case 5: return textoNivelSim(simQsb);

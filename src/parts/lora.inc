@@ -11,7 +11,7 @@ void iniciarEmisionLocalDuo(String cadena, uint8_t wpm) {
   if (cadena.length() == 0) return;
 
   wpmEmisionDuo = wpm;
-  motorCWEmitir(cadena.c_str(), wpm, espaciadoCW, "DUO");
+  motorCWEmitir(cadena.c_str(), wpm, efectivaCW, "DUO");
   emitiendoMorseDuo = true;
 }
 
@@ -124,8 +124,8 @@ void actualizarPantalla();  // Definida mas abajo
 void procesarColaRxDuo() {
   if (subpantalla4Activa != 1 || emitiendoMorseDuo || colaRxNum == 0) return;  // En QSO la vacia procesarQSO()
 
-  uint32_t tDit = 1200 / wpmEmisionDuo;  // Pausa a la velocidad del grupo que acaba de sonar
-  uint32_t tWordGap = (tDit * 7 * espaciadoCW) / 100;
+  uint32_t tCharGap, tWordGap;  // Pausa a la velocidad del grupo que acaba de sonar
+  huecosCW(wpmEmisionDuo, efectivaCW, tCharGap, tWordGap);
   if (millis() - finEmisionDuo < tWordGap) return;
 
   grupoDuoRecibido = String(colaRxDuo[colaRxIni]);

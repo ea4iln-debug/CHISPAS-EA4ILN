@@ -147,15 +147,19 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   (sin clave, por el locator/GPS, ~3 KB; AEMET descartado de momento: clave por usuario y por municipio). AHORA,
   HORAS (cada 3 h hasta 12 h), MAÑANA y AMBIENTE (sale de SOL, que queda con 3 páginas). Probado en la placa 1
   (MANUAL); manual, PDF, web y README al día. Detalle en NOTAS: "Funciones".
+- **Velocidad EFECTIVA** (21 oct, sin publicar): sustituye al ESPACIADO % en Koch, Duo, Echo y QSO SIM; WPM como
+  LCWO (fórmula de su jscwlib, `huecosCW()`), de 5 al wpm (`NO` = sin estirar); cabecera `25/10WPM`; NVS `ef`/`eef`/`sef`.
+  Medido en la placa 1 por serie; manual, PDF, web y README al día. Detalle en NOTAS: "Funciones".
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).
 4. TIEMPO: probar WIFI DATOS AUTO (refresco cada 30 min).
+5. AUTOSPOT: probar el aviso de los 25 min (y su captura `spot_aviso.png` para el manual) y CERRAR sin QRT en una activación real.
 6. Caja (`caja.py`): faltan medidas de batería, GPS y pulsadores PRG/RST (y cuál es cuál), decidir interruptor, y
    probar la ventana impresa sobre la Heltec real (la pantalla del modelo no casa con la zona visible medida).
-5. AUTOSPOT: probar el aviso de los 25 min (y su captura `spot_aviso.png` para el manual) y CERRAR sin QRT en una activación real.
+7. EFECTIVA: oírla junto a LCWO con los mismos valores (20/10, 20/5).
 
 Pulsaciones fantasma del encoder al decodificar (19 oct): diafonía del cable de audio del transceptor con los del
 encoder. Volvieron el 20 oct: filtro de ~1 ms en `leerPulsador()` (PRG y eje), probado en la placa 1, va en la

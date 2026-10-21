@@ -349,6 +349,17 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 ## Funciones (probadas en placa salvo que se diga)
 - **Pantalla CW** (v0.7d; nombres y orden de la v0.8g): estilo LoRa, título " ENTRENADOR CW " en negativo y
   `< KOCH (RX) >`, `< ECHO (TX) >`, `< QSO SIM >`, centradas con `dibujarOpcionCentrada()` como las de LoRa (`opcionPantalla3` 0/1/2; no caben 4 opciones con 9 px por línea). `tx libre` va en el centro del pie (`OPCION_LIBRE_CW` = 3, barra = 4), como "memorias" en TRX. **Desde la v1.30b (16 oct 2026)**: antes la tercera era TX LIBRE y el pie "qso sim"; el usuario quiso el simulador más a la vista. Probado en la placa 1 (capturas por serie: foco y entrada a cada una).
+  - **Velocidad EFECTIVA** (21 oct 2026, sin versión nueva): sustituye al ESPACIADO en % (100–200 %, que solo
+    multiplicaba los huecos de 3 y 7 puntos: el 200 % se quedaba corto para aprender) en Koch, Duo, Echo y QSO SIM.
+    Como LCWO ("Effective speed"): WPM de 5 al wpm; igual al wpm se muestra `NO`. Fórmula copiada de jscwlib de
+    DJ1YFK (`calcSpeed`, el reproductor de LCWO, ajustada a la medida): punto efectivo `1200/ef` por
+    `2,5 − 1,5/(wpm/ef)^1,25`; huecos de letra y palabra, 3 y 7 de esos puntos (`huecosCW()` en `motor_cw.inc`;
+    también la pausa de la cola del Duo). 25/10: 728/1699 ms (ARRL: 712/1662). Cabecera `25/10WPM` (o `25WPM`
+    sin efectiva). NVS: claves nuevas `ef`, `eef`, `sef` (uchar; defecto 10, 10 y 15); las viejas `sp`, `esp` y
+    `ssp` se ignoran. Al bajar el wpm no se recorta la efectiva guardada (si queda ≥ wpm, `NO`). Depuración RETRASO CW
+    añade `[CW X] wpm/ef, huecos L/P ms, duración`. **Probado en la placa 1** (Koch por serie): 25/10 → 728/1699 ms,
+    25/NO → 144/336 ms; límites 5 y NO en la lista. Sin oír frente a LCWO. Capturas del manual con la cabecera nueva
+    (`koch_practica`, `koch_listado`, `echo_practica`, `duo`) retocadas con la fuente 5×7, no recapturadas.
   - **KOCH (RX)**: ajustes en lista desde la v0.9h (WPM, ESPACIADO, LECCION, CARACTERES, GRUPOS, ESTAD.; pie
     `iniciar`/`volver`; `opcionSubpantalla` 0–7, 6 = iniciar por defecto). El Echo, igual (`NOMBRES_AJUSTES_ECHO`).
     ESTAD. (Koch y Echo): pie `3/17 L01-03  >volver` (`nombrePaginaEstad()`). Práctica: pausa/seguir y salir; resultado: volver y

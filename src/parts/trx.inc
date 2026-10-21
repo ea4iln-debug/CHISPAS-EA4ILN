@@ -392,7 +392,7 @@ void salirModoLoRa() {
     guardarKeyerNVS();   // wpm y VER del QSO
     qsoSonando = false;
   } else if (subpantalla4Activa == 1) {
-    guardarUltimaConfiguracionNVS();  // wpm, espaciado, leccion y texto del Duo
+    guardarUltimaConfiguracionNVS();  // wpm, efectiva, leccion y texto del Duo
   }
   enPantalla4_Sub = false;
   subpantalla4Activa = 0;

@@ -159,9 +159,9 @@ void procesarMaquinaEstadosCW() {
       actualizarPantalla();
       // Los indicativos suenan dos veces ("EA4ABC EA4ABC", como en el aire); en el texto a corregir, una
       if (textoKoch == TEXTO_INDICATIVOS) {
-        motorCWEmitir((grupoActualStr + " " + grupoActualStr).c_str(), wpmCW, espaciadoCW, "KOCH");
+        motorCWEmitir((grupoActualStr + " " + grupoActualStr).c_str(), wpmCW, efectivaCW, "KOCH");
       } else {
-        motorCWEmitir(grupoActualStr.c_str(), wpmCW, espaciadoCW, "KOCH");
+        motorCWEmitir(grupoActualStr.c_str(), wpmCW, efectivaCW, "KOCH");
       }
       break;
 

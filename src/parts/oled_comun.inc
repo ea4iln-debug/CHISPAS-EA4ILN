@@ -93,10 +93,15 @@ void dibujarEncabezado() {
     bool deEcho = pantallaActual == PANTALLA_CW && enEcho;
     bool deSim = pantallaActual == PANTALLA_CW && enSim;
     display.setCursor(0, 0);
-    display.print(deEcho ? echoWpm : (deSim ? simWpm : wpmCW));
-    display.print(F("WPM SP:"));
-    display.print(deEcho ? echoEspaciado : (deSim ? simEspaciado : espaciadoCW));
-    display.print(F("%"));
+    // "20/10WPM" con velocidad efectiva; "20WPM" sin ella
+    uint8_t wpm = deEcho ? echoWpm : (deSim ? simWpm : wpmCW);
+    uint8_t efectiva = deEcho ? echoEfectiva : (deSim ? simEfectiva : efectivaCW);
+    display.print(wpm);
+    if (efectiva < wpm) {
+      display.print(F("/"));
+      display.print(efectiva);
+    }
+    display.print(F("WPM"));
 
     String txtRight = "BAT:" + strBat;
     int16_t x1, y1;
