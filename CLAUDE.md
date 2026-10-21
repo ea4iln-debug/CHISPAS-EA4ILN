@@ -153,6 +153,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).
 4. TIEMPO: probar WIFI DATOS AUTO (refresco cada 30 min).
+6. Caja (`caja.py`): faltan medidas de batería, GPS y pulsadores PRG/RST (y cuál es cuál), decidir interruptor, y
+   probar la ventana impresa sobre la Heltec real (la pantalla del modelo no casa con la zona visible medida).
 5. AUTOSPOT: probar el aviso de los 25 min (y su captura `spot_aviso.png` para el manual) y CERRAR sin QRT en una activación real.
 
 Pulsaciones fantasma del encoder al decodificar (19 oct): diafonía del cable de audio del transceptor con los del
