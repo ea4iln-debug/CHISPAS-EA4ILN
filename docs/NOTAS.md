@@ -307,6 +307,19 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   un cambio del PRG o del eje solo vale si se mantiene en 5 lecturas cada 200 µs). Probado por el usuario en la placa 1
   decodificando con el cable de audio cerca: sin pulsaciones fantasma y el eje y el PRG responden igual. Se queda.
   El giro no lleva filtro (la tabla de cuadratura pide un ciclo completo); si salen giros fantasma, filtrar CLK/DT.
+  **21 oct 2026 (el usuario):** siguen saliendo, siempre en el SW, **solo en las opciones de TRX** e incluso **sin el
+  jack DECOD**, con solo KEY OUT conectado a la emisora. Razonado (sin medir): KEY va aislada (PC817), así que no
+  entra por conducción. Hipótesis principal: **RF de la propia emisión** (solo en TRX transmite la emisora); la
+  corriente de RF en modo común del cable KEY se acopla en el hilo del SW, los diodos del GPIO la rectifican y el pin
+  (pull-up de ~45 kΩ) lee BAJO mientras dura la portadora (un punto son decenas de ms: pasa el filtro de 1 ms; al
+  acabar, "suelta" y da una pulsación corta). Agravante: con batería, masa flotante. Software: nada en TRX genera
+  `ENC_PULSA` por otro camino. **Decidido esperar a la PCB nueva y probar allí:** (1) confirmar que lleva el
+  firmware con el filtro; (2) ver si pasa en DECODIFICAR sin transmitir o solo al manipular en OPERAR/QSO; (3) carga
+  artificial frente a antena; (4) menos potencia y otra banda; (5) con batería y con USB; (6) primero sin ferritas,
+  luego con ferrita en el cable KEY **junto a CHISPAS** (si solo hay una; lo ideal, una en cada extremo), material 31
+  (o 43 por encima de ~10 MHz), 3–4 vueltas; también en el cable de DECOD. Arreglo si es RF: 10 kΩ de SW a 3V3 y
+  1–100 nF de SW a GND en el encoder, cables del encoder cortos y separados del de KEY (tenerlo en cuenta en la caja).
+  Apaño de software solo si hace falta: ignorar el eje con KEY activa y ~100 ms después.
 - **Sin encoder** (histórico: de la v0.7p a la v1.10; quitado en la 1.20): entorno `heltec_sin_encoder` (`-DSIN_ENCODER`, mismo `main.cpp`).
   `leerEventoBoton()` traduce el PRG: corta = `ENC_DERECHA` (mover), larga = `ENC_PULSA` (ejecutar), muy larga
   (≥ `TIEMPO_PULSACION_DORMIR`, 2,5 s) = dormir. No hay "atrás" (todas las pantallas tienen volver o ant./sig.).

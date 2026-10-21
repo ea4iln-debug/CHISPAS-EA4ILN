@@ -160,6 +160,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 Pulsaciones fantasma del encoder al decodificar (19 oct): diafonía del cable de audio del transceptor con los del
 encoder. Volvieron el 20 oct: filtro de ~1 ms en `leerPulsador()` (PRG y eje), probado en la placa 1, va en la
 próxima versión. Si salen giros fantasma o sigue, filtro de CLK/DT o condensadores (NOTAS: "Manejo").
+**21 oct:** siguen en el SW, solo en TRX y sin DECOD (solo KEY). Sospecha: RF de la propia emisión rectificada en
+GPIO20. **Se prueba con la PCB nueva** (plan en NOTAS: "Manejo").
 
 Cerrado el 16 oct (decisión del usuario; detalle en NOTAS): GPS dormido y cara de tormenta (consumo despreciable,
 no se miden ni se esperan), OLED negra de la placa 2 (placa averiada), batería de la placa 2 (se reajusta si se
