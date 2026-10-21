@@ -358,7 +358,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
     sin efectiva). NVS: claves nuevas `ef`, `eef`, `sef` (uchar; defecto 10, 10 y 15); las viejas `sp`, `esp` y
     `ssp` se ignoran. Al bajar el wpm no se recorta la efectiva guardada (si queda ≥ wpm, `NO`). Depuración RETRASO CW
     añade `[CW X] wpm/ef, huecos L/P ms, duración`. **Probado en la placa 1** (Koch por serie): 25/10 → 728/1699 ms,
-    25/NO → 144/336 ms; límites 5 y NO en la lista. Sin oír frente a LCWO. Capturas del manual con la cabecera nueva
+    25/NO → 144/336 ms; límites 5 y NO en la lista. El usuario lo ha oído junto a LCWO (21 oct): suena igual. Altavoz mudo en la prueba: tenía
+    los auriculares puestos (el TN del jack lo corta), no era un fallo. Capturas del manual con la cabecera nueva
     (`koch_practica`, `koch_listado`, `echo_practica`, `duo`) retocadas con la fuente 5×7, no recapturadas.
   - **KOCH (RX)**: ajustes en lista desde la v0.9h (WPM, ESPACIADO, LECCION, CARACTERES, GRUPOS, ESTAD.; pie
     `iniciar`/`volver`; `opcionSubpantalla` 0–7, 6 = iniciar por defecto). El Echo, igual (`NOMBRES_AJUSTES_ECHO`).
