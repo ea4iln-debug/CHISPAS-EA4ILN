@@ -37,7 +37,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `m<texto>` simula las palas, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (18 oct 2026)
-- **v1.33b** publicada (beta, 18 oct): pantalla TIEMPO (ver abajo); en la placa 1 por USB. Antes, **v1.32b** (beta, 18 oct): AUTOSPOT POTA con activación en curso (ver abajo); en la placa 1 por OTA desde
+- **v1.34b** publicada (beta, 21 oct): velocidad EFECTIVA y filtro de pulsadores (ver abajo). Antes, **v1.33b** (beta, 18 oct): pantalla TIEMPO (ver abajo); en la placa 1 por USB. Antes, **v1.32b** (beta, 18 oct): AUTOSPOT POTA con activación en curso (ver abajo); en la placa 1 por OTA desde
   la 1.20 (probado). Antes, **v1.31b** (beta, 18 oct; los
   arreglos del 18 oct de abajo). Antes, **v1.30b** (beta, 16 oct; ver abajo). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
   y batería a 4,985. En la placa 1 por USB y en la placa 2 por OTA (16 oct; antes, reinicio por OTA sin avance probado).
@@ -147,7 +147,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   (sin clave, por el locator/GPS, ~3 KB; AEMET descartado de momento: clave por usuario y por municipio). AHORA,
   HORAS (cada 3 h hasta 12 h), MAÑANA y AMBIENTE (sale de SOL, que queda con 3 páginas). Probado en la placa 1
   (MANUAL); manual, PDF, web y README al día. Detalle en NOTAS: "Funciones".
-- **Velocidad EFECTIVA** (21 oct, sin publicar): sustituye al ESPACIADO % en Koch, Duo, Echo y QSO SIM; WPM como
+- **Velocidad EFECTIVA** (21 oct, **v1.34b**): sustituye al ESPACIADO % en Koch, Duo, Echo y QSO SIM; WPM como
   LCWO (fórmula de su jscwlib, `huecosCW()`), de 5 al wpm (`NO` = sin estirar); cabecera `25/10WPM`; NVS `ef`/`eef`/`sef`.
   Medido en la placa 1 por serie y oído igual que LCWO (usuario, 21 oct); manual, PDF, web y README al día. Detalle en NOTAS: "Funciones".
 
