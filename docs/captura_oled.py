@@ -6,7 +6,7 @@ Envia la orden 'p' al firmware (v0.8c o posterior), lee el buffer de la OLED (12
 y lo guarda ampliado. Abre el puerto con DTR y RTS a False para no reiniciar la placa.
 Cierra antes el monitor serie de PlatformIO: el puerto no se puede compartir.
 
-Uso: python docs/captura_oled.py [--puerto COM16] [--escala 4] [--salida archivo.png] [--color azul|blanco]
+Uso: python docs/captura_oled.py [--puerto COMx] [--escala 4] [--salida archivo.png] [--color azul|blanco]
 Solo necesita pyserial (el PNG se escribe sin librerias extra).
 """
 
@@ -17,6 +17,7 @@ import time
 import zlib
 
 import serial
+from serial.tools import list_ports
 
 ANCHO, ALTO = 128, 64
 # Colores (encendido, apagado): azul como el de la OLED por defecto; blanco para documentos impresos
@@ -80,13 +81,25 @@ def guardar_png(pixeles, ruta, escala, color="azul"):
         f.write(trozo(b"IEND", b""))
 
 
+def buscar_puerto():
+    """El puerto del CP210x de la Heltec (el numero de COM cambia de un equipo a otro)."""
+    puertos = [p for p in list_ports.comports() if p.vid == 0x10C4 and p.pid == 0xEA60]
+    if len(puertos) == 1:
+        return puertos[0].device
+    if not puertos:
+        sys.exit("No hay ninguna placa (CP210x) conectada. Usa --puerto si es otro adaptador.")
+    sys.exit("Hay varias placas: " + ", ".join(p.device for p in puertos) + ". Elige una con --puerto.")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Captura la OLED de Chispas por serie")
-    ap.add_argument("--puerto", default="COM16")
+    ap.add_argument("--puerto", help="por defecto, el del CP210x (como serie.py)")
     ap.add_argument("--escala", type=int, default=4)
     ap.add_argument("--salida", default=time.strftime("captura_%Y%m%d_%H%M%S.png"))
     ap.add_argument("--color", choices=sorted(COLORES), default="azul")
     args = ap.parse_args()
+    if not args.puerto:
+        args.puerto = buscar_puerto()
     try:
         buf = leer_buffer(args.puerto)
     except (serial.SerialException, RuntimeError) as e:
