@@ -164,8 +164,9 @@ uint8_t gruposPractica = 20;    // Grupos (o indicativos o frases) de la practic
 uint8_t opcionSubpantalla = 8;  // Ajustes del Koch: 8 = iniciar
 
 enum EstadoCW { 
-  CW_IDLE, 
-  CW_GENERAR_GRUPO, 
+  CW_IDLE,
+  CW_CUENTA_ATRAS,     // 3, 2, 1 antes del primer grupo
+  CW_GENERAR_GRUPO,
   CW_EMITIENDO_GRUPO,  // El grupo esta en el motor CW
   CW_PAUSA_ENTRE_GRUPOS, 
   CW_PAUSADO, 
@@ -175,6 +176,9 @@ enum EstadoCW {
   CW_PANTALLA_RESUMEN_FINAL
 };
 EstadoCW estadoCW = CW_IDLE;
+#define CUENTA_ATRAS_KOCH_MS 3000
+uint32_t cuentaAtrasFinMs = 0;  // Fin de la cuenta atras del Koch
+uint8_t cuentaAtrasMostrada = 0;  // Segundo que esta en pantalla
 
 String grupoActualStr = "";
 String textoCompletoLeccion = ""; 

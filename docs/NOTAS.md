@@ -354,6 +354,12 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 ## Funciones (probadas en placa salvo que se diga)
 - **Pantalla CW** (v0.7d; nombres y orden de la v0.8g): estilo LoRa, título " ENTRENADOR CW " en negativo y
   `< KOCH (RX) >`, `< ECHO (TX) >`, `< QSO SIM >`, centradas con `dibujarOpcionCentrada()` como las de LoRa (`opcionPantalla3` 0/1/2; no caben 4 opciones con 9 px por línea). `tx libre` va en el centro del pie (`OPCION_LIBRE_CW` = 3, barra = 4), como "memorias" en TRX. **Desde la v1.30b (16 oct 2026)**: antes la tercera era TX LIBRE y el pie "qso sim"; el usuario quiso el simulador más a la vista. Probado en la placa 1 (capturas por serie: foco y entrada a cada una).
+  - **Cuenta atrás del Koch** (21 oct 2026, sin versión nueva): al pulsar `iniciar` (y `rep.` del resumen) sale
+    3, 2, 1 en grande (un segundo cada uno) antes del primer grupo, para coger el lápiz. Estado nuevo
+    `CW_CUENTA_ATRAS` (`CUENTA_ATRAS_KOCH_MS` = 3000, en `globales.inc`); el pie `pausa`/`salir` funciona durante
+    la cuenta (pausa y `seguir` empieza ya sin cuenta). Sin pitidos (se confundirían con el CW). Solo el Koch; Echo,
+    QSO SIM y Duo no la llevan. Probado en la placa 1 por serie y capturas: 3, 2, 1, luego grupo 1; pausa en la
+    cuenta. Manual (paso "iniciar") y PDF al día.
   - **Velocidad EFECTIVA** (21 oct 2026, sin versión nueva): sustituye al ESPACIADO en % (100–200 %, que solo
     multiplicaba los huecos de 3 y 7 puntos: el 200 % se quedaba corto para aprender) en Koch, Duo, Echo y QSO SIM.
     Como LCWO ("Effective speed"): WPM de 5 al wpm; igual al wpm se muestra `NO`. Fórmula copiada de jscwlib de

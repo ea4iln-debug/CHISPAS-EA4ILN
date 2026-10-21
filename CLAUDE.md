@@ -150,6 +150,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - **Velocidad EFECTIVA** (21 oct, **v1.34b**): sustituye al ESPACIADO % en Koch, Duo, Echo y QSO SIM; WPM como
   LCWO (fórmula de su jscwlib, `huecosCW()`), de 5 al wpm (`NO` = sin estirar); cabecera `25/10WPM`; NVS `ef`/`eef`/`sef`.
   Medido en la placa 1 por serie y oído igual que LCWO (usuario, 21 oct); manual, PDF, web y README al día. Detalle en NOTAS: "Funciones".
+- **Cuenta atrás del Koch** (21 oct, sin publicar): 3, 2, 1 en grande antes del primer grupo (`CW_CUENTA_ATRAS`);
+  probada en la placa 1 por serie; manual y PDF al día.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
 1. PCB: recibir y montar (ver "Hardware").

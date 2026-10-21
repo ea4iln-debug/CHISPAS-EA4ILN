@@ -613,7 +613,13 @@ void renderizarPantallaCW() {
       display.print(F(" / "));
       display.print(gruposPractica);
 
-      if (mostrarTextoGrupo && grupoActualStr.length() > 10) {
+      if (estadoCW == CW_CUENTA_ATRAS) {
+        // Cuenta atras antes del primer grupo: el segundo en grande, centrado
+        display.setTextSize(2);
+        display.setCursor(58, 26);
+        display.print(cuentaAtrasMostrada);
+        display.setTextSize(1);
+      } else if (mostrarTextoGrupo && grupoActualStr.length() > 10) {
         // Frase de QSO: no cabe en grande; en pequeno, hasta 2 lineas de 21 caracteres, partida en un espacio
         int corte = grupoActualStr.length();
         if (corte > 21) {

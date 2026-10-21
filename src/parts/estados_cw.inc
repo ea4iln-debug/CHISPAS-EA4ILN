@@ -24,9 +24,18 @@ void iniciarPracticaCW() {
   guardarUltimaConfiguracionNVS();
   if (textoKoch == TEXTO_GRUPOS) informarRefuerzo("KOCH", leccionCW, refuerzoKoch);
 
-  estadoCW = CW_GENERAR_GRUPO;
+  // Cuenta atras de 3 s antes del primer grupo, para prepararse a copiar
+  estadoCW = CW_CUENTA_ATRAS;
+  cuentaAtrasFinMs = millis() + CUENTA_ATRAS_KOCH_MS;
+  cuentaAtrasMostrada = CUENTA_ATRAS_KOCH_MS / 1000;
   mostrarTextoGrupo = false;
   tiempoCWProximo = millis();
+}
+
+// Segundos que faltan de la cuenta atras (3, 2, 1)
+uint8_t segundosCuentaAtras() {
+  int32_t falta = (int32_t)(cuentaAtrasFinMs - millis());
+  return (falta <= 0) ? 0 : (uint8_t)((falta + 999) / 1000);
 }
 
 void detenerPracticaCW() {
@@ -139,6 +148,16 @@ void procesarMaquinaEstadosCW() {
   if (!enPractica3_2 || estadoCW == CW_PAUSADO || estadoCW == CW_IDLE || 
       estadoCW == CW_PANTALLA_3_3_LISTADO || estadoCW == CW_PANTALLA_CORREGIR_ERRORES ||
       estadoCW == CW_PANTALLA_FALLOS_TOTALES || estadoCW == CW_PANTALLA_RESUMEN_FINAL) return;
+
+  if (estadoCW == CW_CUENTA_ATRAS) {
+    uint8_t s = segundosCuentaAtras();
+    if (s == 0) {
+      estadoCW = CW_GENERAR_GRUPO;
+    } else {
+      if (s != cuentaAtrasMostrada) { cuentaAtrasMostrada = s; actualizarPantalla(); }
+      return;
+    }
+  }
 
   if (millis() < tiempoCWProximo) return;
 
