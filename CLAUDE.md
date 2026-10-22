@@ -42,8 +42,9 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   arreglos del 18 oct de abajo). Antes, **v1.30b** (beta, 16 oct; ver abajo). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
   y batería a 4,985. En la placa 1 por USB y en la placa 2 por OTA (16 oct; antes, reinicio por OTA sin avance probado).
   Antes, v1.10 (15 oct, primera final; WIFI DATOS MANUAL/AUTO y reinicio de la OTA sin avance). **Nombres de las placas desde el 15 oct** (antes, al revés; lo anterior en NOTAS usa los viejos):
-  **placa 1 = placa perforada** (MAC `08:c0`, montada y probada el 15 oct) y **placa 2 = protoboard** (MAC `50:74`,
-  OLED con defecto de hardware). Las dos con encoder, entorno `heltec_wifi_lora_32_V3`.
+  **placa 1 = placa perforada** (MAC `08:c0`, montada y probada el 15 oct) y **placa 2 = Heltec nueva desnuda**
+  (MAC `44:1b:f6:fa:ab:fc`, desde el 23 oct; v1.34b por USB, para montar en la PCB). La antigua placa 2 (protoboard,
+  MAC `50:74`, OLED averiada) se devuelve con el firmware de fábrica de Heltec. Un solo entorno, `heltec_wifi_lora_32_V3`.
 - **Sin soporte sin encoder** desde la 1.20: un solo entorno (`heltec_wifi_lora_32_V3`); la v1.10 fue la última con
   `heltec_sin_encoder`. **Versiones X.YY con dos cifras** (la OTA compara números: "1.2" sería menor que "1.10").
 - PlatformIO, `platform = espressif32 @ 6.13.0` (core Arduino 2.0.17), RadioLib ^6.6, Adafruit GFX/SSD1306,

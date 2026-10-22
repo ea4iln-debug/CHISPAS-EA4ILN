@@ -13,7 +13,8 @@ description: Cargar el firmware de Chispas en una placa por USB y comprobarlo - 
   (`MAC: ...`). Si la MAC no es ninguna de las de abajo, es una placa nueva: cargar igual (mismo entorno) y apuntar
   su MAC en NOTAS, sin preguntar.
 - Entornos: las dos placas llevan encoder → `heltec_wifi_lora_32_V3`. Nombres desde el 15 oct 2026: **placa 1 =
-  placa perforada** (MAC `3c:0f:02:ee:08:c0`), **placa 2 = protoboard** (MAC `3c:0f:02:ee:50:74`, OLED con defecto).
+  placa perforada** (MAC `3c:0f:02:ee:08:c0`), **placa 2 = Heltec nueva desnuda** (MAC `44:1b:f6:fa:ab:fc`, desde el 23 oct 2026; la antigua
+  placa 2, protoboard con MAC `3c:0f:02:ee:50:74` y OLED averiada, se devolvió).
   `heltec_sin_encoder` existio hasta la v1.10; desde la 1.20 hay un solo entorno.
 
 ## 2. Cargar

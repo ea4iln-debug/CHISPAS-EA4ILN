@@ -235,6 +235,14 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   sin encoder hasta el 15 oct); **placa 2 = protoboard**, `3c:0f:02:ee:50:74` (la antigua "placa 1", con la OLED
   defectuosa). Las dos con encoder, `heltec_wifi_lora_32_V3`. Por OTA cada placa baja el `.bin` de su entorno (el `-sin-encoder` solo
   si lleva `SIN_ENCODER`), así que la placa 2 ya seguirá con el de encoder.
+- **23 oct 2026: nueva placa 2** = Heltec V3 nueva, desnuda (sin periféricos hasta la PCB), MAC `44:1b:f6:fa:ab:fc`.
+  Flash borrada y `chispas-1.34b-usb.bin` de la release en 0x0 (esptool); 5 reinicios por RTS y 40 s en reposo:
+  siempre `v1.34b`, LoRa OK, BME y GPS "NO DETECTADO" (no están), sin pánicos ni reinicios; el único `[E]` es
+  `qnh NOT_FOUND` (NVS nueva, normal). La antigua placa 2 (protoboard, `50:74`, OLED averiada) se devuelve: flash
+  borrada (sin WiFi ni datos) y firmware de fábrica de Heltec (`Lora32_V3_factest_HF.zip` de resource.heltec.cn,
+  4 archivos a 0x0/0x8000/0xe000/0x10000). Ese firmware pide la **licencia de Heltec**, que vive en la flash y se
+  borra con `erase_flash`: se saca con un POST `theId=<ChipID>` a `https://resource.heltec.cn/search` (ChipID = la MAC
+  al revés, la imprime el firmware) y se graba por serie con `AT+CDKEY=<32 hex sin 0x ni comas>` ("The board is actived").
 - Firmware: `src/main.cpp` **v1.09b** (el reset de fábrica borra también `/parques.bin`; release del 14 oct 2026,
   probado antes por USB en la placa 2; instalada por OTA en las dos placas el 14 oct; en la placa 1 la primera
   descarga se colgó en el 8 % y la segunda fue bien, ver "Pendiente"). v1.08b (parques POTA cercanos, POTA > VER PARQUES; release del 14 oct 2026 con
