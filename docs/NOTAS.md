@@ -1199,6 +1199,13 @@ LCSC). **R7 cambiado:** el ALPS RK097111080J (C97444) estaba sin stock; se compr
 encaje en la huella (3 pines en línea a 2,5 mm, sin patillas de sujeción): si trae patillas, cortarlas. Es de curva
 **lineal** (B103), no logarítmica: el volumen cambia sobre todo al principio del giro. En el esquema solo cambian el
 MPN, el `LCSC Part` y el enlace de R7; el valor, el símbolo y la huella siguen con el nombre del ALPS.
+**22 oct, hoja de datos del CTR (LCSC, CT-QR2215 y plano R097□0NS):** lleva **interruptor giratorio SPST** (S1-S2,
+12 V DC 1 A, 100 mΩ, actúa en los primeros 50° de los 300°), 5 patillas de 0,8 mm (largo 2): 1-2-3 a 2,5 mm como la
+huella y S1/S2 a 5 mm entre sí, **6,25 mm detrás** de la fila 1-2-3; cuerpo de **13,5 mm** de fondo (el ALPS, ~7).
+En la PCB v1.0, S1/S2 caen en (147,5; 148,75) y (152,5; 148,75), **encima de la pista F.Cu de PJ3-Pad5** (y=148,83)
+y sin agujeros: hay que doblarlas hacia arriba (para cablear el interruptor) o cortarlas, si no el cuerpo queda
+levantado 2 mm. El cuerpo largo no choca con otras huellas (solo pistas y vías de GND debajo). Sirve para encender
+y apagar cortando el + de la LiPo (S1-S2 en serie con su cable); con él abierto no carga por USB. Sin comprobar en la pieza real.
 **16 oct 2026 (decisión del usuario): R7 vuelve al ALPS** en el esquema (MPN, `LCSC Part` C97444 y enlace) y en
 `compra_lcsc.csv`, porque la placa está diseñada para él y repondrán stock; así la documentación no lleva a error.
 El CTR comprado sigue siendo la pieza de estas 5 placas (comprobar el encaje al montar). El encoder U4 no cambia:
