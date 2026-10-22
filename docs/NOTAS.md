@@ -243,6 +243,10 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   4 archivos a 0x0/0x8000/0xe000/0x10000). Ese firmware pide la **licencia de Heltec**, que vive en la flash y se
   borra con `erase_flash`: se saca con un POST `theId=<ChipID>` a `https://resource.heltec.cn/search` (ChipID = la MAC
   al revés, la imprime el firmware) y se graba por serie con `AT+CDKEY=<32 hex sin 0x ni comas>` ("The board is actived").
+  **ORDENES SERIE en la placa 2 sin encoder:** programa mínimo (Preferences `chispas`, `depu` = 0x01) grabado solo
+  en 0x10000 con esptool y luego `chispas-1.34b.bin` en 0x10000 (no el `-usb.bin`, que rellena con 0xFF y borra la
+  NVS). Probado: captura de la OLED y `i`/`d` mueven el foco. **Ojo:** desnuda y solo con USB, la cabecera dice
+  `BAT:95%` en vez de `PWR` (la detección por dispersión no la ve sin batería; sin investigar).
 - Firmware: `src/main.cpp` **v1.09b** (el reset de fábrica borra también `/parques.bin`; release del 14 oct 2026,
   probado antes por USB en la placa 2; instalada por OTA en las dos placas el 14 oct; en la placa 1 la primera
   descarga se colgó en el 8 % y la segunda fue bien, ver "Pendiente"). v1.08b (parques POTA cercanos, POTA > VER PARQUES; release del 14 oct 2026 con
