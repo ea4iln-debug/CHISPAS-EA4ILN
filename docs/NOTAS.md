@@ -168,6 +168,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   dos y se quita al volver al menú LoRa. Una placa que ya tuviera la primera 1.36b no ve la nueva por OTA (misma versión). Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
   la W en "Y además".
   https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.36b
+  **v1.37b (beta), publicada el 23 oct 2026** (prerelease): WiFi de TRX solo en OPERAR y QSO, QUIEN ME OYE? en su
+  "menu" (y vuelta) y "L" de LoRa en la cabecera; todo probado en la placa 1 por serie. Manual (portada 1.37b) y
+  PDF; web: QUIEN ME OYE desde el menú de OPERAR y la L con la W en "Y además" (el volver de las listas sale de
+  ahí, ya está en el manual).
+  https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.37b
   **v1.33b (beta), publicada el 18 oct 2026** (prerelease): pantalla TIEMPO (Open-Meteo) con AMBIENTE, SOL con 3
   páginas; manual (HTML y PDF, portada 1.33b), web (novedades: tarjeta Tiempo; sonido y consumo juntos en "Y
   además" para seguir con 4 tarjetas), funciones y README al día; `sol_ahora.png` del README con el contador
