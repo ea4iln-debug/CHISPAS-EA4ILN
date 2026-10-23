@@ -482,6 +482,12 @@ void apagarWifi() {
   cpuSegunWifi(false);
   estadoWifi = WIFI_APAGADO;
   Serial.println(F("[WIFI] APAGADO"));
+  pantallaPendiente = true;  // Quita la "W" de la cabecera
+}
+
+// Radio WiFi encendida (la "W" de la cabecera)
+bool wifiEncendido() {
+  return estadoWifi == WIFI_CONECTANDO || estadoWifi == WIFI_CONECTADO || estadoWifi == WIFI_PORTAL;
 }
 
 // NTP en segundo plano, salvo que la hora venga del GPS (mas exacto)

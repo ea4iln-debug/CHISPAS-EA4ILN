@@ -56,6 +56,8 @@ time_t epochUtc(int anio, int mes, int dia, int h, int m, int s) {
   return (time_t)dias * 86400 + h * 3600 + m * 60 + s;
 }
 
+bool wifiEncendido();  // Definida con el WiFi
+
 void dibujarEncabezado() {
   BateriaInfo bat = bateriaActual;
   display.setTextSize(1);
@@ -114,6 +116,7 @@ void dibujarEncabezado() {
     // Hora local o UTC ("12:05Z", segun webconf), en cuanto se haya sincronizado por NTP
     // (el reloj interno la mantiene sin WiFi)
     struct tm local;
+    int16_t finHora = 0;
     if (horaLocalValida(local)) {
       char txtHora[8];
       if (horaUtcCabecera) {
@@ -126,6 +129,7 @@ void dibujarEncabezado() {
       }
       display.setCursor(0, 0);
       display.print(txtHora);
+      finHora = strlen(txtHora) * 6;
     }
 
     String txtRight = "BAT:" + strBat;
@@ -150,8 +154,15 @@ void dibujarEncabezado() {
     }
     if (avisoTormenta) nombre = "TORM!";  // Presion bajando deprisa (BME280): el aviso sustituye al nombre
     display.getTextBounds(nombre, 0, 0, &x1, &y1, &w, &h);
-    display.setCursor((128 - w) / 2, 0);
+    int16_t inicioNombre = (128 - w) / 2;
+    display.setCursor(inicioNombre, 0);
     display.print(nombre);
+
+    // "W" con la radio WiFi encendida (conectando, conectada o con el portal): en el hueco entre la hora y el nombre
+    if (wifiEncendido()) {
+      display.setCursor(finHora + (inicioNombre - finHora - 5) / 2, 0);
+      display.print('W');
+    }
   }
 
   display.drawLine(0, 9, 128, 9, SSD1306_WHITE);

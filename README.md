@@ -271,7 +271,8 @@ muy larga (2,5 s) = dormir.
 | 9 | **TIEMPO** (`WX` en la cabecera) | Tiempo de [Open-Meteo](https://open-meteo.com/) (CC BY 4.0) para el locator o el GPS: ahora, próximas 12 h cada 3 h y mañana; con el BME280, también AMBIENTE |
 | 10 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización, depuración y fábrica) y `STATUS` |
 
-La cabecera muestra la hora (local o UTC, a elegir), el nombre de la pantalla y la batería (`PWR` si no hay batería).
+La cabecera muestra la hora (local o UTC, a elegir), una `W` si el WiFi está encendido, el nombre de la pantalla y la
+batería (`PWR` si no hay batería).
 Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captura_oled.py) (necesita
 **CONF. > CONFIG > DEPURACION > ORDENES SERIE** en `SI`).
 
