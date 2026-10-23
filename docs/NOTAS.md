@@ -136,6 +136,13 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   (39 páginas); web: tarjeta "Cluster" en lugar de "Tiempo" (que pasa a "Y además", con EAXXXX y la cuenta atrás;
   siguen 4 tarjetas). Probada en la placa 1 por USB con el mismo código antes de subir la versión.
   https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.35b
+  **v1.36b (beta), publicada el 23 oct 2026** (prerelease, a petición del usuario): CLUSTER > ESCUCHA EN TRX
+  (QUIEN ME OYE con el CQ de TRX, probado con un CQ real) y **W** en la cabecera con la radio WiFi encendida
+  (conectando, conectada o portal; `wifiEncendido()`, centrada en el hueco entre la hora y el nombre; `apagarWifi`
+  pide redibujar). La W **solo compilada** al publicar (la placa 1 se desconectó): la comprueba el usuario al
+  actualizar por OTA. Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
+  la W en "Y además".
+  https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.36b
   **v1.33b (beta), publicada el 18 oct 2026** (prerelease): pantalla TIEMPO (Open-Meteo) con AMBIENTE, SOL con 3
   páginas; manual (HTML y PDF, portada 1.33b), web (novedades: tarjeta Tiempo; sonido y consumo juntos en "Y
   además" para seguir con 4 tarjetas), funciones y README al día; `sol_ahora.png` del README con el contador
