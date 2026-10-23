@@ -834,6 +834,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
         algún día hiciera falta: filtro más estrecho o umbral que no suba tanto con el ruido. El guion (`-....-`)
         parece no estar en el diccionario (sale `*`; sin comprobar). Al filtrar el log, no tirar las líneas con
         `[GPS]`/`[BME]`/`[DIAG]`: llevan delante letras decodificadas.
+  - **OPERAR o QSO** (aclarado en manual, web y README el 23 oct 2026, a petición del usuario): QSO = OPERAR +
+    DECODIFICAR. OPERAR, para transmitir copiando de oído (no necesita DECOD); QSO, para que CHISPAS decodifique
+    mientras transmites (con DECOD conectado; sin él, OPERAR). OPERAR enseña además los ajustes y el SU.
   - **QSO:** decodificado arriba, estado del decodificador en el separador, manipulado abajo; mem, SU, tune, salir.
     **Probado con emisora real el 12 oct 2026:** manipular y decodificar en la misma sesión, sin descodificar lo propio.
   - **TUNE** (v0.9e): portadora continua por KEY de 1–10 s (`trxTuneSeg`, NVS

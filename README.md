@@ -68,7 +68,7 @@ GitHub.
 | **QSO SIM** | Simulador de QSO POTA con las palas, en los dos papeles (ajuste **ROL**): de cazador (Chispas llama CQ; tú, indicativo, `5NN`, `73`) o de activador (llamas tú CQ y Chispas es el cazador: a veces da medio indicativo, vuelve a llamar si tardas o copia mal el tuyo). Si no te copia, te pide repetir. Velocidad y velocidad efectiva del activador, texto en pantalla y condiciones de banda: **QSB**, **ruido**, **estática de tormenta** y **QRM** (NO / SUAVE / FUERTE). | ✅ |
 | **Práctica Duo por LoRa** | Práctica en pareja entre dos Chispas: uno envía grupos (o indicativos, o frases de QSO POTA) y el otro los recibe y los copia. Tramas digitales a 868 MHz, sin audio. | ✅ |
 | **QSO libre por LoRa** | QSO con las palas entre dos Chispas: cada palabra se envía al terminarla y lo recibido suena cuando dejas de manipular (si manipulas mientras suena, se corta). | ✅ |
-| **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`, `{WX}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez. | ✅ |
+| **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`, `{WX}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez (OPERAR para copiar de oído; QSO para que CHISPAS decodifique mientras transmites). | ✅ |
 | **Propagación** | Índices solares y condiciones por banda de [hamqsl.com](https://www.hamqsl.com/). | ✅ |
 | **Spots POTA** | Activaciones en CW publicadas en [pota.app](https://pota.app/). **Autospot** (beta): desde los parques cercanos, publicas tu propio spot (parque, indicativo, banda, frecuencia, QRP/QRT o un comentario propio) y CHISPAS te avisa a los 25 min para renovarlo. La **activación en curso** (duración, spots, botón de QRT) no se olvida aunque apagues. | ✅ |
 | **Sol y línea gris** | Salida y puesta del sol y ventanas de línea gris de hoy y de mañana, y altura actual del sol, para el locator de la estación. Funciona sin conexión. | ✅ |
@@ -262,7 +262,7 @@ muy larga (2,5 s) = dormir.
 | 1 | **Inicio** | Nombre, indicativo y versión. Tras unos segundos sin uso aparece la cara de Chispas (también en PROP., POTA, SOL, TIEMPO y CONF.). |
 | 2 | **CW** | Entrenador: `KOCH (RX)`, `ECHO (TX)`, `QSO SIM` (simulador de QSO POTA) y `tx libre` en el pie (keyer), con ajustes, práctica y estadísticas |
 | 3 | **LoRa** | `PRÁCTICA DUO` (grupos en pareja) y `QSO LIBRE` (con las palas) |
-| 4 | **TRX** | Transceptor: `DECODIFICAR`, `OPERAR` (por KEY, con tune), `QSO` y `memorias` |
+| 4 | **TRX** | Transceptor: `DECODIFICAR` (solo recibe), `OPERAR` (transmitir por KEY, con memorias y tune, copiando de oído), `QSO` (OPERAR con el decodificador a la vez) y `memorias` |
 | 5 | **PROP.** | Propagación: índices solares y condiciones por banda |
 | 6 | **POTA** | Spots de activaciones en CW, parques POTA más cercanos (con el GPS o el locator) y autospot desde un parque |
 | 7 | **SOL** | Sol y línea gris: hoy, ahora y mañana |
