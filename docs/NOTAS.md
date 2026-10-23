@@ -160,7 +160,12 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `trxEntrarSub(origen)` (OPERAR o QSO, texto manipulado vacío). **Probado en la placa 1** (por serie y capturas):
   menú TRX sin W ni WiFi; OPERAR enciende el WiFi y entra en el RBN (W); menu > QUIEN ME OYE? > lista > atrás
   vuelve a OPERAR sin cortar el WiFi; salir de OPERAR apaga el WiFi; DECODIFICAR sin WiFi. Ojo: al entrar en
-  OPERAR el WiFi tarda unos segundos en conectar y entrar en el RBN (el manual dice esperar a la W). Una placa que ya tuviera la primera 1.36b no ve la nueva por OTA (misma versión). Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
+  OPERAR el WiFi tarda unos segundos en conectar y entrar en el RBN (el manual dice esperar a la W).
+- **"L" de LoRa en la cabecera** (23 oct 2026, petición del usuario; sin publicar): en negativo, como la W
+  (`dibujarMarcaCabecera()` en `oled_comun.inc`), con `modoRadioRxActivo` (solo Práctica Duo y QSO libre: fuera,
+  la radio duerme). En QSO libre (cabecera normal) va en el hueco entre la hora y el nombre (con la W, juntas); en
+  Práctica Duo (cabecera de la velocidad) detrás de `25/8WPM`. **Probado en la placa 1** (capturas): sale en los
+  dos y se quita al volver al menú LoRa. Una placa que ya tuviera la primera 1.36b no ve la nueva por OTA (misma versión). Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
   la W en "Y además".
   https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.36b
   **v1.33b (beta), publicada el 18 oct 2026** (prerelease): pantalla TIEMPO (Open-Meteo) con AMBIENTE, SOL con 3

@@ -58,6 +58,15 @@ time_t epochUtc(int anio, int mes, int dia, int h, int m, int s) {
 
 bool wifiEncendido();  // Definida con el WiFi
 
+// Letra de aviso de la cabecera en negativo ("W" WiFi, "L" LoRa): recuadro de 7x8, un pixel de margen a cada lado
+void dibujarMarcaCabecera(char letra, int16_t x) {
+  display.fillRect(x - 1, 0, 7, 8, SSD1306_WHITE);
+  display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+  display.setCursor(x, 0);
+  display.print(letra);
+  display.setTextColor(SSD1306_WHITE);
+}
+
 void dibujarEncabezado() {
   BateriaInfo bat = bateriaActual;
   display.setTextSize(1);
@@ -104,6 +113,8 @@ void dibujarEncabezado() {
       display.print(efectiva);
     }
     display.print(F("WPM"));
+    // Practica Duo: la radio LoRa escuchando ("L" detras de la velocidad)
+    if (modoRadioRxActivo) dibujarMarcaCabecera('L', display.getCursorX() + 7);
 
     String txtRight = "BAT:" + strBat;
     int16_t x1, y1;
@@ -158,16 +169,14 @@ void dibujarEncabezado() {
     display.setCursor(inicioNombre, 0);
     display.print(nombre);
 
-    // "W" en negativo con la radio WiFi encendida (conectando, conectada o con el portal): en el hueco entre la hora
-    // y el nombre, sobre un recuadro de 7x8 (un pixel de margen a cada lado de la letra)
-    if (wifiEncendido()) {
-      int16_t x = finHora + (inicioNombre - finHora - 5) / 2;
-      display.fillRect(x - 1, 0, 7, 8, SSD1306_WHITE);
-      display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-      display.setCursor(x, 0);
-      display.print('W');
-      display.setTextColor(SSD1306_WHITE);
-    }
+    // En negativo, en el hueco entre la hora y el nombre: "W" con la radio WiFi encendida (conectando, conectada o
+    // con el portal) y "L" con la radio LoRa escuchando (Practica Duo y QSO libre). Si van las dos, juntas
+    char marcas[3];
+    uint8_t n = 0;
+    if (wifiEncendido()) marcas[n++] = 'W';
+    if (modoRadioRxActivo) marcas[n++] = 'L';
+    int16_t x = finHora + (inicioNombre - finHora - (n * 8 - 3)) / 2;
+    for (uint8_t i = 0; i < n; i++) dibujarMarcaCabecera(marcas[i], x + i * 8);
   }
 
   display.drawLine(0, 9, 128, 9, SSD1306_WHITE);

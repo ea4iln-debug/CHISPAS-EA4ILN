@@ -164,7 +164,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   probada en la placa 1 por serie; manual y PDF al día.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-0. **CLUSTER**: sin publicar, WiFi solo en OPERAR/QSO y QUIEN ME OYE en su menu (probado); falta nodo PROPIO, consumo y palas con WiFi en TRX; fases 2 (alertas) y 3 (enviar spots).
+0. **Sin publicar (probado):** WiFi solo en OPERAR/QSO, QUIEN ME OYE en su menu y L de LoRa en la cabecera. **CLUSTER**: falta nodo PROPIO, consumo y palas con WiFi en TRX; fases 2 (alertas) y 3 (enviar spots).
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).
