@@ -37,7 +37,8 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 - Depuración desde CONF > CONFIG > DEPURACION (órdenes serie, `m<texto>` simula las palas, `[DIAG]`, `[DECOD]`, `[CW]`); apagada por defecto.
 
 ## Estado actual (18 oct 2026)
-- **v1.34b** publicada (beta, 21 oct): velocidad EFECTIVA y filtro de pulsadores (ver abajo); en la placa 1 por OTA (probado). Antes, **v1.33b** (beta, 18 oct): pantalla TIEMPO (ver abajo); en la placa 1 por USB. Antes, **v1.32b** (beta, 18 oct): AUTOSPOT POTA con activación en curso (ver abajo); en la placa 1 por OTA desde
+- **v1.35b** publicada (beta, 23 oct): CLUSTER, indicativo EAXXXX y cuenta atrás del Koch (ver abajo); en la placa
+  1 por USB (mismo código). Antes, **v1.34b** (beta, 21 oct): velocidad EFECTIVA y filtro de pulsadores (ver abajo); en la placa 1 por OTA (probado). Antes, **v1.33b** (beta, 18 oct): pantalla TIEMPO (ver abajo); en la placa 1 por USB. Antes, **v1.32b** (beta, 18 oct): AUTOSPOT POTA con activación en curso (ver abajo); en la placa 1 por OTA desde
   la 1.20 (probado). Antes, **v1.31b** (beta, 18 oct; los
   arreglos del 18 oct de abajo). Antes, **v1.30b** (beta, 16 oct; ver abajo). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
   y batería a 4,985. En la placa 1 por USB y en la placa 2 por OTA (16 oct; antes, reinicio por OTA sin avance probado).
@@ -152,13 +153,13 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - **Velocidad EFECTIVA** (21 oct, **v1.34b**): sustituye al ESPACIADO % en Koch, Duo, Echo y QSO SIM; WPM como
   LCWO (fórmula de su jscwlib, `huecosCW()`), de 5 al wpm (`NO` = sin estirar); cabecera `25/10WPM`; NVS `ef`/`eef`/`sef`.
   Medido en la placa 1 por serie y oído igual que LCWO (usuario, 21 oct); manual, PDF, web y README al día. Detalle en NOTAS: "Funciones".
-- **CLUSTER, fase 1** (23 oct, sin publicar; `cluster.inc`): pantalla 7 (cabecera `DXC`; SOL 8, TIEMPO 9, CONF
+- **CLUSTER, fase 1** (23 oct, **v1.35b**; `cluster.inc`): pantalla 7 (cabecera `DXC`; SOL 8, TIEMPO 9, CONF
   10), spots por telnet del RBN (defecto), URE, VE7CC, WA9PIE o PROPIO (WEBCONF), filtros MODO/BANDA en CHISPAS,
   ficha con `a SU`, QUIEN ME OYE (RBN, km por los locators de los receptores). Probado en la placa 1 salvo QUIEN ME
   OYE con spots reales. Detalle en NOTAS: "CLUSTER".
-- **Indicativo de fábrica `EAXXXX`** (23 oct, sin publicar): sin el propio no se abren TRX > OPERAR, QSO ni el
+- **Indicativo de fábrica `EAXXXX`** (23 oct, **v1.35b**): sin el propio no se abren TRX > OPERAR, QSO ni el
   autospot (aviso con `config`, que abre el editor del ID); probado en la placa 1 por serie. Detalle en NOTAS: "CONF".
-- **Cuenta atrás del Koch** (21 oct, sin publicar): 3, 2, 1 en grande antes del primer grupo (`CW_CUENTA_ATRAS`);
+- **Cuenta atrás del Koch** (21 oct, **v1.35b**): 3, 2, 1 en grande antes del primer grupo (`CW_CUENTA_ATRAS`);
   probada en la placa 1 por serie; manual y PDF al día.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")

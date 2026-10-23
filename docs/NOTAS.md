@@ -131,6 +131,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   y PDF, web (velocidad efectiva y pulsadores en "Y además", sigue con 4 tarjetas). Placa 1 por USB con el mismo
   código antes de subir la versión (arrancaba como 1.33b); luego, OTA de esa placa a la 1.34b (21 oct): bien.
   https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.34b
+  **v1.35b (beta), publicada el 23 oct 2026** (prerelease): CLUSTER fase 1 (pantalla 7), indicativo de fábrica
+  EAXXXX con aviso al emitir, cuenta atrás del Koch. Manual (portada 1.35b, sección 09 CLUSTER, 15 secciones) y PDF
+  (39 páginas); web: tarjeta "Cluster" en lugar de "Tiempo" (que pasa a "Y además", con EAXXXX y la cuenta atrás;
+  siguen 4 tarjetas). Probada en la placa 1 por USB con el mismo código antes de subir la versión.
+  https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.35b
   **v1.33b (beta), publicada el 18 oct 2026** (prerelease): pantalla TIEMPO (Open-Meteo) con AMBIENTE, SOL con 3
   páginas; manual (HTML y PDF, portada 1.33b), web (novedades: tarjeta Tiempo; sonido y consumo juntos en "Y
   además" para seguir con 4 tarjetas), funciones y README al día; `sol_ahora.png` del README con el contador
