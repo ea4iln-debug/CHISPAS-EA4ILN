@@ -940,6 +940,14 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
 - **Decisiones de Claude** (corregibles): filtros en CHISPAS, nunca en el servidor (`set/skimmer`, `accept/spots`
   se guardan en la cuenta del cluster y cambiarían lo que el usuario ve en su programa de log); login con el ID de
   CONF y sin conectar si es el de fábrica (EA4ILN); WiFi encendido solo dentro de CLUSTER; lista, ficha y "a SU".
+- **Distancias** (usuario, 23 oct 2026): **en la lista, ninguna** (línea con frecuencia, indicativo y mejor dB; un
+  spot por indicativo y frecuencia, con cuántos receptores lo oyen en la ficha). **En ¿QUIÉN ME OYE?, distancia exacta
+  de ti al receptor, el más lejano arriba** (línea `VE6WZ   7210 26dB`; WPM y hora en la ficha). Se descartó por ahora
+  la distancia por prefijo (tabla tipo `cty.dat`, 20–30 KB; centro del país, en EE. UU. hasta ~1500 km de error).
+  Locators de los receptores: `https://www.reversebeacon.net/cont_includes/status.php?t=skt` (HTML de ~311 KB, 303
+  receptores con locator de 6, ~250 activos en 1 h; filas `<tr class="online ...">`, indicativo en el enlace
+  `c=K7CO`, locator en `<td>DN40BN</td>`): bajarla a LittleFS una vez por semana, leyéndola por trozos (~5 KB útiles).
+  Distancia: tu locator (o GPS) al del receptor.
 - Fases: 1) lista + ficha + a SU + ¿QUIÉN ME OYE?; 2) alertas (indicativos/prefijos vigilados, pitido); 3) enviar
   spots (con alta en el nodo y confirmación).
 
