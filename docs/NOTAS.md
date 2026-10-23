@@ -978,7 +978,9 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `connect()` con 2 s en TRX (4 s en CLUSTER): bloquea el `loop()`, no el keyer ni el motor CW (tareas). Los
   oyentes no se borran al cerrar: al volver a CLUSTER siguen ahí (30 min). **Probado en la placa 1** (23 oct 2026,
   por serie): Inicio > TRX conecta el WiFi y entra en el RBN; con NODO URE, en CLUSTER las dos conexiones y al
-  volver a TRX solo el RBN. Sin probar: con un CQ real, y si la manipulación nota el WiFi (RETRASO CW).
+  volver a TRX solo el RBN. **Probado con un CQ real** (23 oct 2026, el usuario, placa 1, CQ con una memoria desde
+  TRX, sin palas): en QUIEN ME OYE salió MM0ZBH, que DXLook no mostró (DXLook no enseña todo lo del RBN, o va con
+  retraso). Sin probar: si la manipulación con las palas nota el WiFi (RETRASO CW).
 
 #### Diseño (23 oct 2026)
 - **Nodos probados desde el PC** (23 oct 2026, script de Python por telnet, ~30 s cada uno, login EA4ILN, sin cambiar
