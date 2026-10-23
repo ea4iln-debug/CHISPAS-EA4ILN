@@ -143,7 +143,8 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   borradas y hechas de nuevo): añade **volver** seleccionable con el mando en VER SPOTS y QUIEN ME OYE (detrás del
   último; `selSpot == numVistaSpots`, `selOyente == numOyentes`; en él se ve la última página sin marca y el pie
   dice `> volver`). Probado en la placa 1 por serie antes de republicar: W entre la hora y el nombre en TRX y
-  CLUSTER (`15:07  W  TRX`; sin hora aún, sola a la izquierda) y sin W en Inicio tras `[WIFI] APAGADO`; volver
+  CLUSTER (`15:07  W  TRX`; sin hora aún, sola a la izquierda) y sin W en Inicio tras `[WIFI] APAGADO`; luego,
+  a petición del usuario, **W en negativo** (recuadro blanco de 7x8 y letra negra), visto en captura (`15:11 [W] TRX`); volver
   desde el primer spot girando atrás y pulsar lleva al menú. Volver de QUIEN ME OYE con receptores, sin probar
   (mismo código). Una placa que ya tuviera la primera 1.36b no ve la nueva por OTA (misma versión). Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
   la W en "Y además".

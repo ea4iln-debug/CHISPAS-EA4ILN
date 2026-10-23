@@ -158,10 +158,15 @@ void dibujarEncabezado() {
     display.setCursor(inicioNombre, 0);
     display.print(nombre);
 
-    // "W" con la radio WiFi encendida (conectando, conectada o con el portal): en el hueco entre la hora y el nombre
+    // "W" en negativo con la radio WiFi encendida (conectando, conectada o con el portal): en el hueco entre la hora
+    // y el nombre, sobre un recuadro de 7x8 (un pixel de margen a cada lado de la letra)
     if (wifiEncendido()) {
-      display.setCursor(finHora + (inicioNombre - finHora - 5) / 2, 0);
+      int16_t x = finHora + (inicioNombre - finHora - 5) / 2;
+      display.fillRect(x - 1, 0, 7, 8, SSD1306_WHITE);
+      display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+      display.setCursor(x, 0);
       display.print('W');
+      display.setTextColor(SSD1306_WHITE);
     }
   }
 
