@@ -156,6 +156,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   probada en la placa 1 por serie; manual y PDF al día.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
+0. **CLUSTER** (23 oct, en diseño, sin código): pantalla 10 por telnet, RBN por defecto y URE (`ea4ure.com:7300`);
+   nodos medidos, decisiones y fases en NOTAS: "CLUSTER".
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).

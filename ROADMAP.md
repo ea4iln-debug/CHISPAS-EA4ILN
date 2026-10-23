@@ -92,6 +92,8 @@ Funciones que ya están en el firmware pero falta comprobar en la placa.
 - ✅ **Batería en `[DIAG]`** (16 oct 2026): `| BAT 4.17V 100%` al final de la línea, para medir la autonomía con un registro.
 - ✅ **Koch con indicativos y QSO POTA** (16 oct 2026): ajuste TEXTO del Koch.
 - ✅ **Ritmo de la manipulación** (16 oct 2026): TX LIBRE > menu > RITMO. Falta probarlo con las palas.
+- **CLUSTER** (23 oct 2026, en diseño): pantalla 10 con spots por telnet (RBN por defecto, URE y otros), lista,
+  ficha, "a SU" y ¿QUIÉN ME OYE? (fase 1); alertas (fase 2); enviar spots (fase 3). Nodos y decisiones en NOTAS: "CLUSTER".
 
 ### Por decidir
 - ✅ **Batería llena = 100 %** (16 oct 2026): 4,15 V o más cuenta como 100 %.

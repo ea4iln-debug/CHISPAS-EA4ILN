@@ -919,6 +919,30 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `gpio_hold_en` (se libera en `setup()`, donde arranca en BAJO). `[AMP] ENCENDIDO/APAGADO` por serie. **Control de
   SD probado en la placa 1 el 12 oct 2026 (OTA a la v1.04b).** Esquema (hoja 4): el amplificador es el montaje principal (sin buzzer).
 
+### CLUSTER (en diseño, 23 oct 2026; sin código)
+- **Nodos probados desde el PC** (23 oct 2026, script de Python por telnet, ~30 s cada uno, login EA4ILN, sin cambiar
+  ajustes de la cuenta):
+  - **RBN** `telnet.reversebeacon.net:7000`: pide `Please enter your call:`; ~5 spots/s en total (16 000/h, 737
+    usuarios), ~300 bytes/s; 91 spots en 25 s, todos CW. Línea:
+    `DX de AA4PA-#:   7028.00  W8XW           CW    33 dB  22 WPM  CQ      1123Z`. Sin filtros en el servidor.
+  - **URE** `ea4ure.com:7300` (EA4URE-2 + 3 + 5, Madrid, DXSpider 1.57, capacidades `ve7cc rbn`): `login:`; ~4 spots de
+    personas en 40 s, ninguno con "CW" (FT8, SSB, SOTA). Leer, sin alta; **enviar spots exige alta** (ticket en
+    soporte.ure.es, departamento URE-IT, "DXCluster / Solicitud de alta"). `sh/dx 8` y `sh/dx 5 on 40m` funcionan
+    (formato distinto: `  7034.0 EA3AVV/P    23-Oct-2026 1122Z SOTA  EA3/GI-063               <EA5K>`).
+  - VE7CC-1 `dxc.ve7cc.net:23` (CC Cluster; RBN con `SET/SKIMMER`) y WA9PIE-2 `dxc.wa9pie.net:8000` (DXSpider): 2
+    spots en 30 s cada uno.
+  - Spot de personas: `DX de EA5K:       7034.0  EA3AVV/P     SOTA  EA3/GI-063               1122Z` (igual en todos).
+    Tras el login, DXSpider pide nombre/QTH/locator (avisos; se ignoran) y el prompt es `EA4ILN de EA4URE-2 ... >`.
+- **Decisiones** (usuario, 23 oct 2026): pantalla 10 **CLUSTER** detrás de POTA (cabecera `DXC`); fuente por defecto
+  **RBN**, ajuste NODO con URE (y VE7CC, WA9PIE, y uno a mano por WEBCONF); por defecto **todos los modos** (ajuste
+  MODO TODOS / CW: segmento CW de la banda o "CW" en el comentario); **¿QUIÉN ME OYE?** en la fase 1 (RBN filtrado por
+  el ID: receptor, dB, WPM).
+- **Decisiones de Claude** (corregibles): filtros en CHISPAS, nunca en el servidor (`set/skimmer`, `accept/spots`
+  se guardan en la cuenta del cluster y cambiarían lo que el usuario ve en su programa de log); login con el ID de
+  CONF y sin conectar si es el de fábrica (EA4ILN); WiFi encendido solo dentro de CLUSTER; lista, ficha y "a SU".
+- Fases: 1) lista + ficha + a SU + ¿QUIÉN ME OYE?; 2) alertas (indicativos/prefijos vigilados, pitido); 3) enviar
+  spots (con alta en el nodo y confirmación).
+
 ## Organización del código (13 oct 2026)
 - **Por qué:** `main.cpp` tenía 7009 líneas y 285 KB; leerlo o buscar en él gastaba muchos tokens. Se partió para
   poder abrir solo el área que toca, sin cambiar el código.
