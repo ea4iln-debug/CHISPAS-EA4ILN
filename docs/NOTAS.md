@@ -966,6 +966,19 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   RBN / TODOS / TODAS y SU = KB9R.
 - **Sin probar:** QUIEN ME OYE con spots reales (hay que emitir CQ), nodo PROPIO, VE7CC y WA9PIE desde la placa,
   ABRIR WEBCONF desde CLUSTER, reconexión tras caída, consumo con el WiFi siempre encendido.
+- **QUIEN ME OYE no salía con la v1.35b** (23 oct 2026, el usuario): CQ desde TRX, nada en CHISPAS; DXLook sí lo
+  vio: EI4HQ (1449 km, 11 dB), OH6BG (3284/3300 km, 16 dB, dos receptores), MM0ZBH (1933, 14), G3AKX (1492, 18),
+  F6KGL (1346, 7), todos en 20 m. Los cinco están en la lista de receptores del RBN (comprobado en la página
+  bajada): el RBN sí lo spotteó. Causa: en TRX la conexión estaba cerrada y el WiFi apagado (solo se abría en
+  CLUSTER); los receptores avisan a los pocos segundos y no repiten. **Arreglo (sin publicar):** ajuste
+  **ESCUCHA EN TRX** (SI/NO, NVS `ctrx`, SI por defecto; `clusterEscuchaTrx` en globales): en TRX (toda la pantalla)
+  `procesarWifi` deja el WiFi encendido y `procesarCluster` mantiene solo la conexión al RBN (la del nodo, si no es
+  el RBN, se cierra y vuelve en CLUSTER); los spots ajenos no se guardan y no se redibuja la pantalla TRX; no se
+  baja la lista de receptores en TRX (bloquearía), y un oyente sin locator lo vuelve a buscar en cada spot.
+  `connect()` con 2 s en TRX (4 s en CLUSTER): bloquea el `loop()`, no el keyer ni el motor CW (tareas). Los
+  oyentes no se borran al cerrar: al volver a CLUSTER siguen ahí (30 min). **Probado en la placa 1** (23 oct 2026,
+  por serie): Inicio > TRX conecta el WiFi y entra en el RBN; con NODO URE, en CLUSTER las dos conexiones y al
+  volver a TRX solo el RBN. Sin probar: con un CQ real, y si la manipulación nota el WiFi (RETRASO CW).
 
 #### Diseño (23 oct 2026)
 - **Nodos probados desde el PC** (23 oct 2026, script de Python por telnet, ~30 s cada uno, login EA4ILN, sin cambiar

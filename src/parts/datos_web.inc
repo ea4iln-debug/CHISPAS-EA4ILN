@@ -94,6 +94,7 @@ void actualizarSpotsPota() {
 bool tocaDescargarParques();  // Definidas con los parques POTA
 void descargarParques();
 void enviarSpotPota();        // Definida con el autospot
+void leerClusterNVS();        // Definida con la pantalla CLUSTER
 bool tocaActualizarTiempo();  // Definidas con la pantalla TIEMPO
 void actualizarTiempo();
 
@@ -159,8 +160,11 @@ void procesarWifi() {
                     pantallaActual == PANTALLA_TIEMPO || solSinHora);
     bool conPortal = estadoWifi == WIFI_PORTAL &&
                      (pantallaActual == PANTALLA_CONFIG || pantallaActual == PANTALLA_SOL);
-    // CLUSTER va en vivo: WiFi encendido mientras se esta en ella (en MANUAL tambien), si hay indicativo propio
-    bool enCluster = pantallaActual == PANTALLA_CLUSTER && indicativoConfigurado();
+    // CLUSTER va en vivo: WiFi encendido mientras se esta en ella (en MANUAL tambien), si hay indicativo propio.
+    // Con ESCUCHA EN TRX, tambien en TRX: QUIEN ME OYE recoge los receptores que copian el CQ mandado desde alli
+    leerClusterNVS();
+    bool enCluster = indicativoConfigurado() &&
+                     (pantallaActual == PANTALLA_CLUSTER || (pantallaActual == PANTALLA_TRX && clusterEscuchaTrx));
     bool encender = (wifiAuto && enDatos) || enCluster;
     wifiPorPeticion = false;
     forzarActualizacion = false;

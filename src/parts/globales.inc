@@ -278,6 +278,7 @@ String trxTextoRx = "";          // Descodificado de la emisora
 String trxTextoTx = "";          // Manipulado y memorias enviadas
 char trxSu[TRAMA_LONG_INDICATIVO + 1] = "";  // Indicativo del corresponsal ({SU})
 char clusterPropio[41] = "";                 // CLUSTER > NODO PROPIO: "host:puerto" (WEBCONF; NVS "dxcp")
+bool clusterEscuchaTrx = true;               // CLUSTER > ESCUCHA EN TRX: QUIEN ME OYE sigue con el RBN en TRX
 bool trxEnviandoMemoria = false;
 // Tune: portadora continua por KEY para ajustar el acoplador o la potencia (OPERAR y QSO). La duracion se
 // elige en su menu (NVS "ttune"); mientras dura, el corte de seguridad deja ese tiempo mas un margen

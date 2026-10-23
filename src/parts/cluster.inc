@@ -106,8 +106,8 @@ VistaCluster vistaCluster = VC_MENU;
 #define CL_OPCION_AJUSTES 2
 #define CL_OPCION_BARRA   3
 uint8_t opcionPantallaCluster = CL_OPCION_BARRA;  // 0 ver spots, 1 quien me oye, 2 ajustes (pie), 3 barra
-#define N_AJUSTES_CLUSTER 3
-const char* const NOMBRES_AJUSTES_CLUSTER[N_AJUSTES_CLUSTER] = { "NODO", "MODO", "BANDA" };
+#define N_AJUSTES_CLUSTER 4
+const char* const NOMBRES_AJUSTES_CLUSTER[N_AJUSTES_CLUSTER] = { "NODO", "MODO", "BANDA", "ESCUCHA EN TRX" };
 uint8_t focoAjustesCluster = 0;
 uint8_t focoFichaCluster = 0;     // Ficha de un spot: 0 "a SU", 1 volver
 String avisoCluster = "";         // Sustituye al pie de la ficha hasta tocar algo
@@ -154,6 +154,7 @@ void leerClusterNVS() {
   clusterNodo = min(prefs.getUChar("cnodo", NODO_RBN), (uint8_t)(N_NODOS_CLUSTER - 1));
   clusterModo = min(prefs.getUChar("cmodo", 0), (uint8_t)1);
   clusterBanda = min(prefs.getUChar("cband", 0), (uint8_t)N_BANDAS_CLUSTER);
+  clusterEscuchaTrx = prefs.getBool("ctrx", true);
   prefs.end();
 }
 
@@ -162,6 +163,7 @@ void guardarClusterNVS() {
   prefs.putUChar("cnodo", clusterNodo);
   prefs.putUChar("cmodo", clusterModo);
   prefs.putUChar("cband", clusterBanda);
+  prefs.putBool("ctrx", clusterEscuchaTrx);
   prefs.end();
 }
 
@@ -170,6 +172,7 @@ String valorAjusteCluster(uint8_t i) {
     case 0: return String(NODOS_CLUSTER[clusterNodo].nombre);
     case 1: return clusterModo == 0 ? String("TODOS") : String("CW");
     case 2: return clusterBanda == 0 ? String("TODAS") : String(BANDAS_CLUSTER[clusterBanda - 1].nombre);
+    case 3: return clusterEscuchaTrx ? String("SI") : String("NO");
   }
   return String();
 }
@@ -177,7 +180,8 @@ String valorAjusteCluster(uint8_t i) {
 void ajustarOpcionCluster(int8_t giro) {
   if (focoAjustesCluster == 0) clusterNodo = (clusterNodo + N_NODOS_CLUSTER + giro) % N_NODOS_CLUSTER;
   else if (focoAjustesCluster == 1) clusterModo ^= 1;
-  else clusterBanda = (clusterBanda + N_BANDAS_CLUSTER + 1 + giro) % (N_BANDAS_CLUSTER + 1);
+  else if (focoAjustesCluster == 2) clusterBanda = (clusterBanda + N_BANDAS_CLUSTER + 1 + giro) % (N_BANDAS_CLUSTER + 1);
+  else clusterEscuchaTrx = !clusterEscuchaTrx;
 }
 
 // Host y puerto de un nodo; PROPIO, de clusterPropio ("host:puerto"). false si no hay
@@ -460,14 +464,17 @@ void anadirOyente(const SpotDx& s) {
         if ((long)(oyentes[k].ms - oyentes[i].ms) < 0) i = k;
       }
     }
-    Oyente& o = oyentes[i];
-    strlcpy(o.rx, s.spotter, sizeof(o.rx));
+    strlcpy(oyentes[i].rx, s.spotter, sizeof(oyentes[i].rx));
+    oyentes[i].loc[0] = '\0';
+  }
+  Oyente& o = oyentes[i];
+  if (o.loc[0] == '\0') {
+    // Sin locator (o aun sin la lista de receptores, que se baja en CLUSTER): se vuelve a buscar en cada spot
     locatorReceptor(o.rx, o.loc, sizeof(o.loc));
     float la1, lo1, la2, lo2;
     o.km = (o.loc[0] && posicionPropia(la1, lo1) && locatorALatLon(o.loc, la2, lo2)) ? distanciaKm(la1, lo1, la2, lo2)
                                                                                       : -1;
   }
-  Oyente& o = oyentes[i];
   o.db = s.db;
   o.wpm = s.wpm;
   o.khz = s.khz;
@@ -625,7 +632,8 @@ void conectar(ConexionCluster& cx) {
   cx.intentoMs = millis();
   Serial.printf("[DXC] %s: CONECTANDO A %s:%u\n", cx.nombre, cx.host, cx.puerto);
   pantallaPendiente = true;
-  if (!cx.cliente.connect(cx.host, cx.puerto, 4000)) {
+  // connect() bloquea el loop() hasta que contesta: en TRX, menos espera (el keyer y el motor CW van en sus tareas)
+  if (!cx.cliente.connect(cx.host, cx.puerto, pantallaActual == PANTALLA_TRX ? 2000 : 4000)) {
     if (cx.fallos < 255) cx.fallos++;
     Serial.printf("[DXC] %s: NO CONECTA (%u)\n", cx.nombre, cx.fallos);
     return;
@@ -674,7 +682,7 @@ void procesarLineaCluster(ConexionCluster& cx, const char* l) {
   if (strncmp(l, "DX de ", 6) == 0) {
     if (!leerLineaDx(l, s, cx.rbn)) return;
     if (cx.estado != CX_DENTRO) dentroDelNodo(cx);
-    if (&cx == &cxNodo) anadirSpot(s);
+    if (&cx == &cxNodo && pantallaActual == PANTALLA_CLUSTER) anadirSpot(s);
     if (cx.rbn && esMiIndicativo(s.call)) anadirOyente(s);
   } else if (&cx == &cxNodo && !cx.rbn && isdigit((uint8_t)l[strspn(l, " ")])) {
     if (leerLineaShDx(l, s)) anadirSpot(s);
@@ -736,17 +744,20 @@ void refrescarVistaSpots() {
 
 /**
  * Cada vuelta de loop(): conecta, lee y entra en los nodos mientras se esta en CLUSTER con el WiFi conectado e
- * indicativo propio; si no, cierra. Con la lista de receptores vieja o sin ella, la baja antes (bloquea, con aviso)
+ * indicativo propio; si no, cierra. Con la lista de receptores vieja o sin ella, la baja antes (bloquea, con aviso).
+ * Con ESCUCHA EN TRX, en TRX sigue solo la conexion al RBN, para QUIEN ME OYE (los demas spots no se guardan)
  */
 void procesarCluster() {
   caducarCluster();
-  bool activo = pantallaActual == PANTALLA_CLUSTER && estadoWifi == WIFI_CONECTADO && indicativoConfigurado();
+  bool enCluster = pantallaActual == PANTALLA_CLUSTER;
+  bool enTrx = pantallaActual == PANTALLA_TRX && clusterEscuchaTrx;
+  bool activo = (enCluster || enTrx) && estadoWifi == WIFI_CONECTADO && indicativoConfigurado();
   if (!activo) {
     if (cxNodo.usada || cxRbn.usada) cerrarCluster();
     return;
   }
   if (!clusterNvsLeido) leerClusterNVS();
-  if (tocaBajarReceptores()) {
+  if (enCluster && tocaBajarReceptores()) {
     empezarDescarga("BAJANDO RECEPTORES...");
     bajarReceptores();
     terminarDescarga();
@@ -770,11 +781,15 @@ void procesarCluster() {
   ConexionCluster* cxs[2] = { &cxNodo, &cxRbn };
   for (ConexionCluster* cx : cxs) {
     if (!cx->usada) continue;
+    if (!enCluster && !cx->rbn) {  // En TRX, el nodo que no es el RBN se cierra; vuelve al entrar en CLUSTER
+      cerrarConexion(*cx);
+      continue;
+    }
     if (cx->estado == CX_CERRADA) conectar(*cx);
     else leerConexion(*cx);
   }
   static unsigned long ultimoRedibujo = 0;
-  if (clusterCambio && millis() - ultimoRedibujo >= CLUSTER_REDIBUJO_MS) {
+  if (enCluster && clusterCambio && millis() - ultimoRedibujo >= CLUSTER_REDIBUJO_MS) {
     clusterCambio = false;
     ultimoRedibujo = millis();
     if (vistaCluster == VC_SPOTS && selSpot == 0) refrescarVistaSpots();
@@ -987,7 +1002,7 @@ void renderizarPantallaCluster() {
     case VC_OYEN_FICHA: dibujarFichaOyente(); break;
     case VC_PORTAL:     dibujarVistaPortal(focoPortalDatos); break;
     case VC_AJUSTES:
-      dibujarListaOpciones(NOMBRES_AJUSTES_CLUSTER, N_AJUSTES_CLUSTER, focoAjustesCluster, valorAjusteCluster, 0x7);
+      dibujarListaOpciones(NOMBRES_AJUSTES_CLUSTER, N_AJUSTES_CLUSTER, focoAjustesCluster, valorAjusteCluster, 0xF);
       dibujarPieCentrado(focoAjustesCluster == N_AJUSTES_CLUSTER ? "> volver" : "  volver");
       break;
   }
@@ -1090,7 +1105,8 @@ void eventoCluster(int8_t giro, bool pulsa, bool atras, bool ejeLarga) {
       break;
 
     case VC_AJUSTES:
-      // Foco: 0 nodo, 1 modo, 2 banda (giran al editar), 3 volver. Los cambios los aplica procesarCluster()
+      // Foco: 0 nodo, 1 modo, 2 banda, 3 escucha en TRX (giran al editar), 4 volver. Los cambios los aplica
+      // procesarCluster()
       if (atras) { guardarClusterNVS(); vistaCluster = VC_MENU; }
       else if (giro != 0) {
         if (editandoValor) ajustarOpcionCluster(giro);
