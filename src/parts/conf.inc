@@ -526,6 +526,7 @@ void actualizarPantalla() {
     case PANTALLA_TRX: renderizarPantallaTrx(); break;
     case PANTALLA_PROPAGACION: renderizarPantallaPropagacion(); break;
     case PANTALLA_SPOTS: renderizarPantallaSpots(); break;
+    case PANTALLA_CLUSTER: renderizarPantallaCluster(); break;
     case PANTALLA_SOL: renderizarPantallaSol(); break;
     case PANTALLA_TIEMPO: renderizarPantallaTiempo(); break;
     case PANTALLA_CONFIG: renderizarPantallaConfig(); break;

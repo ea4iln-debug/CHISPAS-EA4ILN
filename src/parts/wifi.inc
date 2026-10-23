@@ -196,6 +196,9 @@ class ParametroCasilla : public WiFiManagerParameter {
   }
 };
 ParametroCasilla paramHoraUtc("utc", "Hora UTC en la cabecera (12:05Z) en vez de la local");
+// CLUSTER > AJUSTES > NODO > PROPIO (vacio = ninguno)
+WiFiManagerParameter paramCluster("dxc", "Cluster propio para CLUSTER (host:puerto, p. ej. dxc.ejemplo.net:7300)",
+                                  "", 40);
 
 // Memorias de la pantalla TRX (la primera explica las variables)
 WiFiManagerParameter paramMemoria1("m0", "Memoria 1 ({MI} = tu indicativo, {SU} = el del corresponsal, {WX} = temperatura)",
@@ -245,9 +248,19 @@ void guardarParametrosPortal() {
   paramHoraUtc.marcada = horaUtcCabecera;
   paramHoraUtc.setValue("1", 2);  // Para que vuelva a enviar "1" si se marca otra vez
 
+  // Cluster propio: "host:puerto" sin espacios (vacio lo borra)
+  String dxc = paramCluster.getValue();
+  dxc.trim();
+  int dos = dxc.lastIndexOf(':');
+  if (dxc.length() == 0 || (dos > 0 && dxc.indexOf(' ') < 0 && dxc.substring(dos + 1).toInt() > 0)) {
+    strlcpy(clusterPropio, dxc.c_str(), sizeof(clusterPropio));
+  } else {
+    Serial.printf("[PORTAL] CLUSTER NO VALIDO: %s\n", dxc.c_str());
+  }
+
   guardarEstacionNVS();
-  Serial.printf("[PORTAL] ESTACION: %s %s, hora %s\n", indicativoEstacion, locatorEstacion,
-                horaUtcCabecera ? "UTC" : "local");
+  Serial.printf("[PORTAL] ESTACION: %s %s, hora %s, cluster propio \"%s\"\n", indicativoEstacion, locatorEstacion,
+                horaUtcCabecera ? "UTC" : "local", clusterPropio);
 
   // Memorias: solo lo que se puede emitir (mayusculas, Morse, espacios, {MI}, {SU} y {WX})
   for (uint8_t i = 0; i < TRX_NUM_MEMORIAS; i++) {
@@ -371,6 +384,7 @@ void dibujarPantallaQr() {
 }
 
 void cpuSegunWifi(bool wifiEncendido);  // Definida justo debajo
+void clusterSinConexion();              // Definida con la pantalla CLUSTER
 
 void abrirPortalWifi() {
   if (nombrePortal[0] == '\0') {
@@ -387,6 +401,7 @@ void abrirPortalWifi() {
     wm.addParameter(&paramHora);
     wm.addParameter(&paramHoraUtc);
     for (uint8_t i = 0; i < TRX_NUM_MEMORIAS; i++) wm.addParameter(paramMemorias[i]);
+    wm.addParameter(&paramCluster);
     const char* menu[] = { "wifi", "param", "exit" };  // "param" = pagina "Setup"
     wm.setMenu(menu, 3);
     wm.setSaveParamsCallback(guardarParametrosPortal);
@@ -399,6 +414,7 @@ void abrirPortalWifi() {
   paramHoraUtc.setValue("1", 2);
   paramHoraUtc.marcada = horaUtcCabecera;
   for (uint8_t i = 0; i < TRX_NUM_MEMORIAS; i++) paramMemorias[i]->setValue(trxMemorias[i], TRX_MEMORIA_MAX);
+  paramCluster.setValue(clusterPropio, 40);
 
   cpuSegunWifi(true);
   WiFi.mode(WIFI_STA);
@@ -434,11 +450,13 @@ void quedarseSinConexion() {
     resultadoSpot = "SIN CONEXION WIFI";
     Serial.println(F("[SPOT] SIN CONEXION"));
   }
-  // PROP, POTA, SOL y TIEMPO vuelven a su menu, con el foco en "ABRIR WEBCONF" (salvo desde la ficha del spot)
+  // PROP, POTA, SOL, TIEMPO y CLUSTER vuelven a su menu, con el foco en "ABRIR WEBCONF" (salvo desde la ficha del
+  // spot)
   if (subDatos != DATOS_AUTOSPOT) {
     subDatos = DATOS_MENU;
     opcionPantallaProp = opcionPantallaSpots = opcionPantallaSol = opcionPantallaTiempo = 0;
   }
+  clusterSinConexion();
   pantallaPendiente = true;
 }
 

@@ -379,6 +379,7 @@
       <li><a href="#trx">Con tu transceptor</a></li>
       <li><a href="#prop">Propagación</a></li>
       <li><a href="#pota">POTA: spots, parques y autospot</a></li>
+      <li><a href="#cluster">Cluster: spots en vivo y quién te oye</a></li>
       <li><a href="#sol">Sol, tiempo y GPS</a></li>
       <li><a href="#conf">Configuración</a></li>
       <li><a href="#actualizar">Actualizaciones</a></li>
@@ -658,13 +659,13 @@
         cambiarlo y pulsa otra vez para dejarlo. Si giras deprisa, los números saltan de cinco en cinco.</p>
 
       <h3>Las pantallas principales</h3>
-      <p>CHISPAS tiene nueve pantallas principales, en fila. En cada una, abajo, están <span class="mono">ant.</span>
+      <p>CHISPAS tiene diez pantallas principales, en fila. En cada una, abajo, están <span class="mono">ant.</span>
         (la anterior) y <span class="mono">sig.</span> (la siguiente): gira hasta una de ellas y pulsa. Desde cualquier
         pantalla, <kbd>PRG</kbd> te devuelve al inicio.</p>
       <ul class="ruta" aria-label="Orden de las pantallas">
         <li>INICIO</li><li class="flecha">→</li><li>CW</li><li class="flecha">→</li><li>LORA</li><li class="flecha">→</li>
         <li>TRX</li><li class="flecha">→</li><li>PROP</li><li class="flecha">→</li><li>POTA</li><li class="flecha">→</li>
-        <li>SOL</li><li class="flecha">→</li><li>TIEMPO</li><li class="flecha">→</li><li>CONF</li>
+        <li>CLUSTER</li><li class="flecha">→</li><li>SOL</li><li class="flecha">→</li><li>TIEMPO</li><li class="flecha">→</li><li>CONF</li>
       </ul>
       <table class="tabla">
         <tr><th>Pantalla</th><th>Para qué sirve</th></tr>
@@ -674,6 +675,7 @@
         <tr><td>TRX</td><td>Trabajar con tu transceptor.</td></tr>
         <tr><td>PROP</td><td>Cómo están las bandas.</td></tr>
         <tr><td>POTA</td><td>Quién está activando un parque y qué parques tienes cerca.</td></tr>
+        <tr><td>CLUSTER <span class="chip-beta">beta</span></td><td>Quién está en el aire ahora mismo y quién te oye a ti. En la cabecera se llama <span class="mono">DXC</span>.</td></tr>
         <tr><td>SOL</td><td>Salida y puesta del sol y línea gris.</td></tr>
         <tr><td>TIEMPO <span class="chip-beta">beta</span></td><td>El tiempo que hace y el que va a hacer y, si lleva sensor ambiental, sus datos. En la cabecera se llama <span class="mono">WX</span>.</td></tr>
         <tr><td>CONF</td><td>Configuración y estado del aparato.</td></tr>
@@ -1206,10 +1208,86 @@
     </div>
   </section>
 
-  <!-- ============================== 9. SOL ============================== -->
+  <!-- ============================== 9. CLUSTER ============================== -->
+  <section class="seccion" id="cluster">
+    <div class="cuerpo">
+      <h2><span class="num">09</span>Cluster: spots en vivo y quién te oye <span class="chip-beta">beta</span></h2>
+      <figure class="robot">
+        <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS se lleva la mano a la oreja y le llegan ondas de radio">
+          <path d="M136 74 Q144 86 136 98" fill="none" stroke="#59b8ff" stroke-width="3" stroke-linecap="round"/>
+          <path d="M144 66 Q156 86 144 106" fill="none" stroke="#59b8ff" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+          <path d="M152 58 Q168 86 152 114" fill="none" stroke="#59b8ff" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+          <use href="#r-base"/><use href="#x-sorpresa"/>
+          <path class="r-b1" d="M52 114 Q42 132 46 148"/><path class="r-b2" d="M52 114 Q42 132 46 148"/>
+          <circle cx="46" cy="149" r="6" class="r-m"/>
+          <path class="r-b1" d="M108 114 Q128 106 126 86"/><path class="r-b2" d="M108 114 Q128 106 126 86"/>
+          <circle cx="126" cy="85" r="6" class="r-m"/>
+        </svg>
+        <figcaption>«¿Un receptor en Japón me ha copiado el CQ? Pues a 10.700 km sigo sonando de maravilla.»</figcaption>
+      </figure>
+      <p class="entrada">Un <b>cluster</b> es una red por internet en la que radioaficionados de todo el mundo, y también
+        receptores automáticos, avisan de quién está en el aire. CHISPAS se conecta a uno y te enseña los avisos al
+        momento. Necesita <b>WiFi</b> (el del móvil compartiendo datos sirve) y <b>tu indicativo</b>, que es con el
+        que entra en el cluster: sin él, te pide que lo pongas.</p>
+      <div class="caja ojo"><p><span class="titulo-caja">Batería:</span> mientras estás en CLUSTER, el WiFi va
+        encendido todo el rato para recibir los avisos en vivo. Al salir de la pantalla se apaga.</p></div>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/cluster.png?__SELLO__" width="512" height="256" alt="Menú del cluster"><figcaption>El menú: abajo, a qué cluster está conectado y cuántos avisos tiene.</figcaption></figure>
+      </div>
+
+      <h3>De dónde salen los avisos</h3>
+      <p>Se elige en <span class="mono">ajustes</span> (en el centro del pie del menú), opción <b>NODO</b>:</p>
+      <table class="tabla">
+        <tr><th>Nodo</th><th>Qué es</th></tr>
+        <tr><td>RBN</td><td>El que viene de serie. La <i>Reverse Beacon Network</i>: cientos de receptores automáticos repartidos por el mundo que copian CW solos. Cada aviso trae la fuerza con la que llega la señal (en dB) y su velocidad.</td></tr>
+        <tr><td>URE</td><td>El cluster de la Unión de Radioaficionados Españoles. Los avisos los dan personas, de todos los modos. Al entrar, trae los últimos.</td></tr>
+        <tr><td>VE7CC, WA9PIE</td><td>Otros dos clusters grandes, en Canadá y en Estados Unidos.</td></tr>
+        <tr><td>PROPIO</td><td>El que tú quieras: pon su dirección en WEBCONF (por ejemplo, <span class="mono">dxc.ejemplo.net:7300</span>).</td></tr>
+      </table>
+
+      <h3>VER SPOTS</h3>
+      <p>Cada línea es una estación: frecuencia (en kHz), indicativo y, a la derecha, los dB con que la oye el mejor
+        receptor (RBN) o los minutos desde el aviso (en los demás). Si varios receptores oyen a la misma estación,
+        sale una sola vez. Lo último, arriba.</p>
+      <p>Gira para marcar una. Mientras bajas, la lista se queda quieta (abajo pone <span class="mono">PAUSA</span>)
+        para que puedas leerla; al volver arriba del todo sigue en vivo. Pulsa para ver su ficha: frecuencia, quién la
+        ha oído y a qué hora, y cuántos receptores la oyen.</p>
+      <p>En la ficha, <span class="mono">a SU</span> apunta su indicativo como el de tu corresponsal y te lleva a
+        <b>TRX</b>: en OPERAR o en QSO, las memorias con <span class="mono">{SU}</span> ya lo llevan. CHISPAS no
+        cambia la frecuencia de tu transceptor: sintonízala a mano.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/cluster_spots.png?__SELLO__" width="512" height="256" alt="Lista de spots del RBN"><figcaption>Spots del RBN: frecuencia, indicativo y dB.</figcaption></figure>
+        <figure class="pantalla"><img src="img/cluster_ficha.png?__SELLO__" width="512" height="256" alt="Ficha de un spot con a SU y volver"><figcaption>La ficha: modo, dB, velocidad, cuántos receptores y quién lo oye mejor.</figcaption></figure>
+      </div>
+
+      <h3>¿QUIÉN ME OYE?</h3>
+      <p>Lanza un CQ en CW (por ejemplo, con una memoria) y vuelve a CLUSTER: los receptores del RBN que te hayan
+        copiado salen aquí, <b>el más lejano arriba</b>, con la distancia desde ti (por el GPS o tu locator) y los dB
+        con que te oyen. Pulsa sobre uno para ver su locator, la velocidad a la que te ha copiado, tu frecuencia y la
+        hora. Funciona con cualquier NODO: para esto CHISPAS se conecta también al RBN.</p>
+      <div class="caja truco"><p><span class="titulo-caja">Para que funcione.</span> Los receptores solo avisan
+        cuando llamas <span class="mono">CQ</span> (o <span class="mono">TEST</span>), no en mitad de un QSO, y
+        CHISPAS solo ve los avisos mientras está en CLUSTER: entra enseguida después de llamar.</p></div>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/cluster_oyen.png?__SELLO__" width="512" height="256" alt="Quién me oye, todavía sin receptores"><figcaption>Antes de llamar CQ, todavía nadie.</figcaption></figure>
+      </div>
+
+      <h3>Ajustes</h3>
+      <p><b>NODO</b> (arriba), <b>MODO</b> (<span class="mono">TODOS</span> o solo <span class="mono">CW</span>;
+        si el aviso no dice el modo, CHISPAS lo deduce por la parte de la banda en la que está) y <b>BANDA</b>
+        (<span class="mono">TODAS</span> o una, de 160 a 6 metros). Al cambiar un filtro, la lista empieza de nuevo.</p>
+      <div class="galeria">
+        <figure class="pantalla"><img src="img/cluster_ajustes.png?__SELLO__" width="512" height="256" alt="Ajustes del cluster: nodo, modo y banda"><figcaption>Los ajustes del cluster.</figcaption></figure>
+      </div>
+      <p class="nota">CHISPAS solo lee el cluster: no manda avisos. Los filtros los aplica CHISPAS y no se guardan en
+        tu cuenta del cluster, así que no cambian lo que ves en tu programa de log.</p>
+    </div>
+  </section>
+
+  <!-- ============================== 10. SOL ============================== -->
   <section class="seccion" id="sol">
     <div class="cuerpo">
-      <h2><span class="num">09</span>Sol, tiempo y GPS</h2>
+      <h2><span class="num">10</span>Sol, tiempo y GPS</h2>
       <figure class="robot">
         <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS con gafas de sol y un helado ante la puesta de sol">
           <path d="M118 176 A 22 22 0 0 1 162 176 Z" fill="#ffb36b" stroke="#1b1f29" stroke-width="2"/>
@@ -1329,7 +1407,7 @@
   <!-- ============================== 10. CONF ============================== -->
   <section class="seccion" id="conf">
     <div class="cuerpo">
-      <h2><span class="num">10</span>Configuración</h2>
+      <h2><span class="num">11</span>Configuración</h2>
       <figure class="robot">
         <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS con una llave inglesa y un engranaje flotando">
           <circle cx="28" cy="40" r="11" fill="none" stroke="#9aa3b5" stroke-width="7" stroke-dasharray="4.3 3.3"/>
@@ -1377,7 +1455,7 @@
   <!-- ============================== 11. OTA ============================== -->
   <section class="seccion" id="actualizar">
     <div class="cuerpo">
-      <h2><span class="num">11</span>Actualizaciones</h2>
+      <h2><span class="num">12</span>Actualizaciones</h2>
       <figure class="robot">
         <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS, emocionado, sujeta un regalo mientras baja una flecha">
           <path d="M136 6 V36M126 26 L136 37 L146 26" class="r-al" stroke-width="4"/>
@@ -1420,7 +1498,7 @@
   <!-- ============================== 12. CARA ============================== -->
   <section class="seccion" id="cara">
     <div class="cuerpo">
-      <h2><span class="num">12</span>La cara de CHISPAS y la batería</h2>
+      <h2><span class="num">13</span>La cara de CHISPAS y la batería</h2>
       <figure class="robot">
         <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS pone caras divertidas con las manos en alto">
           <path d="M20 60 l4 -8 l4 8 l-4 8 z M140 40 l3 -6 l3 6 l-3 6 z M148 120 l3 -6 l3 6 l-3 6 z" fill="#ffb36b"/>
@@ -1462,7 +1540,7 @@
   <!-- ============================== 13. PROBLEMAS ============================== -->
   <section class="seccion" id="problemas">
     <div class="cuerpo">
-      <h2><span class="num">13</span>Si algo no va</h2>
+      <h2><span class="num">14</span>Si algo no va</h2>
       <figure class="robot">
         <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS dormido con gorro de dormir">
           <use href="#r-base"/><use href="#x-cerrados"/>
@@ -1490,6 +1568,7 @@
         <tr><td>No se conecta al WiFi</td><td>Abre WEBCONF y vuelve a elegir tu red y su clave.</td></tr>
         <tr><td>Se queda parado unos segundos</td><td>Si es al actualizar, es normal: está descargando.</td></tr>
         <tr><td>El decodificador no saca nada</td><td>Comprueba el cable de SND IN (DECOD) y sube el volumen del transceptor hasta que la barra se mueva.</td></tr>
+        <tr><td>CLUSTER dice <span class="mono">SIN RESPUESTA</span></td><td>Ese cluster no contesta o tu red no le deja pasar: CHISPAS lo reintenta solo. Mientras, prueba otro en <span class="mono">ajustes › NODO</span>.</td></tr>
         <tr><td>Sale <span class="mono">TORM!</span> en la cabecera</td><td>La presión baja deprisa. Si acabas de subir a un monte, puede ser por la altura: ajusta la ALTITUD.</td></tr>
       </table>
     </div>
@@ -1498,7 +1577,7 @@
   <!-- ============================== 14. GLOSARIO ============================== -->
   <section class="seccion" id="glosario">
     <div class="cuerpo">
-      <h2><span class="num">14</span>Glosario</h2>
+      <h2><span class="num">15</span>Glosario</h2>
       <figure class="robot">
         <svg viewBox="0 0 160 190" role="img" aria-label="CHISPAS lee un libro gordo con gafas de leer">
           <use href="#r-base"/><use href="#x-normal"/>

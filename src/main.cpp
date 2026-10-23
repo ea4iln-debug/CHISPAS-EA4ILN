@@ -84,6 +84,7 @@ inline bool depuActiva(uint8_t bit) { return (depuracion & bit) != 0; }
 #include "parts/pant_prop_pota.inc"
 #include "parts/sol.inc"
 #include "parts/tiempo.inc"
+#include "parts/cluster.inc"
 #include "parts/conf.inc"
 #include "parts/estados_cw.inc"
 #include "parts/qso_sim.inc"
@@ -417,6 +418,7 @@ void loop() {
   procesarQSO();
   procesarTrx();
   procesarWifi();
+  procesarCluster();
   procesarAutospot();
   procesarOta();
   procesarGps();

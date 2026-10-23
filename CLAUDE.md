@@ -58,7 +58,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
   **Su P1 (encoder) va CLK, SW, DT** (cable con DT y SW cruzados); el plano, desde el 15 oct, CLK, DT, SW con cable recto.
 
 ## Arquitectura (detalle en NOTAS: "Funciones" y "Manejo")
-- Pantallas `PANTALLA_*`: 1 Inicio, 2 CW, 3 LoRa, 4 TRX, 5 PROP, 6 POTA, 7 Sol, 8 TIEMPO (cabecera `WX`), 9 CONF. Cabecera: hora, nombre corto,
+- Pantallas `PANTALLA_*`: 1 Inicio, 2 CW, 3 LoRa, 4 TRX, 5 PROP, 6 POTA, 7 CLUSTER (`DXC`), 8 Sol, 9 TIEMPO (cabecera `WX`), 10 CONF. Cabecera: hora, nombre corto,
   batería (`PWR` sin batería).
 - **Estilo común (v0.9h):** menús con título en negativo (`dibujarTituloMenu()`) y opciones `< ... >`; ajustes en
   listas (`dibujarListaOpciones()`); datos en páginas (`dibujarPiePaginas()`); pantallas de manipular/escuchar con
@@ -98,7 +98,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 | `lora` `decodificador` `trx` | TX/RX, Duo y QSO; tarea `decod`; TRX + `procesarRecepcionLoRa`, `salirModoLoRa` |
 | `wifi` `ota` `datos_web` `gps` `parques` | WiFi, NTP, portal y QR; OTA; hamqsl, POTA, `procesarWifi`; GPS (ventanas, hora, locator, altitud); parques POTA cercanos (LittleFS) |
 | `pant_inicio_cw` `pant_lora_trx` `autospot` `pant_prop_pota` | Dibujo de Inicio y CW; de LoRa y TRX; autospot POTA y aviso de renovarlo; menús y páginas de PROP y POTA |
-| `sol` `tiempo` | SOL y línea gris; TIEMPO (Open-Meteo) y AMBIENTE (`procesarBME`) |
+| `sol` `tiempo` `cluster` | SOL y línea gris; TIEMPO (Open-Meteo) y AMBIENTE (`procesarBME`); CLUSTER (telnet, QUIEN ME OYE) |
 | `conf` `estados_cw` | CONF, STATUS, OTA y `actualizarPantalla()`; máquina de estados CW |
 | `cara` `entrada` `eventos` | Salvapantallas; encoder, ISR y eventos de botón; `procesarBoton()` |
 - Archivo nuevo en `src/parts/`: extensión `.inc`, cabecera SPDX, y su `#include` en `main.cpp` detrás de lo que use.
@@ -152,14 +152,17 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 - **Velocidad EFECTIVA** (21 oct, **v1.34b**): sustituye al ESPACIADO % en Koch, Duo, Echo y QSO SIM; WPM como
   LCWO (fórmula de su jscwlib, `huecosCW()`), de 5 al wpm (`NO` = sin estirar); cabecera `25/10WPM`; NVS `ef`/`eef`/`sef`.
   Medido en la placa 1 por serie y oído igual que LCWO (usuario, 21 oct); manual, PDF, web y README al día. Detalle en NOTAS: "Funciones".
+- **CLUSTER, fase 1** (23 oct, sin publicar; `cluster.inc`): pantalla 7 (cabecera `DXC`; SOL 8, TIEMPO 9, CONF
+  10), spots por telnet del RBN (defecto), URE, VE7CC, WA9PIE o PROPIO (WEBCONF), filtros MODO/BANDA en CHISPAS,
+  ficha con `a SU`, QUIEN ME OYE (RBN, km por los locators de los receptores). Probado en la placa 1 salvo QUIEN ME
+  OYE con spots reales. Detalle en NOTAS: "CLUSTER".
 - **Indicativo de fábrica `EAXXXX`** (23 oct, sin publicar): sin el propio no se abren TRX > OPERAR, QSO ni el
   autospot (aviso con `config`, que abre el editor del ID); probado en la placa 1 por serie. Detalle en NOTAS: "CONF".
 - **Cuenta atrás del Koch** (21 oct, sin publicar): 3, 2, 1 en grande antes del primer grupo (`CW_CUENTA_ATRAS`);
   probada en la placa 1 por serie; manual y PDF al día.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-0. **CLUSTER** (23 oct, en diseño, sin código): pantalla 10 por telnet, RBN por defecto y URE (`ea4ure.com:7300`);
-   nodos medidos, decisiones y fases en NOTAS: "CLUSTER".
+0. **CLUSTER**: probar QUIEN ME OYE emitiendo CQ, nodo PROPIO y el consumo; fases 2 (alertas) y 3 (enviar spots).
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).

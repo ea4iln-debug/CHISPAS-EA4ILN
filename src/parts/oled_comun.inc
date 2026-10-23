@@ -143,6 +143,7 @@ void dibujarEncabezado() {
       case PANTALLA_TRX:         nombre = "TRX";   break;
       case PANTALLA_PROPAGACION: nombre = "PROP."; break;
       case PANTALLA_SPOTS:       nombre = "POTA";  break;
+      case PANTALLA_CLUSTER:     nombre = "DXC";   break;
       case PANTALLA_SOL:         nombre = "SOL";   break;
       case PANTALLA_TIEMPO:      nombre = "WX";    break;  // TIEMPO: no cabe con "BAT:100%" (METEO queda pegado)
       case PANTALLA_CONFIG:      nombre = "CONF."; break;

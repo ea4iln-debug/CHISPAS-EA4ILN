@@ -71,6 +71,7 @@ GitHub.
 | **Transceptor (TRX)** | Manipulación de la emisora por KEY (aislada con optoacoplador), **tune** (portadora de 1–10 s), 6 memorias con variables (`{MI}`, `{SU}`, `{WX}`), decodificador CW del audio de la emisora (comprobado con audio Morse real) y QSO con las dos cosas a la vez (OPERAR para copiar de oído; QSO para que CHISPAS decodifique mientras transmites). | ✅ |
 | **Propagación** | Índices solares y condiciones por banda de [hamqsl.com](https://www.hamqsl.com/). | ✅ |
 | **Spots POTA** | Activaciones en CW publicadas en [pota.app](https://pota.app/). **Autospot** (beta): desde los parques cercanos, publicas tu propio spot (parque, indicativo, banda, frecuencia, QRP/QRT o un comentario propio) y CHISPAS te avisa a los 25 min para renovarlo. La **activación en curso** (duración, spots, botón de QRT) no se olvida aunque apagues. | ✅ |
+| **Cluster** (beta) | Spots en vivo por telnet: el [RBN](https://reversebeacon.net/) (receptores automáticos de CW, con dB y WPM), el cluster de la [URE](https://www.ure.es/cluster-telnet-ea4ure/) (`ea4ure.com:7300`), VE7CC, WA9PIE o uno propio desde WEBCONF. Filtros de modo (TODOS/CW) y banda en CHISPAS, nunca en tu cuenta del cluster. Un spot por estación, con el mejor receptor y cuántos la oyen; "a SU" pasa su indicativo a TRX. **¿Quién me oye?**: los receptores del RBN que copian tu CQ, con la distancia exacta a cada uno. | ✅ |
 | **Sol y línea gris** | Salida y puesta del sol y ventanas de línea gris de hoy y de mañana, y altura actual del sol, para el locator de la estación. Funciona sin conexión. | ✅ |
 | **Sensor ambiental (BME280)** | Temperatura, humedad y presión; tendencia de la presión en 3 h con **aviso de tormenta**; altitud barométrica calibrable (útil en SOTA); la temperatura en las memorias con `{WX}`. Opcional: sin sensor, Chispas funciona igual. | ✅ |
 | **Configuración en el aparato** | Indicativo, locator, altitud, aceleración del encoder, apagado automático, tono y reset de fábrica, con el encoder. Página STATUS con estación, sistema, WiFi, memoria, arranque y sensor. | ✅ |
@@ -265,9 +266,10 @@ muy larga (2,5 s) = dormir.
 | 4 | **TRX** | Transceptor: `DECODIFICAR` (solo recibe), `OPERAR` (transmitir por KEY, con memorias y tune, copiando de oído), `QSO` (OPERAR con el decodificador a la vez) y `memorias` |
 | 5 | **PROP.** | Propagación: índices solares y condiciones por banda |
 | 6 | **POTA** | Spots de activaciones en CW, parques POTA más cercanos (con el GPS o el locator) y autospot desde un parque |
-| 7 | **SOL** | Sol y línea gris: hoy, ahora y mañana |
-| 8 | **TIEMPO** (`WX` en la cabecera) | Tiempo de [Open-Meteo](https://open-meteo.com/) (CC BY 4.0) para el locator o el GPS: ahora, próximas 12 h cada 3 h y mañana; con el BME280, también AMBIENTE |
-| 9 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización, depuración y fábrica) y `STATUS` |
+| 7 | **CLUSTER** (`DXC` en la cabecera) | Spots en vivo por telnet del RBN (por defecto), del cluster de la URE u otros, con filtros de modo y banda; ficha del spot y "a SU" (pasa el indicativo a TRX); `QUIÉN ME OYE?`: los receptores del RBN que te copian, del más lejano al más cercano, con km y dB. Necesita tu indicativo y WiFi |
+| 8 | **SOL** | Sol y línea gris: hoy, ahora y mañana |
+| 9 | **TIEMPO** (`WX` en la cabecera) | Tiempo de [Open-Meteo](https://open-meteo.com/) (CC BY 4.0) para el locator o el GPS: ahora, próximas 12 h cada 3 h y mañana; con el BME280, también AMBIENTE |
+| 10 | **CONF.** | `CONFIG` (estación, encoder, apagado, tono, webconf, actualización, depuración y fábrica) y `STATUS` |
 
 La cabecera muestra la hora (local o UTC, a elegir), el nombre de la pantalla y la batería (`PWR` si no hay batería).
 Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captura_oled.py) (necesita
@@ -297,6 +299,13 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | <img src="docs/img/trx.png" width="256" alt="Menú TRX"><br>Menú | <img src="docs/img/trx_operar.png" width="256" alt="Operar"><br>Operar | <img src="docs/img/trx_menu.png" width="256" alt="Ajustes de Operar y QSO"><br>Operar y QSO: menu |
 | <img src="docs/img/trx_qso.png" width="256" alt="QSO por la emisora"><br>QSO | <img src="docs/img/trx_decodificar.png" width="256" alt="Decodificar"><br>Decodificar (sin señal) | <img src="docs/img/trx_memorias.png" width="256" alt="Memorias"><br>Memorias |
 | <img src="docs/img/trx_editor.png" width="256" alt="Editor de memorias"><br>Editor (rueda de caracteres, con {WX}) | | |
+
+### Cluster
+
+| | | |
+|:---:|:---:|:---:|
+| <img src="docs/img/cluster.png" width="256" alt="Menú CLUSTER"><br>Menú | <img src="docs/img/cluster_spots.png" width="256" alt="Spots del RBN"><br>Spots (RBN, CW en 40 m) | <img src="docs/img/cluster_ficha.png" width="256" alt="Ficha de un spot"><br>Ficha y "a SU" |
+| <img src="docs/img/cluster_oyen.png" width="256" alt="Quién me oye"><br>¿Quién me oye? (sin emitir) | <img src="docs/img/cluster_ajustes.png" width="256" alt="Ajustes del cluster"><br>Ajustes: nodo, modo y banda | |
 
 ### Utilidades
 

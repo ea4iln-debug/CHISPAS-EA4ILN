@@ -22,9 +22,9 @@ Documentación (CC BY-NC-SA 4.0). Detalle y decisiones en `docs/NOTAS.md`, "Rele
 
 ## Estructura de `web/manual.html`
 - Mismo estilo oscuro que `index.html`; el bloque `@media print` es el del PDF (blanco, una sección por página,
-  robot en el margen derecho de 44 mm). Portada `.portada`, índice `.indice` y 14 `<section class="seccion" id=…>`
-  (ids: cw, chispas, primeros-pasos, entrenador, lora, trx, prop, pota, sol, conf, actualizar, cara, problemas,
-  glosario). Cada una con `<div class="cuerpo">` y, dentro, `<figure class="robot">` (flota al margen).
+  robot en el margen derecho de 44 mm). Portada `.portada`, índice `.indice` y 15 `<section class="seccion" id=…>`
+  (ids: cw, chispas, primeros-pasos, entrenador, lora, trx, prop, pota, cluster, sol, conf, actualizar, cara,
+  problemas, glosario). Cada una con `<div class="cuerpo">` y, dentro, `<figure class="robot">` (flota al margen).
 - **Robot:** piezas en el `<svg>` oculto del principio: `#r-base` (cuerpo, viewBox 0 0 160 190, hombros en
   (50,112) y (108,114)) y caras `#x-normal`, `x-feliz`, `x-cerrados`, `x-guino`, `x-sorpresa`, `x-concentrado`,
   `x-preocupado`, `x-gafas`, `x-duda`, `x-travieso`. Cada pose: accesorios de detrás, `<use href="#r-base"/>`, una

@@ -930,7 +930,39 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   `gpio_hold_en` (se libera en `setup()`, donde arranca en BAJO). `[AMP] ENCENDIDO/APAGADO` por serie. **Control de
   SD probado en la placa 1 el 12 oct 2026 (OTA a la v1.04b).** Esquema (hoja 4): el amplificador es el montaje principal (sin buzzer).
 
-### CLUSTER (en diseño, 23 oct 2026; sin código)
+### CLUSTER (fase 1 hecha el 23 oct 2026, sin publicar; `cluster.inc`)
+- **Firmware:** pantalla 7 `PANTALLA_CLUSTER` (cabecera `DXC`; SOL pasa a 8, TIEMPO a 9, CONF a 10,
+  `TOTAL_PANTALLAS` 10). Menú `< VER SPOTS >`, `< QUIEN ME OYE? >`, línea de estado (`RBN 11 SPOTS`, `ENTRANDO EN
+  URE`, `URE: SIN RESPUESTA`, `FALTA TU INDICATIVO`…) y `ajustes` en el centro del pie (como `memorias` en TRX); sin
+  conexión, ABRIR WEBCONF / REINTENTAR. WiFi encendido al entrar (también en MANUAL) si hay indicativo propio
+  (`procesarWifi`), apagado al salir; `procesarCluster()` en `loop()` abre/cierra las conexiones (`WiFiClient`,
+  `connect` con 4 s), reintenta con espera 5/15/30/60 s, entra al ver `login:`/`call:` (envía el ID) y da por
+  dentro al ver el prompt `... >` o el primer spot; en nodos que no son el RBN pide `sh/dx 20` (lista llena al
+  entrar). Dos conexiones: la del nodo y, si no es el RBN, otra al RBN para QUIEN ME OYE. Lectura no bloqueante
+  (hasta 2 KB por vuelta), líneas de 160. Lista de 30 spots (lo más viejo sale), uno por indicativo y frecuencia
+  (±1 kHz) con el mejor dB y receptores distintos (hash de 8); caducan a 10 min (RBN) o 30 min (personas).
+  Redibujo como mucho cada segundo. VER SPOTS: `14025.3 W8XW     33dB` (o minutos `  3m`), selección en vídeo
+  inverso; al bajar se congela (`PAUSA` en el pie, copia `vistaSpots`) y al volver arriba sigue en vivo; pulsar:
+  ficha (modo, dB, WPM, `X7` receptores, `DE` mejor receptor y hora, comentario) con `a SU` (copia a `trxSu`,
+  `guardarTrxNVS`, salta al menú TRX; más de 8 caracteres: "NO CABE EN SU") / `volver`. QUIEN ME OYE: spots del
+  RBN cuyo indicativo es el ID (también con `/P` o `EA8/…`), 20 receptores, 30 min, más lejano arriba
+  (`VE6WZ      7210  26dB`), ficha con locator, km, dB, WPM, frecuencia y hora. Lista de receptores del RBN en
+  LittleFS `/rbn.bin` (cabecera `RBN1`, registros de 20 bytes), semanal, leída del HTML por trozos (`&c=`,
+  `</td>` x2, `<td>LOC<`); distancia haversine desde GPS o locator. AJUSTES: NODO (RBN, URE, VE7CC, WA9PIE,
+  PROPIO), MODO (TODOS/CW), BANDA (TODAS, 160–6 m); NVS `cnodo`/`cmodo`/`cband` (entrenador); los cambios los
+  aplica `procesarCluster` (otro nodo: reconecta y vacía; otro filtro: vacía). PROPIO: `clusterPropio`
+  ("host:puerto", NVS `dxcp` en `estacion`, campo de WEBCONF). RAM +7,5 KB (19,7 %), flash 40,3 %.
+- **Probado en la placa 1** (23 oct 2026, por serie y capturas): primera entrada baja la lista de receptores y
+  entra en el RBN (`RBN 11 SPOTS` en segundos); lista en vivo, PAUSA al bajar, ficha (`TM8R 7012.0`, `CW 16DB
+  27WPM X7`, `DE DF7GB 1208Z`, `CQ`); `a SU` lleva a TRX con `SU: KB9R` y apaga el WiFi; NODO URE: entra, `sh/dx`
+  da 18 spots al instante (minutos `0m`/`1m`), segunda conexión al RBN dentro; QUIEN ME OYE vacío ("NADIE TE HA
+  OIDO AUN"); filtros CW + 40M: solo spots de CW en 40 m. Lectura de receptores simulada en el PC sobre la página
+  real: 349 con locator; los nombres casan con los spotters quitando `-#` (K3PA-1, VE6WZ-3…). La placa 1 queda con
+  RBN / TODOS / TODAS y SU = KB9R.
+- **Sin probar:** QUIEN ME OYE con spots reales (hay que emitir CQ), nodo PROPIO, VE7CC y WA9PIE desde la placa,
+  ABRIR WEBCONF desde CLUSTER, reconexión tras caída, consumo con el WiFi siempre encendido.
+
+#### Diseño (23 oct 2026)
 - **Nodos probados desde el PC** (23 oct 2026, script de Python por telnet, ~30 s cada uno, login EA4ILN, sin cambiar
   ajustes de la cuenta):
   - **RBN** `telnet.reversebeacon.net:7000`: pide `Please enter your call:`; ~5 spots/s en total (16 000/h, 737

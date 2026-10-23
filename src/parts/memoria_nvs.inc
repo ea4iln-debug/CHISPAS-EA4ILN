@@ -245,6 +245,7 @@ void cargarEstacionNVS() {
           sizeof(locatorEstacion));
   horaUtcCabecera = prefs.getBool("utc", false);
   locatorAuto = prefs.getBool("locgps", true);
+  if (prefs.isKey("dxcp")) prefs.getString("dxcp", clusterPropio, sizeof(clusterPropio));
   qnhHpa = prefs.getFloat("qnh", 0);  // Sin calibrar: atmosfera estandar
   qnhCalibrado = qnhHpa > 850 && qnhHpa < 1100;
   if (!qnhCalibrado) qnhHpa = QNH_ESTANDAR_HPA;
@@ -275,6 +276,7 @@ void guardarEstacionNVS() {
   prefs.putString("loc", locatorEstacion);
   prefs.putBool("utc", horaUtcCabecera);
   prefs.putBool("locgps", locatorAuto);
+  prefs.putString("dxcp", clusterPropio);
   prefs.end();
 }
 

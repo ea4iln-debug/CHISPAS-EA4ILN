@@ -159,7 +159,9 @@ void procesarWifi() {
                     pantallaActual == PANTALLA_TIEMPO || solSinHora);
     bool conPortal = estadoWifi == WIFI_PORTAL &&
                      (pantallaActual == PANTALLA_CONFIG || pantallaActual == PANTALLA_SOL);
-    bool encender = wifiAuto && enDatos;
+    // CLUSTER va en vivo: WiFi encendido mientras se esta en ella (en MANUAL tambien), si hay indicativo propio
+    bool enCluster = pantallaActual == PANTALLA_CLUSTER && indicativoConfigurado();
+    bool encender = (wifiAuto && enDatos) || enCluster;
     wifiPorPeticion = false;
     forzarActualizacion = false;
     spotPendiente = false;
@@ -186,7 +188,7 @@ void procesarWifi() {
         apagarWifi();
         // En PROP, POTA, SOL o TIEMPO se vuelve a su menu sin conexion (ABRIR WEBCONF y REINTENTAR)
         if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
-            pantallaActual == PANTALLA_SOL || pantallaActual == PANTALLA_TIEMPO) {
+            pantallaActual == PANTALLA_SOL || pantallaActual == PANTALLA_TIEMPO || pantallaActual == PANTALLA_CLUSTER) {
           quedarseSinConexion();
         }
         pantallaPendiente = true;

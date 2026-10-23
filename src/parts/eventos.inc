@@ -453,6 +453,9 @@ void procesarBoton() {
         break;
     }
 
+  } else if (pantallaActual == PANTALLA_CLUSTER) {
+    eventoCluster(giro, pulsa, atras, ejeLarga);
+
   } else if (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
              pantallaActual == PANTALLA_SOL || pantallaActual == PANTALLA_TIEMPO) {
     // Menu: [sig.] -> [VER DATOS] -> [ACTUALIZAR] -> [ant.] (sin conexion: ABRIR WEBCONF y REINTENTAR).

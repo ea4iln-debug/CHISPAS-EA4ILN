@@ -25,10 +25,11 @@ uint8_t pantallaActual = 1;
 #define PANTALLA_TRX         4  // Conexion con el transceptor: decodificar, operar (KEY), QSO y memorias
 #define PANTALLA_PROPAGACION 5
 #define PANTALLA_SPOTS       6
-#define PANTALLA_SOL         7
-#define PANTALLA_TIEMPO      8  // Tiempo y prevision (Open-Meteo) y ambiente (BME280)
-#define PANTALLA_CONFIG      9
-const uint8_t TOTAL_PANTALLAS = 9;
+#define PANTALLA_CLUSTER     7  // Spots por telnet (RBN, URE...) y QUIEN ME OYE
+#define PANTALLA_SOL         8
+#define PANTALLA_TIEMPO      9  // Tiempo y prevision (Open-Meteo) y ambiente (BME280)
+#define PANTALLA_CONFIG      10
+const uint8_t TOTAL_PANTALLAS = 10;
 uint8_t opcionNavegacionP1234 = 1;  // 0 = "ant.", 1 = "sig."
 
 String estadoLoraStr = "INICIANDO...";
@@ -276,6 +277,7 @@ uint16_t trxTonoDecodHz = 0;     // Tono del decodificador: 0 = automatico, 400-
 String trxTextoRx = "";          // Descodificado de la emisora
 String trxTextoTx = "";          // Manipulado y memorias enviadas
 char trxSu[TRAMA_LONG_INDICATIVO + 1] = "";  // Indicativo del corresponsal ({SU})
+char clusterPropio[41] = "";                 // CLUSTER > NODO PROPIO: "host:puerto" (WEBCONF; NVS "dxcp")
 bool trxEnviandoMemoria = false;
 // Tune: portadora continua por KEY para ajustar el acoplador o la potencia (OPERAR y QSO). La duracion se
 // elige en su menu (NVS "ttune"); mientras dura, el corte de seguridad deja ese tiempo mas un margen
