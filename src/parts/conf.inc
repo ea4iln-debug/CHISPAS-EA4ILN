@@ -479,6 +479,27 @@ void procesarStatus() {
   pantallaPendiente = true;
 }
 
+// Aviso de indicativo sin configurar (OPERAR, QSO de TRX y autospot): "config" abre el editor del ID
+bool avisoSinIndicativo = false;
+uint8_t focoAvisoSinIndicativo = 0;
+
+// true si hay indicativo propio; si no, muestra el aviso y la opcion no se abre
+bool exigirIndicativo() {
+  if (indicativoConfigurado()) return true;
+  avisoSinIndicativo = true;
+  focoAvisoSinIndicativo = 0;
+  Serial.println(F("[CONFIG] FALTA EL INDICATIVO (ID)"));
+  pantallaPendiente = true;
+  return false;
+}
+
+void dibujarAvisoSinIndicativo() {
+  dibujarTituloMenu(" INDICATIVO ");
+  dibujarTituloCentrado(String("FALTA TU INDICATIVO"), 27);
+  dibujarTituloCentrado(String("NECESARIO PARA EMITIR"), 38);
+  dibujarPieDos(focoAvisoSinIndicativo == 0, "config", focoAvisoSinIndicativo == 1, "volver");
+}
+
 void actualizarPantalla() {
   if (caraActiva) return;  // La cara se dibuja sola (procesarCara)
   if (viendoQrPortal()) {  // Portal abierto: QR a pantalla completa
@@ -489,6 +510,11 @@ void actualizarPantalla() {
   dibujarEncabezado();
   if (avisoRespot) {  // Renovar el spot POTA: tapa la pantalla en la que se este
     dibujarAvisoRespot();
+    display.display();
+    return;
+  }
+  if (avisoSinIndicativo) {
+    dibujarAvisoSinIndicativo();
     display.display();
     return;
   }

@@ -106,9 +106,14 @@ const char* obtenerCodigoMorse(char c) {
 
 // Datos de la estacion: en NVS (espacio NVS_ESTACION); se cambian en CONF > CONFIG o en el portal (webconf)
 #define NVS_ESTACION "estacion"
-#define INDICATIVO_POR_DEFECTO "EA4ILN"
+#define INDICATIVO_POR_DEFECTO "EAXXXX"  // Generico: hay que poner el propio para emitir (KEY, autospot)
 #define LOCATOR_POR_DEFECTO    "IN80dk"  // Madrid (generico): cada estacion pone el suyo
 char indicativoEstacion[TRAMA_LONG_INDICATIVO + 1] = INDICATIVO_POR_DEFECTO;
+
+// Con el de fabrica no se deja emitir por la emisora ni enviar spots (hace falta licencia y el indicativo propio)
+bool indicativoConfigurado() {
+  return strlen(indicativoEstacion) >= 3 && strcmp(indicativoEstacion, INDICATIVO_POR_DEFECTO) != 0;
+}
 char locatorEstacion[7] = LOCATOR_POR_DEFECTO;
 bool locatorAuto = true;       // Con GPS, el locator sale de su posicion (CONFIG > LOCATOR: AUTO o MANUAL)
 bool horaUtcCabecera = false;  // Hora de la cabecera en UTC ("12:05Z") en vez de local; se elige en webconf

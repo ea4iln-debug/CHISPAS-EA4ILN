@@ -682,9 +682,11 @@
       <h3>Lo primero: tu indicativo, tu locator y el WiFi</h3>
       <p>Antes de nada, dile a CHISPAS quién eres y dónde estás. Ve a <b>CONF › CONFIG</b>:</p>
       <ol>
-        <li><b>ID:</b> tu indicativo. De fábrica trae <span class="mono">EA4ILN</span>, el del autor de CHISPAS:
-          cámbialo por el tuyo, porque es el que sale en la portada, en las memorias y en lo que mandas por LoRa. Si
-          aún no tienes indicativo, pon tu nombre o lo que quieras.</li>
+        <li><b>ID:</b> tu indicativo. De fábrica trae <span class="mono">EAXXXX</span>, que no es de nadie:
+          cámbialo por el tuyo, porque es el que sale en la portada, en las memorias y en lo que mandas por LoRa. Sin
+          él, CHISPAS <b>no te deja emitir</b>: OPERAR y QSO de TRX y el autospot de POTA te piden que lo pongas
+          primero (con <span class="mono">config</span> vas directo al editor). Si aún no tienes indicativo, pon
+          tu nombre o lo que quieras para todo lo demás: el entrenador, LoRa y el QSO SIM no lo exigen.</li>
         <li><b>LOCATOR:</b> el código de tu zona (por ejemplo <span class="mono">IN80dk</span>). Es como un código
           postal de radioaficionado: busca en internet «locator» y tus coordenadas. Sirve para calcular la hora
           del sol y la distancia a los parques. Si tu CHISPAS lleva GPS, lo pone solo.</li>
@@ -1349,7 +1351,7 @@
       <h3>CONFIG</h3>
       <table class="tabla">
         <tr><th>Ajuste</th><th>Qué hace</th></tr>
-        <tr><td>ID</td><td>Tu indicativo. Se usa en las memorias (<span class="mono">{MI}</span>), en lo que mandas por LoRa y en el QSO SIM, y sale en la portada. De fábrica trae <span class="mono">EA4ILN</span>: cámbialo por el tuyo.</td></tr>
+        <tr><td>ID</td><td>Tu indicativo. Se usa en las memorias (<span class="mono">{MI}</span>), en lo que mandas por LoRa y en el QSO SIM, y sale en la portada. De fábrica trae <span class="mono">EAXXXX</span>: cámbialo por el tuyo. Sin él no se puede emitir (OPERAR, QSO de TRX, autospot).</td></tr>
         <tr><td>LOCATOR</td><td>Tu zona. Con GPS, elige <span class="mono">AUTO (GPS)</span> o <span class="mono">MANUAL</span>.</td></tr>
         <tr><td>ALTITUD</td><td>Pon a qué altura estás para que la presión del sensor de ambiente sea exacta.</td></tr>
         <tr><td>HORA</td><td>Si la cabecera enseña la hora local o la universal (UTC).</td></tr>

@@ -236,6 +236,7 @@ void ajustarOpcionSpot(int8_t giro) {
 // procesarWifi() al haber conexion
 void pedirEnvioSpot(bool qrt) {
   if (spotParque[0] == '\0') { resultadoSpot = "SIN PARQUE"; return; }
+  if (!indicativoConfigurado()) { resultadoSpot = "FALTA TU ID"; return; }  // Por si se quito tras abrir la ficha
   if (spotUltimoMs != 0 && millis() - spotUltimoMs < SPOT_ESPERA_MS) {
     resultadoSpot = "ESPERA " + String((SPOT_ESPERA_MS - (millis() - spotUltimoMs)) / 1000 + 1) + " S";
     return;

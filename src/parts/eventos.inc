@@ -64,6 +64,24 @@ void procesarBoton() {
     return;
   }
 
+  // Aviso de indicativo sin configurar: "config" abre CONF > CONFIG > ID en el editor; "volver" o atras, nada
+  if (avisoSinIndicativo) {
+    if (giro != 0) {
+      focoAvisoSinIndicativo = (focoAvisoSinIndicativo + 1) % 2;
+    } else if (pulsa || atras || ejeLarga) {
+      avisoSinIndicativo = false;
+      if (pulsa && focoAvisoSinIndicativo == 0) {
+        entrarEnPantalla(PANTALLA_CONFIG);
+        subConf = CONF_CONFIG;
+        focoConf = OC_ID;
+        confirmandoFabrica = false;
+        confAbrirEditor(EDITOR_ID_ESTACION);
+      }
+    }
+    actualizarPantalla();
+    return;
+  }
+
   // Mientras se edita un valor, "atras" y la larga del eje solo salen de la edicion
   if ((atras || ejeLarga) && editandoValor) {
     editandoValor = false;
@@ -161,8 +179,8 @@ void procesarBoton() {
         else if (giro != 0) moverFocoAnillo(opcionTrx, TRX_OPCION_BARRA, giro);
         else if (pulsa) {
           if (opcionTrx == 0) trxEntrarSub(TRX_DECOD);
-          else if (opcionTrx == 1) trxEntrarSub(TRX_OPERAR);
-          else if (opcionTrx == 2) trxEntrarSub(TRX_QSO);
+          else if (opcionTrx == 1) { if (exigirIndicativo()) trxEntrarSub(TRX_OPERAR); }
+          else if (opcionTrx == 2) { if (exigirIndicativo()) trxEntrarSub(TRX_QSO); }
           else if (opcionTrx == TRX_OPCION_MEMORIAS) trxEntrarSub(TRX_MEMORIAS);
           else navegarDesdeBarra();
         }
@@ -510,7 +528,7 @@ void procesarBoton() {
           else if (giro != 0) focoMenuParques = (focoMenuParques + 1) % 2;
           else if (pulsa || ejeLarga) {
             menuParques = false;
-            if (focoMenuParques == 0) abrirAutospot(parqueSel);
+            if (focoMenuParques == 0) { if (exigirIndicativo()) abrirAutospot(parqueSel); }
             else subDatos = DATOS_MENU;
           }
         } else if (atras || ejeLarga || (pulsa && numParquesCercanos == 0)) {

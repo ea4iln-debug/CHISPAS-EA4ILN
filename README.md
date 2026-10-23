@@ -329,7 +329,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 
 | Opción | Qué hace |
 |---|---|
-| **ID** | Tu indicativo (3 a 8 letras, cifras y `/`), con la rueda de caracteres del editor |
+| **ID** | Tu indicativo (3 a 8 letras, cifras y `/`), con la rueda de caracteres del editor. De fábrica, `EAXXXX`: con él no se abren OPERAR y QSO de TRX ni el autospot (aviso con `config`, que lleva al editor) |
 | **LOCATOR** | Locator Maidenhead de 4 o 6 caracteres (para SOL); se comprueba al guardar. Con GPS: pulsar, girar entre `AUTO (GPS)` y `MANUAL` y pulsar (MANUAL abre el editor) |
 | **ALTITUD** | Con el BME280: altitud barométrica (con `?` si no está calibrada). Pulsar, girar hasta la altitud real y pulsar calibra el QNH (con GPS se calibra solo) |
 | **HORA** | Hora de la cabecera: `LOCAL` o `UTC` (`12:05Z`) |

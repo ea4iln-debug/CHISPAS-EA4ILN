@@ -15,7 +15,8 @@ Documentación (CC BY-NC-SA 4.0). Detalle y decisiones en `docs/NOTAS.md`, "Rele
   (nunca «Chispín») y habla en primera persona en los pies de sus dibujos, con humor.
 - Conectores: delante **Palas (KEY IN)**, **Auriculares (SND OUT)** y volumen; detrás **KEY OUT** y **SND IN (DECOD)**
   (la entrada de audio; así en todo, decisión del usuario del 23 oct); **USB-C** a la izquierda.
-- Indicativo de fábrica **EA4ILN**: el manual avisa de cambiarlo (CONF › CONFIG › ID).
+- Indicativo de fábrica **EAXXXX** (desde el 23 oct; antes EA4ILN): el manual avisa de cambiarlo (CONF › CONFIG ›
+  ID); sin él no se abren OPERAR y QSO de TRX ni el autospot.
 - Funciones solo en la beta: `<span class="chip-beta">beta</span>`. La portada dice para qué versión es: actualizarla.
 - PDF en A4 con **fondo blanco** (se probó crema y el usuario prefirió blanco).
 
