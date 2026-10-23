@@ -139,8 +139,13 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   **v1.36b (beta), publicada el 23 oct 2026** (prerelease, a petición del usuario): CLUSTER > ESCUCHA EN TRX
   (QUIEN ME OYE con el CQ de TRX, probado con un CQ real) y **W** en la cabecera con la radio WiFi encendida
   (conectando, conectada o portal; `wifiEncendido()`, centrada en el hueco entre la hora y el nombre; `apagarWifi`
-  pide redibujar). La W **solo compilada** al publicar (la placa 1 se desconectó): la comprueba el usuario al
-  actualizar por OTA. Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
+  pide redibujar). **Republicada el mismo día con la misma versión** (petición del usuario; release y etiqueta
+  borradas y hechas de nuevo): añade **volver** seleccionable con el mando en VER SPOTS y QUIEN ME OYE (detrás del
+  último; `selSpot == numVistaSpots`, `selOyente == numOyentes`; en él se ve la última página sin marca y el pie
+  dice `> volver`). Probado en la placa 1 por serie antes de republicar: W entre la hora y el nombre en TRX y
+  CLUSTER (`15:07  W  TRX`; sin hora aún, sola a la izquierda) y sin W en Inicio tras `[WIFI] APAGADO`; volver
+  desde el primer spot girando atrás y pulsar lleva al menú. Volver de QUIEN ME OYE con receptores, sin probar
+  (mismo código). Una placa que ya tuviera la primera 1.36b no ve la nueva por OTA (misma versión). Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
   la W en "Y además".
   https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.36b
   **v1.33b (beta), publicada el 18 oct 2026** (prerelease): pantalla TIEMPO (Open-Meteo) con AMBIENTE, SOL con 3

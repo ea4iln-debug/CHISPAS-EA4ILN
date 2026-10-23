@@ -865,9 +865,11 @@ void dibujarPaginaSpots() {
     dibujarPieCentrado(String(NODOS_CLUSTER[clusterNodo].nombre) + "  >volver");
     return;
   }
-  if (selSpot >= numVistaSpots) selSpot = numVistaSpots - 1;
+  if (selSpot > numVistaSpots) selSpot = numVistaSpots;
+  bool enVolver = selSpot == numVistaSpots;
   display.setTextWrap(false);
-  uint8_t primera = (selSpot / CLUSTER_SPOTS_PAGINA) * CLUSTER_SPOTS_PAGINA;
+  // En "volver" se sigue viendo la ultima pagina, sin ningun spot marcado
+  uint8_t primera = ((enVolver ? numVistaSpots - 1 : selSpot) / CLUSTER_SPOTS_PAGINA) * CLUSTER_SPOTS_PAGINA;
   for (uint8_t k = 0; k < CLUSTER_SPOTS_PAGINA && primera + k < numVistaSpots; k++) {
     const SpotDx& s = vistaSpots[primera + k];
     char dcha[8];
@@ -882,8 +884,9 @@ void dibujarPaginaSpots() {
   }
   display.setTextWrap(true);
   // Lista congelada mientras se baja por ella; al volver arriba, vuelve a ir en vivo
-  dibujarPieCentrado(String(selSpot + 1) + "/" + String(numVistaSpots) + " " + NODOS_CLUSTER[clusterNodo].nombre +
-                     (selSpot > 0 ? " PAUSA" : ""));
+  if (enVolver) dibujarPieCentrado("> volver");
+  else dibujarPieCentrado(String(selSpot + 1) + "/" + String(numVistaSpots) + " " +
+                          NODOS_CLUSTER[clusterNodo].nombre + (selSpot > 0 ? " PAUSA" : ""));
 }
 
 void dibujarFichaDx() {
@@ -949,8 +952,9 @@ void dibujarPaginaOyentes() {
   }
   uint8_t orden[CLUSTER_MAX_OYENTES];
   ordenOyentes(orden);
-  if (selOyente >= numOyentes) selOyente = numOyentes - 1;
-  uint8_t primera = (selOyente / CLUSTER_SPOTS_PAGINA) * CLUSTER_SPOTS_PAGINA;
+  if (selOyente > numOyentes) selOyente = numOyentes;
+  bool enVolver = selOyente == numOyentes;
+  uint8_t primera = ((enVolver ? numOyentes - 1 : selOyente) / CLUSTER_SPOTS_PAGINA) * CLUSTER_SPOTS_PAGINA;
   display.setTextWrap(false);
   for (uint8_t k = 0; k < CLUSTER_SPOTS_PAGINA && primera + k < numOyentes; k++) {
     const Oyente& o = oyentes[orden[primera + k]];
@@ -965,7 +969,8 @@ void dibujarPaginaOyentes() {
     display.setTextColor(SSD1306_WHITE);
   }
   display.setTextWrap(true);
-  dibujarPieCentrado(String(selOyente + 1) + "/" + String(numOyentes) + " TE OYEN KM");
+  if (enVolver) dibujarPieCentrado("> volver");
+  else dibujarPieCentrado(String(selOyente + 1) + "/" + String(numOyentes) + " TE OYEN KM");
 }
 
 void dibujarFichaOyente() {
@@ -1058,13 +1063,14 @@ void eventoCluster(int8_t giro, bool pulsa, bool atras, bool ejeLarga) {
       break;
 
     case VC_SPOTS:
-      // Girar marca otro spot (bajar congela la lista); pulsar abre su ficha; atras vuelve al menu
+      // Girar marca otro spot o, detras del ultimo, "volver" (selSpot == numVistaSpots); bajar congela la lista.
+      // Pulsar abre la ficha o, en "volver", vuelve al menu, como atras
       if (atras || ejeLarga) vistaCluster = VC_MENU;
       else if (giro != 0 && numVistaSpots > 0) {
-        selSpot = (selSpot + numVistaSpots + giro) % numVistaSpots;
+        selSpot = (selSpot + numVistaSpots + 1 + giro) % (numVistaSpots + 1);
         if (selSpot == 0) refrescarVistaSpots();
       } else if (pulsa) {
-        if (numVistaSpots == 0) {
+        if (numVistaSpots == 0 || selSpot >= numVistaSpots) {
           vistaCluster = VC_MENU;
         } else {
           fichaSpot = vistaSpots[selSpot];
@@ -1086,10 +1092,11 @@ void eventoCluster(int8_t giro, bool pulsa, bool atras, bool ejeLarga) {
       break;
 
     case VC_OYEN:
+      // Como VER SPOTS: detras del ultimo receptor, "volver" (selOyente == numOyentes)
       if (atras || ejeLarga) vistaCluster = VC_MENU;
-      else if (giro != 0 && numOyentes > 0) selOyente = (selOyente + numOyentes + giro) % numOyentes;
+      else if (giro != 0 && numOyentes > 0) selOyente = (min(selOyente, numOyentes) + numOyentes + 1 + giro) % (numOyentes + 1);
       else if (pulsa) {
-        if (numOyentes == 0) {
+        if (numOyentes == 0 || selOyente >= numOyentes) {
           vistaCluster = VC_MENU;
         } else {
           uint8_t orden[CLUSTER_MAX_OYENTES];

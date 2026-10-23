@@ -38,7 +38,7 @@ propagación, spots POTA, sol y línea gris, sensor BME280, configuración en el
 
 ## Estado actual (23 oct 2026)
 - **v1.36b** publicada (beta, 23 oct): CLUSTER > ESCUCHA EN TRX (QUIEN ME OYE con el CQ de TRX, probado con un CQ
-  real) y W de WiFi en la cabecera (solo compilada: la comprueba el usuario por OTA). Antes, **v1.35b** (beta, 23 oct): CLUSTER, indicativo EAXXXX y cuenta atrás del Koch (ver abajo); en la placa
+  real), W de WiFi en la cabecera y volver en las listas de CLUSTER (republicada; probado en la placa 1 por serie). Antes, **v1.35b** (beta, 23 oct): CLUSTER, indicativo EAXXXX y cuenta atrás del Koch (ver abajo); en la placa
   1 por USB (mismo código). Antes, **v1.34b** (beta, 21 oct): velocidad EFECTIVA y filtro de pulsadores (ver abajo); en la placa 1 por OTA (probado). Antes, **v1.33b** (beta, 18 oct): pantalla TIEMPO (ver abajo); en la placa 1 por USB. Antes, **v1.32b** (beta, 18 oct): AUTOSPOT POTA con activación en curso (ver abajo); en la placa 1 por OTA desde
   la 1.20 (probado). Antes, **v1.31b** (beta, 18 oct; los
   arreglos del 18 oct de abajo). Antes, **v1.30b** (beta, 16 oct; ver abajo). **v1.20** (release del 16 oct, final): sin la versión sin encoder (entorno, binario y código `#ifdef SIN_ENCODER`)
@@ -164,7 +164,7 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
   probada en la placa 1 por serie; manual y PDF al día.
 
 ## Pendiente (detalle en NOTAS: "Pendiente")
-0. **CLUSTER**: comprobar la W de la cabecera (v1.36b); falta nodo PROPIO, consumo y palas con WiFi en TRX; fases 2 (alertas) y 3 (enviar spots).
+0. **CLUSTER**: falta nodo PROPIO, consumo y palas con WiFi en TRX; fases 2 (alertas) y 3 (enviar spots).
 1. PCB: recibir y montar (ver "Hardware").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).
