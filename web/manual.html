@@ -1010,8 +1010,10 @@
         CHISPAS y la duración del <i>tune</i>. Abajo: <span class="mono">mem</span> (memorias),
         <span class="mono">tune</span> y <span class="mono">menu</span>.</p>
       <p>En <span class="mono">menu</span>: <b>WPM</b> (tu velocidad), <b>TONO LOCAL</b> (si quieres oír tu CW
-        también en CHISPAS mientras transmites), <b>TUNE</b> (cuántos segundos dura) y <b>SU</b>, el indicativo de
-        la estación con la que hablas, que usan las memorias.</p>
+        también en CHISPAS mientras transmites), <b>TUNE</b> (cuántos segundos dura), <b>SU</b>, el indicativo de
+        la estación con la que hablas, que usan las memorias, y <b>QUIEN ME OYE?</b>, que te lleva a la lista de
+        receptores que han copiado tu CQ (a la derecha, cuántos son; ver <a href="#cluster">Cluster</a>). Al salir
+        de esa lista vuelves a donde estabas.</p>
       <div class="galeria">
         <figure class="pantalla"><img src="img/trx_operar.png?__SELLO__" width="512" height="256" alt="Pantalla OPERAR"><figcaption>OPERAR: tus ajustes arriba y el indicativo del corresponsal (SU).</figcaption></figure>
       </div>
@@ -1266,17 +1268,19 @@
       </div>
 
       <h3>¿QUIÉN ME OYE?</h3>
-      <p>Lanza un CQ en CW desde <b>TRX</b> (por ejemplo, con una memoria) y vuelve a CLUSTER: los receptores del RBN
-        que te hayan copiado salen aquí, <b>el más lejano arriba</b>, con la distancia desde ti (por el GPS o tu
+      <p>Lanza un CQ en CW desde <b>TRX › OPERAR</b> o <b>QSO</b> (por ejemplo, con una memoria) y abre
+        <span class="mono">menu › QUIEN ME OYE?</span>, o vuelve a CLUSTER: los receptores del RBN que te hayan
+        copiado salen aquí, <b>el más lejano arriba</b>, con la distancia desde ti (por el GPS o tu
         locator) y los dB con que te oyen. Pulsa sobre uno para ver su locator, la velocidad a la que te ha copiado,
         tu frecuencia y la hora. Como en VER SPOTS, detrás del último está <span class="mono">volver</span>.
         Funciona con cualquier NODO: para esto CHISPAS se conecta también al RBN.</p>
-      <p>Mientras estás en TRX, CHISPAS sigue escuchando el RBN (ajuste <b>ESCUCHA EN TRX</b>), así que no se pierde
-        a nadie aunque tardes en volver: los receptores se guardan media hora.</p>
+      <p>Mientras estás en OPERAR o en QSO, CHISPAS sigue escuchando el RBN (ajuste <b>ESCUCHA EN TRX</b>), así que no
+        se pierde a nadie aunque tardes en mirar: los receptores se guardan media hora. Si abriste la lista desde el
+        <span class="mono">menu</span> de OPERAR o QSO, al salir vuelves allí.</p>
       <div class="caja truco"><p><span class="titulo-caja">Para que funcione.</span> Los receptores solo avisan
         cuando llamas <span class="mono">CQ</span> (o <span class="mono">TEST</span>), no en mitad de un QSO. Y
-        CHISPAS solo los oye mientras está en CLUSTER o en TRX con el WiFi conectado: llama CQ desde TRX, no desde
-        otra pantalla.</p></div>
+        CHISPAS solo los oye con el WiFi conectado, en CLUSTER o en OPERAR y QSO: al entrar en OPERAR espera a que
+        salga la <span class="mono">W</span> y unos segundos antes de llamar.</p></div>
       <div class="galeria">
         <figure class="pantalla"><img src="img/cluster_oyen.png?__SELLO__" width="512" height="256" alt="Quién me oye: siete receptores, el más lejano a 2880 km"><figcaption>Tras un CQ en 20 m: siete receptores, el más lejano arriba.</figcaption></figure>
         <figure class="pantalla"><img src="img/cluster_oyen_ficha.png?__SELLO__" width="512" height="256" alt="Ficha de un receptor: locator, distancia, dB, velocidad, frecuencia y hora"><figcaption>La ficha del receptor: dónde está, a cuánto, cómo te oye y cuándo.</figcaption></figure>
@@ -1286,9 +1290,9 @@
       <p><b>NODO</b> (arriba), <b>MODO</b> (<span class="mono">TODOS</span> o solo <span class="mono">CW</span>;
         si el aviso no dice el modo, CHISPAS lo deduce por la parte de la banda en la que está) y <b>BANDA</b>
         (<span class="mono">TODAS</span> o una, de 160 a 6 metros). Al cambiar un filtro, la lista empieza de nuevo.
-        <b>ESCUCHA EN TRX</b> (<span class="mono">SI</span> de serie): en TRX, el WiFi sigue encendido y CHISPAS
-        sigue escuchando el RBN para ¿QUIÉN ME OYE?. Gasta algo más de batería; con <span class="mono">NO</span>, el
-        WiFi se apaga en TRX.</p>
+        <b>ESCUCHA EN TRX</b> (<span class="mono">SI</span> de serie): en TRX › OPERAR y QSO el WiFi se enciende y
+        CHISPAS escucha el RBN para ¿QUIÉN ME OYE?; en el menú TRX y en DECODIFICAR, no. Gasta algo más de batería;
+        con <span class="mono">NO</span>, el WiFi se queda apagado en TRX.</p>
       <div class="galeria">
         <figure class="pantalla"><img src="img/cluster_ajustes.png?__SELLO__" width="512" height="256" alt="Ajustes del cluster: nodo, modo, banda y escucha en TRX"><figcaption>Los ajustes del cluster.</figcaption></figure>
       </div>

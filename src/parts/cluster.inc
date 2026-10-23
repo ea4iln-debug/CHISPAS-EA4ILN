@@ -750,7 +750,7 @@ void refrescarVistaSpots() {
 void procesarCluster() {
   caducarCluster();
   bool enCluster = pantallaActual == PANTALLA_CLUSTER;
-  bool enTrx = pantallaActual == PANTALLA_TRX && clusterEscuchaTrx;
+  bool enTrx = pantallaActual == PANTALLA_TRX && clusterEscuchaTrx && trxEnOperarOQso();
   bool activo = (enCluster || enTrx) && estadoWifi == WIFI_CONECTADO && indicativoConfigurado();
   if (!activo) {
     if (cxNodo.usada || cxRbn.usada) cerrarCluster();
@@ -803,11 +803,43 @@ void clusterSinConexion() {
   opcionPantallaCluster = 0;
 }
 
+// QUIEN ME OYE abierto desde el "menu" de OPERAR o QSO: al salir de la lista se vuelve alli
+bool oyentesDesdeTrx = false;
+SubTrx trxAntesDeOyentes = TRX_OPERAR;
+
 void entrarEnCluster() {
   leerClusterNVS();
   vistaCluster = VC_MENU;
   opcionPantallaCluster = CL_OPCION_BARRA;
   avisoCluster = "";
+  oyentesDesdeTrx = false;
+}
+
+uint8_t numOyentesCluster() {
+  return numOyentes;
+}
+
+// OPERAR/QSO > menu > QUIEN ME OYE?: sale de TRX como con SALIR (KEY deshabilitada) y abre la lista
+void abrirOyentesDesdeTrx() {
+  SubTrx origen = trxAjustesOrigen;
+  trxSalirAlMenu();
+  entrarEnPantalla(PANTALLA_CLUSTER, false);
+  vistaCluster = VC_OYEN;
+  opcionPantallaCluster = 1;
+  selOyente = 0;
+  oyentesDesdeTrx = true;
+  trxAntesDeOyentes = origen;
+}
+
+// Salir de la lista de QUIEN ME OYE: al menu de CLUSTER o, si se vino de OPERAR o QSO, de vuelta alli
+void salirDeOyentes() {
+  if (!oyentesDesdeTrx) {
+    vistaCluster = VC_MENU;
+    return;
+  }
+  oyentesDesdeTrx = false;
+  entrarEnPantalla(PANTALLA_TRX, false);
+  trxEntrarSub(trxAntesDeOyentes);
 }
 
 // ----------------------------------------------------------------------------
@@ -1093,11 +1125,11 @@ void eventoCluster(int8_t giro, bool pulsa, bool atras, bool ejeLarga) {
 
     case VC_OYEN:
       // Como VER SPOTS: detras del ultimo receptor, "volver" (selOyente == numOyentes)
-      if (atras || ejeLarga) vistaCluster = VC_MENU;
+      if (atras || ejeLarga) salirDeOyentes();
       else if (giro != 0 && numOyentes > 0) selOyente = (min(selOyente, numOyentes) + numOyentes + 1 + giro) % (numOyentes + 1);
       else if (pulsa) {
         if (numOyentes == 0 || selOyente >= numOyentes) {
-          vistaCluster = VC_MENU;
+          salirDeOyentes();
         } else {
           uint8_t orden[CLUSTER_MAX_OYENTES];
           ordenOyentes(orden);

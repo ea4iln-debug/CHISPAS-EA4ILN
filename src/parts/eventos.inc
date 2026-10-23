@@ -226,7 +226,8 @@ void procesarBoton() {
         break;
 
       case TRX_AJUSTES: {
-        // Foco: 0 wpm, 1 tono local, 2 tune (s), 3 SU, 4 salir, 5 volver (pie). Las palas siguen manipulando
+        // Foco: 0 wpm, 1 tono local, 2 tune (s), 3 SU, 4 quien me oye, 5 salir, 6 volver (pie). Las palas siguen
+        // manipulando
         const uint8_t N_FOCO = N_AJUSTES_TRX + 1;
         if (atras) subTrx = trxAjustesOrigen;
         else if (giro != 0) {
@@ -238,7 +239,8 @@ void procesarBoton() {
             case 0: case 2: editandoValor = !editandoValor; break;
             case 1: trxTonoLocal = !trxTonoLocal; break;
             case 3: trxAbrirEditor(-1); break;  // Vuelve aqui
-            case 4: trxSalirAlMenu(); break;
+            case AJUSTE_TRX_OYEN: abrirOyentesDesdeTrx(); break;  // Al salir de la lista, vuelve a OPERAR o QSO
+            case 5: trxSalirAlMenu(); break;
             default: subTrx = trxAjustesOrigen; break;
           }
         }

@@ -233,9 +233,12 @@ String valorAjusteDecod(uint8_t i) {
   return trxTonoDecodHz == 0 ? String("AUTO") : String(trxTonoDecodHz) + " Hz";
 }
 
-// Ajustes de OPERAR y QSO ("menu"): 0 wpm y 2 tune se editan girando, 1 tono local, 3 SU (editor), 4 salir
-#define N_AJUSTES_TRX 5
-const char* const NOMBRES_AJUSTES_TRX[N_AJUSTES_TRX] = { "WPM", "TONO LOCAL", "TUNE", "SU", "SALIR" };
+// Ajustes de OPERAR y QSO ("menu"): 0 wpm y 2 tune se editan girando, 1 tono local, 3 SU (editor), 4 QUIEN ME OYE
+// (lleva a CLUSTER y vuelve aqui), 5 salir
+#define N_AJUSTES_TRX 6
+#define AJUSTE_TRX_OYEN 4
+const char* const NOMBRES_AJUSTES_TRX[N_AJUSTES_TRX] = { "WPM", "TONO LOCAL", "TUNE", "SU", "QUIEN ME OYE?", "SALIR" };
+uint8_t numOyentesCluster();  // Definida con la pantalla CLUSTER
 
 String valorAjusteTrx(uint8_t i) {
   switch (i) {
@@ -243,6 +246,7 @@ String valorAjusteTrx(uint8_t i) {
     case 1: return trxTonoLocal ? String("SI") : String("NO");
     case 2: return String(trxTuneSeg) + " s";
     case 3: return trxSu[0] ? String(trxSu) : String("--");
+    case AJUSTE_TRX_OYEN: return numOyentesCluster() > 0 ? String(numOyentesCluster()) : String("");  // Cuantos
     default: return String("");
   }
 }

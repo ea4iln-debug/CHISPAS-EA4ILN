@@ -149,7 +149,18 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   CQ en 20 m desde TRX con la v1.36b republicada): QUIEN ME OYE con 7 receptores (SE5E 2880 km, HG8A 2306,
   S53A 1915, DR4W 1906, PE5TT 1746, G3AKX 1492, F6KGL 1346); las distancias de G3AKX y F6KGL **coinciden al km con
   DXLook**; ficha (SE5E JO89LW, 13 dB, 25 WPM, 14036.0 kHz, 1319Z) y volver con receptores, bien (capturas por
-  serie, `cluster_oyen.png` y `cluster_oyen_ficha.png`). Una placa que ya tuviera la primera 1.36b no ve la nueva por OTA (misma versión). Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
+  serie, `cluster_oyen.png` y `cluster_oyen_ficha.png`).
+- **WiFi solo en OPERAR y QSO, y QUIEN ME OYE en su "menu"** (23 oct 2026, petición del usuario; sin publicar):
+  `trxEnOperarOQso()` (`trx.inc`): OPERAR o QSO, o lo abierto desde ellos (AJUSTES con `trxAjustesOrigen`, lista
+  de envío y editor con `subTrxOrigen`). `procesarWifi` mira además el cambio de ese estado (no solo el de
+  pantalla) y `procesarCluster` lo exige para escuchar en TRX: en el menú TRX, DECODIFICAR y las memorias del menú
+  el WiFi se apaga. "menu" de OPERAR/QSO: opción nueva **QUIEN ME OYE?** (`AJUSTE_TRX_OYEN` = 4; SALIR pasa a 5;
+  a la derecha, cuántos receptores hay), `abrirOyentesDesdeTrx()`: `trxSalirAlMenu()` (KEY deshabilitada), CLUSTER
+  en la vista de oyentes; al salir de la lista (atrás, volver o larga) `salirDeOyentes()` vuelve a TRX con
+  `trxEntrarSub(origen)` (OPERAR o QSO, texto manipulado vacío). **Probado en la placa 1** (por serie y capturas):
+  menú TRX sin W ni WiFi; OPERAR enciende el WiFi y entra en el RBN (W); menu > QUIEN ME OYE? > lista > atrás
+  vuelve a OPERAR sin cortar el WiFi; salir de OPERAR apaga el WiFi; DECODIFICAR sin WiFi. Ojo: al entrar en
+  OPERAR el WiFi tarda unos segundos en conectar y entrar en el RBN (el manual dice esperar a la W). Una placa que ya tuviera la primera 1.36b no ve la nueva por OTA (misma versión). Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
   la W en "Y además".
   https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.36b
   **v1.33b (beta), publicada el 18 oct 2026** (prerelease): pantalla TIEMPO (Open-Meteo) con AMBIENTE, SOL con 3

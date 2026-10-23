@@ -49,6 +49,15 @@ bool trxManipulando() {
   return subTrx == TRX_OPERAR || subTrx == TRX_QSO || subTrx == TRX_AJUSTES;
 }
 
+// En OPERAR o QSO, o en algo abierto desde ellos (memorias, menu, editor de SU): donde se llama CQ. Con ESCUCHA EN
+// TRX, solo aqui va el WiFi (QUIEN ME OYE); en el menu TRX, DECODIFICAR y las memorias del menu, no
+bool trxEnOperarOQso() {
+  SubTrx s = subTrx;
+  if (s == TRX_AJUSTES) s = trxAjustesOrigen;
+  else if (s == TRX_LISTA_ENVIO || s == TRX_EDITOR) s = subTrxOrigen;
+  return s == TRX_OPERAR || s == TRX_QSO;
+}
+
 // Habilita la salida KEY (OPERAR y QSO) y pone el keyer en marcha
 void trxHabilitarKey() {
   keyCortadaPorSeguridad = false;

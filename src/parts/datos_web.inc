@@ -148,12 +148,18 @@ void terminarDescarga() {
  */
 void procesarWifi() {
   static uint8_t pantallaAnterior = 0;
+  static bool trxConWifiAntes = false;
   // En AUTO, PROP, POTA y TIEMPO encienden el WiFi al entrar; SOL tambien, pero solo si aun no hay hora (para
   // sincronizarla por NTP). En MANUAL, ninguna: solo ACTUALIZAR. Si no conecta, su menu ofrece ABRIR WEBCONF y
   // REINTENTAR. En CONF y SOL el WiFi solo sigue encendido si el portal esta abierto: si se llega con el WiFi
   // conectado (desde PROP o POTA) se apaga, porque no se usa (eran unos 40 mA de mas, medido). Al cambiar de
   // pantalla se olvida lo pedido con ACTUALIZAR.
-  if (pantallaActual != pantallaAnterior) {
+  // En TRX, con ESCUCHA EN TRX, el WiFi va solo en OPERAR y QSO (y lo abierto desde ellos): tambien se mira al
+  // entrar y salir de ellos, no solo al cambiar de pantalla
+  leerClusterNVS();
+  bool trxConWifi = pantallaActual == PANTALLA_TRX && clusterEscuchaTrx && trxEnOperarOQso();
+  if (pantallaActual != pantallaAnterior || trxConWifi != trxConWifiAntes) {
+    trxConWifiAntes = trxConWifi;
     struct tm hora;
     bool solSinHora = pantallaActual == PANTALLA_SOL && !horaLocalValida(hora);
     bool enDatos = (pantallaActual == PANTALLA_PROPAGACION || pantallaActual == PANTALLA_SPOTS ||
@@ -161,10 +167,8 @@ void procesarWifi() {
     bool conPortal = estadoWifi == WIFI_PORTAL &&
                      (pantallaActual == PANTALLA_CONFIG || pantallaActual == PANTALLA_SOL);
     // CLUSTER va en vivo: WiFi encendido mientras se esta en ella (en MANUAL tambien), si hay indicativo propio.
-    // Con ESCUCHA EN TRX, tambien en TRX: QUIEN ME OYE recoge los receptores que copian el CQ mandado desde alli
-    leerClusterNVS();
-    bool enCluster = indicativoConfigurado() &&
-                     (pantallaActual == PANTALLA_CLUSTER || (pantallaActual == PANTALLA_TRX && clusterEscuchaTrx));
+    // Con ESCUCHA EN TRX, tambien en OPERAR y QSO: QUIEN ME OYE recoge los receptores que copian el CQ mandado alli
+    bool enCluster = indicativoConfigurado() && (pantallaActual == PANTALLA_CLUSTER || trxConWifi);
     bool encender = (wifiAuto && enDatos) || enCluster;
     wifiPorPeticion = false;
     forzarActualizacion = false;
