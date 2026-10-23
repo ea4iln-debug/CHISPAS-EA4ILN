@@ -46,7 +46,7 @@ R_POSTE = 3.4
 ESQ_COMP = [(X1 - 3.2, Y1 - 3.2), (X1 - 3.2, Y0 + 3.2)]
 
 # Jacks PJ-307: canon de 6 mm a 2,5 mm sobre la PCB. (x de la PCB, lado)
-JACKS = [(115, "detras", "KEY OUT"), (141, "detras", "SND IN"), (115, "delante", "KEY IN"), (133, "delante", "SND OUT")]
+JACKS = [(115, "detras", "KEY OUT"), (141, "detras", "SND IN\n(DECOD)"), (115, "delante", "KEY IN"), (133, "delante", "SND OUT")]
 Z_JACK = PCB_TOP + 2.5
 VOL_X, Z_VOL = 150, PCB_TOP + 6.0           # potenciometro: rosca M7
 USB = dict(y=0.0, z=PCB_TOP + 14.3, ancho=12.5, alto=7.0)   # boca para la funda del cable
@@ -190,7 +190,8 @@ def rotulo(texto, x, y, tam=3.2, giro=0):
          .rotate((0, 0, 0), (0, 0, 1), giro).translate((x, y, Z_TAPA + TAPA)))
     tapa = tapa.cut(t)
 for bx, lado, nombre in JACKS:
-    rotulo(nombre, P(bx, 0)[0], Y1 - 2.5 if lado == "detras" else Y0 + 2.5, 2.6)
+    for i, linea in enumerate(nombre.split("\n")):   # Segunda linea hacia dentro de la tapa
+        rotulo(linea, P(bx, 0)[0], Y1 - 2.5 - 3.1 * i if lado == "detras" else Y0 + 2.5 + 3.1 * i, 2.6)
 rotulo("VOL", P(VOL_X, 0)[0], Y0 + 2.5, 2.6)
 rotulo("MENU / CLICK", ENCODER[0], ENCODER[1] - 8.0, 2.4)
 rotulo("EXIT", X0 - 0.4, PULSADORES[0][1] + 5.0, 2.2, 90)

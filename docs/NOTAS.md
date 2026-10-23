@@ -180,7 +180,7 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   sin indicativo ni locator propios; ejemplos con huecos ‹TU INDICATIVO›). La mascota es **CHISPAS** (robot en SVG
   con la cara del salvapantallas, 22 poses con humor en el margen; piezas comunes en `<defs>`: `#r-base` y caras
   `#x-*`). Decisiones del usuario: el robot se llama CHISPAS (no "Chispín"), en masculino; la entrada de audio se
-  llama **DECOD** (no SND IN); indicativo de fábrica **EA4ILN** (se deja; el manual avisa de cambiarlo); PDF con
+  llama **SND IN (DECOD)** (23 oct 2026, decisión del usuario; antes solo DECOD, "nunca SND IN"); indicativo de fábrica **EA4ILN** (se deja; el manual avisa de cambiarlo); PDF con
   fondo **blanco** (se probó crema: con fondo en `html` los márgenes salían blancos; con `@page { background }`
   cubría la hoja, pero el usuario prefirió blanco). Enlazado desde la barra y la portada de `index.html`, y desde
   la barra de funciones y hardware; hardware tiene ahora "Inicio" en la barra y "Volver a la página principal" al
@@ -1257,7 +1257,7 @@ quedará corrida unos 6 mm sobre la pantalla real.
 - Ventana de la OLED con la zona visible medida (+1 mm y chaflán); eje del encoder Ø7,5; agujero de Ø3,5 para el
   trimmer; **PRG y RST con lengüeta flexible** (1,2 mm, ranura de 0,8) y tetón hasta 0,3 mm del pulsador: la posición
   de los pulsadores es la estimada (`gen_heltec.py`) y no sé cuál es PRG (rotulado EXIT el de detrás).
-- Rótulos grabados 0,6 mm: KEY OUT, SND IN (DECOD), KEY IN, SND OUT (auriculares), VOL, MENU / CLICK, EXIT, RST,
+- Rótulos grabados 0,6 mm: KEY OUT, SND IN (DECOD) (grabado en dos líneas desde el 23 oct 2026; antes solo SND IN), KEY IN, SND OUT (auriculares), VOL, MENU / CLICK, EXIT, RST,
   CHISPAS y EA4ILN.
 **Comprobado:** intersección de base y tapa con todas las piezas de `chispas.step` (OCP): sin choques salvo la tuerca
 que el STEP del potenciómetro trae pegada al cuerpo (en la realidad va por fuera de la pared). Vistas en SVG de

@@ -406,7 +406,7 @@
           <ul class="opciones">
             <li><b>GPS NEO-6M</b>: hora exacta, locator y altitud.</li>
             <li><b>Sensor BME280</b>: presión, temperatura y aviso de tormenta.</li>
-            <li><b>Cables a tu transceptor</b>: KEY OUT para manipularlo y DECOD para decodificar su audio.</li>
+            <li><b>Cables a tu transceptor</b>: KEY OUT para manipularlo y SND IN (DECOD) para decodificar su audio.</li>
           </ul>
         </div>
         <a class="boton-sec" href="hardware.html">Ver el hardware</a>
@@ -585,7 +585,7 @@
     for (const [cx, cy] of [[M(5.5), M(5.5)], [M(94.5), M(5.5)], [M(5.5), M(56.5)], [M(94.5), M(56.5)]])
       s += `<circle cx="${cx}" cy="${cy}" r="7.5" fill="#8f918a" stroke="#4d4f49"/><line x1="${cx - 5}" y1="${cy - 2}" x2="${cx + 5}" y2="${cy + 2}" stroke="#3b3d38" stroke-width="2"/>`;
     s += `<text x="${M(20)}" y="${M(4.5)}" text-anchor="middle" fill="${C.tinta}" font-size="12" style="${C.f}" opacity="0.8">▲ KEY OUT</text>`;
-    s += `<text x="${M(46)}" y="${M(4.5)}" text-anchor="middle" fill="${C.tinta}" font-size="12" style="${C.f}" opacity="0.8">▲ SND IN</text>`;
+    s += `<text x="${M(46)}" y="${M(4.5)}" text-anchor="middle" fill="${C.tinta}" font-size="12" style="${C.f}" opacity="0.8">▲ SND IN (DECOD)</text>`;
     s += `<circle cx="${M(62)}" cy="${M(4)}" r="4" fill="#111"/><text x="${M(62) + 9}" y="${M(4.5)}" fill="${C.tinta}" font-size="11" style="${C.f}" opacity="0.8">NIVEL</text>`;
     s += `<rect x="${M(23)}" y="${M(15.5)}" width="165" height="115" rx="7" fill="#0b0b0b" stroke="#000" stroke-width="3"/>`;
     s += `<g id="boceto-pantallas"></g><rect x="${M(23)}" y="${M(15.5)}" width="165" height="115" rx="7" fill="url(#vidrio)"/>`;
