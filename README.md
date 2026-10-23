@@ -306,7 +306,7 @@ Las capturas salen de la propia pantalla con [`docs/captura_oled.py`](docs/captu
 | | | |
 |:---:|:---:|:---:|
 | <img src="docs/img/cluster.png" width="256" alt="Menú CLUSTER"><br>Menú | <img src="docs/img/cluster_spots.png" width="256" alt="Spots del RBN"><br>Spots (RBN) | <img src="docs/img/cluster_ficha.png" width="256" alt="Ficha de un spot"><br>Ficha y "a SU" |
-| <img src="docs/img/cluster_oyen.png" width="256" alt="Quién me oye"><br>¿Quién me oye? (sin emitir) | <img src="docs/img/cluster_ajustes.png" width="256" alt="Ajustes del cluster"><br>Ajustes: nodo, modo, banda y escucha en TRX | <img src="docs/img/cluster_volver.png" width="256" alt="Volver en la lista de spots"><br>Volver, detrás del último spot |
+| <img src="docs/img/cluster_oyen.png" width="256" alt="Quién me oye"><br>¿Quién me oye? (tras un CQ en 20 m) | <img src="docs/img/cluster_ajustes.png" width="256" alt="Ajustes del cluster"><br>Ajustes: nodo, modo, banda y escucha en TRX | <img src="docs/img/cluster_volver.png" width="256" alt="Volver en la lista de spots"><br>Volver, detrás del último spot |
 
 ### Utilidades
 

@@ -34,7 +34,7 @@ CAPTURAS = ("inicio.png", "cara.png", "cw.png", "qso_sim.png", "koch.png", "trx.
             "parques.png", "ambiente.png", "webconf.png", "parques_menu.png", "spot_ficha.png", "spot_ficha2.png",
             "inicio_activando.png", "pota_menu_activacion.png", "spot_activacion.png", "spot_activacion2.png",
             "spot_qrt.png", "tiempo.png", "tiempo_horas.png", "tiempo_manana.png", "cluster.png", "cluster_spots.png",
-            "cluster_ficha.png", "cluster_oyen.png", "cluster_ajustes.png", "cluster_volver.png")
+            "cluster_ficha.png", "cluster_oyen.png", "cluster_ajustes.png", "cluster_volver.png", "cluster_oyen_ficha.png")
 
 PAGINAS = ("index.html", "hardware.html", "funciones.html", "manual.html")
 DOCS_PDF = ("esquema_protoboard.pdf", "placa_perforada.pdf", "manual_chispas.pdf")

@@ -145,8 +145,11 @@ configuración en el aparato y actualización OTA desde las releases de GitHub. 
   dice `> volver`). Probado en la placa 1 por serie antes de republicar: W entre la hora y el nombre en TRX y
   CLUSTER (`15:07  W  TRX`; sin hora aún, sola a la izquierda) y sin W en Inicio tras `[WIFI] APAGADO`; luego,
   a petición del usuario, **W en negativo** (recuadro blanco de 7x8 y letra negra), visto en captura (`15:11 [W] TRX`); volver
-  desde el primer spot girando atrás y pulsar lleva al menú. Volver de QUIEN ME OYE con receptores, sin probar
-  (mismo código). Una placa que ya tuviera la primera 1.36b no ve la nueva por OTA (misma versión). Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
+  desde el primer spot girando atrás y pulsar lleva al menú. **Prueba del usuario con la emisora** (23 oct 2026,
+  CQ en 20 m desde TRX con la v1.36b republicada): QUIEN ME OYE con 7 receptores (SE5E 2880 km, HG8A 2306,
+  S53A 1915, DR4W 1906, PE5TT 1746, G3AKX 1492, F6KGL 1346); las distancias de G3AKX y F6KGL **coinciden al km con
+  DXLook**; ficha (SE5E JO89LW, 13 dB, 25 WPM, 14036.0 kHz, 1319Z) y volver con receptores, bien (capturas por
+  serie, `cluster_oyen.png` y `cluster_oyen_ficha.png`). Una placa que ya tuviera la primera 1.36b no ve la nueva por OTA (misma versión). Manual (portada 1.36b, la W en "Lo que ves en pantalla") y PDF; web: QUIEN ME OYE desde TRX y
   la W en "Y además".
   https://github.com/ea4iln-debug/CHISPAS-EA4ILN/releases/tag/v1.36b
   **v1.33b (beta), publicada el 18 oct 2026** (prerelease): pantalla TIEMPO (Open-Meteo) con AMBIENTE, SOL con 3
