@@ -1276,6 +1276,19 @@ largo) asoma por fuera y el cuerpo apoya en la pared por dentro. Podrían salir 
 los tetones), pero asomaría el cuerpo cuadrado y el esfuerzo de la clavija iría a las soldaduras: descartado.
 Volumen con la cara del cuerpo en el borde (rosca M7 de 5 mm: pared de 2 mm + tuerca). USB de la Heltec enrasado.
 
+**Error del filtro del encoder (7 nov 2026, PCB recibida y montada con la Heltec de la placa 1):** el giro no funcionaba;
+el pulsador sí. El filtro de Bourns se pasó mal al esquema: 3V3 → R12 (10 k) → **GPIO** → R13 (10 k) → A, igual en DT con
+R14 y R15. Lo correcto es el pull-up en el lado del encoder: 3V3 → 10 k → A → 10 k → GPIO + 10 nF. Con el contacto
+cerrado queda un divisor: ~1,65 V, entre los umbrales del S3 (VIL 0,25 VDD, VIH 0,75 VDD).
+Medido con `pruebas/prueba_pines.cpp` (actualizada a los pines de ahora, con ADC2 en CLK; valor aproximado, sin el
+pull-up interno; `analogReadMilliVolts` satura en ADC2): 20 clics, CLK 0 cambios y mínimo ~1,5 V, DT 58 cambios, 0 pasos.
+**Arreglo en las placas ya hechas:** una gota de estaño entre el extremo derecho de R13 y el izquierdo de C10 (A con
+CLK) y otra entre el derecho de R15 y el izquierdo de C11 (B con DT). Hueco de 1,1 mm, por él solo pasan esas redes;
+equivale a puentear R13 y R15. Queda 10 k de pull-up y 10 nF en el GPIO, sin resistencia en serie. Medido en la placa 1 tras las
+gotas: 20 clics, CLK mínimo 0 V, 40 cambios en CLK y en DT, 0 inválidas. Sentido de giro sin comprobar aún.
+Descartado quitar R12 y R14 (pull-up interno: nivel bajo de ~0,6 V, poco margen y más sensible a la RF). **Para otra tirada
+o antes de publicar Gerber: corregir el esquema y rutar de nuevo.** El firmware no cambia.
+
 **Para la caja:** alrededor de cada jack, rebaje redondo por fuera (~10 mm) que deje la pared en ~1,5 mm (si no,
 la clavija no llega al fondo); agujero para el eje del encoder junto a la OLED; agujero pequeño para ajustar el
 trimmer del decodificador (o ajustarlo antes de cerrar); hueco del USB-C algo mayor que la funda del cable; SMA de
