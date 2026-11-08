@@ -1304,8 +1304,11 @@ circuito (razonado, sin medir): los auriculares cuelgan del cursor del potenció
 R4/R5 220 Ω + ~32 Ω), y esa carga de ~250 Ω aplasta la curva: con el potenciómetro lineal, al 80 % ~−8 dB y al 50 %
 ~−14 dB respecto al máximo. A tope, ~2,5 % de la salida del GPIO en el auricular. El firmware ya da la amplitud
 máxima (±127 en el sigma-delta). **El ALPS logarítmico del esquema sería peor que el lineal comprado: en otra tirada,
-lineal (B).** Más nivel a tope sin rediseñar: R3 a 330 Ω (~+6 dB, la curva no cambia). Pendiente de que el usuario
-diga si a tope suena bastante.
+lineal (B).** Más nivel a tope sin rediseñar: R3 a 330 Ω (~+6 dB, la curva no cambia). **El usuario: a tope suena
+bastante; se deja así** en estas placas. Con el log, al 50 % ~−19 dB (peor); haría falta antilog (curva C). Para otra
+tirada, quitar la carga del cursor: auriculares desde la salida del PAM8302A (condensador + resistencia; el
+potenciómetro solo ve la entrada del amplificador y vale el log) o un amplificador de auriculares tras el
+potenciómetro.
 
 **Para la caja:** alrededor de cada jack, rebaje redondo por fuera (~10 mm) que deje la pared en ~1,5 mm (si no,
 la clavija no llega al fondo); agujero para el eje del encoder junto a la OLED; agujero pequeño para ajustar el
