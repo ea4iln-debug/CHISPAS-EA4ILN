@@ -1298,6 +1298,15 @@ alimentación) y después nada, con 3,3 V en su VCC y sin contestar a los 0xFF p
 Esquema, cobre (DRC: 0 pads sin conectar) y pines revisados: bien. **Con otro módulo, DETECTADO** en el arranque.
 El módulo antiguo se da por dañado. **Ojo con los cables JST de dos extremos: comprobar que son rectos.**
 
+**Resto de la PCB (8 nov 2026, el usuario):** sentido de giro bien (sin opción de firmware), palas y decodificador
+bien, auriculares y volumen bien. Altavoz y KEY sin probar. **El volumen hay que subirlo casi al máximo:** es el
+circuito (razonado, sin medir): los auriculares cuelgan del cursor del potenciómetro (TONO → R3 1 k → R7 10 k → C4 →
+R4/R5 220 Ω + ~32 Ω), y esa carga de ~250 Ω aplasta la curva: con el potenciómetro lineal, al 80 % ~−8 dB y al 50 %
+~−14 dB respecto al máximo. A tope, ~2,5 % de la salida del GPIO en el auricular. El firmware ya da la amplitud
+máxima (±127 en el sigma-delta). **El ALPS logarítmico del esquema sería peor que el lineal comprado: en otra tirada,
+lineal (B).** Más nivel a tope sin rediseñar: R3 a 330 Ω (~+6 dB, la curva no cambia). Pendiente de que el usuario
+diga si a tope suena bastante.
+
 **Para la caja:** alrededor de cada jack, rebaje redondo por fuera (~10 mm) que deje la pared en ~1,5 mm (si no,
 la clavija no llega al fondo); agujero para el eje del encoder junto a la OLED; agujero pequeño para ajustar el
 trimmer del decodificador (o ajustarlo antes de cerrar); hueco del USB-C algo mayor que la funda del cable; SMA de

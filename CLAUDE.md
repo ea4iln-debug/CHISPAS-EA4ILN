@@ -168,7 +168,8 @@ Abrir solo el que toca; los avisos de IntelliSense en los `.inc` no son errores.
 0. **CLUSTER**: falta nodo PROPIO, consumo y palas con WiFi en TRX; fases 2 (alertas) y 3 (enviar spots).
 1. PCB recibida y montada con la placa 1 (7 nov). **Error de diseño en el filtro del encoder**: pull-ups R12/R14 al lado del GPIO, CLK no bajaba de ~1,5 V.
    En cada placa montada, una gota de estaño R13-C10 y R15-C11 (arreglado y medido en la placa 1, 7 nov). BME280 y GPS probados (8 nov; el GPS
-   antiguo, dañado: probablemente un cable JST invertido). Falta el sentido de giro, audio, KEY, palas y DECOD; **corregir el esquema (pull-up al lado del encoder) antes de publicar Gerber o de otra tirada** (NOTAS: "PCB").
+   antiguo, dañado: probablemente un cable JST invertido). Giro, palas, DECOD y auriculares bien (8 nov);
+   el volumen va casi al máximo por el circuito (otra tirada: potenciómetro lineal, no el ALPS log). Falta altavoz y KEY; **corregir el esquema (pull-up al lado del encoder) antes de publicar Gerber o de otra tirada** (NOTAS: "PCB").
 2. Probar con las palas TX LIBRE > RITMO, y la práctica QSO POTA del Koch.
 3. **Siguiente:** Duo TEXTO (dos placas) y QSO SIM (los dos roles) con las palas de verdad (sin palas, probado); instalar la beta desde la web (sin probar).
 4. TIEMPO: probar WIFI DATOS AUTO (refresco cada 30 min).
