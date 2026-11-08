@@ -1289,6 +1289,15 @@ gotas: 20 clics, CLK mínimo 0 V, 40 cambios en CLK y en DT, 0 inválidas. Senti
 Descartado quitar R12 y R14 (pull-up interno: nivel bajo de ~0,6 V, poco margen y más sensible a la RF). **Para otra tirada
 o antes de publicar Gerber: corregir el esquema y rutar de nuevo.** El firmware no cambia.
 
+**BME280 y GPS en la PCB (8 nov 2026):** J3 (BME280) y J2 (GPS) son JST-XH de 4 pines, pin 1 hacia delante (lado
+de las palas): J3 = 3V3, GND, SCL, SDA; J2 = 3V3, GPS_RX (GPIO39 → RX del GPS), GPS_TX (TX del GPS → GPIO47), GND.
+Coinciden con el orden de los módulos (BME280 VIN GND SCL SDA; GY-GPS6MV2 VCC RX TX GND): cable recto.
+BME280 detectado a la primera (0x76). El GPS antiguo no respondía: en el primer intento llegó una ráfaga de NMEA por
+GPIO39 (TX y RX cruzados, probablemente un cable JST invertido de extremo a extremo, que también invierte la
+alimentación) y después nada, con 3,3 V en su VCC y sin contestar a los 0xFF por ninguno de los dos pines.
+Esquema, cobre (DRC: 0 pads sin conectar) y pines revisados: bien. **Con otro módulo, DETECTADO** en el arranque.
+El módulo antiguo se da por dañado. **Ojo con los cables JST de dos extremos: comprobar que son rectos.**
+
 **Para la caja:** alrededor de cada jack, rebaje redondo por fuera (~10 mm) que deje la pared en ~1,5 mm (si no,
 la clavija no llega al fondo); agujero para el eje del encoder junto a la OLED; agujero pequeño para ajustar el
 trimmer del decodificador (o ajustarlo antes de cerrar); hueco del USB-C algo mayor que la funda del cable; SMA de
